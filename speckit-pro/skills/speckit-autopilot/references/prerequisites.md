@@ -52,7 +52,7 @@ midway. The contract is in
 [Run-start grants](./stop-policy.md#run-start-grants).
 
 1. Run one no-op runner request: helper `helper-registry-dispatch` with empty
-   `inputs`, sent on stdin to `<resolved_python> -m speckit_pro_runner` exactly as
+   `inputs`, sent on stdin to `<resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"` exactly as
    every later request is.
 2. Run one `git status --porcelain` in the live checkout.
 
@@ -66,14 +66,14 @@ not a run stop.
 Autopilot needs permission for its own calls before it starts. Add these allow
 rules to permissions.allow in .claude/settings.local.json or your user settings,
 then rerun. Or start the session in bypassPermissions mode.
-  runner request:  <resolved_python> -m speckit_pro_runner:*   and   printf:*
+  runner request:  <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py":*   and   printf:*
   git status:      git status:*
 ```
 
 Print each rule in Claude Code's `Tool(pattern)` form, where the tool is the shell
 tool and the pattern is the text above. Print only the rules for the failed probe.
 Replace `<resolved_python>` with the interpreter path the request used, written
-exactly as the request invoked it: a shell rule matches the command text, and an
+exactly as the request invoked it; replace `<plugin-root>` with the loaded absolute plugin root: a shell rule matches the command text, and an
 absolute interpreter path must appear in the rule as it does in the request. A probe
 that passes needs no rule.
 
@@ -243,7 +243,7 @@ to archive previously merged specs.
 3. If the archive extension is installed, list the sweep candidates with the
    read-only runner helper `list-archive-candidates`:
    ```text
-   printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-list-archive-candidates","helper_id":"list-archive-candidates","operation":"list-archive-candidates","mode":"read_only","inputs":{"current_target":"<current-spec-dir>"}}' | <resolved_python> -m speckit_pro_runner
+   printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-list-archive-candidates","helper_id":"list-archive-candidates","operation":"list-archive-candidates","mode":"read_only","inputs":{"current_target":"<current-spec-dir>"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
    ```
    The helper lists `specs/*/spec.md`, excludes the current target, and asks
    `gh` for each remaining spec's merged pull request. `archive_order` lists
@@ -431,6 +431,8 @@ invocations — it only exists inside agent subprocesses. Always use
 the literal path extracted from the skill header.
 
 <!-- /host -->
+Before the first probe or binding call, follow [Installed runner transport](./installed-runtime.md).
+
 Runner helper transport: use the resolved Python 3.11+ interpreter as
 `<resolved_python>`, send one JSON request on stdin, and parse the one JSON
 response envelope from stdout. Every request includes `schema_version`,
@@ -443,7 +445,7 @@ G0 never repairs or rewrites the record, asks a setup question, or sends the
 user back to scaffold:
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-read-readiness","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"readiness","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-read-readiness","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"readiness","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 `data.readiness.verdict` is always `proceed`. `data.readiness.stale` names
@@ -477,7 +479,7 @@ Before any phase work, verify the installed Claude Code plugin package includes
 every bundled SpecKit Pro agent:
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-validate-agent-install","helper_id":"validate-agent-install","operation":"validate-agent-install","mode":"read_only","inputs":{"surface":"claude"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-validate-agent-install","helper_id":"validate-agent-install","operation":"validate-agent-install","mode":"read_only","inputs":{"surface":"claude"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 The helper resolves the loaded plugin root that owns
@@ -532,7 +534,7 @@ Record how the research broker will screen web and docs results:
 <!-- /host -->
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-research-broker-preflight","helper_id":"research-broker-preflight","operation":"research-broker-preflight","mode":"read_only","inputs":{}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-research-broker-preflight","helper_id":"research-broker-preflight","operation":"research-broker-preflight","mode":"read_only","inputs":{}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 The helper never reads a key value. Write `data.screening_mode` and every
@@ -562,7 +564,7 @@ as the fix, as in Step 0.0a, and continue.
 ## Step 0.1–0.7: Environment Checks
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-check-prerequisites","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"prerequisites","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-check-prerequisites","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"prerequisites","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 Read the unchanged probe report from `data.result.stdout_json`:
@@ -859,7 +861,7 @@ missing existing input, or an invalid configuration) is logged as
 formal checkpoint still requires its pass. Checker installs belong to scaffold.
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-commands","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"commands","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-commands","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"commands","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 Read `data.result.stdout_json` for the unchanged `commands` object containing:
@@ -1040,7 +1042,7 @@ Codex ships them in `codex-hooks.json`, trusted once by the operator through
 ## Step 0.12: Preset and Extension Detection
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-presets","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"presets","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-presets","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"presets","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 Read `data.result.stdout_json` for: `has_presets`, `presets` (names +

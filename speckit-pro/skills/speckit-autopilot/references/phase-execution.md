@@ -724,7 +724,7 @@ non-zero tool result propagate and abort the run:
 
 ```text
 plan = "specs/<feature>/plan.md"
-resolved_python -m speckit_pro_runner < request.json
+resolved_python "<plugin-root>/scripts/run-speckit-pro.py" < request.json
 
 request.json:
 {
@@ -4017,7 +4017,7 @@ including Converge or review appends. Reconcile the sidecar through the Tasks
 producer before dispatch; do not change upstream Converge. Then invoke:
 
 ```text
-resolved_python -m speckit_pro_runner < request.json
+resolved_python "<plugin-root>/scripts/run-speckit-pro.py" < request.json
 
 request.json:
 {

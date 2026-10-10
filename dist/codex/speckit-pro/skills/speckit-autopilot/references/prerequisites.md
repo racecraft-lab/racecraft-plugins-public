@@ -256,6 +256,8 @@ path as prefix.** Never run these scripts from
 SpecKit scripts (create-new-feature, setup-plan, etc.), which are
 different from the autopilot scripts.
 
+Before the first probe or binding call, follow [Installed runner transport](./installed-runtime.md).
+
 Runner helper transport: use the resolved Python 3.11+ interpreter as
 `<resolved_python>`, send one JSON request on stdin, and parse the one JSON
 response envelope from stdout. Every request includes `schema_version`,
@@ -268,7 +270,7 @@ G0 never repairs or rewrites the record, asks a setup question, or sends the
 user back to scaffold:
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-read-readiness","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"readiness","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-read-readiness","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"readiness","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 `data.readiness.verdict` is always `proceed`. `data.readiness.stale` names
@@ -306,7 +308,7 @@ restart), as in Step 0.0a, and continue: research runs in `sanitizer-only` mode.
 Then record how the research broker will screen web and docs results:
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-research-broker-preflight","helper_id":"research-broker-preflight","operation":"research-broker-preflight","mode":"read_only","inputs":{}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-research-broker-preflight","helper_id":"research-broker-preflight","operation":"research-broker-preflight","mode":"read_only","inputs":{}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 The helper never reads a key value. Write `data.screening_mode` and every
@@ -327,7 +329,7 @@ The helper never reads a key value. Write `data.screening_mode` and every
 ## Step 0.1–0.7: Environment Checks
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-check-prerequisites","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"prerequisites","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-check-prerequisites","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"prerequisites","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 Read the unchanged probe report from `data.result.stdout_json`:
@@ -523,7 +525,7 @@ missing existing input, or an invalid configuration) is logged as
 formal checkpoint still requires its pass. Checker installs belong to scaffold.
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-commands","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"commands","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-commands","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"commands","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 Read `data.result.stdout_json` for the unchanged `commands` object containing:
@@ -696,7 +698,7 @@ Codex ships them in `codex-hooks.json`, trusted once by the operator through
 ## Step 0.12: Preset and Extension Detection
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-presets","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"presets","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-presets","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"presets","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> "<plugin-root>/scripts/run-speckit-pro.py"
 ```
 
 Read `data.result.stdout_json` for: `has_presets`, `presets` (names +

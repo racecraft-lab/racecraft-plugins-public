@@ -132,6 +132,71 @@ def preflight_with(
 
 
 class RunnerFoundationTests(unittest.TestCase):
+    def test_documented_installed_argv_resolves_runner_on_both_hosts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="installed runner ") as tmp:
+            root = Path(tmp)
+            payloads.build_installed_plugin_payloads(REPO_ROOT, root / "dist")
+            worktree = root / "feature worktree"
+            worktree.mkdir()
+            env = os.environ.copy()
+            env.pop("PYTHONPATH", None)
+            for host in ("claude", "codex"):
+                plugin_root = root / "dist" / host / "speckit-pro"
+                for skill in ("speckit-autopilot", "speckit-scaffold-spec", "speckit-status",
+                              "speckit-install", "speckit-upgrade", "speckit-archive-cleanup"):
+                    with self.subTest(host=host, skill=skill):
+                        text = (plugin_root / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+                        match = re.search(r'`(\[resolved_python, [^`]+\])`', text)
+                        self.assertIsNotNone(match, "skill must document its installed runner argv")
+                        assert match is not None
+                        argv = ast.literal_eval(match[1].replace("resolved_python", repr(sys.executable)))
+                        argv = [arg.replace("<plugin-root>", str(plugin_root)) for arg in argv]
+                        completed = subprocess.run(
+                            argv, input=json.dumps(base_request()), cwd=worktree, env=env,
+                            text=True, capture_output=True, check=False,
+                        )
+                        self.assertEqual(completed.returncode, 0, completed.stderr)
+                        response = json.loads(completed.stdout)
+                        self.assertEqual(response["status"], "ok")
+                        report = response["data"]["report"]
+                        self.assertEqual(report["paths"]["plugin_root"]["value"], ".")
+                        self.assertEqual(report["source_vs_installed_context"], "installed_payload")
+
+    def test_installed_launcher_preserves_runner_transport_and_workflow_cwd(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="installed transport ") as tmp:
+            root = Path(tmp)
+            payloads.build_installed_plugin_payloads(REPO_ROOT, root / "dist")
+            worktree = root / "feature worktree"
+            worktree.mkdir()
+            subprocess.run(["git", "init", "-q", str(worktree)], check=True, capture_output=True)
+            (worktree / ".specify").mkdir()
+            (worktree / "workflow.md").write_text("# Workflow\n", encoding="utf-8")
+            request = base_request("resolve-workflow-binding", {"workflow_file": "workflow.md"})
+            request["helper_id"] = "resolve-workflow-binding"
+            env = os.environ.copy()
+            env.pop("PYTHONPATH", None)
+            for host in ("claude", "codex"):
+                plugin_root = root / "dist" / host / "speckit-pro"
+                argv = [sys.executable, str(plugin_root / "scripts/run-speckit-pro.py")]
+                for args, stdin in (([], json.dumps(request)), ([], "invalid json"),
+                                    (["--help"], ""), (["--version"], ""), (["--unknown"], "")):
+                    with self.subTest(host=host, args=args, stdin=stdin):
+                        actual = subprocess.run(argv + args, input=stdin, cwd=worktree, env=env,
+                                                text=True, capture_output=True, check=False)
+                        expected = subprocess.run(
+                            [sys.executable, "-m", "speckit_pro_runner", *args], input=stdin,
+                            cwd=worktree, env={**env, "PYTHONPATH": str(plugin_root)},
+                            text=True, capture_output=True, check=False,
+                        )
+                        self.assertEqual((actual.returncode, actual.stdout, actual.stderr),
+                                         (expected.returncode, expected.stdout, expected.stderr))
+                binding_run = subprocess.run(argv, input=json.dumps(request), cwd=worktree, env=env,
+                                             text=True, capture_output=True, check=False)
+                self.assertEqual(binding_run.returncode, 0, binding_run.stderr)
+                binding = json.loads(json.loads(binding_run.stdout)["data"]["stdout"]["text"])
+                self.assertEqual(binding["binding_status"], "resolved")
+                self.assertEqual(binding["workflow_root"], worktree.resolve().as_posix())
+
     def assert_diagnostic_shape(self, diagnostic: dict[str, object], code: str | None = None) -> None:
         for field in ("severity", "source", "code", "message", "remediation"):
             self.assertIn(field, diagnostic)

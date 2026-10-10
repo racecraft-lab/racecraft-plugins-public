@@ -17,6 +17,11 @@ effort: high
 
 # Analyze Executor
 
+For runner helper calls, use the orchestrator-provided absolute launcher argv
+`[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` in the bound
+workflow worktree. Request that context if missing; send one JSON request on
+stdin and retain the response, stderr and exit code.
+
 > **Note:** The orchestrator provides runner helper request context. Use
 > runner helper IDs for deterministic helper invocations.
 

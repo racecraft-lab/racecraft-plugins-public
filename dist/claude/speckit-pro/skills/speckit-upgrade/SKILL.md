@@ -9,6 +9,14 @@ license: MIT
 
 # SpecKit Upgrade
 
+## Installed Runtime Contract
+
+Before the first runner call, resolve `<plugin-root>` and keep the caller's
+working directory per [Installed runner transport](../speckit-autopilot/references/installed-runtime.md).
+
+Invoke `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]`
+for runner helper requests.
+
 Upgrade an existing SpecKit install in the current repository safely.
 Preserves `.specify/memory/constitution.md` and any other
 locally-modified files via backup-then-force-then-restore. Supports
@@ -147,7 +155,7 @@ Never report such an upgrade as complete. The new skills may call
 script options the old scripts reject. List every path the warnings
 name and treat them as the modified files in 5b: offer
 `force-and-restore`, `keep-mine`, or `manual-merge`. After this step,
-invoke `[resolved_python, "-m", "speckit_pro_runner"]` with this
+invoke `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` with this
 request on stdin:
 
 ```json

@@ -15,6 +15,11 @@ effort: high
 
 # Phase Executor
 
+For runner helper calls, use the orchestrator-provided absolute launcher argv
+`[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` in the bound
+workflow worktree. Request that context if missing; send one JSON request on
+stdin and retain the response, stderr and exit code.
+
 You receive a workflow
 <!-- host:claude: Claude runs a slash command in its own context and delegates with a subagent -->
 prompt and a `/speckit-*` command to run. Do the work in this
