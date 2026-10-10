@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import os
 import re
@@ -17,11 +18,12 @@ from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-for directory in (REPO_ROOT / "scripts", REPO_ROOT / "tests" / "speckit-pro" / "lib"):
+for directory in (REPO_ROOT / "scripts", REPO_ROOT / "speckit-pro", REPO_ROOT / "tests" / "speckit-pro" / "lib"):
     if str(directory) not in sys.path:
         sys.path.insert(0, str(directory))
 
 from script_loader import load_script  # noqa: E402
+from speckit_pro_runner.suite_checkout_lock import SuiteLock  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 TITLE = "chore(repo): plain entry points for the CI suite and title gate"
@@ -63,11 +65,14 @@ class PlainEntryPointCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.module = load_script(cls.module_name, REPO_ROOT / "scripts" / cls.script_name)
 
+    def suite_lock_patch(self):
+        return contextlib.nullcontext()
+
     def run_script(self, argv: list[str], code: int = 0, base: dict[str, str] | None = None):
         with mock.patch.dict(os.environ, BASE_ENV if base is None else base, clear=True):
             with mock.patch.object(
                 self.module.subprocess, "run", return_value=completed(code)
-            ) as run:
+            ) as run, self.suite_lock_patch():
                 status = self.module.main(argv)
         return status, run
 
@@ -98,6 +103,12 @@ class RunCiSuiteTests(PlainEntryPointCase):
     script_name = "run-ci-suite.py"
     module_name = "run_ci_suite_script"
     documented_check = "CI suite:"
+
+    def suite_lock_patch(self):
+        # The suite running this test already holds the lock on this checkout.
+        return mock.patch.object(
+            self.module, "hold_suite_lock", return_value=contextlib.nullcontext(SuiteLock())
+        )
 
     def test_sends_the_same_request_the_raw_command_reads(self) -> None:
         _, run = self.run_script([])

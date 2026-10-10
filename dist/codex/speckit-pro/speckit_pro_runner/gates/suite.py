@@ -16,6 +16,7 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from ..path_utils import find_repo_root, is_relative_to, resolves_to_current_python
+from ..suite_checkout_lock import UNLOCKED, SuiteLock, SuiteLockHeld, SuiteLockUnavailable, hold_suite_lock
 from .gate_response import gate_base_data
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
@@ -315,7 +316,11 @@ def run_command_set(entry: Any, request: Any, repo_root: Path, command_ids: list
             )
         commands.append(command_result)
 
-    results = [run_command(command, repo_root) for command in commands]
+    try:
+        with hold_suite_lock(repo_root) as suite_lock:
+            results = [run_command(command, repo_root, suite_lock) for command in commands]
+    except (SuiteLockHeld, SuiteLockUnavailable) as exc:
+        return suite_lock_refusal(entry, request, exc)
     status = aggregate_status(results)
     data = base_data(entry, request.operation, status)
     data["suite"] = {
@@ -327,6 +332,26 @@ def run_command_set(entry: Any, request: Any, repo_root: Path, command_ids: list
     if status == "ok":
         return response("ok", request_id=request.request_id, data=data)
     return response(status, request_id=request.request_id, data=data, diagnostics=[gate_diagnostic(status, results)])
+
+
+def suite_lock_refusal(entry: Any, request: Any, exc: SuiteLockHeld | SuiteLockUnavailable) -> dict[str, Any]:
+    held = isinstance(exc, SuiteLockHeld)
+    diag = diagnostic(
+        "suite_lock_held" if held else "suite_lock_unavailable",
+        str(exc),
+        remediation_summary=(
+            "Another suite runs in this checkout; wait for it or use another worktree."
+            if held
+            else "Make the checkout's git directory writable for the suite lock."
+        ),
+        remediation_actions=["Retry the suite-gate request once the checkout is free."],
+    )
+    return response(
+        "missing_prerequisite",
+        request_id=request.request_id,
+        data=base_data(entry, request.operation, "missing_prerequisite"),
+        diagnostics=[diag],
+    )
 
 
 def requested_suite(inputs: dict[str, Any]) -> tuple[str, ...] | dict[str, Any]:
@@ -438,7 +463,7 @@ def external_layer_script_spec(command_id: str) -> CommandSpec:
     )
 
 
-def run_command(command: CommandSpec, repo_root: Path) -> dict[str, Any]:
+def run_command(command: CommandSpec, repo_root: Path, suite_lock: SuiteLock = UNLOCKED) -> dict[str, Any]:
     if command.internal:
         return run_internal_command(command, repo_root)
     missing = missing_executable(command.argv[0], repo_root)
@@ -467,6 +492,8 @@ def run_command(command: CommandSpec, repo_root: Path) -> dict[str, Any]:
         completed = subprocess.run(
             [sys.executable, *command.argv[1:]],
             cwd=repo_root,
+            env=suite_lock.environment(os.environ),
+            pass_fds=suite_lock.pass_fds,
             text=True,
             capture_output=True,
             timeout=command.timeout_seconds,

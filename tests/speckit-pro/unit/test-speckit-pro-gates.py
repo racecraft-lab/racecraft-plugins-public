@@ -2293,7 +2293,7 @@ class GateFoundationTests(unittest.TestCase):
         ordinary = REPO_ROOT / "tests/speckit-pro/unit/test-check-toolchain.py"
         events = []
 
-        def run_script(path, root):
+        def run_script(path, root, _suite_lock):
             events.append(path.name)
             return (path.relative_to(root).as_posix(), True, "passed")
 
