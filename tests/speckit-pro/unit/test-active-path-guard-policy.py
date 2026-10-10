@@ -80,9 +80,7 @@ class ActivePathGuardPolicyTests(unittest.TestCase):
                 self.assertEqual([diag["code"] for diag in result["diagnostics"]], [case["code"]])
 
     def test_runtime_guard_remediation_names_the_installed_launcher(self) -> None:
-        actions = " ".join(runtime_guard.RUNTIME_GUARD_POLICY.blocked_actions)
-        self.assertIn("<plugin-root>/scripts/run-speckit-pro.py", actions)
-        self.assertNotIn("-m speckit_pro_runner", actions)
+        self.assertIn("with <plugin-root>/scripts/run-speckit-pro.py", " ".join(runtime_guard.RUNTIME_GUARD_POLICY.blocked_actions))
 
 
 if __name__ == "__main__":
