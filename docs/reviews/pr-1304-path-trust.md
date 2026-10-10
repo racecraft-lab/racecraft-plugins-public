@@ -7,7 +7,7 @@ before it could prove that the requested executable's ownership was checked.
 The fixture now installs only the requested CLI in its PATH directory. It models
 ownership by inode, independently of write access, so a runner-owned executable
 can have protected ancestors. Every assertion runs against the source, Claude
-payload and Codex payload, with regular, symlink, hardlink and renamed targets.
+payload and Codex payload, with regular, symlink and hardlink targets.
 
 ## Variant coverage
 
@@ -29,9 +29,11 @@ All tests below are in `tests/speckit-pro/unit/test-cli-probe-path-trust.py`.
 | Protected executable acceptance control | `test_root_owned_read_only_executable_is_accepted`, all five CLIs |
 | External non-host writable-directory policy | `test_other_cli_path_directory_stays_outside_the_directory_rule`, git, gh and docker |
 
-Each row includes source and both payload copies and all four target layouts.
-The rename layout stages the executable outside PATH before installing it under
-its requested name; there is no second entry to mask a target-specific bypass.
+Each row includes source and both payload copies and all three target layouts.
+Each PATH directory holds only the requested name, so there is no second entry
+to mask a target-specific bypass. A rename layout was dropped: renaming the
+executable away and back keeps the same inode and name, so it repeated the
+regular-file layout.
 
 ## Known limits
 
