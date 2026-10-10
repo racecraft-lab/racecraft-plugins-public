@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.42.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.1...speckit-pro-v2.42.2) (2026-10-10)
+
+
+### Bug Fixes
+
+* **speckit-pro:** refuse credentials in readiness URL userinfo ([#1303](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1303)) ([d5a526c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d5a526ca3062d25d5123a2d125b53b04308c027f)), closes [#1298](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1298)
+* **speckit-pro:** use pinned archives in curated recommendations ([#1296](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1296)) ([d351e79](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d351e79efdeb6b3d6f5b93d49baa86c880a3ab6f)), closes [#1275](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1275)
+
 ## [2.42.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.0...speckit-pro-v2.42.1) (2026-10-09)
 
 
