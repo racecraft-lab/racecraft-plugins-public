@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 import sys
 from contextlib import contextmanager
+from functools import partial
 import tempfile
 import unittest
 from pathlib import Path
@@ -62,13 +63,11 @@ def probe_identity(directory, target, owned, writable):
     writable_info = selected[writable].stat() if writable else None
     real_stat, real_lstat = os.stat, os.lstat
 
-    def modeled(read):
-        def owned_as_runner(path, *args, **options):
-            info = read(path, *args, **options)
-            if not (owned_info and (info.st_dev, info.st_ino) == (owned_info.st_dev, owned_info.st_ino)):
-                return info
-            return os.stat_result([*info[:4], OTHER_IDENTITY, *info[5:]])
-        return owned_as_runner
+    def owned_as_runner(read, path, *args, **options):
+        info = read(path, *args, **options)
+        if not (owned_info and (info.st_dev, info.st_ino) == (owned_info.st_dev, owned_info.st_ino)):
+            return info
+        return os.stat_result([*info[:4], OTHER_IDENTITY, *info[5:]])
 
     def can_write(path, mode, **options):
         info = real_stat(path)
@@ -76,7 +75,8 @@ def probe_identity(directory, target, owned, writable):
             info.st_dev, info.st_ino) == (writable_info.st_dev, writable_info.st_ino)
 
     with patch("os.geteuid", return_value=OTHER_IDENTITY), patch("os.access", side_effect=can_write), \
-            patch("os.stat", modeled(real_stat)), patch("os.lstat", modeled(real_lstat)):
+            patch("os.stat", partial(owned_as_runner, real_stat)), \
+            patch("os.lstat", partial(owned_as_runner, real_lstat)):
         yield
 
 
