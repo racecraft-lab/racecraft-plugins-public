@@ -144,6 +144,7 @@ class CuratedRecommendationContracts(unittest.TestCase):
             with self.subTest(path=path), self.assertRaises(SelectionError):
                 clean_text(f'{url} {path}', 'action')
 
+    def test_readiness_https_urls_refuse_userinfo(self) -> None:
         at = '@'
         for value in (f'https://user:hunter2{at}example.com/x.zip',
                       f'https://user:letters{at}example.com/x.zip',
