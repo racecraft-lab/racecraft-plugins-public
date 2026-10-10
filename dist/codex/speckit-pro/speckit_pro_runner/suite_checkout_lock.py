@@ -6,13 +6,19 @@ state under one checkout, so a second run there corrupts the first. Each entry
 point and the runner's suite gate hold this lock for their whole run. The lock
 is an ``flock`` on a file in the checkout's own git directory, so it does not
 depend on ``TMPDIR`` and is private to the checkout. The kernel drops it when
-the holding process exits or is killed, so a failed or interrupted suite never
-leaves the checkout locked.
+the last process holding it exits or is killed, so a failed or interrupted
+suite never leaves the checkout locked.
 
 A holder names its lock file in ``SPECKIT_SUITE_LOCK`` for its children
 (``SuiteLock.environment``). A process that finds its own checkout's lock file
 named there runs inside the holding suite and proceeds without locking again,
 so a suite's own runner requests and nested test runners are not refused.
+
+Children also inherit the locked descriptor (``SuiteLock.pass_fds``, numbered in
+``SPECKIT_SUITE_LOCK_FD``) and pass it on, so the lock lives as long as any
+process of the suite: killing the process that took it leaves the checkout
+locked while a suite child still runs. A child that was started without the
+descriptor still runs inside the suite but does not extend the lock.
 
 The guard stands down outside supported checkouts: no ``fcntl`` (Windows) or
 no git directory. It never prints, because the runner's stderr is a JSON
@@ -36,6 +42,7 @@ except ImportError:  # no flock on this platform: suites run unguarded
 
 LOCK_NAME = "speckit-suite.lock"
 HOLDER_VARIABLE = "SPECKIT_SUITE_LOCK"
+DESCRIPTOR_VARIABLE = "SPECKIT_SUITE_LOCK_FD"
 # EX_TEMPFAIL: distinct from 1 so callers do not read a refusal as a red test.
 REFUSED_STATUS = 75
 
@@ -53,14 +60,23 @@ class SuiteLock:
     """The lock a running suite holds, as its child processes must see it."""
 
     lock_path: Path | None = None
+    descriptor: int | None = None
     unguarded_warning: str | None = None
 
     def environment(self, base: Mapping[str, str]) -> dict[str, str]:
-        """Return ``base`` plus the marker that admits this suite's children."""
+        """Return ``base`` plus the markers that admit this suite's children."""
         environment = dict(base)
+        environment.pop(DESCRIPTOR_VARIABLE, None)
         if self.lock_path is not None:
             environment[HOLDER_VARIABLE] = str(self.lock_path)
+        if self.descriptor is not None:
+            environment[DESCRIPTOR_VARIABLE] = str(self.descriptor)
         return environment
+
+    @property
+    def pass_fds(self) -> tuple[int, ...]:
+        """The descriptor a child must inherit to keep the lock alive."""
+        return () if self.descriptor is None else (self.descriptor,)
 
 
 def _git_dir(checkout: Path) -> Path | None:
@@ -78,6 +94,21 @@ def _git_dir(checkout: Path) -> Path | None:
     return (checkout / first_line[len(prefix):].strip()).resolve()
 
 
+def _inherited_descriptor(lock_path: Path) -> int | None:
+    """Return the locked descriptor a parent suite passed down, if it is still this lock file."""
+    raw = os.environ.get(DESCRIPTOR_VARIABLE, "")
+    if not raw.isdigit():
+        return None
+    descriptor = int(raw)
+    try:
+        held, expected = os.fstat(descriptor), os.stat(lock_path)
+    except OSError:
+        return None
+    if (held.st_dev, held.st_ino) != (expected.st_dev, expected.st_ino):
+        return None
+    return descriptor
+
+
 @contextlib.contextmanager
 def hold_suite_lock(checkout: Path) -> Iterator[SuiteLock]:
     """Hold the suite lock, or refuse a held or unavailable checkout lock."""
@@ -90,7 +121,7 @@ def hold_suite_lock(checkout: Path) -> Iterator[SuiteLock]:
     lock_path = git_dir / LOCK_NAME
     if os.environ.get(HOLDER_VARIABLE) == str(lock_path):
         # A parent suite holds this checkout's lock and started this process.
-        yield SuiteLock(lock_path)
+        yield SuiteLock(lock_path, _inherited_descriptor(lock_path))
         return
     try:
         stream = open(lock_path, "a+", encoding="utf-8")
@@ -113,7 +144,7 @@ def hold_suite_lock(checkout: Path) -> Iterator[SuiteLock]:
         stream.write(str(os.getpid()))
         stream.flush()
         try:
-            yield SuiteLock(lock_path)
+            yield SuiteLock(lock_path, stream.fileno())
         finally:
             stream.seek(0)
             stream.truncate()

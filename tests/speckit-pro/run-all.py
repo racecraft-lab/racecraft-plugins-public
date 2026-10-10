@@ -172,6 +172,7 @@ def dispatch_script(
         text=True,
         capture_output=True,
         env=suite_lock.environment(child_environment(root, verbose=config.verbose)),
+        pass_fds=suite_lock.pass_fds,
         shell=False,
         check=False,
     )

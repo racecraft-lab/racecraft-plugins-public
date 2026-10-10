@@ -493,6 +493,7 @@ def run_command(command: CommandSpec, repo_root: Path, suite_lock: SuiteLock = S
             [sys.executable, *command.argv[1:]],
             cwd=repo_root,
             env=suite_lock.environment(os.environ),
+            pass_fds=suite_lock.pass_fds,
             text=True,
             capture_output=True,
             timeout=command.timeout_seconds,

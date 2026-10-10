@@ -9,6 +9,11 @@ argv command (``python tests/speckit-pro/run-layer-scripts.py --layer <id|key>``
 maps the process exit code to a runner status: 0 -> ok, 1 -> expected_failure,
 2 -> input_error, 3 -> missing_prerequisite, 4 -> subprocess_failure.
 
+The dispatcher holds the checkout's suite lock (``speckit_pro_runner/
+suite_checkout_lock.py``) and passes it to every child. Under the suite gate it
+runs inside the gate's lock; run on its own while another suite holds the
+checkout, it exits 75.
+
 A layer's scripts run as separate child processes, several at a time. The default
 is 4 or the CPU count, whichever is lower; ``SPECKIT_LAYER_WORKERS`` overrides it
 exactly (``1`` runs them one by one). Results are reported in manifest order
@@ -28,7 +33,17 @@ from pathlib import Path
 TEST_LIB = Path(__file__).resolve().parent / "lib"
 if str(TEST_LIB) not in sys.path:
     sys.path.insert(0, str(TEST_LIB))
+PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "speckit-pro"
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
 
+from speckit_pro_runner.suite_checkout_lock import (  # noqa: E402
+    REFUSED_STATUS,
+    SuiteLock,
+    SuiteLockHeld,
+    SuiteLockUnavailable,
+    hold_suite_lock,
+)
 from suite_child_env import child_environment  # noqa: E402
 from test_result import child_check_status, failure_report  # noqa: E402
 
@@ -101,12 +116,12 @@ def layer_workers() -> int:
     return min(DEFAULT_LAYER_WORKERS, os.cpu_count() or 1)
 
 
-def run_script(test_path: Path, repo_root: Path) -> tuple[str, bool, str]:
+def run_script(test_path: Path, repo_root: Path, suite_lock: SuiteLock = SuiteLock()) -> tuple[str, bool, str]:
     if not test_path.is_file():
         return (rel(test_path, repo_root), False, "test file missing")
     if test_path.suffix != ".py":
         return (rel(test_path, repo_root), False, "non-Python manifest entry")
-    env = child_environment(repo_root)
+    env = suite_lock.environment(child_environment(repo_root))
     argv = [sys.executable, rel(test_path, repo_root)]
     completed = subprocess.run(
         argv,
@@ -114,6 +129,7 @@ def run_script(test_path: Path, repo_root: Path) -> tuple[str, bool, str]:
         text=True,
         capture_output=True,
         env=env,
+        pass_fds=suite_lock.pass_fds,
         shell=False,
         check=False,
     )
@@ -126,10 +142,10 @@ def run_script(test_path: Path, repo_root: Path) -> tuple[str, bool, str]:
     return (rel(test_path, repo_root), ok, detail)
 
 
-def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
+def run_script_suite(label: str, tests: list[Path], repo_root: Path, suite_lock: SuiteLock = SuiteLock()) -> int:
     workers = min(layer_workers(), len(tests))
     if workers <= 1:
-        checks = [run_script(test_path, repo_root) for test_path in tests]
+        checks = [run_script(test_path, repo_root, suite_lock) for test_path in tests]
     else:
         # Each script is its own child process, and children stay in this
         # dispatcher's process group, as in the serial loop. Executor.map yields
@@ -137,10 +153,11 @@ def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
         # manifest order.
         pooled = [test_path for test_path in tests if rel(test_path, repo_root) not in SERIAL_SCRIPTS]
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            results = dict(zip(pooled, pool.map(run_script, pooled, [repo_root] * len(pooled)), strict=True))
+            mapped = pool.map(run_script, pooled, [repo_root] * len(pooled), [suite_lock] * len(pooled))
+            results = dict(zip(pooled, mapped, strict=True))
         for test_path in tests:
             if test_path not in results:
-                results[test_path] = run_script(test_path, repo_root)
+                results[test_path] = run_script(test_path, repo_root, suite_lock)
         checks = [results[test_path] for test_path in tests]
     return emit_checks(label, checks)
 
@@ -171,7 +188,12 @@ def main(argv: list[str]) -> int:
         print(f"missing prerequisite: no layer {layer['id']} test entries in {SUITE_MANIFEST}", file=sys.stderr)
         return 3
 
-    return run_script_suite(f"layer-{layer['id']} {layer['label'].lower()}", tests, repo_root)
+    try:
+        with hold_suite_lock(repo_root) as suite_lock:
+            return run_script_suite(f"layer-{layer['id']} {layer['label'].lower()}", tests, repo_root, suite_lock)
+    except (SuiteLockHeld, SuiteLockUnavailable) as exc:
+        print(f"run-layer-scripts: {exc}", file=sys.stderr)
+        return REFUSED_STATUS
 
 
 if __name__ == "__main__":

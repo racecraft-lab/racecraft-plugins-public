@@ -8,9 +8,11 @@ import io
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -73,6 +75,46 @@ def ci_request_with_sentinels(sentinel: Path) -> dict:
         command_id: {"argv": [sys.executable, "-c", record], "timeout_seconds": 30} for command_id in command_ids
     }
     return request
+
+
+# Writes its pid where the test can find it, then outlives the parent that started it.
+SLEEPER = (
+    "import os, sys, time; from pathlib import Path; pid = Path(sys.argv[1]);"
+    "pid.with_suffix('.tmp').write_text(str(os.getpid())); pid.with_suffix('.tmp').replace(pid);"
+    "time.sleep(120)"
+)
+TESTS_LIB = REPO_ROOT / "tests" / "speckit-pro" / "lib"
+CI_WRAPPER_DRIVER = """
+import sys
+from pathlib import Path
+sys.path[:0] = [sys.argv[1], sys.argv[2]]
+from script_loader import load_script
+wrapper = load_script("run_ci_suite_driven", Path(sys.argv[1]) / "run-ci-suite.py")
+wrapper.REPO_ROOT = Path(sys.argv[3])
+wrapper.REQUEST_FILE = Path(sys.argv[4])
+raise SystemExit(wrapper.main([]))
+"""
+QUICK_SUITE_DRIVER = """
+import json, sys
+from pathlib import Path
+from unittest import mock
+sys.path.insert(0, sys.argv[1])
+from script_loader import load_script
+run_all = load_script("run_all_driven", Path(sys.argv[2]))
+root, manifest = Path(sys.argv[3]), json.loads(sys.argv[4])
+with mock.patch.object(run_all, "repo_root", return_value=root), mock.patch.object(run_all, "load_manifest", return_value=manifest):
+    raise SystemExit(run_all.main(["--layer", "4"]))
+"""
+LAYER_DISPATCHER_DRIVER = """
+import sys
+from pathlib import Path
+from unittest import mock
+sys.path.insert(0, sys.argv[1])
+from script_loader import load_script
+dispatcher = load_script("run_layer_scripts_driven", Path(sys.argv[2]))
+with mock.patch.object(dispatcher, "resolve_repo_root", return_value=Path(sys.argv[3])):
+    raise SystemExit(dispatcher.main(["--layer", "4"]))
+"""
 
 
 needs_flock = unittest.skipIf(lock.fcntl is None, "flock is unavailable on this platform")
@@ -274,9 +316,142 @@ class RawRunnerRequestTests(unittest.TestCase):
         self.assertEqual(self.sentinel.read_text(encoding="utf-8").count("started"), 6)
 
 
+@needs_flock
+class KilledParentTests(unittest.TestCase):
+    """Killing the process that took the lock leaves it held while a suite child still runs."""
+
+    def setUp(self) -> None:
+        self.root = runner_checkout(self)
+        self.pid_file = self.root / "child.pid"
+        self.environment = dict(os.environ, SPECKIT_SKIP_TOOLCHAIN_CHECK="1", PYTHONDONTWRITEBYTECODE="1")
+        sleeper = self.root / "sleeper.py"
+        sleeper.write_text(f"import sys; sys.argv[1:] = [{str(self.pid_file)!r}]\n{SLEEPER}\n", encoding="utf-8")
+        self.layer = {
+            "id": "4",
+            "key": "unit",
+            "label": "Script unit tests",
+            "default": True,
+            "live_only": False,
+            "integration": False,
+            "dispatch": "python-module",
+            "execution": "execute",
+            "scripts": [{"path": "sleeper.py"}],
+        }
+
+    def sleeper_request(self) -> dict:
+        command = {"argv": [sys.executable, "-c", SLEEPER, str(self.pid_file)], "timeout_seconds": 120}
+        return {
+            "schema_version": "1.0",
+            "request_id": "killed-parent",
+            "helper_id": "suite-gate",
+            "operation": "run-layer",
+            "mode": "read_only",
+            "inputs": {"repo_root": ".", "layer": "4", "test_commands": {"layer-4": command}},
+        }
+
+    def start(self, argv: list[str], *, stdin: bytes | None = None) -> subprocess.Popen:
+        # A new session puts the parent and every child it starts in one group the cleanup can kill.
+        parent = subprocess.Popen(
+            argv,
+            cwd=self.root,
+            env=self.environment,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        self.addCleanup(self.kill_group, parent.pid)
+        parent.stdin.write(stdin or b"")
+        parent.stdin.close()
+        return parent
+
+    def kill_group(self, group: int) -> None:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(group, signal.SIGKILL)
+
+    def wait_for_child(self, parent: subprocess.Popen) -> int:
+        deadline = time.monotonic() + 60
+        while not self.pid_file.exists():
+            if parent.poll() is not None or time.monotonic() > deadline:
+                self.fail(f"the suite child never started (parent exit {parent.returncode})")
+            time.sleep(0.05)
+        return int(self.pid_file.read_text(encoding="utf-8"))
+
+    def assert_lock_outlives_killed_parent(self, parent: subprocess.Popen) -> None:
+        child = self.wait_for_child(parent)
+        parent.kill()
+        parent.wait()
+        os.kill(child, 0)  # the suite child is still running
+        with self.assertRaises(lock.SuiteLockHeld, msg="a second suite started beside a running suite child"):
+            with lock.hold_suite_lock(self.root):
+                pass
+        self.kill_group(parent.pid)
+        deadline = time.monotonic() + 30
+        while True:
+            try:
+                with lock.hold_suite_lock(self.root):
+                    return
+            except lock.SuiteLockHeld:
+                if time.monotonic() > deadline:
+                    raise
+                time.sleep(0.05)
+
+    def test_killing_the_ci_wrapper_keeps_the_lock_while_its_runner_child_runs(self) -> None:
+        request = self.root / "request.json"
+        request.write_text(json.dumps(self.sleeper_request()), encoding="utf-8")
+        parent = self.start(
+            [sys.executable, "-c", CI_WRAPPER_DRIVER, str(REPO_ROOT / "scripts"), str(TESTS_LIB), str(self.root), str(request)]
+        )
+        self.assert_lock_outlives_killed_parent(parent)
+
+    def test_killing_the_runner_keeps_the_lock_while_its_suite_command_runs(self) -> None:
+        environment = dict(self.environment, PYTHONPATH=str(REPO_ROOT / "speckit-pro"))
+        self.environment = environment
+        parent = self.start(
+            [sys.executable, "-m", "speckit_pro_runner"], stdin=json.dumps(self.sleeper_request()).encode()
+        )
+        self.assert_lock_outlives_killed_parent(parent)
+
+    def test_killing_the_quick_suite_keeps_the_lock_while_its_test_child_runs(self) -> None:
+        manifest = {"layers": [self.layer]}
+        parent = self.start(
+            [
+                sys.executable,
+                "-c",
+                QUICK_SUITE_DRIVER,
+                str(TESTS_LIB),
+                str(REPO_ROOT / "tests" / "speckit-pro" / "run-all.py"),
+                str(self.root),
+                json.dumps(manifest),
+            ]
+        )
+        self.assert_lock_outlives_killed_parent(parent)
+
+    def test_killing_the_layer_dispatcher_keeps_the_lock_while_its_test_child_runs(self) -> None:
+        manifest = self.root / "tests" / "speckit-pro" / "suite-manifest.json"
+        manifest.write_text(json.dumps({"layers": [self.layer]}), encoding="utf-8")
+        parent = self.start(
+            [
+                sys.executable,
+                "-c",
+                LAYER_DISPATCHER_DRIVER,
+                str(TESTS_LIB),
+                str(REPO_ROOT / "tests" / "speckit-pro" / "run-layer-scripts.py"),
+                str(self.root),
+            ]
+        )
+        self.assert_lock_outlives_killed_parent(parent)
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(
         unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (SuiteCheckoutLockTests, UnguardedCheckoutTests, EntryPointTests, RawRunnerRequestTests)
+        for case in (
+            SuiteCheckoutLockTests,
+            UnguardedCheckoutTests,
+            EntryPointTests,
+            RawRunnerRequestTests,
+            KilledParentTests,
+        )
     )
     raise SystemExit(run_counted(suite, label="test-suite-checkout-lock"))

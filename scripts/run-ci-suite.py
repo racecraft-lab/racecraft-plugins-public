@@ -63,6 +63,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 input=request,
                 cwd=str(REPO_ROOT),
                 env=suite_lock.environment(build_environment(os.environ)),
+                pass_fds=suite_lock.pass_fds,
                 check=False,
                 shell=False,
             )
