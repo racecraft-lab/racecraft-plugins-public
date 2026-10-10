@@ -295,6 +295,8 @@ def _required_workflow_step(text: str, job: str, name: str) -> str:
     allowed_job = {'name', 'runs-on', 'timeout-minutes', 'if', 'permissions', 'steps'}
     if job == 'test':
         allowed_job |= {'needs', 'strategy'}
+        if _scalar_values(job_block, 'needs', 4) != ['[detect]']:
+            return ''
     if set(job_keys) != allowed_job or len(job_keys) != len(allowed_job):
         return ''
     conditions = {
@@ -390,6 +392,16 @@ class ValidateExecutableWorkflowContracts(WorkflowMutationCase):
                     self.assert_sentinel_rejects(source, replacement)
 
 class ValidateInheritedWorkflowContracts(WorkflowMutationCase):
+    def test_suite_dependency_changes_are_rejected(self) -> None:
+        header = _job_block(
+            validate_pr_checks_sentinel_WORKFLOW_FILE.read_text(encoding='utf-8'),
+            'test').split('    steps:', 1)[0]
+        for needs in ('[go]', '[detect, go]'):
+            with self.subTest(needs=needs):
+                self.assert_sentinel_rejects('workflow',
+                    '        run: python3 scripts/run-ci-suite.py',
+                    ((header, header.replace('needs: [detect]', 'needs: ' + needs)),))
+
     def test_inherited_execution_controls_are_rejected(self) -> None:
         cases = (
             ('workflow', validate_pr_checks_sentinel_WORKFLOW_FILE, 'test',
