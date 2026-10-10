@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import os
 import shutil
 import sys
@@ -16,6 +15,7 @@ TEST_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TEST_DIR.parents[2]
 sys.path.insert(0, str(TEST_DIR.parent / "lib"))
 
+from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 COPIES = {
@@ -28,10 +28,7 @@ NO_SEARCH_DIRECTORY = "no external absolute CLI search directory"
 
 
 def load(name: str):
-    spec = importlib.util.spec_from_file_location(f"cli_probe_{name}", COPIES[name])
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script(f"cli_probe_{name}", COPIES[name])
 
 
 class CliProbePathTrustTest(unittest.TestCase):
