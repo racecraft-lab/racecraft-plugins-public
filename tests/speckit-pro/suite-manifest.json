@@ -27,6 +27,7 @@
         { "path": "tests/speckit-pro/layer1-structural/validate-agent-contracts.py", "label": "validate-agent-contracts" },
         { "path": "tests/speckit-pro/layer1-structural/validate-ci-release-contracts.py", "label": "validate-ci-release-contracts" },
         { "path": "tests/speckit-pro/layer1-structural/validate-curated-set.py", "label": "validate-curated-set" },
+        { "path": "tests/speckit-pro/layer1-structural/validate-doc-test-layer-paths.py", "label": "validate-doc-test-layer-paths" },
         { "path": "tests/speckit-pro/layer1-structural/validate-hook-contracts.py", "label": "validate-hook-contracts" },
         { "path": "tests/speckit-pro/layer1-structural/validate-instruction-files.py", "label": "validate-instruction-files" },
         { "path": "tests/speckit-pro/layer1-structural/validate-moc-lint.py", "label": "validate-moc-lint" },
