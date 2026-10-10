@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -37,16 +38,21 @@ class CliProbePathTrustTest(unittest.TestCase):
     """Each test runs once per copy. The runner identity is modeled at the two inputs the rule reads."""
 
     def setUp(self) -> None:
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        base = Path(tmp.name).resolve()
-        self.root = base / "worktree"
-        self.root.mkdir()
-        self.bin = base / "bin"
-        self.bin.mkdir()
-        self.tool = self.bin / "codex"
-        self.tool.write_text("#!/bin/sh\n", encoding="utf-8")
-        self.tool.chmod(0o555)
+        self.root = self.scratch_dir("worktree")
+        self.bin = self.scratch_dir("bin")
+        self.tool = self.install(self.bin, "codex")
+
+    def scratch_dir(self, name: str) -> Path:
+        directory = Path(tempfile.mkdtemp(prefix=f"cli-probe-{name}-")).resolve()
+        self.addCleanup(shutil.rmtree, directory, True)
+        return directory
+
+    @staticmethod
+    def install(directory: Path, name: str) -> Path:
+        tool = directory / name
+        tool.write_text("#!/bin/sh\n", encoding="utf-8")
+        tool.chmod(0o555)
+        return tool
 
     def identity(self, *, euid: int, writable: set[Path]):
         """Pretend the runner is `euid` and can write exactly the paths in `writable`."""
@@ -101,9 +107,7 @@ class CliProbePathTrustTest(unittest.TestCase):
     def test_other_cli_path_directory_stays_outside_the_directory_rule(self) -> None:
         # Pins the documented split: only host lookups require a protected directory.
         owner, access = self.identity(euid=OTHER_IDENTITY, writable={self.bin})
-        git = self.bin / "git"
-        git.write_text("#!/bin/sh\n", encoding="utf-8")
-        git.chmod(0o555)
+        self.install(self.bin, "git")
         with owner, access:
             for module in self.each_copy():
                 self.assertEqual(str(self.bin), self.search(module, "git"))
