@@ -189,8 +189,12 @@ class RunnerFoundationTests(unittest.TestCase):
                             cwd=worktree, env={**env, "PYTHONPATH": str(plugin_root)},
                             text=True, capture_output=True, check=False,
                         )
-                        self.assertEqual((actual.returncode, actual.stdout, actual.stderr),
-                                         (expected.returncode, expected.stdout, expected.stderr))
+                        # duration_ms is wall-clock time, so two runs may differ by a millisecond.
+                        untimed = re.compile(r'"duration_ms":\d+')
+                        self.assertEqual(
+                            (actual.returncode, untimed.sub("", actual.stdout), actual.stderr),
+                            (expected.returncode, untimed.sub("", expected.stdout), expected.stderr),
+                        )
                 binding_run = subprocess.run(argv, input=json.dumps(request), cwd=worktree, env=env,
                                              text=True, capture_output=True, check=False)
                 self.assertEqual(binding_run.returncode, 0, binding_run.stderr)
