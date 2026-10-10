@@ -25,6 +25,7 @@ CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
 CODEX_TRUST_ITEMS = ("codex_approval_posture", "codex_hook_trust", "codex_local_access")
 CODEX_ONLY_ITEMS = ("codex_agents", "extension_versions", *CODEX_TRUST_ITEMS)
 HOST_ITEMS = (*CLAUDE_ONLY_ITEMS, "hooks", *CODEX_ONLY_ITEMS)
+CURATED_SET = Path(__file__).resolve().parents[2] / "scripts" / "curated-set.json"
 DETAIL_KEYS = {"permission_probe": "probes", "plugin_scope": "scope", "mcp_authentication": "servers",
                "hooks": "hooks", "codex_agents": "agents", "extension_versions": "extensions",
                "codex_approval_posture": "posture", "codex_hook_trust": "hooks", "codex_local_access": "access"}
@@ -363,13 +364,19 @@ def observe_extension_versions(raw: dict[str, Any], observed_at: str, source: st
                         for name, installed, expected in entries)
     prints = {"value:extensions": digest(summary)}
     source = describe(source, summary, "extension_versions.evidence_source")
-    steps = [f"Run `specify extension add {name}`" if installed is None else f"Run `specify extension update {name}`"
+    archives = {entry["id"]: entry["archive_url"]
+                for entry in json.loads(CURATED_SET.read_text(encoding="utf-8"))["entries"]
+                if entry["kind"] == "extension"}
+    steps = [f"Run `specify extension add {name} --from {archives.get(name, '<archive_url>')}`"
+             if installed is None else f"Run `specify extension update {name}`"
              for name, installed, expected in entries if installed is None or (expected and installed != expected)]
     if steps:
-        action = "; ".join(steps) + ", then rerun scaffold."
+        action = "Operator: vet the archive and accept Spec Kit's trust prompt. " + "; ".join(steps) + ", then rerun scaffold."
         if len(action) > MAX_TEXT:  # many drifted extensions: one fixed line instead of a refused record
-            action = ("Run `specify extension list`, then `specify extension update` for each drifted extension "
-                      "and `specify extension add <id>` for each missing one, then rerun scaffold.")
+            action = ("Operator: run `specify extension update` for each drifted extension. For each missing one, "
+                      "vet its archive and run `specify extension add <id> --from <archive_url>` using its entry in "
+                      "scripts/curated-set.json (choose a vetted archive for unlisted IDs); accept the trust prompt, "
+                      "then rerun scaffold.")
         return make_item("unavailable", source, observed_at, prints, clean_text(action, "extension_versions.action"))
     if any(expected is None for _, _, expected in entries):
         return make_item("unknown", source, observed_at, prints, "Name the expected version of each extension "
