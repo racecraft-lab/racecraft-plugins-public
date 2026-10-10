@@ -74,11 +74,13 @@ class CliProbePathTrustTest(unittest.TestCase):
                 self.assertEqual(str(self.bin), self.search(module))
 
     def test_runner_owned_executable_is_rejected(self) -> None:
-        owner, access = self.identity(euid=self.tool.stat().st_uid, writable=set())
+        # A non-host CLI skips the directory rule, so the runner-owned directory cannot cause the rejection.
+        tool = self.install(self.bin, "git")
+        owner, access = self.identity(euid=tool.stat().st_uid, writable=set())
         with owner, access:
             for module in self.each_copy():
                 with self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
-                    self.search(module)
+                    self.search(module, "git")
 
     def test_runner_writable_executable_is_rejected(self) -> None:
         owner, access = self.identity(euid=OTHER_IDENTITY, writable={self.tool})
