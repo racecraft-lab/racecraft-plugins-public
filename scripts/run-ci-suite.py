@@ -55,12 +55,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"run-ci-suite: unable to read {REQUEST_FILE.name}: {exc}", file=sys.stderr)
         return 1
     try:
-        with hold_suite_lock(REPO_ROOT):
+        with hold_suite_lock(REPO_ROOT) as suite_lock:
+            if suite_lock.unguarded_warning:
+                print(suite_lock.unguarded_warning, file=sys.stderr)
             completed = subprocess.run(
                 [sys.executable, "-m", "speckit_pro_runner"],
                 input=request,
                 cwd=str(REPO_ROOT),
-                env=build_environment(os.environ),
+                env=suite_lock.environment(build_environment(os.environ)),
                 check=False,
                 shell=False,
             )

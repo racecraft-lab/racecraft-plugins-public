@@ -18,11 +18,12 @@ from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-for directory in (REPO_ROOT / "scripts", REPO_ROOT / "tests" / "speckit-pro" / "lib"):
+for directory in (REPO_ROOT / "scripts", REPO_ROOT / "speckit-pro", REPO_ROOT / "tests" / "speckit-pro" / "lib"):
     if str(directory) not in sys.path:
         sys.path.insert(0, str(directory))
 
 from script_loader import load_script  # noqa: E402
+from speckit_pro_runner.suite_checkout_lock import SuiteLock  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 TITLE = "chore(repo): plain entry points for the CI suite and title gate"
@@ -106,7 +107,7 @@ class RunCiSuiteTests(PlainEntryPointCase):
     def suite_lock_patch(self):
         # The suite running this test already holds the lock on this checkout.
         return mock.patch.object(
-            self.module, "hold_suite_lock", return_value=contextlib.nullcontext()
+            self.module, "hold_suite_lock", return_value=contextlib.nullcontext(SuiteLock())
         )
 
     def test_sends_the_same_request_the_raw_command_reads(self) -> None:

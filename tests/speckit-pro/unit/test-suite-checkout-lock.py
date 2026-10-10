@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import os
 import shutil
 import subprocess
@@ -19,6 +20,7 @@ for directory in (REPO_ROOT / "scripts", REPO_ROOT / "speckit-pro", REPO_ROOT / 
     if str(directory) not in sys.path:
         sys.path.insert(0, str(directory))
 
+from runner_invocation import run_runner  # noqa: E402
 from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -49,6 +51,28 @@ def fresh_checkout(case: unittest.TestCase, *, git_dir: bool = True) -> Path:
     if git_dir:
         (root / ".git").mkdir()
     return root
+
+
+CI_REQUEST = REPO_ROOT / "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-ci-suite.json"
+
+
+def runner_checkout(case: unittest.TestCase) -> Path:
+    """A checkout the runner accepts as a repository root, with its own git directory."""
+    root = fresh_checkout(case)
+    (root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+    (root / "tests" / "speckit-pro").mkdir(parents=True)
+    return root
+
+
+def ci_request_with_sentinels(sentinel: Path) -> dict:
+    """The CI suite request, each command replaced by one that records it started."""
+    request = json.loads(CI_REQUEST.read_text(encoding="utf-8"))
+    record = f"open({str(sentinel)!r}, 'a').write('started\\n')"
+    command_ids = ["toolchain", "layer-1", "layer-4", "layer-5", "layer-6", "layer-7"]
+    request["inputs"]["test_commands"] = {
+        command_id: {"argv": [sys.executable, "-c", record], "timeout_seconds": 30} for command_id in command_ids
+    }
+    return request
 
 
 needs_flock = unittest.skipIf(lock.fcntl is None, "flock is unavailable on this platform")
@@ -130,9 +154,12 @@ class UnguardedCheckoutTests(unittest.TestCase):
         root = fresh_checkout(self, git_dir=False)
         err = io.StringIO()
         with contextlib.redirect_stderr(err):
-            with lock.hold_suite_lock(root), lock.hold_suite_lock(root):
+            with lock.hold_suite_lock(root) as first, lock.hold_suite_lock(root):
                 pass
-        self.assertIn("running without the one-suite guard", err.getvalue())
+        # The runner's stderr is a JSON channel: the module never prints, callers do.
+        self.assertEqual(err.getvalue(), "")
+        self.assertIn("running without the one-suite guard", first.unguarded_warning)
+        self.assertEqual(first.environment({}), {})
 
     def test_unwritable_lock_file_refuses_execution(self) -> None:
         root = fresh_checkout(self)
@@ -217,9 +244,39 @@ class EntryPointTests(unittest.TestCase):
             pass
 
 
+@needs_flock
+class RawRunnerRequestTests(unittest.TestCase):
+    """The runner's suite gate takes the lock, so the raw CI command cannot bypass it."""
+
+    def setUp(self) -> None:
+        self.root = runner_checkout(self)
+        self.sentinel = self.root / "started.txt"
+        self.request = ci_request_with_sentinels(self.sentinel)
+
+    def test_raw_ci_request_is_refused_while_another_suite_holds_the_checkout(self) -> None:
+        with lock.hold_suite_lock(self.root):
+            completed, response, stderr_records = run_runner(self.request, cwd=self.root)
+        self.assertFalse(self.sentinel.exists(), "a CI command started despite the held lock")
+        self.assertEqual(response["status"], "missing_prerequisite")
+        self.assertEqual(completed.returncode, 3)
+        self.assertEqual([record["code"] for record in stderr_records], ["suite_lock_held"])
+        self.assertIn("another suite is already running", response["diagnostics"][0]["message"])
+
+    def test_raw_ci_request_runs_once_the_checkout_is_free(self) -> None:
+        completed, response, _ = run_runner(self.request, cwd=self.root)
+        self.assertEqual(response["status"], "ok", completed.stderr)
+        self.assertEqual(self.sentinel.read_text(encoding="utf-8").count("started"), 6)
+
+    def test_a_suite_holding_the_lock_can_still_send_its_own_runner_requests(self) -> None:
+        with lock.hold_suite_lock(self.root) as held:
+            completed, response, _ = run_runner(self.request, cwd=self.root, extra_env=held.environment({}))
+        self.assertEqual(response["status"], "ok", completed.stderr)
+        self.assertEqual(self.sentinel.read_text(encoding="utf-8").count("started"), 6)
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(
         unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (SuiteCheckoutLockTests, UnguardedCheckoutTests, EntryPointTests)
+        for case in (SuiteCheckoutLockTests, UnguardedCheckoutTests, EntryPointTests, RawRunnerRequestTests)
     )
     raise SystemExit(run_counted(suite, label="test-suite-checkout-lock"))

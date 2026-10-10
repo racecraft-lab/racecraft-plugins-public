@@ -511,7 +511,7 @@
         "value": "speckit_pro_runner/gates/suite.py",
         "display": "speckit_pro_runner/gates/suite.py"
       },
-      "sha256": "84935f643ec6782a452cb32ce442f2146471813396e7ea2393b357e4ed358bd7"
+      "sha256": "7981cabfbfac72a5c4726e426476fd5dcedda65c492e2ad52a089e1fdd010e9c"
     },
     {
       "path": {
@@ -975,7 +975,7 @@
         "value": "speckit_pro_runner/suite_checkout_lock.py",
         "display": "speckit_pro_runner/suite_checkout_lock.py"
       },
-      "sha256": "8a6716497270ba121a1bf142dbc968d932f6945556e634e5bdbc18495f38d6db"
+      "sha256": "4b28492a8c2da0ae19bd4d6127cc1535fa6ba86efc868ef970bdb584aed8001a"
     },
     {
       "path": {
