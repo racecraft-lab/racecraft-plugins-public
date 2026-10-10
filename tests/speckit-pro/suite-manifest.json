@@ -191,6 +191,7 @@
         { "path": "tests/speckit-pro/unit/test-release-pr-reconciliation.py", "label": "test-release-pr-reconciliation" },
         { "path": "tests/speckit-pro/unit/test-render-egress-authorization.py", "label": "test-render-egress-authorization" },
         { "path": "tests/speckit-pro/unit/test-repo-bash-confinement.py", "label": "test-repo-bash-confinement" },
+        { "path": "tests/speckit-pro/unit/test-repo-gitignore-caches.py", "label": "test-repo-gitignore-caches" },
         { "path": "tests/speckit-pro/unit/test-research-broker-preflight.py", "label": "test-research-broker-preflight" },
         { "path": "tests/speckit-pro/unit/test-research-broker.py", "label": "test-research-broker" },
         { "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py", "label": "test-reviewability-marker-guidance" },

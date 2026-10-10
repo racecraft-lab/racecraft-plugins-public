@@ -11,6 +11,11 @@ __pycache__/
 .specify/feature.json
 /.worktrees
 
+# Local tool caches: pnpm store (docs-site frozen-lockfile install), mypy, ruff
+.pnpm-store/
+.mypy_cache/
+.ruff_cache/
+
 # Docs site local install/cache/build artifacts
 docs-site/node_modules/
 docs-site/.astro/
