@@ -27,15 +27,29 @@ allowing only a nonnegative integer `data.duration_ms` to vary between separate
 executions. Fifty deterministic timing cases retain failures for changed
 results, exit codes, stderr, missing timing and invalid timing.
 
+Scaffold's printed permission-probe rules now name the quoted installed launcher,
+matching autopilot's run-start probe. Saved actions retain only the interpreter
+basename (or `<interpreter>`) and the `<plugin-root>` placeholder. Prompted and
+denied probes share the same template; passed probes still need no rule.
+
 ## Known limits
 
+- An installation path containing permission-pattern or shell metacharacters
+  cannot produce a narrow allow rule. The helper refuses it instead of printing
+  a broader grant; ordinary paths with spaces are quoted. Printed rules contain
+  installation paths for the operator, while saved records omit them.
+- The installed-argv regression covers six shared skills on each host. It does
+  not separately execute the Codex-only `install` overlay's identical launcher
+  declaration. The Claude installed-runtime reference also retains an obsolete
+  mention of its `${CLAUDE_PLUGIN_ROOT}` text; the explicit loaded-skill root
+  instructions determine the actual path, so that wording does not affect it.
 - A module selected with `-m` could be already importable, but a contributor's
   project module is absent from the empty feature worktree, and `PYTHONPATH`
   is removed. A relative project script is likewise absent. Both argv forms
   are now rejected before subprocess execution, even with forged success output.
 - Another absolute plugin script requires control over a runnable plugin
-  file. The test rejects alternative scripts, flags and noncanonical launcher
-  spellings. Replacing, renaming or linking the canonical launcher itself
+  file. The test rejects alternative scripts, flags and parent-directory path
+  components. Replacing, renaming or linking the canonical launcher itself
   requires changing the trusted runnable installation; guidance text alone
   cannot select such a target. Payload checks cover those runnable files.
 - Runner checksum metadata attests the runner package, rather than every
@@ -46,6 +60,12 @@ results, exit codes, stderr, missing timing and invalid timing.
   Inline reference commands and agent handoff paragraphs use the same
   launcher, but are not executed as independent shell commands. The current
   diff replaces each bare main-module call in installed workflow guidance.
+- The regression checks the first matching entry-point list, rather than every
+  occurrence in the guidance. Removing that match can expose a later equivalent
+  list; equivalent Python literal spellings also pass. This limits guidance
+  coverage, but cannot change executable arguments: execution uses the independent
+  launcher command. The security harness repeats the six-skill roster and known
+  contract literal; a future contract update must also update that harness.
 - The runner's diagnostic replay fields retain their existing module format.
   Read-only helpers dispatch in-process; those fields do not spawn a child.
   Installed agents reuse the resolved launcher argv with each stdin request,
@@ -73,5 +93,5 @@ results, exit codes, stderr, missing timing and invalid timing.
   outside the workflow transport: scaffold runs only the guide's
   `crap-score.py` steps and uses the `propose-quality-gates` helper instead.
   The call fails loudly, never with a silent pass.
-- The launcher equivalence test drops `duration_ms` before comparing runner
-  stdout, because that field is wall-clock time and differs between two runs.
+- The launcher equivalence test validates and masks only `data.duration_ms`
+  before comparing runner JSON, because elapsed time differs between two runs.

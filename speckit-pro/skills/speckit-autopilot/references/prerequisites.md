@@ -77,6 +77,10 @@ exactly as the request invoked it; replace `<plugin-root>` with the loaded absol
 absolute interpreter path must appear in the rule as it does in the request. A probe
 that passes needs no rule.
 
+Scaffold's readiness helper prints the same launcher rule. Saved readiness
+actions omit interpreter directories and use `<plugin-root>` for the installation
+directory; use the printed rule when updating permission settings.
+
 <!-- /host -->
 ## Workflow Worktree Binding
 

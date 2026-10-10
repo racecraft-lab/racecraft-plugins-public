@@ -25,7 +25,10 @@ CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
 CODEX_TRUST_ITEMS = ("codex_approval_posture", "codex_hook_trust", "codex_local_access")
 CODEX_ONLY_ITEMS = ("codex_agents", "extension_versions", *CODEX_TRUST_ITEMS)
 HOST_ITEMS = (*CLAUDE_ONLY_ITEMS, "hooks", *CODEX_ONLY_ITEMS)
-CURATED_SET = Path(__file__).resolve().parents[2] / "scripts" / "curated-set.json"
+PLUGIN_ROOT = Path(__file__).resolve().parents[2]
+CURATED_SET = PLUGIN_ROOT / "scripts" / "curated-set.json"
+RUNNER_LAUNCHER = "scripts/run-speckit-pro.py"
+LAUNCHER_PLACEHOLDER = f"<plugin-root>/{RUNNER_LAUNCHER}"
 DETAIL_KEYS = {"permission_probe": "probes", "plugin_scope": "scope", "mcp_authentication": "servers",
                "hooks": "hooks", "codex_agents": "agents", "extension_versions": "extensions",
                "codex_approval_posture": "posture", "codex_hook_trust": "hooks", "codex_local_access": "access"}
@@ -67,7 +70,8 @@ def name_text(value: Any, label: str) -> str:
     return clean_text(text, label)
 
 
-def allow_rule_texts(probes: list[dict[str, Any]], command_label: str) -> list[str]:
+def allow_rule_texts(probes: list[dict[str, Any]], command_label: str,
+                     launcher_label: str = LAUNCHER_PLACEHOLDER) -> list[str]:
     """Claude Code `Tool(pattern)` rules for each failed probe; `command_label` stands in for the interpreter."""
     rules: list[str] = []
     for probe in probes:
@@ -76,7 +80,7 @@ def allow_rule_texts(probes: list[dict[str, Any]], command_label: str) -> list[s
         if outcome == "passed":
             continue
         if name == "runner_request":
-            rules += [f"Bash({command_label} -m speckit_pro_runner:*)", "Bash(printf:*)"]
+            rules += [f'Bash({command_label} "{launcher_label}":*)', "Bash(printf:*)"]
         else:
             rules.append("Bash(git status:*)")
     return rules
@@ -100,12 +104,17 @@ def parse_probes(raw: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def rules_for(probes: list[dict[str, Any]], recorded: bool) -> list[str]:
-    """Printed rules retain the command; recorded rules omit interpreter directories."""
+    """Printed rules retain paths; recorded rules omit interpreter and plugin directories."""
     rules: list[str] = []
     for probe in probes:
         command = probe.get("command", INTERPRETER_PLACEHOLDER)
         label = INTERPRETER_PLACEHOLDER if command.startswith("/") else command.rsplit("/", 1)[-1]
-        rules += allow_rule_texts([probe], label if recorded else command)
+        launcher = LAUNCHER_PLACEHOLDER
+        if not recorded and probe.get("probe") == "runner_request" and probe.get("outcome") != "passed":
+            launcher = (PLUGIN_ROOT / RUNNER_LAUNCHER).as_posix()
+            if not re.fullmatch(r"[A-Za-z0-9_./+ :\-]+", launcher):
+                raise SelectionError("the installed launcher path cannot be represented by a narrow allow rule")
+        rules += allow_rule_texts([probe], label if recorded else command, launcher)
     return rules
 
 
