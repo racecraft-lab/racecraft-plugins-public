@@ -10,8 +10,9 @@ or interrupted suite never leaves the checkout locked. Child processes do not
 inherit it: killing the wrapper alone frees the lock while orphaned children
 may still run.
 
-The guard stands down, with a warning, where a lock cannot be taken: no
-``fcntl`` (Windows), no git directory, or one that cannot be written.
+The guard stands down, with a warning, outside supported checkouts: no
+``fcntl`` (Windows) or no git directory. Lock errors in a supported checkout
+refuse execution because its staging state may still be writable and shared.
 """
 
 from __future__ import annotations
@@ -36,6 +37,10 @@ class SuiteLockHeld(RuntimeError):
     """Another suite already holds the lock for this checkout."""
 
 
+class SuiteLockUnavailable(RuntimeError):
+    """A supported checkout cannot establish its suite lock."""
+
+
 def _git_dir(checkout: Path) -> Path | None:
     """Return the checkout's git directory, following a worktree ``.git`` file."""
     marker = checkout / ".git"
@@ -57,7 +62,7 @@ def _unguarded(reason: str) -> None:
 
 @contextlib.contextmanager
 def hold_suite_lock(checkout: Path) -> Iterator[None]:
-    """Hold the checkout's suite lock, or raise ``SuiteLockHeld``."""
+    """Hold the suite lock, or refuse a held or unavailable checkout lock."""
     git_dir = _git_dir(checkout)
     if fcntl is None or git_dir is None:
         _unguarded("no flock or git directory here")
@@ -66,9 +71,7 @@ def hold_suite_lock(checkout: Path) -> Iterator[None]:
     try:
         stream = open(git_dir / LOCK_NAME, "a+", encoding="utf-8")
     except OSError as exc:
-        _unguarded(f"cannot open the lock file ({exc.strerror})")
-        yield
-        return
+        raise SuiteLockUnavailable(f"cannot open the lock file ({exc.strerror}); refusing to run") from exc
     with stream:
         try:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -80,9 +83,7 @@ def hold_suite_lock(checkout: Path) -> Iterator[None]:
                 "wait for it to finish or run from another worktree"
             ) from None
         except OSError as exc:
-            _unguarded(f"flock failed ({exc.strerror})")
-            yield
-            return
+            raise SuiteLockUnavailable(f"flock failed ({exc.strerror}); refusing to run") from exc
         stream.seek(0)
         stream.truncate()
         stream.write(str(os.getpid()))

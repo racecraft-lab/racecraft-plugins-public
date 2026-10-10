@@ -134,16 +134,17 @@ class UnguardedCheckoutTests(unittest.TestCase):
                 pass
         self.assertIn("running without the one-suite guard", err.getvalue())
 
-    def test_unwritable_lock_file_runs_unguarded_with_a_warning(self) -> None:
+    def test_unwritable_lock_file_refuses_execution(self) -> None:
         root = fresh_checkout(self)
         err = io.StringIO()
         with (
             mock.patch("builtins.open", side_effect=PermissionError(13, "Permission denied")),
             contextlib.redirect_stderr(err),
         ):
-            with lock.hold_suite_lock(root):
-                pass
-        self.assertIn("Permission denied", err.getvalue())
+            with self.assertRaises(lock.SuiteLockUnavailable) as raised:
+                with lock.hold_suite_lock(root):
+                    self.fail("the suite must not start without a lock")
+        self.assertIn("Permission denied", str(raised.exception))
 
 
 @needs_flock
@@ -174,15 +175,20 @@ class EntryPointTests(unittest.TestCase):
             status = run_ci_suite.main([])
         return status, err.getvalue(), run
 
-    def test_each_entry_point_refuses_while_another_suite_holds_the_checkout(self) -> None:
-        with lock.hold_suite_lock(self.root):
-            quick_status, quick_out, quick_err = self.quick_suite()
-            ci_status, ci_err, ci_run = self.ci_suite()
-        for status, err in ((quick_status, quick_err), (ci_status, ci_err)):
-            self.assertEqual(status, lock.REFUSED_STATUS)
-            self.assertIn("another suite is already running", err)
-        self.assertNotIn("Layer 4", quick_out)
-        ci_run.assert_not_called()
+    def test_each_entry_point_refuses_without_an_exclusive_checkout_lock(self) -> None:
+        cases = (
+            (lock.hold_suite_lock(self.root), "another suite is already running"),
+            (mock.patch("builtins.open", side_effect=PermissionError(13, "Permission denied")), "cannot open the lock file"),
+            (mock.patch.object(lock.fcntl, "flock", side_effect=OSError(95, "Operation not supported")), "flock failed"),
+        )
+        for guard, message in cases:
+            with self.subTest(reason=message), guard:
+                quick_status, _, quick_err = self.quick_suite()
+                ci_status, ci_err, ci_run = self.ci_suite()
+            for status, err in ((quick_status, quick_err), (ci_status, ci_err)):
+                self.assertEqual(status, 75)
+                self.assertIn(message, err)
+            ci_run.assert_not_called()
 
     def test_quick_suite_refuses_while_the_ci_suite_runs(self) -> None:
         results: list[tuple[int, str, str]] = []
@@ -204,11 +210,9 @@ class EntryPointTests(unittest.TestCase):
     def test_lock_is_free_after_each_suite_even_when_it_fails(self) -> None:
         status, err, _ = self.ci_suite(returncode=3)
         self.assertEqual(status, 3)
-        self.assertNotIn("already running", err)
         status, out, err = self.quick_suite()
         self.assertEqual(status, 1)  # the empty layer fails on its own, not on the lock
         self.assertIn("no test scripts discovered", out)
-        self.assertNotIn("already running", err)
         with lock.hold_suite_lock(self.root):
             pass
 

@@ -15,7 +15,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from process_status import shell_compatible_status
-from suite_checkout_lock import REFUSED_STATUS, SuiteLockHeld, hold_suite_lock
+from suite_checkout_lock import REFUSED_STATUS, SuiteLockHeld, SuiteLockUnavailable, hold_suite_lock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REQUEST_FILE = (
@@ -55,7 +55,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 check=False,
                 shell=False,
             )
-    except SuiteLockHeld as exc:
+    except (SuiteLockHeld, SuiteLockUnavailable) as exc:
         print(f"run-ci-suite: {exc}", file=sys.stderr)
         return REFUSED_STATUS
     return shell_compatible_status(completed.returncode)
