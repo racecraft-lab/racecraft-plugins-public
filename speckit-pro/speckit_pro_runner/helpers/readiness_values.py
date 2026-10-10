@@ -20,7 +20,8 @@ UNSAFE_TEXT_RE = re.compile(
 # Archive recommendations contain remote paths; keep checking the rest of the line for local paths.
 HTTPS_URL_RE = re.compile(r"https://[A-Za-z0-9.-]+(?:/[A-Za-z0-9._~%/-]*)?")
 # Userinfo ends at @ inside the authority, before any path, query or fragment.
-HTTPS_USERINFO_RE = re.compile(r"https://[^/?#\s]*@", re.IGNORECASE)
+# Whitespace must not hide userinfo in an otherwise malformed authority.
+HTTPS_USERINFO_RE = re.compile(r"https://[^/?#]*@", re.IGNORECASE)
 
 
 def clean_text(value: Any, label: str) -> str:

@@ -441,6 +441,88 @@ class ReadinessRecordTest(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(text, clean_text(text, "evidence_source"))
 
+    def assert_caller_text_refused(self, texts: tuple[str, ...]) -> None:
+        from speckit_pro_runner.strict_input import SelectionError
+
+        for text, item, status, field in itertools.product(
+                texts, CALLER_ITEMS, ("unavailable", "unknown"), ("action", "evidence_source")):
+            with self.subTest(text=ascii(text), item=item, status=status, field=field):
+                raw = observation(item, status, **{field: text})
+                with self.assertRaises(SelectionError):
+                    readiness_record.caller_item(raw, self.root, "observed")
+
+    def test_caller_readiness_refuses_ascii_space_in_https_userinfo(self) -> None:
+        userinfo = "reader:sample"
+        at = "@"
+        self.assert_caller_text_refused(tuple(
+            f"Download https://{userinfo[:index]} {userinfo[index:]}{at}example.invalid/x.zip"
+            for index in range(len(userinfo) + 1)))
+
+    def test_caller_readiness_refuses_unicode_space_in_https_userinfo(self) -> None:
+        userinfo = "reader:sample"
+        at = "@"
+        spaces = ("\u00a0", "\u1680", *map(chr, range(0x2000, 0x200B)), "\u202f", "\u205f", "\u3000")
+        self.assert_caller_text_refused(tuple(
+            f"https://{userinfo[:index]}{space}{userinfo[index:]}{at}example.invalid/x.zip"
+            for space, index in itertools.product(spaces, range(len(userinfo) + 1))))
+
+    def test_caller_readiness_refuses_controls_in_url_userinfo(self) -> None:
+        at = "@"
+        self.assert_caller_text_refused(tuple(
+            f"https://reader{control}:sample{at}example.invalid/x.zip"
+            for control in ("\t", "\n", "\r", "\v", "\f", "\u0085", "\u2028", "\u2029")))
+
+    def test_caller_readiness_refuses_plain_https_userinfo(self) -> None:
+        at = "@"
+        self.assert_caller_text_refused(tuple(
+            f"{scheme}://{userinfo}{at}{authority}"
+            for scheme, userinfo, authority in itertools.product(
+                ("https", "HTTPS", "git+https"), ("reader:sample", "reader", "", "reader%40name:sample"),
+                ("example.invalid", "example.invalid:443/x.zip", "[::1]/x.zip"))))
+
+    def test_caller_readiness_preserves_at_outside_https_authority(self) -> None:
+        at = "@"
+        texts = ("https://example.invalid", "https://example.invalid:443/x.zip",
+                 f"https://example.invalid/reader{at}docs.zip",
+                 f"https://example.invalid?contact=reader{at}example.invalid",
+                 f"https://example.invalid#reader{at}example.invalid",
+                 f"Download https://example.invalid/x.zip then contact reader{at}example.invalid.")
+        for text, item, field in itertools.product(texts, CALLER_ITEMS, ("action", "evidence_source")):
+            with self.subTest(text=text, item=item, field=field):
+                _, result = readiness_record.caller_item(
+                    observation(item, "unavailable", **{field: text}), self.root, "observed")
+                self.assertEqual(text, result[field])
+
+    def test_caller_readiness_refuses_http_and_ftp_userinfo(self) -> None:
+        at = "@"
+        self.assert_caller_text_refused(tuple(
+            f"{scheme}://reader:sample{at}example.invalid/x.zip" for scheme in ("http", "ftp")))
+
+    def test_readiness_userinfo_refusal_covers_host_sources_and_fingerprints(self) -> None:
+        from speckit_pro_runner.helpers.readiness_host_items import host_item
+        from speckit_pro_runner.strict_input import SelectionError
+
+        at = "@"
+        for space in (" ", "\u00a0", "\u2009"):
+            text = f"https://reader{space}name:sample{at}example.invalid/x.zip"
+            for host, item in (("claude", "permission_probe"), ("codex", "codex_agents")):
+                with self.subTest(space=ascii(space), host=host), self.assertRaises(SelectionError):
+                    host_item({"item": item, "evidence_source": text}, host, "observed", "revision")
+            with self.subTest(space=ascii(space), field="files"), self.assertRaises(SelectionError):
+                readiness_record.fingerprint_files([text], self.root, "github_auth")
+            with self.subTest(space=ascii(space), field="values name"), self.assertRaises(SelectionError):
+                readiness_record.fingerprint_values({text: "passed"}, "github_auth")
+
+    def test_userinfo_refusal_never_writes_a_record_on_either_host(self) -> None:
+        at = "@"
+        for host, field, space in itertools.product(("claude", "codex"), ("action", "evidence_source"),
+                                                  (" ", "\u2009")):
+            with self.subTest(host=host, field=field, space=ascii(space)):
+                text = f"https://reader{space}name:sample{at}example.invalid/x.zip"
+                response = self.run_helper([observation("github_auth", "unavailable", **{field: text})], host=host)
+                assert_runner_response(self, response, "input_error", 2)
+                self.assertFalse(self.record_path(host).exists())
+
     def test_unreadable_files_are_not_reported_missing(self) -> None:
         outside = self.root / "target.txt"
         outside.write_text("x\n", encoding="utf-8")
