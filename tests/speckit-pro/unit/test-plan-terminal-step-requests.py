@@ -6,7 +6,7 @@ orchestrator's context is largest. Each request the guidance names but does not
 spell out, and each request that cannot run there, costs the orchestrator extra
 turns hunting through references and runner source. The release-readiness gate
 needs a SpecKit Pro source checkout, so its operations never belong here; the
-packet producer owns the draft title's shape instead.
+packet producer owns the draft title's shape instead (GeneratedTitleScopeTests).
 """
 
 from __future__ import annotations
@@ -23,10 +23,8 @@ sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
 from host_skill_views import host_skill_root  # noqa: E402
 from speckit_pro_runner.gates.release import RELEASE_INPUT_FIELDS  # noqa: E402
-from speckit_pro_runner.helpers import pr_packet  # noqa: E402
 from speckit_pro_runner.helpers.read_only import workflow_draft_pr_row  # noqa: E402
 from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noqa: E402
-from speckit_pro_runner.pr_contract import GATE_TITLE_PATTERN, TITLE_TYPES  # noqa: E402
 from speckit_pro_runner.workflow_stage import AUTOPILOT_BASIC_INFO_HEADING  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -91,28 +89,9 @@ class TerminalStepRequestTests(unittest.TestCase):
                 self.assertIsNotNone(parsed, f"{host}: the runner reads {row!r} as no Draft PR row")
 
 
-class DraftTitleOwnerTests(unittest.TestCase):
-    """The packet dry run is the draft title's check, so the gate is not needed."""
-
-    def test_packet_refuses_a_type_outside_the_conventional_set(self) -> None:
-        for title_type in ("feature", "Feat", "perf", 7):
-            with self.subTest(title_type=title_type):
-                title = pr_packet.normalize_generated_title(
-                    {"title_type": title_type, "title_scope": "tally", "title_description": "add a demo feature"})
-                self.assertEqual(title["diagnostic"]["details"]["field"], "title_type")
-
-    def test_every_title_the_packet_builds_passes_the_gate_pattern(self) -> None:
-        for title_type in TITLE_TYPES:
-            title = pr_packet.normalize_generated_title(
-                {"title_type": title_type, "title_scope": "word-count-2", "title_description": "add word frequency and JSON output"})
-            self.assertNotIn("diagnostic", title)
-            self.assertRegex(title["value"], GATE_TITLE_PATTERN)
-
-
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    return unittest.TestSuite([loader.loadTestsFromTestCase(TerminalStepRequestTests),
-                               loader.loadTestsFromTestCase(DraftTitleOwnerTests)])
+    return unittest.TestSuite([loader.loadTestsFromTestCase(TerminalStepRequestTests)])
 
 
 def main() -> int:
