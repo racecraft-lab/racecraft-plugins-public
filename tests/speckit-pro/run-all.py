@@ -35,8 +35,12 @@ from pathlib import Path
 TEST_LIB = Path(__file__).resolve().parent / "lib"
 if str(TEST_LIB) not in sys.path:
     sys.path.insert(0, str(TEST_LIB))
+SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 
 from runner_invocation import run_runner  # noqa: E402
+from suite_checkout_lock import SuiteLockHeld, hold_suite_lock  # noqa: E402
 from suite_child_env import child_environment  # noqa: E402
 from test_result import classify_counted_child, failure_report  # noqa: E402
 
@@ -251,6 +255,15 @@ def main(argv: list[str]) -> int:
         return 2
 
     root = repo_root()
+    try:
+        with hold_suite_lock(root):
+            return run_selected_layers(config, root)
+    except SuiteLockHeld as exc:
+        print(f"run-all: {exc}", file=sys.stderr)
+        return 1
+
+
+def run_selected_layers(config: Config, root: Path) -> int:
     manifest = load_manifest(root)
     total_pass = total_fail = 0
     layer_results: list[str] = []

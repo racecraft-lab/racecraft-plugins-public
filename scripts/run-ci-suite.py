@@ -15,6 +15,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from process_status import shell_compatible_status
+from suite_checkout_lock import SuiteLockHeld, hold_suite_lock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REQUEST_FILE = (
@@ -44,14 +45,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     except OSError as exc:
         print(f"run-ci-suite: unable to read {REQUEST_FILE.name}: {exc}", file=sys.stderr)
         return 1
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=request,
-        cwd=str(REPO_ROOT),
-        env=build_environment(os.environ),
-        check=False,
-        shell=False,
-    )
+    try:
+        with hold_suite_lock(REPO_ROOT):
+            completed = subprocess.run(
+                [sys.executable, "-m", "speckit_pro_runner"],
+                input=request,
+                cwd=str(REPO_ROOT),
+                env=build_environment(os.environ),
+                check=False,
+                shell=False,
+            )
+    except SuiteLockHeld as exc:
+        print(f"run-ci-suite: {exc}", file=sys.stderr)
+        return 1
     return shell_compatible_status(completed.returncode)
 
 

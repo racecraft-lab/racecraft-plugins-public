@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import os
 import re
@@ -67,7 +68,10 @@ class PlainEntryPointCase(unittest.TestCase):
         with mock.patch.dict(os.environ, BASE_ENV if base is None else base, clear=True):
             with mock.patch.object(
                 self.module.subprocess, "run", return_value=completed(code)
-            ) as run:
+            ) as run, mock.patch.object(
+                self.module, "hold_suite_lock", create=True, return_value=contextlib.nullcontext()
+            ):
+                # The suite running this test already holds the checkout lock.
                 status = self.module.main(argv)
         return status, run
 
