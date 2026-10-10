@@ -456,7 +456,8 @@ class ReadinessRecordTest(unittest.TestCase):
         at = "@"
         self.assert_caller_text_refused(tuple(
             f"Download https://{userinfo[:index]} {userinfo[index:]}{at}example.invalid/x.zip"
-            for index in range(len(userinfo) + 1)))
+            for index in range(len(userinfo) + 1)) + (
+                f"Download https://example.invalid then contact reader{at}example.invalid",))
 
     def test_caller_readiness_refuses_unicode_space_in_https_userinfo(self) -> None:
         userinfo = "reader:sample"
@@ -483,6 +484,7 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_caller_readiness_preserves_at_outside_https_authority(self) -> None:
         at = "@"
         texts = ("https://example.invalid", "https://example.invalid:443/x.zip",
+                 f"Download https://example.invalid/ then contact reader{at}example.invalid.",
                  f"https://example.invalid/reader{at}docs.zip",
                  f"https://example.invalid?contact=reader{at}example.invalid",
                  f"https://example.invalid#reader{at}example.invalid",
