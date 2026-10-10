@@ -14,10 +14,19 @@ import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from process_status import shell_compatible_status
-from suite_checkout_lock import REFUSED_STATUS, SuiteLockHeld, SuiteLockUnavailable, hold_suite_lock
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
+
+from process_status import shell_compatible_status  # noqa: E402
+from speckit_pro_runner.suite_checkout_lock import (  # noqa: E402
+    REFUSED_STATUS,
+    SuiteLockHeld,
+    SuiteLockUnavailable,
+    hold_suite_lock,
+)
+
 REQUEST_FILE = (
     REPO_ROOT
     / "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-ci-suite.json"
@@ -32,7 +41,7 @@ def build_environment(base: Mapping[str, str]) -> dict[str, str]:
             "GIT_CONFIG_GLOBAL": "/dev/null",
             "GIT_CONFIG_SYSTEM": "/dev/null",
             "GIT_CONFIG_NOSYSTEM": "1",
-            "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
+            "PYTHONPATH": str(PLUGIN_ROOT),
         }
     )
     return environment

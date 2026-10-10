@@ -15,14 +15,14 @@ from pathlib import Path
 from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-for directory in (REPO_ROOT / "scripts", REPO_ROOT / "tests" / "speckit-pro" / "lib"):
+for directory in (REPO_ROOT / "scripts", REPO_ROOT / "speckit-pro", REPO_ROOT / "tests" / "speckit-pro" / "lib"):
     if str(directory) not in sys.path:
         sys.path.insert(0, str(directory))
 
 from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
-import suite_checkout_lock as lock  # noqa: E402
+import speckit_pro_runner.suite_checkout_lock as lock  # noqa: E402
 
 run_all = load_script("run_all_for_lock", REPO_ROOT / "tests" / "speckit-pro" / "run-all.py")
 run_ci_suite = load_script("run_ci_suite_for_lock", REPO_ROOT / "scripts" / "run-ci-suite.py")
@@ -102,12 +102,12 @@ class SuiteCheckoutLockTests(unittest.TestCase):
     def test_lock_dies_with_a_killed_holder(self) -> None:
         code = (
             "import sys, time; sys.path.insert(0, sys.argv[1]);"
-            "import suite_checkout_lock as l; from pathlib import Path;"
+            "import speckit_pro_runner.suite_checkout_lock as l; from pathlib import Path;"
             "cm = l.hold_suite_lock(Path(sys.argv[2])); cm.__enter__();"
             "print('held', flush=True); time.sleep(60)"
         )
         child = subprocess.Popen(
-            [sys.executable, "-c", code, str(REPO_ROOT / "scripts"), str(self.root)],
+            [sys.executable, "-c", code, str(REPO_ROOT / "speckit-pro"), str(self.root)],
             stdout=subprocess.PIPE,
             text=True,
         )
