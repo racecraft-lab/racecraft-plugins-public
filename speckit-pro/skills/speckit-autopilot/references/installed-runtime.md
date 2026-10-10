@@ -3,8 +3,11 @@
 Resolve Python 3.11+ and the root of the plugin loaded in this session before
 the first runner request, including workflow binding and scaffold checks.
 
-<!-- host:claude: Claude exposes the root of the loaded plugin -->
-Use the absolute `${CLAUDE_PLUGIN_ROOT}` value as `<plugin-root>`.
+<!-- host:claude: Claude supplies the loaded skill's literal base directory -->
+Use the absolute base directory printed in the loaded skill header:
+`<plugin-root>/skills/<skill-name>/`. The parent of `skills/` is
+`<plugin-root>`. Use that literal path in command calls; the reference's
+`${CLAUDE_PLUGIN_ROOT}` text is not a command-tool environment binding.
 <!-- /host -->
 <!-- host:codex: Codex derives the root from the installed skill location -->
 Use the absolute path of this session's loaded `SKILL.md`: its layout is

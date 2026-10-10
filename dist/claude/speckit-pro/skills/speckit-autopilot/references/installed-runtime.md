@@ -3,7 +3,10 @@
 Resolve Python 3.11+ and the root of the plugin loaded in this session before
 the first runner request, including workflow binding and scaffold checks.
 
-Use the absolute `${CLAUDE_PLUGIN_ROOT}` value as `<plugin-root>`.
+Use the absolute base directory printed in the loaded skill header:
+`<plugin-root>/skills/<skill-name>/`. The parent of `skills/` is
+`<plugin-root>`. Use that literal path in command calls; the reference's
+`${CLAUDE_PLUGIN_ROOT}` text is not a command-tool environment binding.
 
 Invoke `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` with
 the placeholder replaced by that absolute plugin root. Keep the current

@@ -218,7 +218,7 @@
     "before the binding guard, Step -1, Step 0, and any phase work",
     "on every start and every resume",
     "one no-op runner request: helper `helper-registry-dispatch` with empty `inputs`",
-    "`<resolved_python> -m speckit_pro_runner`",
+    "`<resolved_python> \"<plugin-root>/scripts/run-speckit-pro.py\"`",
     "one `git status --porcelain` in the live checkout"
   ],
   "ClaudeRunStartPermissionProbeSourceContractTests.test_a_prompt_or_denial_prints_the_exact_allow_rule_and_stops_once#1": [
@@ -226,7 +226,7 @@
     "print the allow rules for the probe that failed, once",
     "stop before any phase work",
     "do not run Archive Sweep, edit a file, or dispatch an agent",
-    "<resolved_python> -m speckit_pro_runner:*",
+    "<resolved_python> \"<plugin-root>/scripts/run-speckit-pro.py\":*",
     "printf:*",
     "git status:*",
     "Print each rule in Claude Code's `Tool(pattern)` form",

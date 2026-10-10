@@ -151,8 +151,9 @@ class RunnerFoundationTests(unittest.TestCase):
                         assert match is not None
                         argv = ast.literal_eval(match[1].replace("resolved_python", repr(sys.executable)))
                         argv = [arg.replace("<plugin-root>", str(plugin_root)) for arg in argv]
+                        self.assertEqual(argv[0], sys.executable)
                         completed = subprocess.run(
-                            argv, input=json.dumps(base_request()), cwd=worktree, env=env,
+                            [sys.executable, *argv[1:]], input=json.dumps(base_request()), cwd=worktree, env=env,
                             text=True, capture_output=True, check=False,
                         )
                         self.assertEqual(completed.returncode, 0, completed.stderr)

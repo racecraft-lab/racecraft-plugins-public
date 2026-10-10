@@ -553,6 +553,13 @@ AUTOPILOT_AGREEMENT = (
 class AutopilotHostAgreementTests(unittest.TestCase):
     """Behavior the runner owns reads the same on both hosts' shipped autopilot."""
 
+    def test_installed_runner_root_comes_from_the_loaded_skill_on_both_hosts(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                text = shipped_autopilot_text(host, "references/installed-runtime.md")
+                self.assertIn("parent of `skills/`", text)
+                self.assertNotIn("Use the absolute `${CLAUDE_PLUGIN_ROOT}` value", text)
+
     def test_both_hosts_state_the_runner_behavior(self) -> None:
         for case, relative, present, absent in AUTOPILOT_AGREEMENT:
             for host in ("claude", "codex"):
