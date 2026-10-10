@@ -295,6 +295,11 @@ class RawRunnerRequestTests(unittest.TestCase):
         self.sentinel = self.root / "started.txt"
         self.request = ci_request_with_sentinels(self.sentinel)
 
+    def assert_every_command_started(self, extra_env: dict[str, str] | None = None) -> None:
+        completed, response, _ = run_runner(self.request, cwd=self.root, extra_env=extra_env)
+        self.assertEqual(response["status"], "ok", completed.stderr)
+        self.assertEqual(self.sentinel.read_text(encoding="utf-8").count("started"), 6)
+
     def test_raw_ci_request_is_refused_while_another_suite_holds_the_checkout(self) -> None:
         with lock.hold_suite_lock(self.root):
             completed, response, stderr_records = run_runner(self.request, cwd=self.root)
@@ -305,15 +310,75 @@ class RawRunnerRequestTests(unittest.TestCase):
         self.assertIn("another suite is already running", response["diagnostics"][0]["message"])
 
     def test_raw_ci_request_runs_once_the_checkout_is_free(self) -> None:
-        completed, response, _ = run_runner(self.request, cwd=self.root)
-        self.assertEqual(response["status"], "ok", completed.stderr)
-        self.assertEqual(self.sentinel.read_text(encoding="utf-8").count("started"), 6)
+        self.assert_every_command_started()
 
     def test_a_suite_holding_the_lock_can_still_send_its_own_runner_requests(self) -> None:
         with lock.hold_suite_lock(self.root) as held:
-            completed, response, _ = run_runner(self.request, cwd=self.root, extra_env=held.environment({}))
-        self.assertEqual(response["status"], "ok", completed.stderr)
-        self.assertEqual(self.sentinel.read_text(encoding="utf-8").count("started"), 6)
+            self.assert_every_command_started(held.environment({}))
+
+
+SLEEPER_LAYER = {
+    "id": "4",
+    "key": "unit",
+    "label": "Script unit tests",
+    "default": True,
+    "live_only": False,
+    "integration": False,
+    "dispatch": "python-module",
+    "execution": "execute",
+    "scripts": [{"path": "sleeper.py"}],
+}
+
+
+def sleeper_request(pid_file: Path) -> dict:
+    """A suite-gate request whose only command is the sleeper."""
+    command = {"argv": [sys.executable, "-c", SLEEPER, str(pid_file)], "timeout_seconds": 120}
+    return {
+        "schema_version": "1.0",
+        "request_id": "killed-parent",
+        "helper_id": "suite-gate",
+        "operation": "run-layer",
+        "mode": "read_only",
+        "inputs": {"repo_root": ".", "layer": "4", "test_commands": {"layer-4": command}},
+    }
+
+
+def kill_group(group: int) -> None:
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(group, signal.SIGKILL)
+
+
+def start_session(arguments: list[str], cwd: Path, stdin: bytes) -> subprocess.Popen:
+    """Start Python in a new session: the parent and every child it starts share one killable group."""
+    parent = subprocess.Popen(
+        [sys.executable, *arguments],
+        cwd=cwd,
+        env=dict(
+            os.environ,
+            SPECKIT_SKIP_TOOLCHAIN_CHECK="1",
+            PYTHONDONTWRITEBYTECODE="1",
+            PYTHONPATH=str(REPO_ROOT / "speckit-pro"),
+        ),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    parent.stdin.write(stdin)
+    parent.stdin.close()
+    return parent
+
+
+def wait_until_lock_is_free(root: Path) -> None:
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            with lock.hold_suite_lock(root):
+                return
+        except lock.SuiteLockHeld:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.05)
 
 
 @needs_flock
@@ -323,122 +388,57 @@ class KilledParentTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = runner_checkout(self)
         self.pid_file = self.root / "child.pid"
-        self.environment = dict(os.environ, SPECKIT_SKIP_TOOLCHAIN_CHECK="1", PYTHONDONTWRITEBYTECODE="1")
         sleeper = self.root / "sleeper.py"
         sleeper.write_text(f"import sys; sys.argv[1:] = [{str(self.pid_file)!r}]\n{SLEEPER}\n", encoding="utf-8")
-        self.layer = {
-            "id": "4",
-            "key": "unit",
-            "label": "Script unit tests",
-            "default": True,
-            "live_only": False,
-            "integration": False,
-            "dispatch": "python-module",
-            "execution": "execute",
-            "scripts": [{"path": "sleeper.py"}],
-        }
 
-    def sleeper_request(self) -> dict:
-        command = {"argv": [sys.executable, "-c", SLEEPER, str(self.pid_file)], "timeout_seconds": 120}
-        return {
-            "schema_version": "1.0",
-            "request_id": "killed-parent",
-            "helper_id": "suite-gate",
-            "operation": "run-layer",
-            "mode": "read_only",
-            "inputs": {"repo_root": ".", "layer": "4", "test_commands": {"layer-4": command}},
-        }
-
-    def start(self, arguments: list[str], *, stdin: bytes | None = None) -> subprocess.Popen:
-        # A new session puts the parent and every child it starts in one group the cleanup can kill.
-        parent = subprocess.Popen(
-            [sys.executable, *arguments],
-            cwd=self.root,
-            env=self.environment,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-        self.addCleanup(self.kill_group, parent.pid)
-        parent.stdin.write(stdin or b"")
-        parent.stdin.close()
-        return parent
-
-    def kill_group(self, group: int) -> None:
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(group, signal.SIGKILL)
-
-    def wait_for_child(self, parent: subprocess.Popen) -> int:
+    def start(self, arguments: list[str], stdin: bytes) -> subprocess.Popen:
+        parent = start_session(arguments, self.root, stdin)
+        self.addCleanup(kill_group, parent.pid)
         deadline = time.monotonic() + 60
         while not self.pid_file.exists():
             if parent.poll() is not None or time.monotonic() > deadline:
                 self.fail(f"the suite child never started (parent exit {parent.returncode})")
             time.sleep(0.05)
-        return int(self.pid_file.read_text(encoding="utf-8"))
+        return parent
 
-    def assert_lock_outlives_killed_parent(self, parent: subprocess.Popen) -> None:
-        child = self.wait_for_child(parent)
+    def assert_killing_the_parent_keeps_the_lock(self, arguments: list[str], stdin: bytes = b"") -> None:
+        parent = self.start(arguments, stdin)
+        child = int(self.pid_file.read_text(encoding="utf-8"))
         parent.kill()
         parent.wait()
         os.kill(child, 0)  # the suite child is still running
         with self.assertRaises(lock.SuiteLockHeld, msg="a second suite started beside a running suite child"):
             with lock.hold_suite_lock(self.root):
                 pass
-        self.kill_group(parent.pid)
-        deadline = time.monotonic() + 30
-        while True:
-            try:
-                with lock.hold_suite_lock(self.root):
-                    return
-            except lock.SuiteLockHeld:
-                if time.monotonic() > deadline:
-                    raise
-                time.sleep(0.05)
+        kill_group(parent.pid)
+        wait_until_lock_is_free(self.root)
 
     def test_killing_the_ci_wrapper_keeps_the_lock_while_its_runner_child_runs(self) -> None:
         request = self.root / "request.json"
-        request.write_text(json.dumps(self.sleeper_request()), encoding="utf-8")
-        parent = self.start(
-            ["-c", CI_WRAPPER_DRIVER, str(REPO_ROOT / "scripts"), str(TESTS_LIB), str(self.root), str(request)]
+        request.write_text(json.dumps(sleeper_request(self.pid_file)), encoding="utf-8")
+        scripts = str(REPO_ROOT / "scripts")
+        self.assert_killing_the_parent_keeps_the_lock(
+            ["-c", CI_WRAPPER_DRIVER, scripts, str(TESTS_LIB), str(self.root), str(request)]
         )
-        self.assert_lock_outlives_killed_parent(parent)
 
     def test_killing_the_runner_keeps_the_lock_while_its_suite_command_runs(self) -> None:
-        environment = dict(self.environment, PYTHONPATH=str(REPO_ROOT / "speckit-pro"))
-        self.environment = environment
-        parent = self.start(
-            ["-m", "speckit_pro_runner"], stdin=json.dumps(self.sleeper_request()).encode()
-        )
-        self.assert_lock_outlives_killed_parent(parent)
+        request = json.dumps(sleeper_request(self.pid_file)).encode()
+        self.assert_killing_the_parent_keeps_the_lock(["-m", "speckit_pro_runner"], request)
 
     def test_killing_the_quick_suite_keeps_the_lock_while_its_test_child_runs(self) -> None:
-        manifest = {"layers": [self.layer]}
-        parent = self.start(
-            [
-                "-c",
-                QUICK_SUITE_DRIVER,
-                str(TESTS_LIB),
-                str(REPO_ROOT / "tests" / "speckit-pro" / "run-all.py"),
-                str(self.root),
-                json.dumps(manifest),
-            ]
+        run_all_script = str(REPO_ROOT / "tests" / "speckit-pro" / "run-all.py")
+        manifest = json.dumps({"layers": [SLEEPER_LAYER]})
+        self.assert_killing_the_parent_keeps_the_lock(
+            ["-c", QUICK_SUITE_DRIVER, str(TESTS_LIB), run_all_script, str(self.root), manifest]
         )
-        self.assert_lock_outlives_killed_parent(parent)
 
     def test_killing_the_layer_dispatcher_keeps_the_lock_while_its_test_child_runs(self) -> None:
         manifest = self.root / "tests" / "speckit-pro" / "suite-manifest.json"
-        manifest.write_text(json.dumps({"layers": [self.layer]}), encoding="utf-8")
-        parent = self.start(
-            [
-                "-c",
-                LAYER_DISPATCHER_DRIVER,
-                str(TESTS_LIB),
-                str(REPO_ROOT / "tests" / "speckit-pro" / "run-layer-scripts.py"),
-                str(self.root),
-            ]
+        manifest.write_text(json.dumps({"layers": [SLEEPER_LAYER]}), encoding="utf-8")
+        dispatcher = str(REPO_ROOT / "tests" / "speckit-pro" / "run-layer-scripts.py")
+        self.assert_killing_the_parent_keeps_the_lock(
+            ["-c", LAYER_DISPATCHER_DRIVER, str(TESTS_LIB), dispatcher, str(self.root)]
         )
-        self.assert_lock_outlives_killed_parent(parent)
 
 
 if __name__ == "__main__":
