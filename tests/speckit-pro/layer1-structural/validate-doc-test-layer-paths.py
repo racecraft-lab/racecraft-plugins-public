@@ -106,6 +106,22 @@ def assert_missing_citations(case: unittest.TestCase, paths: list[str], markup: 
             case.assertEqual(errors, [f"docs/adr/0001-x.md:1 cites {cited}, which is not a tracked path"])
 
 
+def assert_missing_suffixes(case: unittest.TestCase, kind: str) -> None:
+    cases = {
+        "terminal": ((" ", "\t", "\u00a0", "+", "@", "é", ",", ";", ":", "!", "?", ")", "]", ">"), "code"),
+        "dots": (("..", "...", "/.", "/..", "/./", "/../", "./", "//", "//."), "code"),
+        "link": (("+extra", " extra", ".", "/", "..", "/."), "link"),
+    }
+    suffixes, markup = cases[kind]
+    assert_missing_citations(case, [f"tests/speckit-pro/layer1-structural/exists.py{suffix}" for suffix in suffixes], markup)
+
+
+def assert_cited_paths(case: unittest.TestCase, text: str, expected: list[str]) -> list[str]:
+    paths = cited_paths(text)
+    case.assertEqual(paths, expected)
+    return paths
+
+
 class LiteralCitationParsing(unittest.TestCase):
 
     def test_child_component_characters_cannot_pass_as_parent(self) -> None:
@@ -120,8 +136,7 @@ class LiteralCitationParsing(unittest.TestCase):
         assert_missing_citations(self, [f"{base}{char}extra" for char in characters for base in bases])
 
     def test_terminal_filename_characters_are_not_punctuation_in_code(self) -> None:
-        suffixes = (" ", "\t", "\u00a0", "+", "@", "é", ",", ";", ":", "!", "?", ")", "]", ">")
-        assert_missing_citations(self, [f"tests/speckit-pro/layer1-structural/exists.py{suffix}" for suffix in suffixes])
+        assert_missing_suffixes(self, "terminal")
 
     def test_plain_links_and_bare_tokens_do_not_truncate_components(self) -> None:
         paths = [
@@ -155,22 +170,20 @@ class LiteralPathExistence(unittest.TestCase):
         assert_missing_citations(self, ["tests/speckit-pro/layer1-structural/exists.py/"])
 
     def test_repeated_dots_and_slash_dot_forms_are_not_stripped(self) -> None:
-        suffixes = ("..", "...", "/.", "/..", "/./", "/../", "./", "//", "//.")
-        assert_missing_citations(self, [f"tests/speckit-pro/layer1-structural/exists.py{suffix}" for suffix in suffixes])
+        assert_missing_suffixes(self, "dots")
 
     def test_literal_directory_slash_remains_accepted(self) -> None:
         path = "tests/speckit-pro/layer1-structural/"
-        self.assertEqual(cited_paths(f"`{path}`"), [path])
-        self.assertTrue(path_exists(cited_paths(f"`{path}`")[0], [path + "exists.py"]))
+        paths = assert_cited_paths(self, f"`{path}`", [path])
+        self.assertTrue(path_exists(paths[0], [path + "exists.py"]))
 
     def test_sentence_final_dot_outside_code_remains_punctuation(self) -> None:
         path = "tests/speckit-pro/layer1-structural/exists.py"
-        self.assertEqual(cited_paths(f"See {path}."), [path])
-        self.assertEqual(cited_paths(f"See `{path}.`."), [path + "."])
+        assert_cited_paths(self, f"See {path}.", [path])
+        assert_cited_paths(self, f"See `{path}.`.", [path + "."])
 
     def test_link_destinations_preserve_literal_characters_and_suffixes(self) -> None:
-        suffixes = ("+extra", " extra", ".", "/", "..", "/.")
-        assert_missing_citations(self, [f"tests/speckit-pro/layer1-structural/exists.py{suffix}" for suffix in suffixes], "link")
+        assert_missing_suffixes(self, "link")
 
     def test_existing_literal_names_are_checked_exactly(self) -> None:
         suffixes = ("+extra", "@extra", "éextra", " extra", ".", "..", ",", "\t", "\u00a0")
