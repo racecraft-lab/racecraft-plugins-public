@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import os
-import shutil
 import sys
+from contextlib import contextmanager
 import tempfile
 import unittest
 from pathlib import Path
@@ -31,85 +31,100 @@ def load(name: str):
     return load_script(f"cli_probe_{name}", COPIES[name])
 
 
+CLIS = ("codex", "claude", "git", "gh", "docker")
+HOSTS = ("codex", "claude")
+
+
+@contextmanager
+def probe_fixture(cli, layout):
+    """Keep only the requested CLI in PATH, including when it has an external alias."""
+    with tempfile.TemporaryDirectory(prefix="cli-probe-") as scratch:
+        base = Path(scratch).resolve()
+        root, directory = base / "worktree", base / "bin"
+        root.mkdir()
+        directory.mkdir()
+        tool = directory / cli
+        target = base / cli if layout in ("symlink", "hardlink") else tool
+        target.write_text("#!/bin/sh\n", encoding="utf-8")
+        target.chmod(0o555)
+        if layout == "symlink":
+            tool.symlink_to(target)
+        elif layout == "hardlink":
+            tool.hardlink_to(target)
+        elif layout == "rename":
+            staging = base / "replacement"
+            tool.rename(staging)
+            staging.rename(tool)
+        yield root, directory, target
+
+
+@contextmanager
+def probe_identity(directory, target, owned, writable):
+    """Ownership and access follow inode identity, without changing ancestor ownership."""
+    selected = {"file": target, "directory": directory}
+    owned_info = selected[owned].stat() if owned else None
+    writable_info = selected[writable].stat() if writable else None
+    stat_path = Path.stat
+
+    def modeled_stat(path, **options):
+        info = stat_path(path, **options)
+        if owned_info and (info.st_dev, info.st_ino) == (owned_info.st_dev, owned_info.st_ino):
+            fields = list(info)
+            fields[4] = OTHER_IDENTITY
+            return os.stat_result(fields)
+        return info
+
+    def can_write(path, mode, **options):
+        info = stat_path(Path(path))
+        return mode == os.W_OK and writable_info is not None and (
+            info.st_dev, info.st_ino) == (writable_info.st_dev, writable_info.st_ino)
+
+    with patch("os.geteuid", return_value=OTHER_IDENTITY), patch("os.access", side_effect=can_write), \
+            patch.object(Path, "stat", modeled_stat):
+        yield
+
+
+def assert_probe(test, clis=CLIS, *, owned=None, writable=None, accepted=False):
+    """Exercise each assertion at the public lookup boundary in every shipped copy."""
+    for cli in clis:
+        for layout in ("file", "symlink", "hardlink", "rename"):
+            with probe_fixture(cli, layout) as (root, directory, target):
+                for name in COPIES:
+                    with test.subTest(copy=name, cli=cli, layout=layout):
+                        module = load(name)
+                        with probe_identity(directory, target, owned, writable), \
+                                patch.dict(os.environ, {"PATH": str(directory)}):
+                            if accepted:
+                                test.assertEqual(str(directory), module.probe_search_path(root, cli))
+                            else:
+                                with test.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                                    module.probe_search_path(root, cli)
+                            if owned == "directory":
+                                with test.assertRaisesRegex(ValueError, "mutable directory"):
+                                    module.reject_mutable_probe_alias(directory.lstat(), directory, host=True)
+
+
 class CliProbePathTrustTest(unittest.TestCase):
-    """Each test runs once per copy. The runner identity is modeled at the two inputs the rule reads."""
-
-    def setUp(self) -> None:
-        self.root = self.scratch_dir("worktree")
-        self.bin = self.scratch_dir("bin")
-        self.tool = self.install(self.bin, "codex")
-
-    def scratch_dir(self, name: str) -> Path:
-        directory = Path(tempfile.mkdtemp(prefix=f"cli-probe-{name}-")).resolve()
-        self.addCleanup(shutil.rmtree, directory, True)
-        return directory
-
-    @staticmethod
-    def install(directory: Path, name: str) -> Path:
-        tool = directory / name
-        tool.write_text("#!/bin/sh\n", encoding="utf-8")
-        tool.chmod(0o555)
-        return tool
-
-    def identity(self, *, euid: int, writable: set[Path]):
-        """Pretend the runner is `euid` and can write exactly the paths in `writable`."""
-        paths = {path.resolve() for path in writable}
-        return (patch("os.geteuid", return_value=euid),
-                patch("os.access", side_effect=lambda path, mode, **options:
-                      mode == os.W_OK and Path(path).resolve() in paths))
-
-    def search(self, module, cli: str = "codex") -> str:
-        with patch.dict(os.environ, {"PATH": str(self.bin)}):
-            return module.probe_search_path(self.root, cli)
-
-    def each_copy(self):
-        for name in COPIES:
-            with self.subTest(copy=name):
-                yield load(name)
+    """The same public lookup contract covers source and both shipped hosts."""
 
     def test_root_owned_read_only_executable_is_accepted(self) -> None:
-        owner, access = self.identity(euid=OTHER_IDENTITY, writable=set())
-        with owner, access:
-            for module in self.each_copy():
-                self.assertEqual(str(self.bin), self.search(module))
+        assert_probe(self, accepted=True)
 
     def test_runner_owned_executable_is_rejected(self) -> None:
-        # A non-host CLI skips the directory rule, so the runner-owned directory cannot cause the rejection.
-        tool = self.install(self.bin, "git")
-        owner, access = self.identity(euid=tool.stat().st_uid, writable=set())
-        with owner, access:
-            for module in self.each_copy():
-                with self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
-                    self.search(module, "git")
+        assert_probe(self, owned="file")
 
     def test_runner_writable_executable_is_rejected(self) -> None:
-        owner, access = self.identity(euid=OTHER_IDENTITY, writable={self.tool})
-        with owner, access:
-            for module in self.each_copy():
-                with self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
-                    self.search(module)
+        assert_probe(self, writable="file")
 
     def test_runner_writable_host_path_directory_is_rejected(self) -> None:
-        owner, access = self.identity(euid=OTHER_IDENTITY, writable={self.bin})
-        with owner, access:
-            for module in self.each_copy():
-                with self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
-                    self.search(module)
+        assert_probe(self, HOSTS, writable="directory")
 
     def test_runner_owned_host_path_directory_is_rejected(self) -> None:
-        owner, access = self.identity(euid=self.bin.stat().st_uid, writable=set())
-        with owner, access:
-            for module in self.each_copy():
-                with self.assertRaisesRegex(ValueError, "mutable directory"):
-                    module.reject_mutable_probe_alias(self.bin.lstat(), self.bin, host=True)
+        assert_probe(self, HOSTS, owned="directory")
 
     def test_other_cli_path_directory_stays_outside_the_directory_rule(self) -> None:
-        # Pins the documented split: only host lookups require a protected directory.
-        owner, access = self.identity(euid=OTHER_IDENTITY, writable={self.bin})
-        self.install(self.bin, "git")
-        with owner, access:
-            for module in self.each_copy():
-                self.assertEqual(str(self.bin), self.search(module, "git"))
+        assert_probe(self, ("git", "gh", "docker"), writable="directory", accepted=True)
+
 
 
 def build_suite() -> unittest.TestSuite:
