@@ -38,7 +38,11 @@ a Post item is incomplete or `autopilot_continuation.required=true`.
 
 Commands like `/speckit.verify`, `/speckit.verify-tasks`,
 `/speckit.doctor`, and `/speckit.retrospective.analyze` are INSTALLED by
-`specify extension add <name>`. The CLI creates command files in the
+`specify extension add <name> --from <archive_url>`. For a curated extension,
+fill in its name and pinned `archive_url` from the plugin's
+[`scripts/curated-set.json`](../../../scripts/curated-set.json).
+The operator vets the archive and runs the install, accepting Spec Kit's trust
+prompt. The CLI creates command files in the
 project's commands directory (`.codex/commands/` for Codex CLI,
 `.claude/commands/` for Claude Code). These commands then appear as
 invocable skills.
@@ -48,7 +52,9 @@ commands ARE available — run the item. If an extension is NOT in
 `.registry` and NOT found via search, log a warning and mark that specific
 item `skipped: <ext> not installed` (do NOT fail the entire autopilot). The
 item MUST still appear in the plan — never drop it silently. Recommend:
-`specify extension add <name>`.
+`specify extension add <name> --from <archive_url>` using that curated entry.
+For an unlisted extension, the operator chooses and vets an archive first.
+Autopilot recommends the command; the operator runs it.
 
 **CRITICAL:** Use subagents only for extension-backed items and the
 parallel-group tracks defined below. Parent-session items stay in the parent

@@ -17,6 +17,11 @@ if str(LIB_DIR) not in sys.path:
 
 from test_result import run_counted
 
+sys.path.insert(0, str(PLUGIN_ROOT))
+from speckit_pro_runner.helpers.readiness_host_items import host_item
+from speckit_pro_runner.helpers.readiness_values import clean_text
+from speckit_pro_runner.strict_input import SelectionError
+
 MANIFEST = PLUGIN_ROOT / 'scripts' / 'curated-set.json'
 # Spec Kit v1.1.0 refuses `add <id>` for community-catalog entries (discovery-only), so each
 # entry carries the archive the install command takes through `--from`. Pinning a commit
@@ -86,6 +91,58 @@ class ValidateCuratedSet(unittest.TestCase):
             with self.subTest(msg=f"entry '{entry['id']}' pins a commit archive for the --from install"):
                 url = entry.get('archive_url')
                 self.assertTrue(isinstance(url, str) and ARCHIVE_URL.fullmatch(url), f'archive_url={url!r}')
+
+
+class CuratedRecommendationContracts(unittest.TestCase):
+
+    def test_shipped_curated_recommendations_have_an_archive_source(self) -> None:
+        catalog = json.loads(MANIFEST.read_text(encoding='utf-8'))['entries']
+        names = {entry['id'] for entry in catalog} | {'<name>', '<id>', '{name}'}
+        command = re.compile(r'''\bspecify (?:extension|preset) add ([^`\n"']+)''')
+        roots = (PLUGIN_ROOT, REPO_ROOT / 'dist' / 'claude' / 'speckit-pro',
+                 REPO_ROOT / 'dist' / 'codex' / 'speckit-pro')
+        for root in roots:
+            self.assertTrue(root.is_dir())
+            paths = sorted((root / 'skills').rglob('*.md'))
+            paths += sorted((root / 'codex-skills').rglob('*.md'))
+            paths += sorted((root / 'speckit_pro_runner' / 'helpers').glob('*.py'))
+            for path in paths:
+                for match in command.finditer(path.read_text(encoding='utf-8')):
+                    args = match.group(1).split()
+                    if args[0] in names:
+                        with self.subTest(path=str(path.relative_to(REPO_ROOT)), command=match.group()):
+                            self.assertIn('--from', args)
+                            self.assertLess(args.index('--from') + 1, len(args))
+
+    def test_readiness_missing_curated_extensions_use_the_pinned_archive(self) -> None:
+        for entry in json.loads(MANIFEST.read_text(encoding='utf-8'))['entries']:
+            if entry['kind'] != 'extension':
+                continue
+            with self.subTest(extension=entry['id']):
+                _, item = host_item({'item': 'extension_versions', 'evidence_source': 'extension registry',
+                                     'extensions': [{'extension': entry['id'], 'installed': None,
+                                                     'expected': '1.0.0'}]}, 'codex', 'observed', 'revision')
+                self.assertEqual(item['status'], 'unavailable')
+                self.assertIn(f"specify extension add {entry['id']} --from {entry['archive_url']}", item['action'])
+                self.assertIn('operator', item['action'].lower())
+
+    def test_many_missing_extensions_keep_the_archive_install_instructions(self) -> None:
+        entries = [{'extension': entry['id'], 'installed': None, 'expected': '1.0.0'}
+                   for entry in json.loads(MANIFEST.read_text(encoding='utf-8'))['entries']
+                   if entry['kind'] == 'extension']
+        _, item = host_item({'item': 'extension_versions', 'evidence_source': 'extension registry',
+                             'extensions': entries}, 'codex', 'observed', 'revision')
+        self.assertEqual(item['status'], 'unavailable')
+        self.assertIn('curated-set.json', item['action'])
+        self.assertIn('--from <archive_url>', item['action'])
+        self.assertIn('operator', item['action'].lower())
+
+    def test_readiness_archive_urls_do_not_relax_local_path_privacy(self) -> None:
+        url = json.loads(MANIFEST.read_text(encoding='utf-8'))['entries'][0]['archive_url']
+        self.assertEqual(clean_text(url, 'action'), url)
+        for path in ('/' + 'private/data', '~' + '/data', 'C:' + '/data', 'prefix:/' + 'data'):
+            with self.subTest(path=path), self.assertRaises(SelectionError):
+                clean_text(f'{url} {path}', 'action')
 
 
 class CuratedGuidanceContracts(unittest.TestCase):
