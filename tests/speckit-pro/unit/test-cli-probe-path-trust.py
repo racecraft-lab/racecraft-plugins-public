@@ -84,7 +84,7 @@ def probe_identity(directory, target, owned, writable):
         yield
 
 
-def assert_probe(test, clis=CLIS, *, owned=None, writable=None, accepted=False):
+def assert_probe(test, clis=CLIS, owned=None, writable=None, accepted=False):
     """Exercise each assertion at the public lookup boundary in every shipped copy."""
     for cli in clis:
         for layout in ("file", "symlink", "hardlink", "rename"):
