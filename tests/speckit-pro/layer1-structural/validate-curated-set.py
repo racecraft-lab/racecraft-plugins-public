@@ -144,6 +144,24 @@ class CuratedRecommendationContracts(unittest.TestCase):
             with self.subTest(path=path), self.assertRaises(SelectionError):
                 clean_text(f'{url} {path}', 'action')
 
+    def test_readiness_https_urls_refuse_userinfo(self) -> None:
+        for value in ('https://user:hunter2@example.com/x.zip',
+                      'https://user:letters@example.com/x.zip',
+                      'https://user@example.com/x.zip',
+                      'https://@example.com/x.zip',
+                      'HTTPS://user:hunter2@example.com/x.zip',
+                      'Download https://user:hunter2@example.com/x.zip before installing.'):
+            with self.subTest(value=value):
+                with self.assertRaises(SelectionError) as refused:
+                    clean_text(value, 'action')
+                self.assertNotIn(value, str(refused.exception))
+        for url in ('https://example.com/x.zip',
+                    'https://example.com/user@docs.zip',
+                    'https://example.com/x.zip?contact=reader@example.com',
+                    'https://example.com/x.zip#reader@example.com'):
+            with self.subTest(url=url):
+                self.assertEqual(clean_text(url, 'action'), url)
+
 
 class CuratedGuidanceContracts(unittest.TestCase):
 
