@@ -15,7 +15,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
-from unittest import mock
+import unittest.mock as mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 for directory in (REPO_ROOT / "scripts", REPO_ROOT / "speckit-pro", REPO_ROOT / "tests" / "speckit-pro" / "lib"):
