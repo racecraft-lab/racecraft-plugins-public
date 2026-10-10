@@ -64,14 +64,14 @@ class PlainEntryPointCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.module = load_script(cls.module_name, REPO_ROOT / "scripts" / cls.script_name)
 
+    def suite_lock_patch(self):
+        return contextlib.nullcontext()
+
     def run_script(self, argv: list[str], code: int = 0, base: dict[str, str] | None = None):
         with mock.patch.dict(os.environ, BASE_ENV if base is None else base, clear=True):
             with mock.patch.object(
                 self.module.subprocess, "run", return_value=completed(code)
-            ) as run, mock.patch.object(
-                self.module, "hold_suite_lock", create=True, return_value=contextlib.nullcontext()
-            ):
-                # The suite running this test already holds the checkout lock.
+            ) as run, self.suite_lock_patch():
                 status = self.module.main(argv)
         return status, run
 
@@ -102,6 +102,12 @@ class RunCiSuiteTests(PlainEntryPointCase):
     script_name = "run-ci-suite.py"
     module_name = "run_ci_suite_script"
     documented_check = "CI suite:"
+
+    def suite_lock_patch(self):
+        # The suite running this test already holds the lock on this checkout.
+        return mock.patch.object(
+            self.module, "hold_suite_lock", return_value=contextlib.nullcontext()
+        )
 
     def test_sends_the_same_request_the_raw_command_reads(self) -> None:
         _, run = self.run_script([])

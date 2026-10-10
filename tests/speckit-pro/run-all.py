@@ -17,7 +17,8 @@ parity layer with no run-all block.
 
 Headline: ``speckit-pro test suite: X/Y passed`` (``X/Y passed (Z failed)`` on
 failure), where X/Y sums each child's ``<label>: X/Y passed`` line. Exit 0 iff
-no failures, 1 on any failure, 2 on an unknown flag.
+no failures, 1 on any failure, 2 on an unknown flag, 75 when another suite
+already holds this checkout (``scripts/suite_checkout_lock.py``).
 
 Every executable manifest entry is Python-authoritative. A non-``.py`` entry
 fails closed instead of falling back to a platform shell.
@@ -40,7 +41,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from runner_invocation import run_runner  # noqa: E402
-from suite_checkout_lock import SuiteLockHeld, hold_suite_lock  # noqa: E402
+from suite_checkout_lock import REFUSED_STATUS, SuiteLockHeld, hold_suite_lock  # noqa: E402
 from suite_child_env import child_environment  # noqa: E402
 from test_result import classify_counted_child, failure_report  # noqa: E402
 
@@ -260,7 +261,7 @@ def main(argv: list[str]) -> int:
             return run_selected_layers(config, root)
     except SuiteLockHeld as exc:
         print(f"run-all: {exc}", file=sys.stderr)
-        return 1
+        return REFUSED_STATUS
 
 
 def run_selected_layers(config: Config, root: Path) -> int:

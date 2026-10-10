@@ -41,13 +41,20 @@ EMPTY_LAYER = {
 }
 
 
-def fresh_checkout(case: unittest.TestCase) -> Path:
-    """Return an empty directory standing in for a checkout; removed after the test."""
+def fresh_checkout(case: unittest.TestCase, *, git_dir: bool = True) -> Path:
+    """Return a directory standing in for a checkout; removed after the test."""
     temp = tempfile.TemporaryDirectory()
     case.addCleanup(temp.cleanup)
-    return Path(temp.name).resolve()
+    root = Path(temp.name).resolve()
+    if git_dir:
+        (root / ".git").mkdir()
+    return root
 
 
+needs_flock = unittest.skipIf(lock.fcntl is None, "flock is unavailable on this platform")
+
+
+@needs_flock
 class SuiteCheckoutLockTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = fresh_checkout(self)
@@ -77,6 +84,21 @@ class SuiteCheckoutLockTests(unittest.TestCase):
         with lock.hold_suite_lock(self.root), lock.hold_suite_lock(other):
             pass
 
+    def test_worktree_git_file_resolves_to_its_own_git_directory(self) -> None:
+        real = fresh_checkout(self)
+        linked = fresh_checkout(self, git_dir=False)
+        (linked / ".git").write_text(f"gitdir: {real / '.git'}\n", encoding="utf-8")
+        with lock.hold_suite_lock(linked):
+            self.assertTrue((real / ".git" / lock.LOCK_NAME).is_file())
+            with self.assertRaises(lock.SuiteLockHeld):
+                with lock.hold_suite_lock(linked):
+                    pass
+
+    def test_released_lock_does_not_leave_a_stale_holder(self) -> None:
+        with lock.hold_suite_lock(self.root):
+            pass
+        self.assertEqual((self.root / ".git" / lock.LOCK_NAME).read_text(encoding="utf-8"), "")
+
     def test_lock_dies_with_a_killed_holder(self) -> None:
         code = (
             "import sys, time; sys.path.insert(0, sys.argv[1]);"
@@ -102,6 +124,29 @@ class SuiteCheckoutLockTests(unittest.TestCase):
             pass
 
 
+@needs_flock
+class UnguardedCheckoutTests(unittest.TestCase):
+    def test_checkout_without_a_git_directory_runs_unguarded_with_a_warning(self) -> None:
+        root = fresh_checkout(self, git_dir=False)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            with lock.hold_suite_lock(root), lock.hold_suite_lock(root):
+                pass
+        self.assertIn("running without the one-suite guard", err.getvalue())
+
+    def test_unwritable_lock_file_runs_unguarded_with_a_warning(self) -> None:
+        root = fresh_checkout(self)
+        err = io.StringIO()
+        with (
+            mock.patch("builtins.open", side_effect=PermissionError(13, "Permission denied")),
+            contextlib.redirect_stderr(err),
+        ):
+            with lock.hold_suite_lock(root):
+                pass
+        self.assertIn("Permission denied", err.getvalue())
+
+
+@needs_flock
 class EntryPointTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = fresh_checkout(self)
@@ -132,14 +177,14 @@ class EntryPointTests(unittest.TestCase):
     def test_quick_suite_refuses_while_another_suite_holds_the_checkout(self) -> None:
         with lock.hold_suite_lock(self.root):
             status, out, err = self.quick_suite()
-        self.assertEqual(status, 1)
+        self.assertEqual(status, lock.REFUSED_STATUS)
         self.assertIn("another suite is already running", err)
         self.assertNotIn("Layer 4", out)
 
     def test_ci_suite_refuses_while_another_suite_holds_the_checkout(self) -> None:
         with lock.hold_suite_lock(self.root):
             status, err, run = self.ci_suite()
-        self.assertEqual(status, 1)
+        self.assertEqual(status, lock.REFUSED_STATUS)
         self.assertIn("another suite is already running", err)
         run.assert_not_called()
 
@@ -157,14 +202,17 @@ class EntryPointTests(unittest.TestCase):
             contextlib.redirect_stderr(err),
         ):
             self.assertEqual(run_ci_suite.main([]), 0)
-        self.assertEqual(results[0][0], 1)
+        self.assertEqual(results[0][0], lock.REFUSED_STATUS)
         self.assertIn("another suite is already running", results[0][2])
 
     def test_lock_is_free_after_each_suite_even_when_it_fails(self) -> None:
-        status, _, _ = self.ci_suite(returncode=3)
+        status, err, _ = self.ci_suite(returncode=3)
         self.assertEqual(status, 3)
-        status, _, _ = self.quick_suite()
+        self.assertNotIn("already running", err)
+        status, out, err = self.quick_suite()
         self.assertEqual(status, 1)  # the empty layer fails on its own, not on the lock
+        self.assertIn("no test scripts discovered", out)
+        self.assertNotIn("already running", err)
         with lock.hold_suite_lock(self.root):
             pass
 
@@ -172,6 +220,6 @@ class EntryPointTests(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite(
         unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (SuiteCheckoutLockTests, EntryPointTests)
+        for case in (SuiteCheckoutLockTests, UnguardedCheckoutTests, EntryPointTests)
     )
     raise SystemExit(run_counted(suite, label="test-suite-checkout-lock"))

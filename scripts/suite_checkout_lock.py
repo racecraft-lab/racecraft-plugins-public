@@ -3,16 +3,22 @@
 The quick suite (``tests/speckit-pro/run-all.py``) and the CI suite
 (``scripts/run-ci-suite.py``) share staging state under one checkout, so a
 second run there corrupts the first. Both entry points hold this lock for
-their whole run. The kernel drops an ``flock`` when its holder exits or is
-killed, so a failed or interrupted suite never leaves the checkout locked.
+their whole run. The lock is an ``flock`` on a file in the checkout's own git
+directory, so it does not depend on ``TMPDIR`` and is private to the checkout.
+The kernel drops it when the holding process exits or is killed, so a failed
+or interrupted suite never leaves the checkout locked. Child processes do not
+inherit it: killing the wrapper alone frees the lock while orphaned children
+may still run.
+
+The guard stands down, with a warning, where a lock cannot be taken: no
+``fcntl`` (Windows), no git directory, or one that cannot be written.
 """
 
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import os
-import tempfile
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -21,23 +27,49 @@ try:
 except ImportError:  # no flock on this platform: suites run unguarded
     fcntl = None  # type: ignore[assignment]
 
+LOCK_NAME = "speckit-suite.lock"
+# EX_TEMPFAIL: distinct from 1 so callers do not read a refusal as a red test.
+REFUSED_STATUS = 75
+
 
 class SuiteLockHeld(RuntimeError):
     """Another suite already holds the lock for this checkout."""
 
 
-def _lock_path(checkout: Path) -> Path:
-    digest = hashlib.sha256(str(checkout.resolve()).encode("utf-8")).hexdigest()[:16]
-    return Path(tempfile.gettempdir()) / f"speckit-suite-{digest}.lock"
+def _git_dir(checkout: Path) -> Path | None:
+    """Return the checkout's git directory, following a worktree ``.git`` file."""
+    marker = checkout / ".git"
+    if marker.is_dir():
+        return marker
+    try:
+        first_line = marker.read_text(encoding="utf-8").splitlines()[0]
+    except (OSError, IndexError, UnicodeError):
+        return None
+    prefix = "gitdir:"
+    if not first_line.startswith(prefix):
+        return None
+    return (checkout / first_line[len(prefix):].strip()).resolve()
+
+
+def _unguarded(reason: str) -> None:
+    print(f"suite lock: {reason}; running without the one-suite guard", file=sys.stderr)
 
 
 @contextlib.contextmanager
 def hold_suite_lock(checkout: Path) -> Iterator[None]:
     """Hold the checkout's suite lock, or raise ``SuiteLockHeld``."""
-    if fcntl is None:
+    git_dir = _git_dir(checkout)
+    if fcntl is None or git_dir is None:
+        _unguarded("no flock or git directory here")
         yield
         return
-    with open(_lock_path(checkout), "a+", encoding="utf-8") as stream:
+    try:
+        stream = open(git_dir / LOCK_NAME, "a+", encoding="utf-8")
+    except OSError as exc:
+        _unguarded(f"cannot open the lock file ({exc.strerror})")
+        yield
+        return
+    with stream:
         try:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -47,8 +79,16 @@ def hold_suite_lock(checkout: Path) -> Iterator[None]:
                 f"another suite is already running in this checkout (pid {holder}); "
                 "wait for it to finish or run from another worktree"
             ) from None
+        except OSError as exc:
+            _unguarded(f"flock failed ({exc.strerror})")
+            yield
+            return
         stream.seek(0)
         stream.truncate()
         stream.write(str(os.getpid()))
         stream.flush()
-        yield
+        try:
+            yield
+        finally:
+            stream.seek(0)
+            stream.truncate()
