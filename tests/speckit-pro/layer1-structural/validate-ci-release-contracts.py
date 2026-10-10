@@ -211,7 +211,7 @@ PR_CHECKS_EVENTS_LITERAL = '[opened, reopened, synchronize, ready_for_review]'
 PR_CONCURRENCY_LINES = ('  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}', "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
 UNIQUE_ARTIFACT_SUFFIX = '-${{ github.run_id }}-${{ github.run_attempt }}'
 TITLE_LITERAL = "TITLE: ${{ github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).title || github.event.pull_request.title }}"
-CONTENT_CHECKS: list[tuple[str, str, str, list[str]]] = [('metadata', 'all', 'title validation runs the plain title-gate entry point', ['run: python3 scripts/check-pr-title.py "$TITLE"']), ('metadata', 'absent', 'title validation does not carry the raw runner command', ['validate-pr-title-live.json', 'python3 -m speckit_pro_runner']), ('metadata', 'all', 'title validation supplies the live title', [TITLE_LITERAL]), ('metadata', 'all', 'metadata jobs keep the required context names', ['validate-pr-title:', 'validate-release-note:', "'manual-validate-pr-title' || 'validate-pr-title'", "'manual-validate-release-note' || 'validate-release-note'"]), ('metadata', 'all', 'metadata supports dispatched release PR checks', ['workflow_dispatch:', 'run-name: "PR Metadata #', 'inputs.pr_number', 'pr_number:', 'run: python3 scripts/pr_metadata.py', 'pull-requests: read', "github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false"]), ('metadata', 'all', 'release-note validation receives PR text through env values', ['PR_TITLE: ', 'PR_BODY: ', 'PR_LABELS_JSON: ', 'run: python3 scripts/compose-release-notes.py --validate-pr']), ('workflow', 'absent', 'PR Checks no longer reports the metadata contexts', ['validate-pr-title:', 'validate-release-note:', 'pr_title:', 'inputs.pr_title']), ('workflow', 'all', 'workflow validation job is defined', ['validate-workflows:']), ('combined', 'all', 'workflow validation installs pinned actionlint', ['ACTIONLINT_VERSION: "1.7.12"', 'ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"', 'run: python3 scripts/install-actionlint.py install', 'https://github.com/rhysd/actionlint/releases/download/', 'verify_sha256(archive_path, pinned_sha256, label=archive.label)']), ('combined', 'all', 'workflow validation runs actionlint over all workflows', ['run: python3 scripts/install-actionlint.py run', 'workflows_directory.glob("*.yml")', 'shell=False']), ('combined', 'all', 'Python-gated plugin matrix is emitted', ['Emit Python-gated plugin matrix', 'run: python3 scripts/emit-plugin-matrix.py', 'PLUGINS = ("speckit-pro",)']), ('workflow', 'all', 'workflow_dispatch trigger is defined', ['workflow_dispatch:']), ('workflow', 'all', 'dispatched PR checks identify the PR number', ['run-name: "PR Checks #', 'inputs.pr_number']), ('workflow', 'all', 'workflow_dispatch accepts PR check inputs', ['pr_number:', 'base_ref:']), ('workflow', 'all', 'detect supports dispatched release PR checks', ["github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false", "github.event_name == 'pull_request' && github.base_ref || inputs.base_ref"]), ('metadata', 'all', 'title validation supports dispatched release PR checks', ["github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).title || github.event.pull_request.title"]), ('workflow', 'all', 'sentinel depends on detect, test, artifact-consistency, and go jobs', ['needs: [detect, test, artifact-consistency, go]']), ('workflow', 'all', 'sentinel checks the go result', ['GO_RESULT: ${{ needs.go.result }}']), ('workflow', 'all', 'detect emits the Go module change flag from the base ref', ['go: ${{ steps.go_changes.outputs.run_go }}', 'run: python3 scripts/check-go-module.py detect']), ('workflow', 'all', 'go job runs pinned setup-go and the Python Go wrapper', ['go:\n    name: "go (${{ matrix.os }})"', "if: needs.detect.result == 'success' && needs.detect.outputs.go == 'true'", 'uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0', 'go-version-file: typesafe-jev/go.mod', 'run: python3 scripts/check-go-module.py check']), ('combined', 'all', 'sentinel checks go_result for success or skipped', ['go_result not in {"success", "skipped"}']), ('workflow', 'all', 'sentinel checks the artifact-consistency result', ['ARTIFACT_RESULT: ${{ needs.artifact-consistency.result }}', 'run: python3 scripts/check-pr-workflow-results.py']), ('workflow', 'all', 'sentinel runs if: always()', ['if: always()']), ('workflow', 'all', 'sentinel has only checkout read permission', ['validate-plugins:', 'contents: read']), ('workflow', 'absent', 'latest jq job is deferred', ['test-latest-jq:', 'latest_jq_result']), ('workflow', 'all', 'test job dispatches runner toolchain gate', ['run-toolchain-preflight.json', 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']), ('workflow', 'all', 'test job runs the plain CI-suite entry point', ['run: python3 scripts/run-ci-suite.py']), ('workflow', 'absent', 'test job does not carry the raw CI-suite command or its environment', ['run-ci-suite.json', 'SPECKIT_SKIP_TOOLCHAIN_CHECK', 'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM', 'GIT_CONFIG_NOSYSTEM']), ('workflow', 'all', 'docs validation dispatches runner toolchain preflight', ['Report docs toolchain', 'run-toolchain-preflight-docs.json']), ('workflow', 'absent', 'docs validation does not dispatch bash toolchain check', ['bash tests/speckit-pro/check-toolchain.sh --mode docs']), ('combined', 'all', 'sentinel checks detect_result for failure', ['DETECT_RESULT: ${{ needs.detect.result }}', 'detect_result in {"failure", "cancelled"}']), ('combined', 'all', 'sentinel checks test_result for success or skipped', ['TEST_RESULT: ${{ needs.test.result }}', 'test_result not in {"success", "skipped"}']), ('combined', 'all', 'sentinel exits 0 on success or skipped', ['Plugin tests passed or were skipped', 'artifact_result not in {"success", "skipped"}']), ('combined', 'all', 'sentinel exits 1 on detect failure', ['"failure"']), ('combined', 'all', 'sentinel exits 1 on detect cancellation', ['"cancelled"'])]
+CONTENT_CHECKS: list[tuple[str, str, str, list[str]]] = [('metadata', 'absent', 'title validation does not carry the raw runner command', ['validate-pr-title-live.json', 'python3 -m speckit_pro_runner']), ('metadata', 'all', 'metadata jobs keep the required context names', ['validate-pr-title:', 'validate-release-note:', "'manual-validate-pr-title' || 'validate-pr-title'", "'manual-validate-release-note' || 'validate-release-note'"]), ('metadata', 'all', 'metadata supports dispatched release PR checks', ['workflow_dispatch:', 'run-name: "PR Metadata #', 'inputs.pr_number', 'pr_number:', 'run: python3 scripts/pr_metadata.py', 'pull-requests: read', "github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false"]), ('metadata', 'all', 'release-note validation receives PR text through env values', ['PR_TITLE: ', 'PR_BODY: ', 'PR_LABELS_JSON: ', 'run: python3 scripts/compose-release-notes.py --validate-pr']), ('workflow', 'absent', 'PR Checks no longer reports the metadata contexts', ['validate-pr-title:', 'validate-release-note:', 'pr_title:', 'inputs.pr_title']), ('workflow', 'all', 'workflow validation job is defined', ['validate-workflows:']), ('combined', 'all', 'workflow validation installs pinned actionlint', ['ACTIONLINT_VERSION: "1.7.12"', 'ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"', 'run: python3 scripts/install-actionlint.py install', 'https://github.com/rhysd/actionlint/releases/download/', 'verify_sha256(archive_path, pinned_sha256, label=archive.label)']), ('combined', 'all', 'workflow validation runs actionlint over all workflows', ['run: python3 scripts/install-actionlint.py run', 'workflows_directory.glob("*.yml")', 'shell=False']), ('combined', 'all', 'Python-gated plugin matrix is emitted', ['Emit Python-gated plugin matrix', 'run: python3 scripts/emit-plugin-matrix.py', 'PLUGINS = ("speckit-pro",)']), ('workflow', 'all', 'workflow_dispatch trigger is defined', ['workflow_dispatch:']), ('workflow', 'all', 'dispatched PR checks identify the PR number', ['run-name: "PR Checks #', 'inputs.pr_number']), ('workflow', 'all', 'workflow_dispatch accepts PR check inputs', ['pr_number:', 'base_ref:']), ('workflow', 'all', 'detect supports dispatched release PR checks', ["github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false", "github.event_name == 'pull_request' && github.base_ref || inputs.base_ref"]), ('metadata', 'all', 'title validation supports dispatched release PR checks', ["github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).title || github.event.pull_request.title"]), ('workflow', 'all', 'sentinel depends on detect, test, artifact-consistency, and go jobs', ['needs: [detect, test, artifact-consistency, go]']), ('workflow', 'all', 'sentinel checks the go result', ['GO_RESULT: ${{ needs.go.result }}']), ('workflow', 'all', 'detect emits the Go module change flag from the base ref', ['go: ${{ steps.go_changes.outputs.run_go }}', 'run: python3 scripts/check-go-module.py detect']), ('workflow', 'all', 'go job runs pinned setup-go and the Python Go wrapper', ['go:\n    name: "go (${{ matrix.os }})"', "if: needs.detect.result == 'success' && needs.detect.outputs.go == 'true'", 'uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0', 'go-version-file: typesafe-jev/go.mod', 'run: python3 scripts/check-go-module.py check']), ('combined', 'all', 'sentinel checks go_result for success or skipped', ['go_result not in {"success", "skipped"}']), ('workflow', 'all', 'sentinel checks the artifact-consistency result', ['ARTIFACT_RESULT: ${{ needs.artifact-consistency.result }}', 'run: python3 scripts/check-pr-workflow-results.py']), ('workflow', 'all', 'sentinel runs if: always()', ['if: always()']), ('workflow', 'all', 'sentinel has only checkout read permission', ['validate-plugins:', 'contents: read']), ('workflow', 'absent', 'latest jq job is deferred', ['test-latest-jq:', 'latest_jq_result']), ('workflow', 'all', 'test job dispatches runner toolchain gate', ['run-toolchain-preflight.json', 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']), ('workflow', 'absent', 'test job does not carry the raw CI-suite command or its environment', ['run-ci-suite.json', 'SPECKIT_SKIP_TOOLCHAIN_CHECK', 'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM', 'GIT_CONFIG_NOSYSTEM']), ('workflow', 'all', 'docs validation dispatches runner toolchain preflight', ['Report docs toolchain', 'run-toolchain-preflight-docs.json']), ('workflow', 'absent', 'docs validation does not dispatch bash toolchain check', ['bash tests/speckit-pro/check-toolchain.sh --mode docs']), ('combined', 'all', 'sentinel checks detect_result for failure', ['DETECT_RESULT: ${{ needs.detect.result }}', 'detect_result in {"failure", "cancelled"}']), ('combined', 'all', 'sentinel checks test_result for success or skipped', ['TEST_RESULT: ${{ needs.test.result }}', 'test_result not in {"success", "skipped"}']), ('combined', 'all', 'sentinel exits 0 on success or skipped', ['Plugin tests passed or were skipped', 'artifact_result not in {"success", "skipped"}']), ('combined', 'all', 'sentinel exits 1 on detect failure', ['"failure"']), ('combined', 'all', 'sentinel exits 1 on detect cancellation', ['"cancelled"'])]
 CONTAINER_JOBS = ('changes', 'linux-amd64-preflight', 'linux-arm64-preflight', 'windows-availability', 'windows-x64-smoke', 'windows-arm64-smoke', 'linux-amd64', 'linux-arm64')
 LINUX_REQUESTS = ('run-toolchain-preflight.json', 'run-ci-suite.json', 'repository-bash-confinement/requests/repo-bash-confinement.json', 'installed-plugin-release/requests/runner-invocation.json', 'installed-plugin-release/requests/active-runtime-guard.json', 'installed-plugin-release/requests/payload-completeness.json', 'installed-plugin-release/requests/release-readiness.json')
 EXPECTED_PERMISSIONS = {'changes': 'contents: read', 'linux-amd64-preflight': 'contents: read', 'linux-arm64-preflight': 'contents: read', 'windows-availability': 'contents: read', 'windows-x64-smoke': 'contents: read', 'windows-arm64-smoke': 'contents: read', 'linux-amd64': 'contents: read', 'linux-arm64': 'contents: read'}
@@ -243,6 +243,119 @@ def uses_shared_changed_files(docs_content: str) -> bool:
     shared = (REPO_ROOT / 'scripts' / 'changed_files.py').read_text(encoding='utf-8')
     return '_changed_files.changed_files_for_base(base_ref' in docs_content and '["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"]' in shared
 
+def _workflow_structure(text: str) -> str:
+    """Keep structural lines, never comments or block-scalar contents."""
+    lines = []
+    scalar_indent: int | None = None
+    for raw_line in text.splitlines():
+        indent = len(raw_line) - len(raw_line.lstrip())
+        if scalar_indent is not None and indent > scalar_indent:
+            continue
+        line = _strip_comment(raw_line)
+        if not line.strip():
+            continue
+        scalar_indent = None
+        lines.append(line)
+        item = line.lstrip()
+        mapping = _split_mapping(item.removeprefix('- '))
+        if mapping and re.fullmatch(r'[|>][1-9+-]*', mapping[1].strip()):
+            scalar_indent = indent + (2 if item.startswith('- ') else 0)
+    return '\n'.join(lines)
+
+def _unique_workflow_block(text: str, header: str, indent: int) -> str:
+    """Select a canonical block in its parent, rejecting duplicates or aliases."""
+    lines = text.splitlines()
+    starts = [i for i, line in enumerate(lines) if line == ' ' * indent + header]
+    if len(starts) != 1:
+        return ''
+    start = starts[0]
+    end = next((i for i in range(start + 1, len(lines))
+                if len(lines[i]) - len(lines[i].lstrip()) <= indent), len(lines))
+    return '\n'.join(lines[start:end])
+
+def _required_workflow_step(text: str, job: str, name: str) -> str:
+    """Read only a real named step under jobs.<job>.steps in the pinned layout."""
+    jobs = _unique_workflow_block(_workflow_structure(text), 'jobs:', 0)
+    job_block = _unique_workflow_block(jobs, job + ':', 2)
+    steps = _unique_workflow_block(job_block, 'steps:', 4)
+    return _unique_workflow_block(steps, '- name: ' + name, 6)
+
+class ValidateExecutableWorkflowContracts(unittest.TestCase):
+    """Exercise the actual sentinel with contributor-controlled workflow text."""
+
+    def assert_sentinel_rejects(self, source: str, replacement: str) -> None:
+        paths = {
+            'workflow': validate_pr_checks_sentinel_WORKFLOW_FILE,
+            'metadata': PR_METADATA_WORKFLOW_FILE,
+        }
+        commands = {
+            'workflow': 'python3 scripts/run-ci-suite.py',
+            'metadata': 'python3 scripts/check-pr-title.py "$TITLE"',
+        }
+        content = paths[source].read_text(encoding='utf-8')
+        if source == 'metadata' and '\n        if:' in replacement:
+            content = content.replace(
+                "        if: github.event_name != 'workflow_dispatch' || fromJSON(steps.metadata.outputs.metadata).draft == false\n",
+                '', 1)
+        original = '        run: ' + commands[source]
+        self.assertEqual(1, content.count(original))
+        mutated = content.replace(original, replacement)
+        self.assertTrue(yaml_syntax_sane(mutated), 'probe must remain sane YAML')
+        with tempfile.TemporaryDirectory() as temporary:
+            workflow = Path(temporary) / paths[source].name
+            workflow.write_text(mutated, encoding='utf-8')
+            constant = ('validate_pr_checks_sentinel_WORKFLOW_FILE'
+                        if source == 'workflow' else 'PR_METADATA_WORKFLOW_FILE')
+            with patch.dict(globals(), {constant: workflow}):
+                result = unittest.TestResult()
+                ValidatePrChecksSentinel('test_sentinel').run(result)
+            self.assertFalse(result.errors, result.errors)
+            self.assertFalse(result.wasSuccessful(), 'sentinel accepted a disabled gate')
+
+    def test_suite_command_only_in_comment_is_rejected(self) -> None:
+        self.assert_sentinel_rejects('workflow',
+            "        run: python3 -c 'pass'\n"
+            '        # run: python3 scripts/run-ci-suite.py')
+
+    def test_suite_command_only_in_unused_env_is_rejected(self) -> None:
+        self.assert_sentinel_rejects('workflow',
+            "        run: python3 -c 'pass'\n"
+            '        env: {UNUSED: "run: python3 scripts/run-ci-suite.py"}')
+
+    def test_title_command_only_in_comment_is_rejected(self) -> None:
+        self.assert_sentinel_rejects('metadata',
+            "        run: python3 -c 'pass'\n"
+            '        # run: python3 scripts/check-pr-title.py "$TITLE"')
+
+    def test_title_command_only_in_unused_env_is_rejected(self) -> None:
+        self.assert_sentinel_rejects('metadata',
+            '          UNUSED: \'run: python3 scripts/check-pr-title.py "$TITLE"\'\n'
+            "        run: python3 -c 'pass'")
+
+    def test_inert_and_disabled_step_variants_are_rejected(self) -> None:
+        commands = {
+            'workflow': ('Run test suite', 'python3 scripts/run-ci-suite.py'),
+            'metadata': ('Check PR title', 'python3 scripts/check-pr-title.py "$TITLE"'),
+        }
+        for source, (name, command) in commands.items():
+            variants = {
+                'inline comment': f"        run: python3 -c 'pass' # run: {command}",
+                'step name': f"        run: python3 -c 'pass'\n      - name: 'run: {command}'\n        run: python3 -c 'pass'",
+                'block scalar env': (f'          UNUSED: |\n            run: {command}\n'
+                                     "        run: python3 -c 'pass'" if source == 'metadata' else
+                                     f"        run: python3 -c 'pass'\n        env:\n          UNUSED: |\n            run: {command}"),
+                'other job': f"        run: python3 -c 'pass'\n  unrelated:\n    runs-on: ubuntu-latest\n    steps:\n      - name: {name}\n        run: {command}",
+                'skipped step': f'        run: {command}\n        if: false',
+                'ignored failure': f'        run: {command}\n        continue-on-error: true',
+                'custom shell': f'        run: {command}\n        shell: python',
+                'different directory': f'        run: {command}\n        working-directory: unrelated',
+                'duplicate run': f"        run: {command}\n        run: python3 -c 'pass'",
+                'command suffix': f'        run: {command} extra',
+            }
+            for variant, replacement in variants.items():
+                with self.subTest(source=source, variant=variant):
+                    self.assert_sentinel_rejects(source, replacement)
+
 class ValidatePrChecksSentinel(unittest.TestCase):
 
     def test_sentinel(self) -> None:
@@ -255,6 +368,19 @@ class ValidatePrChecksSentinel(unittest.TestCase):
         sources = {'workflow': content, 'metadata': metadata_content, 'combined': '\n'.join((content, *helper_contents.values()))}
         with self.subTest(msg='pr-metadata.yml exists'):
             self.assertTrue(PR_METADATA_WORKFLOW_FILE.is_file(), f'file not found: {PR_METADATA_WORKFLOW_FILE}')
+        with self.subTest(msg='suite entry point is the executable test-job step'):
+            self.assertEqual(
+                '      - name: Run test suite\n'
+                '        run: python3 scripts/run-ci-suite.py',
+                _required_workflow_step(content, 'test', 'Run test suite'))
+        with self.subTest(msg='title entry point executes with the live title'):
+            self.assertEqual(
+                '      - name: Check PR title\n'
+                "        if: github.event_name != 'workflow_dispatch' || fromJSON(steps.metadata.outputs.metadata).draft == false\n"
+                '        env:\n'
+                '          ' + TITLE_LITERAL + '\n'
+                '        run: python3 scripts/check-pr-title.py "$TITLE"',
+                _required_workflow_step(metadata_content, 'validate-pr-title', 'Check PR title'))
         with self.subTest(msg='validate-plugins job is defined'):
             self.assertIn('validate-plugins:', content)
         with self.subTest(msg='validate-plugins has name: validate-plugins'):
