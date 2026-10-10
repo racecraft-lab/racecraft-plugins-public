@@ -41,11 +41,16 @@ EMPTY_LAYER = {
 }
 
 
+def fresh_checkout(case: unittest.TestCase) -> Path:
+    """Return an empty directory standing in for a checkout; removed after the test."""
+    temp = tempfile.TemporaryDirectory()
+    case.addCleanup(temp.cleanup)
+    return Path(temp.name).resolve()
+
+
 class SuiteCheckoutLockTests(unittest.TestCase):
     def setUp(self) -> None:
-        self._temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self._temp.cleanup)
-        self.root = Path(self._temp.name).resolve()
+        self.root = fresh_checkout(self)
 
     def test_second_holder_in_the_same_checkout_is_refused(self) -> None:
         with lock.hold_suite_lock(self.root):
@@ -68,9 +73,9 @@ class SuiteCheckoutLockTests(unittest.TestCase):
             pass
 
     def test_other_checkouts_do_not_block_each_other(self) -> None:
-        with tempfile.TemporaryDirectory() as other:
-            with lock.hold_suite_lock(self.root), lock.hold_suite_lock(Path(other).resolve()):
-                pass
+        other = fresh_checkout(self)
+        with lock.hold_suite_lock(self.root), lock.hold_suite_lock(other):
+            pass
 
     def test_lock_dies_with_a_killed_holder(self) -> None:
         code = (
@@ -99,9 +104,7 @@ class SuiteCheckoutLockTests(unittest.TestCase):
 
 class EntryPointTests(unittest.TestCase):
     def setUp(self) -> None:
-        self._temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self._temp.cleanup)
-        self.root = Path(self._temp.name).resolve()
+        self.root = fresh_checkout(self)
 
     def quick_suite(self) -> tuple[int, str, str]:
         out, err = io.StringIO(), io.StringIO()
