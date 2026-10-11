@@ -469,9 +469,9 @@ def final_checkpoint(root: Path, inputs: dict[str, Any], verify_baseline: Any, m
     record = confined_path(root, link)
     with held_feature(root, feature, exclusive=mode != "read_only") as directory:
         observed = {name: snapshot["digest"] for name, snapshot in read_artifacts(directory).items()}
+        state, value, claimed, owed = recorded_rounds(root, record)
         outcome, rounds, written = "unchanged", 0, False
         if observed != baseline:
-            state, value, claimed, owed = recorded_rounds(root, record)
             key = {"verify_baseline": baseline, "observed": observed}
             if mode == "read_only":
                 outcome, rounds = claimed_outcome(claimed, owed, key), len(claimed)

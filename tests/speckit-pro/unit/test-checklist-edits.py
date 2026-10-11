@@ -405,6 +405,122 @@ class FinalVerifyRoundTests(_FinalVerifyRoundCase):
         self.assertEqual([], self.rounds())
 
 
+class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
+    """Equal artifact digests never substitute for a usable application record, at either public seam."""
+
+    def checkpoint_result(self, verified: dict[str, str], mode: str) -> dict[str, Any]:
+        if mode != "phase-brief":
+            return self.claim(verified, mode)
+        with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
+            return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief",
+                mode="read_only", request_id=None, inputs={"phase": "Checklist", **self.fixed_inputs,
+                "domains": DOMAINS, "max_agents": 20, "verify_baseline": verified}))
+
+    def test_equal_digests_accept_a_valid_application_record_without_writing(self) -> None:
+        verified = self.applied()
+        before = (self.root / RECORD).read_bytes()
+        for mode in ("apply", "dry_run", "phase-brief"):
+            with self.subTest(mode=mode):
+                result = self.checkpoint_result(verified, mode)
+                self.assertEqual("ok", result["status"], result)
+                self.assertEqual("unchanged", result["data"]["final_checkpoint"])
+                self.assertEqual(before, (self.root / RECORD).read_bytes())
+
+    def assert_checkpoint_refused(self, verified: dict[str, str]) -> None:
+        for mode in ("apply", "dry_run", "phase-brief"):
+            with self.subTest(mode=mode):
+                result = self.checkpoint_result(verified, mode)
+                self.assertNotEqual("ok", result["status"], result)
+                self.assertEqual({}, result["data"], result)
+                self.assertEqual(verified, self.baseline())
+
+    def test_equal_digests_refuse_a_missing_application_record(self) -> None:
+        verified = self.applied()
+        record = self.root / RECORD
+        record.unlink()
+        self.assert_checkpoint_refused(verified)
+        self.assertFalse(record.exists())
+
+    def test_equal_digests_refuse_a_missing_record_directory(self) -> None:
+        verified = self.applied()
+        directory = (self.root / RECORD).parent
+        shutil.rmtree(directory)
+        self.assert_checkpoint_refused(verified)
+        self.assertFalse(directory.exists())
+
+    def test_equal_digests_refuse_a_renamed_record_directory(self) -> None:
+        verified = self.applied()
+        directory = (self.root / RECORD).parent
+        renamed = directory.with_name("renamed-record")
+        directory.rename(renamed)
+        before = (renamed / "applied.json").read_bytes()
+        self.assert_checkpoint_refused(verified)
+        self.assertFalse(directory.exists())
+        self.assertEqual(before, (renamed / "applied.json").read_bytes())
+
+    def test_equal_digests_refuse_malformed_application_records(self) -> None:
+        verified = self.applied()
+        record = self.root / RECORD
+        valid = json.loads(record.read_bytes())
+        pair = {"verify_baseline": verified, "observed": verified}
+        records = {"not JSON": b"{", "invalid encoding": b"\xff", "not an object": b"[]"}
+        invalid = {"schema_version": "other/v1", "domains": {}, "final_verify_rounds": {},
+                   "final_verify_open": True}
+        records.update({field: json.dumps({**valid, field: value}).encode() for field, value in invalid.items()})
+        records.update({"too many rounds": json.dumps({**valid, "final_verify_rounds": [pair] * 2}).encode(),
+                        "malformed round": json.dumps({**valid, "final_verify_rounds": [{"observed": verified}]}).encode(),
+                        "invalid open flag": json.dumps({**valid, "final_verify_rounds": [pair], "final_verify_open": 1}).encode()})
+        for label, content in records.items():
+            with self.subTest(record=label):
+                record.write_bytes(content)
+                self.assert_checkpoint_refused(verified)
+                self.assertEqual(content, record.read_bytes())
+
+    def assert_unreadable_checkpoint_refused(self, name: str) -> None:
+        verified = self.applied()
+        record = self.root / RECORD
+        before = record.read_bytes()
+        original = os.open
+
+        def unreadable(path: Any, *args: Any, **kwargs: Any) -> int:
+            if os.fspath(path) == name:
+                raise PermissionError(errno.EACCES, "checkpoint evidence unreadable")
+            return original(path, *args, **kwargs)
+
+        with patch.object(os, "open", unreadable):
+            self.assert_checkpoint_refused(verified)
+        self.assertEqual(before, record.read_bytes())
+
+    def test_equal_digests_refuse_an_unreadable_application_record(self) -> None:
+        self.assert_unreadable_checkpoint_refused("applied.json")
+
+    def test_equal_digests_refuse_an_unreadable_record_directory(self) -> None:
+        self.assert_unreadable_checkpoint_refused("checklist-edits")
+
+    def test_equal_digests_refuse_a_nonregular_application_record(self) -> None:
+        verified = self.applied()
+        record = self.root / RECORD
+        record.unlink()
+        record.mkdir()
+        self.assert_checkpoint_refused(verified)
+        self.assertTrue(record.is_dir())
+
+    def test_equal_digests_refuse_linked_records_and_record_directories(self) -> None:
+        verified = self.applied()
+        record = self.root / RECORD
+        for target in (record, record.parent):
+            with self.subTest(target=target.name):
+                saved = target.with_name("saved-" + target.name)
+                target.rename(saved)
+                target.symlink_to(saved.name)
+                try:
+                    self.assert_checkpoint_refused(verified)
+                    self.assertTrue(target.is_symlink())
+                finally:
+                    target.unlink()
+                    saved.rename(target)
+
+
 class FinalVerifyRoundRefusalTests(_FinalVerifyRoundCase):
     """A claim with no usable application record, or with extra inputs, is refused and writes nothing."""
 
@@ -1493,6 +1609,9 @@ sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
 
 
 class HostParityTests(_HostParitySupport, unittest.TestCase):
+    def test_equal_digest_checkpoints_require_usable_records_on_both_hosts(self) -> None:
+        self.assert_payload_cases(("FinalCheckpointEvidenceTests",))
+
     def test_displaced_fifos_never_block_a_checked_write_or_hide_its_outcome(self) -> None:
         program = """
 import os, stat, sys
@@ -2596,7 +2715,7 @@ if __name__ == "__main__":
         run_counted(
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                for case in (ProposalTests, ConflictTests, RefusalTests, FinalVerifyRoundTests, FinalVerifyRoundRefusalTests, WorkflowPathTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
+                for case in (ProposalTests, ConflictTests, RefusalTests, FinalVerifyRoundTests, FinalVerifyRoundRefusalTests, FinalCheckpointEvidenceTests, WorkflowPathTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
                              UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests,
                              GateFourHostParityTests, GateFourResourceTests, GateFourCoverageTests,
