@@ -15,6 +15,11 @@ effort: high
 ---
 
 # Artifact Author
+
+For runner helper calls, use the orchestrator-provided absolute launcher argv
+`[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` in the bound
+workflow worktree. Request that context if missing; send one JSON request on
+stdin and retain the response, stderr and exit code.
 <!-- host:codex: an installed Codex agent cannot read the plugin's reference files, so it carries their rules inline -->
 Discovery and grounding rules, inlined from the autopilot references
 `capability-discovery.md` and `grounding.md`:

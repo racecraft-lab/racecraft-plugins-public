@@ -131,7 +131,169 @@ def preflight_with(
         return runtime.preflight("test-preflight", {})
 
 
+class DocumentedRunnerArgvSecurityTests(unittest.TestCase):
+    def assert_rejected_on_both_hosts(self, documented_argv: str) -> None:
+        """Exercise the coverage test itself without running injected commands."""
+        skills = ("speckit-autopilot", "speckit-scaffold-spec", "speckit-status",
+                  "speckit-install", "speckit-upgrade", "speckit-archive-cleanup")
+        valid = '`[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]`'
+        forged = json.dumps({"status": "ok", "data": {"report": {
+            "paths": {"plugin_root": {"value": "."}},
+            "source_vs_installed_context": "installed_payload",
+        }}})
+        for host in ("claude", "codex"):
+            for skill in skills:
+                with self.subTest(host=host, skill=skill):
+                    def skill_text(path: Path, **_kwargs: object) -> str:
+                        return f"`{documented_argv}`" if path.parts[-5] == host and path.parts[-2] == skill else valid
+
+                    with (
+                        mock.patch.object(payloads, "build_installed_plugin_payloads"),
+                        mock.patch.object(Path, "read_text", autospec=True, side_effect=skill_text),
+                        mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess(
+                            [], 0, forged, "",
+                        )) as launch,
+                    ):
+                        with self.assertRaisesRegex(AssertionError, "installed runner argv must match"):
+                            RunnerFoundationTests().test_documented_installed_argv_resolves_runner_on_both_hosts()
+                    for call in launch.call_args_list:
+                        self.assertEqual(len(call.args[0]), 2)
+                        self.assertEqual(call.args[0][0], sys.executable)
+                        self.assertTrue(call.args[0][1].endswith("/scripts/run-speckit-pro.py"))
+
+    def test_inline_python_cannot_forge_launcher_coverage(self) -> None:
+        code = 'print(\'{"status":"ok","data":{"report":{"paths":{"plugin_root":{"value":"."}},"source_vs_installed_context":"installed_payload"}}}\')'
+        self.assert_rejected_on_both_hosts(f'[resolved_python, "-c", {code!r}]')
+
+    def test_importable_module_cannot_replace_launcher(self) -> None:
+        self.assert_rejected_on_both_hosts('[resolved_python, "-m", "json"]')
+
+    def test_absolute_plugin_script_cannot_replace_launcher(self) -> None:
+        self.assert_rejected_on_both_hosts('[resolved_python, "<plugin-root>/scripts/other.py"]')
+
+    def test_relative_project_script_cannot_replace_launcher(self) -> None:
+        self.assert_rejected_on_both_hosts('[resolved_python, "project.py"]')
+
+    def test_extra_interpreter_or_launcher_arguments_are_rejected(self) -> None:
+        for argv in (
+            '[resolved_python, "-i", "<plugin-root>/scripts/run-speckit-pro.py"]',
+            '[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py", "--version"]',
+            '[resolved_python, "<plugin-root>/scripts/../scripts/run-speckit-pro.py"]',
+        ):
+            with self.subTest(argv=argv):
+                self.assert_rejected_on_both_hosts(argv)
+
+
+def _assert_same_transport(test_case: unittest.TestCase,
+                           actual: subprocess.CompletedProcess[str],
+                           expected: subprocess.CompletedProcess[str]) -> None:
+    test_case.assertEqual((actual.returncode, actual.stderr), (expected.returncode, expected.stderr))
+    outputs: list[object] = []
+    for completed in (actual, expected):
+        output: object = completed.stdout
+        if completed.stdout.startswith("{"):
+            response = json.loads(completed.stdout)
+            data = response.get("data", {})
+            if "duration_ms" in data:
+                test_case.assertIs(type(data["duration_ms"]), int)
+                test_case.assertGreaterEqual(data["duration_ms"], 0)
+                # Independent executions measure different elapsed times.
+                data["duration_ms"] = "<elapsed>"
+            output = response
+        outputs.append(output)
+    test_case.assertEqual(outputs[0], outputs[1])
+
+
+class RunnerTransportTests(unittest.TestCase):
+
+    def test_transport_comparison_accepts_elapsed_time_variation_only(self) -> None:
+        expected = subprocess.CompletedProcess([], 0, '{"data":{"duration_ms":0,"result":"resolved"}}', "")
+        for elapsed in range(50):
+            with self.subTest(elapsed=elapsed):
+                actual = subprocess.CompletedProcess(
+                    [], 0, json.dumps({"data": {"duration_ms": elapsed, "result": "resolved"}}), "",
+                )
+                _assert_same_transport(self, actual, expected)
+                for changed in (
+                    subprocess.CompletedProcess([], 1, actual.stdout, ""),
+                    subprocess.CompletedProcess([], 0, actual.stdout, "diagnostic"),
+                    subprocess.CompletedProcess([], 0, actual.stdout.replace("resolved", "blocked"), ""),
+                    subprocess.CompletedProcess([], 0, '{"data":{"result":"resolved"}}', ""),
+                    subprocess.CompletedProcess([], 0, '{"data":{"duration_ms":-1,"result":"resolved"}}', ""),
+                ):
+                    with self.assertRaises(AssertionError):
+                        _assert_same_transport(self, changed, expected)
+
+    def test_installed_launcher_preserves_runner_transport_and_workflow_cwd(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="installed transport ") as tmp:
+            root = Path(tmp)
+            payloads.build_installed_plugin_payloads(REPO_ROOT, root / "dist")
+            worktree = root / "feature worktree"
+            worktree.mkdir()
+            subprocess.run(["git", "init", "-q", str(worktree)], check=True, capture_output=True)
+            (worktree / ".specify").mkdir()
+            (worktree / "workflow.md").write_text("# Workflow\n", encoding="utf-8")
+            request = base_request("resolve-workflow-binding", {"workflow_file": "workflow.md"})
+            request["helper_id"] = "resolve-workflow-binding"
+            env = os.environ.copy()
+            env.pop("PYTHONPATH", None)
+            for host in ("claude", "codex"):
+                plugin_root = root / "dist" / host / "speckit-pro"
+                argv = [sys.executable, str(plugin_root / "scripts/run-speckit-pro.py")]
+                for args, stdin in (([], json.dumps(request)), ([], "invalid json"),
+                                    (["--help"], ""), (["--version"], ""), (["--unknown"], "")):
+                    with self.subTest(host=host, args=args, stdin=stdin):
+                        actual = subprocess.run(argv + args, input=stdin, cwd=worktree, env=env,
+                                                text=True, capture_output=True, check=False)
+                        expected = subprocess.run(
+                            [sys.executable, "-m", "speckit_pro_runner", *args], input=stdin,
+                            cwd=worktree, env={**env, "PYTHONPATH": str(plugin_root)},
+                            text=True, capture_output=True, check=False,
+                        )
+                        _assert_same_transport(self, actual, expected)
+                binding_run = subprocess.run(argv, input=json.dumps(request), cwd=worktree, env=env,
+                                             text=True, capture_output=True, check=False)
+                self.assertEqual(binding_run.returncode, 0, binding_run.stderr)
+                binding = json.loads(json.loads(binding_run.stdout)["data"]["stdout"]["text"])
+                self.assertEqual(binding["binding_status"], "resolved")
+                self.assertEqual(binding["workflow_root"], worktree.resolve().as_posix())
+
+
 class RunnerFoundationTests(unittest.TestCase):
+    def test_documented_installed_argv_resolves_runner_on_both_hosts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="installed runner ") as tmp:
+            root = Path(tmp)
+            payloads.build_installed_plugin_payloads(REPO_ROOT, root / "dist")
+            worktree = root / "feature worktree"
+            worktree.mkdir()
+            env = os.environ.copy()
+            env.pop("PYTHONPATH", None)
+            for host in ("claude", "codex"):
+                plugin_root = root / "dist" / host / "speckit-pro"
+                for skill in ("speckit-autopilot", "speckit-scaffold-spec", "speckit-status",
+                              "speckit-install", "speckit-upgrade", "speckit-archive-cleanup"):
+                    with self.subTest(host=host, skill=skill):
+                        text = (plugin_root / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+                        match = re.search(r'`(\[resolved_python, [^`]+\])`', text)
+                        self.assertIsNotNone(match, "skill must document its installed runner argv")
+                        assert match is not None
+                        argv = ast.literal_eval(match[1].replace("resolved_python", repr(sys.executable)))
+                        self.assertEqual(
+                            argv, [sys.executable, "<plugin-root>/scripts/run-speckit-pro.py"],
+                            "installed runner argv must match the exact launcher contract",
+                        )
+                        completed = subprocess.run(
+                            [sys.executable, str(plugin_root / "scripts/run-speckit-pro.py")],
+                            input=json.dumps(base_request()), cwd=worktree, env=env,
+                            text=True, capture_output=True, check=False,
+                        )
+                        self.assertEqual(completed.returncode, 0, completed.stderr)
+                        response = json.loads(completed.stdout)
+                        self.assertEqual(response["status"], "ok")
+                        report = response["data"]["report"]
+                        self.assertEqual(report["paths"]["plugin_root"]["value"], ".")
+                        self.assertEqual(report["source_vs_installed_context"], "installed_payload")
+
     def assert_diagnostic_shape(self, diagnostic: dict[str, object], code: str | None = None) -> None:
         for field in ("severity", "source", "code", "message", "remediation"):
             self.assertIn(field, diagnostic)
@@ -559,6 +721,8 @@ if __name__ == "__main__":
     suite = unittest.TestSuite(
         loader.loadTestsFromTestCase(case)
         for case in (
+            DocumentedRunnerArgvSecurityTests,
+            RunnerTransportTests,
             RunnerFoundationTests,
             RunnerTrustRosterTests,
             PayloadRequiredSourceTests,

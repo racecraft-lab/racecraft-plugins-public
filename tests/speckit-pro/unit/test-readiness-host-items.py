@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import sys
 import unittest
+from unittest import mock
 from pathlib import Path
 
 TEST_DIR = Path(__file__).resolve().parent
@@ -15,6 +16,9 @@ sys.path.insert(0, str(LIB_DIR))
 from readiness_case import current_plugin_revision, ReadinessCase, scaffold_step  # noqa: E402
 from runner_invocation import assert_runner_response  # noqa: E402
 from test_result import run_counted  # noqa: E402
+from speckit_pro_runner.helpers import readiness_host_items  # noqa: E402
+
+LAUNCHER = str(Path(__file__).resolve().parents[3] / "speckit-pro/scripts/run-speckit-pro.py")
 
 CLAUDE_ONLY = ("permission_probe", "plugin_scope", "mcp_authentication")
 HOOKS = [{"hook": "Stop", "defined": True, "trust": "trusted"},
@@ -28,6 +32,29 @@ def detail(item: str, key: str, value: object, **extra: object) -> dict[str, obj
 class ReadinessHostItemsTest(ReadinessCase):
     request_id = "test-host-items"
 
+    def test_prompted_and_denied_rules_quote_launcher_and_strip_recorded_roots(self) -> None:
+        for outcome in ("prompted", "denied"):
+            with self.subTest(outcome=outcome), mock.patch.object(
+                readiness_host_items, "PLUGIN_ROOT", Path("/opt/plugin cache/speckit-pro"), create=True,
+            ):
+                probes = [{"probe": "runner_request", "outcome": outcome, "command": "/opt/tools/python3"}]
+                self.assertEqual([
+                    'Bash(/opt/tools/python3 "/opt/plugin cache/speckit-pro/scripts/run-speckit-pro.py":*)',
+                    "Bash(printf:*)",
+                ], readiness_host_items.rules_for(probes, recorded=False))
+                self.assertEqual([
+                    'Bash(<interpreter> "<installed-launcher>":*)', "Bash(printf:*)",
+                ], readiness_host_items.rules_for(probes, recorded=True))
+
+    def test_unsafe_launcher_root_never_broadens_an_allow_rule(self) -> None:
+        for suffix in ('*', '?', '[x]', '(x)', '"', '$x', '`x`', '\n'):
+            with self.subTest(suffix=suffix), mock.patch.object(
+                readiness_host_items, "PLUGIN_ROOT", Path("/opt/plugin" + suffix), create=True,
+            ):
+                probes = [{"probe": "runner_request", "outcome": "denied", "command": "python3"}]
+                with self.assertRaises(readiness_host_items.SelectionError):
+                    readiness_host_items.rules_for(probes, recorded=False)
+
     def test_denied_probe_prints_the_needed_allow_rules(self) -> None:
         probes = [{"probe": "runner_request", "outcome": "denied", "command": "python3"},
                   {"probe": "git_status", "outcome": "passed"}]
@@ -35,9 +62,9 @@ class ReadinessHostItemsTest(ReadinessCase):
         item = self.items(response)["permission_probe"]
         self.assertEqual("unavailable", item["status"])
         rules = response["data"]["allow_rules"]
-        self.assertEqual(["Bash(python3 -m speckit_pro_runner:*)", "Bash(printf:*)"], rules)
-        for rule in rules:
-            self.assertIn(rule, item["action"])
+        self.assertEqual([f'Bash(python3 "{LAUNCHER}":*)', "Bash(printf:*)"], rules)
+        self.assertIn('Bash(python3 "<installed-launcher>":*)', item["action"])
+        self.assertIn("Bash(printf:*)", item["action"])
         self.assertNotIn("git status", item["action"])
 
     def test_denied_git_probe_names_only_the_git_rule_and_a_clean_probe_needs_none(self) -> None:
@@ -139,9 +166,10 @@ class ReadinessHostItemsTest(ReadinessCase):
         probes = [{"probe": "runner_request", "outcome": "denied", "command": interpreter}]
         response = self.run_helper([detail("permission_probe", "probes", probes)])
         item = self.items(response)["permission_probe"]
-        self.assertIn(f"Bash({interpreter} -m speckit_pro_runner:*)", response["data"]["allow_rules"])
+        self.assertIn(f'Bash({interpreter} "{LAUNCHER}":*)', response["data"]["allow_rules"])
         self.assertNotIn(interpreter, json.dumps(response["data"]["record"]))
-        self.assertIn("<interpreter>", item["action"])
+        self.assertIn('Bash(<interpreter> "<installed-launcher>":*)', item["action"])
+        self.assertNotIn(LAUNCHER, json.dumps(response["data"]["record"]))
 
     def test_relative_interpreter_directories_are_not_recorded(self) -> None:
         for command in ("person/venv/bin/python", ".venv/bin/python", "python3"):
@@ -149,8 +177,8 @@ class ReadinessHostItemsTest(ReadinessCase):
                 probes = [{"probe": "runner_request", "outcome": "denied", "command": command}]
                 response = self.run_helper([detail("permission_probe", "probes", probes)])
                 item = self.items(response)["permission_probe"]
-                self.assertIn(f"Bash({command} -m speckit_pro_runner:*)", response["data"]["allow_rules"])
-                self.assertIn(f"Bash({command.rsplit('/', 1)[-1]} -m speckit_pro_runner:*)", item["action"])
+                self.assertIn(f'Bash({command} "{LAUNCHER}":*)', response["data"]["allow_rules"])
+                self.assertIn(f'Bash({command.rsplit("/", 1)[-1]} "<installed-launcher>":*)', item["action"])
                 if "/" in command:
                     self.assertNotIn(command, (self.root / ".specify/readiness/claude.json").read_text())
 
@@ -183,7 +211,7 @@ class ReadinessHostItemsTest(ReadinessCase):
         relative = [{"probe": "runner_request", "outcome": "denied", "command": ".venv/bin/python"},
                     {"probe": "git_status", "outcome": "passed"}]
         response = self.run_helper([detail("permission_probe", "probes", relative)])
-        self.assertEqual(["Bash(.venv/bin/python -m speckit_pro_runner:*)", "Bash(printf:*)"],
+        self.assertEqual([f'Bash(.venv/bin/python "{LAUNCHER}":*)', "Bash(printf:*)"],
                          response["data"]["allow_rules"])
         partial = [{"probe": "runner_request", "outcome": "passed"}]
         item = self.items(self.run_helper([detail("permission_probe", "probes", partial)]))["permission_probe"]
@@ -207,7 +235,7 @@ class ReadinessHostItemsTest(ReadinessCase):
                   {"probe": "git_status", "outcome": "prompted"}]
         rules = self.run_helper([detail("permission_probe", "probes", probes)])["data"]["allow_rules"]
         for rule in rules:
-            self.assertRegex(rule, r"^Bash\((?:/?[A-Za-z0-9_./+-]+ -m speckit_pro_runner:\*|printf:\*|git status:\*)\)$")
+            self.assertRegex(rule, r'^Bash\((?:/?[A-Za-z0-9_./+-]+ "[^"*]+/scripts/run-speckit-pro.py":\*|printf:\*|git status:\*)\)$')
         self.assertEqual(3, len(rules))
 
     def test_scaffold_documents_the_host_items_on_each_host(self) -> None:

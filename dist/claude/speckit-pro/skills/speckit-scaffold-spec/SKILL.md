@@ -11,8 +11,11 @@ license: MIT
 
 ## Installed Runtime Contract
 
+Before the first runner call, resolve `<plugin-root>` and keep the caller's
+working directory per [Installed runner transport](../speckit-autopilot/references/installed-runtime.md).
+
 Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
-`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
+`[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]`, send one JSON request on
 stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.

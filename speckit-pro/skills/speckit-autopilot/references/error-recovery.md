@@ -1,5 +1,9 @@
 # Error Recovery Reference
 
+For `No module named speckit_pro_runner` before workflow binding or G0, use
+the launcher recovery in [Installed runner transport](./installed-runtime.md).
+
+
 ## Contents
 
 - [Resuming After Interruption](#resuming-after-interruption) — `--from-phase` flag, workflow-file as durable state

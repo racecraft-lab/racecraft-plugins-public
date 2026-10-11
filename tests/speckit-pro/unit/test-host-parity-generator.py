@@ -520,6 +520,8 @@ def shipped_autopilot_text(host: str, relative: str) -> str:
 # (case, autopilot file, phrases both hosts carry, phrases neither host carries).
 # Each pin is a behavior the two copies once disagreed on; the runner settled it.
 AUTOPILOT_AGREEMENT = (
+    ("installed runner root comes from the loaded skill", "references/installed-runtime.md",
+     ("parent of `skills/`",), ("Use the absolute `${CLAUDE_PLUGIN_ROOT}` value",)),
     # stop_policy.STOP_REASONS has no model-tier reason, so a weak tier warns and routes.
     ("a weak model tier warns and routes instead of stopping", "SKILL.md",
      ("warn the operator once and route gate and consensus dispatches to the strongest available tier",),
