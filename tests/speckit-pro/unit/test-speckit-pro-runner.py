@@ -184,24 +184,27 @@ class DocumentedRunnerArgvSecurityTests(unittest.TestCase):
                 self.assert_rejected_on_both_hosts(argv)
 
 
+def _assert_same_transport(test_case: unittest.TestCase,
+                           actual: subprocess.CompletedProcess[str],
+                           expected: subprocess.CompletedProcess[str]) -> None:
+    test_case.assertEqual((actual.returncode, actual.stderr), (expected.returncode, expected.stderr))
+    outputs: list[object] = []
+    for completed in (actual, expected):
+        output: object = completed.stdout
+        if completed.stdout.startswith("{"):
+            response = json.loads(completed.stdout)
+            data = response.get("data", {})
+            if "duration_ms" in data:
+                test_case.assertIs(type(data["duration_ms"]), int)
+                test_case.assertGreaterEqual(data["duration_ms"], 0)
+                # Independent executions measure different elapsed times.
+                data["duration_ms"] = "<elapsed>"
+            output = response
+        outputs.append(output)
+    test_case.assertEqual(outputs[0], outputs[1])
+
+
 class RunnerTransportTests(unittest.TestCase):
-    def assert_same_transport(self, actual: subprocess.CompletedProcess[str],
-                              expected: subprocess.CompletedProcess[str]) -> None:
-        self.assertEqual((actual.returncode, actual.stderr), (expected.returncode, expected.stderr))
-        outputs: list[object] = []
-        for completed in (actual, expected):
-            output: object = completed.stdout
-            if completed.stdout.startswith("{"):
-                response = json.loads(completed.stdout)
-                data = response.get("data", {})
-                if "duration_ms" in data:
-                    self.assertIs(type(data["duration_ms"]), int)
-                    self.assertGreaterEqual(data["duration_ms"], 0)
-                    # Independent executions measure different elapsed times.
-                    data["duration_ms"] = "<elapsed>"
-                output = response
-            outputs.append(output)
-        self.assertEqual(outputs[0], outputs[1])
 
     def test_transport_comparison_accepts_elapsed_time_variation_only(self) -> None:
         expected = subprocess.CompletedProcess([], 0, '{"data":{"duration_ms":0,"result":"resolved"}}', "")
@@ -210,7 +213,7 @@ class RunnerTransportTests(unittest.TestCase):
                 actual = subprocess.CompletedProcess(
                     [], 0, json.dumps({"data": {"duration_ms": elapsed, "result": "resolved"}}), "",
                 )
-                self.assert_same_transport(actual, expected)
+                _assert_same_transport(self, actual, expected)
                 for changed in (
                     subprocess.CompletedProcess([], 1, actual.stdout, ""),
                     subprocess.CompletedProcess([], 0, actual.stdout, "diagnostic"),
@@ -219,7 +222,7 @@ class RunnerTransportTests(unittest.TestCase):
                     subprocess.CompletedProcess([], 0, '{"data":{"duration_ms":-1,"result":"resolved"}}', ""),
                 ):
                     with self.assertRaises(AssertionError):
-                        self.assert_same_transport(changed, expected)
+                        _assert_same_transport(self, changed, expected)
 
     def test_installed_launcher_preserves_runner_transport_and_workflow_cwd(self) -> None:
         with tempfile.TemporaryDirectory(prefix="installed transport ") as tmp:
@@ -247,7 +250,7 @@ class RunnerTransportTests(unittest.TestCase):
                             cwd=worktree, env={**env, "PYTHONPATH": str(plugin_root)},
                             text=True, capture_output=True, check=False,
                         )
-                        self.assert_same_transport(actual, expected)
+                        _assert_same_transport(self, actual, expected)
                 binding_run = subprocess.run(argv, input=json.dumps(request), cwd=worktree, env=env,
                                              text=True, capture_output=True, check=False)
                 self.assertEqual(binding_run.returncode, 0, binding_run.stderr)
