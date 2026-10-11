@@ -617,7 +617,7 @@ class PreviewSurfaceWriterFixture(unittest.TestCase):
                 response = self.run_helper([observation("preview_surface", status, **evidence)], mode, host=host)
                 assert_runner_response(self, response, "input_error", 2)
                 self.assertIn("values.surface", json.dumps(response))
-                self.assertFalse(self.record_path(host).exists())
+                self.assertEqual([], list(self.root.glob(".specify/readiness/*.json")))
 
 
 class TerminalPreviewEvidenceTest(PreviewSurfaceWriterFixture):
