@@ -1974,6 +1974,8 @@ class _TasksInputSupport:
 
 
 class _TasksMutationSupport:
+    RECHECK_WINDOWS = ("entry recheck", "last check", "snapshot return", "verdict serialization")
+
     @staticmethod
     def task_target_cases(targets: dict[str, tuple[str, ...]]) -> list[tuple[str, str]]:
         return [(relative, variant) for relative, variants in targets.items() for variant in variants]
@@ -2353,8 +2355,7 @@ class GateFourPostValidationTests(_GateFourTestSupport, ChecklistEditsCase):
         self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
 
     def test_tasks_refuses_every_post_g4_validation_mutation(self) -> None:
-        windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
-        self.assert_shared_artifact_mutations(windows, self.gate_then_brief)
+        self.assert_shared_artifact_mutations(self.RECHECK_WINDOWS, self.gate_then_brief)
 
 
 class TasksCheckedBytesTests(_GateFourTestSupport, ChecklistEditsCase):
@@ -2486,8 +2487,7 @@ class TasksRecheckTests(_GateFourTestSupport, ChecklistEditsCase):
                          consumed["data"]["files"])
 
     def test_tasks_recheck_windows_bind_the_exact_captured_bytes(self) -> None:
-        windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
-        self.assert_shared_artifact_mutations(windows, self.brief_then_consume)
+        self.assert_shared_artifact_mutations(self.RECHECK_WINDOWS, self.brief_then_consume)
 
 
 class GateFourDiagnosticTests(_GateFourTestSupport, ChecklistEditsCase):
