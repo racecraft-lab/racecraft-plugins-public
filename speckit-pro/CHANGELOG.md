@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.42.4](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.3...speckit-pro-v2.42.4) (2026-10-11)
+
+
+### Bug Fixes
+
+* **speckit-pro:** bound the checklist final verify rounds in the runner ([#1318](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1318)) ([8ca3d93](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8ca3d93d6cfe3ae87b4847a4ba406f48113695f1)), closes [#1316](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1316)
+
 ## [2.42.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.2...speckit-pro-v2.42.3) (2026-10-11)
 
 
