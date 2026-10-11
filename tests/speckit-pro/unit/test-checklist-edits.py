@@ -97,6 +97,13 @@ def feature_locked(root: Path) -> bool:
     return False
 
 
+def dispatch_phase_brief(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
+    """Request a read-only phase brief at the public dispatcher seam in the test checkout."""
+    with patch.object(phase_brief, "resolve_repo_root", return_value=root):
+        return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
+                               request_id=None, inputs=inputs))
+
+
 class ChecklistEditsCase(MutationRequestCase):
     """A checkout with a spec and a plan; the helpers send one batch of proposals."""
 
@@ -408,23 +415,25 @@ class FinalVerifyRoundTests(_FinalVerifyRoundCase):
 class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
     """Equal artifact digests never substitute for a usable application record, at either public seam."""
 
+    def setUp(self) -> None:
+        super().setUp()
+        self.verified = self.applied()
+        self.record = self.root / RECORD
+
     def checkpoint_result(self, verified: dict[str, str], mode: str) -> dict[str, Any]:
         if mode != "phase-brief":
             return self.claim(verified, mode)
-        with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
-            return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief",
-                mode="read_only", request_id=None, inputs={"phase": "Checklist", **self.fixed_inputs,
-                "domains": DOMAINS, "max_agents": 20, "verify_baseline": verified}))
+        return dispatch_phase_brief(self.root, {"phase": "Checklist", **self.fixed_inputs,
+            "domains": DOMAINS, "max_agents": 20, "verify_baseline": verified})
 
     def test_equal_digests_accept_a_valid_application_record_without_writing(self) -> None:
-        verified = self.applied()
-        before = (self.root / RECORD).read_bytes()
+        before = self.record.read_bytes()
         for mode in ("apply", "dry_run", "phase-brief"):
             with self.subTest(mode=mode):
-                result = self.checkpoint_result(verified, mode)
+                result = self.checkpoint_result(self.verified, mode)
                 self.assertEqual("ok", result["status"], result)
                 self.assertEqual("unchanged", result["data"]["final_checkpoint"])
-                self.assertEqual(before, (self.root / RECORD).read_bytes())
+                self.assertEqual(before, self.record.read_bytes())
 
     def assert_checkpoint_refused(self, verified: dict[str, str]) -> None:
         for mode in ("apply", "dry_run", "phase-brief"):
@@ -435,39 +444,34 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
                 self.assertEqual(verified, self.baseline())
 
     def test_equal_digests_refuse_a_missing_application_record(self) -> None:
-        verified = self.applied()
-        record = self.root / RECORD
-        record.unlink()
-        self.assert_checkpoint_refused(verified)
-        self.assertFalse(record.exists())
+        self.record.unlink()
+        self.assert_checkpoint_refused(self.verified)
+        self.assertFalse(self.record.exists())
 
     def test_equal_digests_refuse_a_missing_record_directory(self) -> None:
-        verified = self.applied()
-        directory = (self.root / RECORD).parent
+        directory = self.record.parent
         shutil.rmtree(directory)
-        self.assert_checkpoint_refused(verified)
+        self.assert_checkpoint_refused(self.verified)
         self.assertFalse(directory.exists())
 
     def test_equal_digests_refuse_a_renamed_record_directory(self) -> None:
-        verified = self.applied()
-        directory = (self.root / RECORD).parent
+        directory = self.record.parent
         renamed = directory.with_name("renamed-record")
         directory.rename(renamed)
         before = (renamed / "applied.json").read_bytes()
-        self.assert_checkpoint_refused(verified)
+        self.assert_checkpoint_refused(self.verified)
         self.assertFalse(directory.exists())
         self.assertEqual(before, (renamed / "applied.json").read_bytes())
 
     def test_equal_digests_refuse_malformed_application_records(self) -> None:
-        verified = self.applied()
-        record = self.root / RECORD
+        verified, record = self.verified, self.record
         valid = json.loads(record.read_bytes())
         pair = {"verify_baseline": verified, "observed": verified}
         records = {"not JSON": b"{", "invalid encoding": b"\xff", "not an object": b"[]"}
         invalid = {"schema_version": "other/v1", "domains": {}, "final_verify_rounds": {},
                    "final_verify_open": True}
         records.update({field: json.dumps({**valid, field: value}).encode() for field, value in invalid.items()})
-        records.update({"too many rounds": json.dumps({**valid, "final_verify_rounds": [pair] * 2}).encode(),
+        records.update({"too many rounds": json.dumps({**valid, "final_verify_rounds": [pair] * (checklist_edits.FINAL_VERIFY_ROUNDS + 1)}).encode(),
                         "malformed round": json.dumps({**valid, "final_verify_rounds": [{"observed": verified}]}).encode(),
                         "invalid open flag": json.dumps({**valid, "final_verify_rounds": [pair], "final_verify_open": 1}).encode()})
         for label, content in records.items():
@@ -477,9 +481,7 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
                 self.assertEqual(content, record.read_bytes())
 
     def assert_unreadable_checkpoint_refused(self, name: str) -> None:
-        verified = self.applied()
-        record = self.root / RECORD
-        before = record.read_bytes()
+        before = self.record.read_bytes()
         original = os.open
 
         def unreadable(path: Any, *args: Any, **kwargs: Any) -> int:
@@ -488,8 +490,8 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
             return original(path, *args, **kwargs)
 
         with patch.object(os, "open", unreadable):
-            self.assert_checkpoint_refused(verified)
-        self.assertEqual(before, record.read_bytes())
+            self.assert_checkpoint_refused(self.verified)
+        self.assertEqual(before, self.record.read_bytes())
 
     def test_equal_digests_refuse_an_unreadable_application_record(self) -> None:
         self.assert_unreadable_checkpoint_refused("applied.json")
@@ -498,23 +500,20 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
         self.assert_unreadable_checkpoint_refused("checklist-edits")
 
     def test_equal_digests_refuse_a_nonregular_application_record(self) -> None:
-        verified = self.applied()
-        record = self.root / RECORD
-        record.unlink()
-        record.mkdir()
-        self.assert_checkpoint_refused(verified)
-        self.assertTrue(record.is_dir())
+        self.record.unlink()
+        self.record.mkdir()
+        self.assert_checkpoint_refused(self.verified)
+        self.assertTrue(self.record.is_dir())
 
     def test_equal_digests_refuse_linked_records_and_record_directories(self) -> None:
-        verified = self.applied()
-        record = self.root / RECORD
+        record = self.record
         for target in (record, record.parent):
             with self.subTest(target=target.name):
                 saved = target.with_name("saved-" + target.name)
                 target.rename(saved)
                 target.symlink_to(saved.name)
                 try:
-                    self.assert_checkpoint_refused(verified)
+                    self.assert_checkpoint_refused(self.verified)
                     self.assertTrue(target.is_symlink())
                 finally:
                     target.unlink()
@@ -1962,10 +1961,8 @@ class _GateFourFinalValidationSupport:
 class _TasksInputSupport:
 
     def tasks_brief(self, judged: dict[str, str]) -> dict[str, Any]:
-        with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
-            return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
-                                   request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW,
-                                   "feature_dir": FEATURE, "g4_judged": judged, "g4_feature_identity": self.feature_identity}))
+        return dispatch_phase_brief(self.root, {"phase": "Tasks", "workflow_file": WORKFLOW,
+            "feature_dir": FEATURE, "g4_judged": judged, "g4_feature_identity": self.feature_identity})
 
 
     def consume_tasks(self, brief: dict[str, Any]) -> dict[str, Any]:
@@ -2340,10 +2337,7 @@ class GateFourPostValidationTests(_GateFourTestSupport, ChecklistEditsCase):
                     self.assertNotIn("judged", verdict, "unsafe capture must not supply dispatch evidence")
                     continue
                 judged = verdict["judged"]
-                with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
-                    result = dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
-                             request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW, "feature_dir": FEATURE,
-                             "g4_judged": judged, "g4_feature_identity": self.feature_identity}))
+                result = self.tasks_brief(judged)
                 self.assertEqual("input_error", result["status"])
                 self.assertEqual({}, result["data"])
                 self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
