@@ -1825,6 +1825,37 @@ class G0WorkflowTests(G0ReadinessFixture):
         entries = self.g0()["decisions"]
         self.runner("decisions-list", "apply", {"workflow_file": "workflow.md", "entries": entries})
 
+    def test_autopilot_asks_no_setup_question_on_either_host(self) -> None:
+        for host in ("claude", "codex"):
+            view = host_skill_root(host) / "speckit-autopilot"
+            for name in AUTOPILOT_TEXTS:
+                text = (view / name).read_text(encoding="utf-8")
+                for pattern in SETUP_QUESTIONS:
+                    with self.subTest(host=host, file=name, pattern=pattern.pattern):
+                        self.assertIsNone(pattern.search(text))
+            prerequisites = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
+            with self.subTest(host=host):
+                self.assertIn('"inputs":{"probe":"readiness"', prerequisites)
+                self.assertIn("data.readiness.decisions", prerequisites)
+                self.assertIn("`readiness_stale`", prerequisites)
+
+    def test_g0_has_no_selected_formal_setup_stop(self) -> None:
+        for host in ("claude", "codex"):
+            view = host_skill_root(host) / "speckit-autopilot" / "references"
+            preflight = (view / "prerequisites.md").read_text(encoding="utf-8")
+            preflight = preflight.split("## Step 0.11", 1)[1].split("```", 1)[0]
+            selection = (view / "formal-methods.md").read_text(encoding="utf-8")
+            selection = selection.split("## Selection and preflight", 1)[1].split("\n## ", 1)[0]
+            setup_gap = selection.split("formal-doctor", 1)[1].split("\n\n", 1)[0]
+            for name, text in (("prerequisites", preflight), ("formal-methods", setup_gap)):
+                with self.subTest(host=host, text=name):
+                    self.assertNotRegex(text, r"(?i)\b(?:stop|stops|block|blocks)\b")
+                    self.assertIn("`readiness stale: formal_methods`", text)
+
+
+class G0WorkflowPathTests(G0ReadinessFixture):
+    """Workflow binding hands both hosts a canonical absolute WORKFLOW_FILE (#1311)."""
+
     def g0_response(self, host: str, workflow: str, probe: str = "readiness") -> dict:
         _, response, _ = run_runner({"schema_version": "1.0", "request_id": "test-g0", "helper_id": "g0-setup",
                                      "operation": "g0-setup", "mode": "read_only",
@@ -1833,7 +1864,6 @@ class G0WorkflowTests(G0ReadinessFixture):
         return response
 
     def test_absolute_workflow_path_reads_like_the_relative_one_on_either_host(self) -> None:
-        # Workflow binding hands both hosts a canonical absolute WORKFLOW_FILE (#1311).
         alias = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve() / "checkout"
         alias.symlink_to(self.root, target_is_directory=True)
         for host in ("claude", "codex"):
@@ -1875,38 +1905,11 @@ class G0WorkflowTests(G0ReadinessFixture):
                     assert_runner_response(self, response, "input_error", 2)
                     self.assertIn("workflow_file", json.dumps(response["data"]["problems"]))
 
-    def test_autopilot_asks_no_setup_question_on_either_host(self) -> None:
-        for host in ("claude", "codex"):
-            view = host_skill_root(host) / "speckit-autopilot"
-            for name in AUTOPILOT_TEXTS:
-                text = (view / name).read_text(encoding="utf-8")
-                for pattern in SETUP_QUESTIONS:
-                    with self.subTest(host=host, file=name, pattern=pattern.pattern):
-                        self.assertIsNone(pattern.search(text))
-            prerequisites = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
-            with self.subTest(host=host):
-                self.assertIn('"inputs":{"probe":"readiness"', prerequisites)
-                self.assertIn("data.readiness.decisions", prerequisites)
-                self.assertIn("`readiness_stale`", prerequisites)
-
-    def test_g0_has_no_selected_formal_setup_stop(self) -> None:
-        for host in ("claude", "codex"):
-            view = host_skill_root(host) / "speckit-autopilot" / "references"
-            preflight = (view / "prerequisites.md").read_text(encoding="utf-8")
-            preflight = preflight.split("## Step 0.11", 1)[1].split("```", 1)[0]
-            selection = (view / "formal-methods.md").read_text(encoding="utf-8")
-            selection = selection.split("## Selection and preflight", 1)[1].split("\n## ", 1)[0]
-            setup_gap = selection.split("formal-doctor", 1)[1].split("\n\n", 1)[0]
-            for name, text in (("prerequisites", preflight), ("formal-methods", setup_gap)):
-                with self.subTest(host=host, text=name):
-                    self.assertNotRegex(text, r"(?i)\b(?:stop|stops|block|blocks)\b")
-                    self.assertIn("`readiness stale: formal_methods`", text)
-
 
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     cases = (ReadinessRecordTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
-             G0RecordValidationTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests)
+             G0RecordValidationTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests, G0WorkflowPathTests)
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
 
