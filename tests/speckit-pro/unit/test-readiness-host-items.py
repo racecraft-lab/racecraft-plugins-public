@@ -43,7 +43,7 @@ class ReadinessHostItemsTest(ReadinessCase):
                     "Bash(printf:*)",
                 ], readiness_host_items.rules_for(probes, recorded=False))
                 self.assertEqual([
-                    'Bash(<interpreter> "<plugin-root>/scripts/run-speckit-pro.py":*)', "Bash(printf:*)",
+                    'Bash(<interpreter> "<installed-launcher>":*)', "Bash(printf:*)",
                 ], readiness_host_items.rules_for(probes, recorded=True))
 
     def test_unsafe_launcher_root_never_broadens_an_allow_rule(self) -> None:
@@ -63,7 +63,7 @@ class ReadinessHostItemsTest(ReadinessCase):
         self.assertEqual("unavailable", item["status"])
         rules = response["data"]["allow_rules"]
         self.assertEqual([f'Bash(python3 "{LAUNCHER}":*)', "Bash(printf:*)"], rules)
-        self.assertIn('Bash(python3 "<plugin-root>/scripts/run-speckit-pro.py":*)', item["action"])
+        self.assertIn('Bash(python3 "<installed-launcher>":*)', item["action"])
         self.assertIn("Bash(printf:*)", item["action"])
         self.assertNotIn("git status", item["action"])
 
@@ -168,7 +168,7 @@ class ReadinessHostItemsTest(ReadinessCase):
         item = self.items(response)["permission_probe"]
         self.assertIn(f'Bash({interpreter} "{LAUNCHER}":*)', response["data"]["allow_rules"])
         self.assertNotIn(interpreter, json.dumps(response["data"]["record"]))
-        self.assertIn('Bash(<interpreter> "<plugin-root>/scripts/run-speckit-pro.py":*)', item["action"])
+        self.assertIn('Bash(<interpreter> "<installed-launcher>":*)', item["action"])
         self.assertNotIn(LAUNCHER, json.dumps(response["data"]["record"]))
 
     def test_relative_interpreter_directories_are_not_recorded(self) -> None:
@@ -178,7 +178,7 @@ class ReadinessHostItemsTest(ReadinessCase):
                 response = self.run_helper([detail("permission_probe", "probes", probes)])
                 item = self.items(response)["permission_probe"]
                 self.assertIn(f'Bash({command} "{LAUNCHER}":*)', response["data"]["allow_rules"])
-                self.assertIn(f'Bash({command.rsplit("/", 1)[-1]} "<plugin-root>/scripts/run-speckit-pro.py":*)', item["action"])
+                self.assertIn(f'Bash({command.rsplit("/", 1)[-1]} "<installed-launcher>":*)', item["action"])
                 if "/" in command:
                     self.assertNotIn(command, (self.root / ".specify/readiness/claude.json").read_text())
 

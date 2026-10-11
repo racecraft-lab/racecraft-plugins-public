@@ -29,12 +29,12 @@ results, exit codes, stderr, missing timing and invalid timing.
 
 Scaffold's printed permission-probe rules now name the quoted installed launcher,
 matching autopilot's run-start probe. Saved actions retain only the interpreter
-basename (or `<interpreter>`) and the `<plugin-root>` placeholder. Prompted and
+basename (or `<interpreter>`) and the `<installed-launcher>` placeholder. Prompted and
 denied probes share the same template; passed probes still need no rule.
 
 ## Known limits
 
-- An installation path containing permission-pattern or shell metacharacters
+- An installation path containing characters outside the narrow allow-rule template
   cannot produce a narrow allow rule. The helper refuses it instead of printing
   a broader grant; ordinary paths with spaces are quoted. Printed rules contain
   installation paths for the operator, while saved records omit them.

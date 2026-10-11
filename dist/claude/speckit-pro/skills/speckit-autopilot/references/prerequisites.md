@@ -55,8 +55,8 @@ absolute interpreter path must appear in the rule as it does in the request. A p
 that passes needs no rule.
 
 Scaffold's readiness helper prints the same launcher rule. Saved readiness
-actions omit interpreter directories and use `<plugin-root>` for the installation
-directory; use the printed rule when updating permission settings.
+actions omit interpreter directories and use `<installed-launcher>` for the launcher
+path; use the printed rule when updating permission settings.
 
 ## Workflow Worktree Binding
 

@@ -28,7 +28,7 @@ HOST_ITEMS = (*CLAUDE_ONLY_ITEMS, "hooks", *CODEX_ONLY_ITEMS)
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 CURATED_SET = PLUGIN_ROOT / "scripts" / "curated-set.json"
 RUNNER_LAUNCHER = "scripts/run-speckit-pro.py"
-LAUNCHER_PLACEHOLDER = f"<plugin-root>/{RUNNER_LAUNCHER}"
+LAUNCHER_PLACEHOLDER = "<installed-launcher>"
 DETAIL_KEYS = {"permission_probe": "probes", "plugin_scope": "scope", "mcp_authentication": "servers",
                "hooks": "hooks", "codex_agents": "agents", "extension_versions": "extensions",
                "codex_approval_posture": "posture", "codex_hook_trust": "hooks", "codex_local_access": "access"}
