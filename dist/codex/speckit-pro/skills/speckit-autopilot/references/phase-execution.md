@@ -282,13 +282,19 @@ for phase in PHASES starting from first_pending:
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
-       Checklist only: Always request the final phase brief with the original domains,
-       verify_baseline saved before consensus and max_agents=subagent_slots, even with
+       Checklist only: first claim the final verify round: run `checklist-edits` in
+       apply mode with only the verify_baseline saved before consensus; it returns
+       `baseline`, the current digests of both files.
+       Always request the final phase brief with the original domains,
+       that verify_baseline and max_agents=subagent_slots, even with
        no queued items or edit labels, before marking any domain completed.
-       The runner compares both shared artifacts on disk: any spec.md/plan.md change
-       returns only verify waves for every original domain; no change returns none.
-       Missing or unreadable evidence fails closed; edit labels are not inputs.
-       Consume every returned wave with a fresh read_only baseline and dry_run guard
+       The runner compares both shared artifacts on disk and bounds the rounds;
+       `final_checkpoint` says which: `reverify` returns only verify waves for every
+       original domain, `unchanged` returns none, and `bounded` returns none because
+       the round limit is spent: complete without re-verifying and log the unverified
+       edits in the Consensus Resolution Log. Missing or unreadable evidence fails
+       closed, an unclaimed change is refused, and edit labels are not inputs.
+       Consume every returned wave with the claim's `baseline` and dry_run guard
        as above. The final verify-pass unresolved items return to consensus before completion,
        under the existing shared repair reservation and consensus-round bounds.
        Preserve pending items, append new verify_items, save the just-verified baseline

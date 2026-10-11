@@ -320,6 +320,92 @@ class RefusalTests(ChecklistEditsCase):
         self.assertIn("private", self.text("spec.md"))
 
 
+class FinalVerifyRoundTests(ChecklistEditsCase):
+    """A verify_baseline request claims one bounded final verify round in the application record."""
+
+    def claim(self, verified: dict[str, str], mode: str = "apply") -> dict[str, Any]:
+        return self.call(mode, verify_baseline=verified)
+
+    def applied(self) -> dict[str, str]:
+        """Apply clean proposals, so the record exists, and return the just-verified baseline."""
+        self.assertEqual("ok", self.apply()["status"])
+        return self.baseline()
+
+    def wording_edit(self, text: str) -> None:
+        (self.root / FEATURE / "spec.md").write_text(self.text("spec.md") + text, encoding="utf-8")
+
+    def rounds(self) -> list[Any]:
+        return json.loads((self.root / RECORD).read_text(encoding="utf-8")).get(checklist_edits.ROUNDS_FIELD, [])
+
+    def test_unchanged_artifacts_claim_nothing_and_write_nothing(self) -> None:
+        verified = self.applied()
+        before = (self.root / RECORD).read_bytes()
+        result = self.claim(verified)
+        self.assertEqual(("ok", "unchanged", False), (result["status"], result["data"]["final_checkpoint"], result["data"]["writes_state"]))
+        self.assertEqual(verified, result["data"]["baseline"])
+        self.assertEqual(before, (self.root / RECORD).read_bytes())
+
+    def test_a_changed_checkpoint_claims_one_round_then_reports_the_bound(self) -> None:
+        verified = self.applied()
+        self.wording_edit("Wording fix one.\n")
+        first = self.claim(verified)
+        self.assertEqual(("ok", "reverify", True, 1), (first["status"], first["data"]["final_checkpoint"],
+                                                       first["data"]["writes_state"], first["data"]["rounds"]))
+        self.assertEqual([{"verify_baseline": verified, "observed": first["data"]["baseline"]}], self.rounds())
+        again = self.claim(verified)
+        self.assertEqual(("reverify", False), (again["data"]["final_checkpoint"], again["data"]["writes_state"]))
+        self.wording_edit("Wording fix two.\n")
+        bounded = self.claim(first["data"]["baseline"])
+        self.assertEqual(("ok", "bounded", False, checklist_edits.FINAL_VERIFY_ROUNDS),
+                         (bounded["status"], bounded["data"]["final_checkpoint"], bounded["data"]["writes_state"], bounded["data"]["rounds"]))
+        self.assertEqual(checklist_edits.FINAL_VERIFY_ROUNDS, len(self.rounds()))
+
+    def test_a_dry_run_claim_reports_the_round_and_writes_nothing(self) -> None:
+        verified = self.applied()
+        self.wording_edit("Wording fix.\n")
+        before = (self.root / RECORD).read_bytes()
+        result = self.claim(verified, mode="dry_run")
+        self.assertEqual(("ok", "reverify", False), (result["status"], result["data"]["final_checkpoint"], result["data"]["writes_state"]))
+        self.assertEqual(before, (self.root / RECORD).read_bytes())
+
+    def test_a_fresh_apply_starts_with_no_claimed_rounds(self) -> None:
+        verified = self.applied()
+        self.wording_edit("Wording fix.\n")
+        self.assertEqual("reverify", self.claim(verified)["data"]["final_checkpoint"])
+        self.assertEqual(1, len(self.rounds()))
+        self.applied()
+        self.assertEqual([], self.rounds())
+
+    def test_a_changed_checkpoint_without_a_usable_record_is_refused(self) -> None:
+        verified = self.baseline()
+        self.wording_edit("Wording fix.\n")
+        self.assertEqual("input_error", self.claim(verified)["status"])
+        self.assertFalse((self.root / RECORD).exists())
+        self.applied()
+        record = self.root / RECORD
+        valid = json.loads(record.read_text(encoding="utf-8"))
+        self.wording_edit("Another fix.\n")
+        pair = {"verify_baseline": verified, "observed": verified}
+        for label, content in {"not JSON": "{", "other schema": json.dumps({**valid, "schema_version": "other/v1"}),
+                               "rounds not a list": json.dumps({**valid, "final_verify_rounds": {}}),
+                               "too many rounds": json.dumps({**valid, "final_verify_rounds": [pair] * (checklist_edits.FINAL_VERIFY_ROUNDS + 1)}),
+                               "malformed round": json.dumps({**valid, "final_verify_rounds": [{"observed": verified}]})}.items():
+            with self.subTest(record=label):
+                record.write_text(content, encoding="utf-8")
+                self.assertEqual("input_error", self.claim(verified)["status"])
+                self.assertEqual(content, record.read_text(encoding="utf-8"))
+
+    def test_a_claim_takes_only_the_verify_baseline_and_read_only_refuses_it(self) -> None:
+        verified = self.applied()
+        bad = (("apply", {"verify_baseline": verified, "domains": DOMAINS}),
+               ("apply", {"verify_baseline": {"spec.md": "0" * 64}}),
+               ("apply", {"verify_baseline": {**verified, "plan.md": "bad"}}),
+               ("read_only", {"verify_baseline": verified}))
+        for mode, inputs in bad:
+            with self.subTest(mode=mode, inputs=sorted(inputs)):
+                self.assertEqual("input_error", self.call(mode, **inputs)["status"])
+
+
 def target_changes(root: Path, name: str) -> dict[str, Callable[[], None]]:
     """The receipt's changes to one artifact after the helper read it, keyed by form."""
     target = root / FEATURE / name
@@ -2476,7 +2562,7 @@ if __name__ == "__main__":
         run_counted(
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                for case in (ProposalTests, ConflictTests, RefusalTests, WorkflowPathTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
+                for case in (ProposalTests, ConflictTests, RefusalTests, FinalVerifyRoundTests, WorkflowPathTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
                              UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests,
                              GateFourHostParityTests, GateFourResourceTests, GateFourCoverageTests,

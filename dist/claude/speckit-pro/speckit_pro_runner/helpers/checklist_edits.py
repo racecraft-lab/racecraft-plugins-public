@@ -17,6 +17,14 @@ which is empty when it found no gaps, so a missing return is refused rather than
 as a clean domain. `dry_run` with no domains and no proposals only compares the digests,
 which is how the orchestrator checks that a verify run wrote nothing. Once a write
 has started, any failure reports what reached disk instead of a refusal.
+
+The final checkpoint is bounded here too. `apply` (or `dry_run`) with only a
+`verify_baseline` claims one final verify round: when either artifact moved since that
+baseline, it records the (baseline, observed digests) pair in the application record,
+at most FINAL_VERIFY_ROUNDS times per apply. The phase brief reads the same record
+and returns verify waves only for a claimed round, so verify passes whose consensus
+keeps editing the artifacts cannot start an unbounded chain of waves. A fresh apply
+writes a record with no rounds.
 """
 
 from __future__ import annotations
@@ -38,11 +46,15 @@ from ..envelope import diagnostic, response
 from ..execution_control import confined_path, contained_workflow_file, ignore_owned_directory, workflow_process_directory
 from ..strict_input import SelectionError, has_hidden_characters, next_fence, require_fields, require_text
 from ..sweep_isolation import secret_matches
-from .dispatch_waves import DOMAIN_NAME
+from .dispatch_waves import DOMAIN_NAME, checked_digests
 from .execution_requests import Refusal, run_contained_helper
 
 SCHEMA_VERSION = "checklist-edits/v1"
 ARTIFACTS = ("spec.md", "plan.md")
+# Final verify waves per apply (issue 1316): the first verify wave checks every domain once, and consensus edits
+# after it earn at most this many re-verify waves. Edits made after the last one are applied without another wave.
+FINAL_VERIFY_ROUNDS = 1
+ROUNDS_FIELD = "final_verify_rounds"
 MAX_TEXT = 20000
 # Auto-application accepts prose, not Markdown syntax, references or path/token alphabets.
 PLAIN_PROSE = re.compile(r"[A-Za-z0-9 ,;!?'\"().-]*")
@@ -377,10 +389,75 @@ def record_on_disk(root: Path, record: Path, value: dict[str, Any] | None) -> bo
         return False
 
 
+class UnclaimedCheckpoint(SelectionError):
+    """The artifacts changed since the verify baseline, a round is left, and no checklist-edits apply claimed it."""
+
+
+def record_link(workflow: str) -> str:
+    return workflow_process_directory(workflow).joinpath("checklist-edits", "applied.json").as_posix()
+
+
+def checked_round(value: Any) -> dict[str, dict[str, str]]:
+    item = require_fields(value, {"verify_baseline", "observed"}, "final verify round")
+    return {key: checked_digests(item[key], f"final verify round {key}") for key in ("verify_baseline", "observed")}
+
+
+def recorded_rounds(root: Path, record: Path) -> tuple[tuple[tuple[int, int], dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
+    """The application record's entry, its value and its claimed rounds; a missing or malformed record fails closed."""
+    state = entry_state(root, record)
+    if state is None or not state[1]["exists"]:
+        raise SelectionError("the final checkpoint needs the application record; run checklist-edits apply first")
+    try:
+        value = json.loads(state[1]["content"])
+    except ValueError as error:
+        raise SelectionError("the application record is not JSON") from error
+    if not isinstance(value, dict) or value.get("schema_version") != SCHEMA_VERSION or not isinstance(value.get("domains"), list):
+        raise SelectionError("the application record does not match checklist-edits/v1")
+    rounds = value.get(ROUNDS_FIELD, [])
+    if not isinstance(rounds, list) or len(rounds) > FINAL_VERIFY_ROUNDS:
+        raise SelectionError(f"the application record must hold at most {FINAL_VERIFY_ROUNDS} final verify rounds")
+    return state, value, [checked_round(item) for item in rounds]
+
+
+def final_checkpoint(root: Path, inputs: dict[str, Any], verify_baseline: Any, mode: str) -> dict[str, Any]:
+    """Decide the final checkpoint: `unchanged`, `reverify` (a claimed round) or `bounded` (no round left).
+
+    `apply` records a new round while one is left; `dry_run` reports the same outcome and writes nothing;
+    `read_only`, the phase brief's read, refuses a changed checkpoint no apply has claimed yet.
+    """
+    workflow = contained_workflow_file(root, inputs["workflow_file"])
+    feature = confined_path(root, require_text(inputs["feature_dir"], "feature_dir"))
+    baseline = checked_digests(verify_baseline, "verify_baseline")
+    link = record_link(workflow)
+    record = confined_path(root, link)
+    with held_feature(root, feature, exclusive=mode != "read_only") as directory:
+        observed = {name: snapshot["digest"] for name, snapshot in read_artifacts(directory).items()}
+        outcome, rounds, written = "unchanged", 0, False
+        if observed != baseline:
+            state, value, claimed = recorded_rounds(root, record)
+            key = {"verify_baseline": baseline, "observed": observed}
+            outcome, rounds = ("reverify" if key in claimed else "bounded"), len(claimed)
+            if key not in claimed and len(claimed) < FINAL_VERIFY_ROUNDS:
+                if mode == "read_only":
+                    raise UnclaimedCheckpoint("spec.md or plan.md changed since verify_baseline and no checklist-edits apply "
+                                              "claimed this final verify round")
+                outcome, rounds = "reverify", len(claimed) + 1
+                if mode == "apply":
+                    write_file_atomic(record, canonical_bytes({**value, ROUNDS_FIELD: [*claimed, key]}).decode("utf-8"),
+                                      trust_root=root, expected_snapshot={**state[1], "parent": state[0]})
+                    written = True
+    return {"final_checkpoint": outcome, "baseline": observed, "rounds": rounds, "limit": FINAL_VERIFY_ROUNDS,
+            "link": link, "writes_state": written}
+
+
 def checklist_edits(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
-    """Snapshot (read_only), plan (dry_run) or apply (apply) one batch of domain proposals."""
+    """Snapshot (read_only), plan (dry_run) or apply (apply) one batch of domain proposals, or claim a final round."""
+    given = {key: value for key, value in inputs.items() if key != "repo_root"}
+    if mode != "read_only" and "verify_baseline" in given:
+        request = require_fields(given, {"workflow_file", "feature_dir", "verify_baseline"}, "inputs")
+        return final_checkpoint(root, request, request["verify_baseline"], mode)
     fields = {"workflow_file", "feature_dir"} | (set() if mode == "read_only" else {"domains", "baseline", "proposals"})
-    request = require_fields({key: value for key, value in inputs.items() if key != "repo_root"}, fields, "inputs")
+    request = require_fields(given, fields, "inputs")
     workflow = contained_workflow_file(root, request["workflow_file"])
     feature = confined_path(root, require_text(request["feature_dir"], "feature_dir"))
     if mode == "read_only":
@@ -388,7 +465,7 @@ def checklist_edits(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, 
             return {"baseline": {name: snapshot["digest"] for name, snapshot in read_artifacts(directory).items()},
                     "writes_state": False}
     domains, baseline, proposals = checked_request(request)
-    link = workflow_process_directory(workflow).joinpath("checklist-edits", "applied.json").as_posix()
+    link = record_link(workflow)
     record = confined_path(root, link)
     progress = Progress()
     try:
@@ -453,7 +530,8 @@ def locked_apply(root: Path, feature: Path, record: Path, mode: str,
 
 REFUSAL = Refusal(
     "invalid_checklist_edits_request",
-    "Send the workflow file, the feature directory and, to apply, the domains, baseline and proposals.",
+    "Send the workflow file, the feature directory and, to apply, the domains, baseline and proposals, "
+    "or only a verify_baseline to claim a final verify round.",
     ["Correct the named field or file.", "Take a fresh baseline with read_only, then rerun checklist-edits."],
 )
 

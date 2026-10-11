@@ -908,10 +908,13 @@ and plan.md unchanged), the security wave (the three analysts of each
 security item), the low-confidence wave (the routed analyst of each
 low-confidence item). The final checkpoint request supplies `domains` (the
 original full list), `verify_baseline` (the pre-consensus spec/plan digests from
-`checklist-edits`, read_only), and `max_agents`. The runner reads both shared
-artifacts: if either changed, it returns only `pass: verify` waves for every
-original domain; otherwise it returns no waves. Missing or unreadable evidence
-fails closed, and edit labels are not inputs. Checklist executors only
+`checklist-edits`, read_only), and `max_agents`, after `checklist-edits` mode apply
+with only that `verify_baseline` claimed the final verify round. The runner reads
+both shared artifacts and bounds the rounds; `final_checkpoint` says which:
+`reverify` returns only `pass: verify` waves for every original domain,
+`unchanged` returns none, and `bounded` returns none because the round limit is
+spent. Missing or unreadable evidence fails closed, an unclaimed change is
+refused, and edit labels are not inputs. Checklist executors only
 propose edits, so domain checks share a wave within the host limit. The
 runner applies their proposals one domain at a time, in workflow order.
 Pass `max_agents=subagent_slots`, derived as in the capacity rule above. The
@@ -945,9 +948,9 @@ Consensus Resolution Log. Follow the consensus rounds of
 Always request the final phase brief with the original `domains`,
 `verify_baseline` saved before consensus and `max_agents`, even with no queued
 items or edit labels, before marking any domain completed. Consume every returned
-verify wave and guard it with a fresh `checklist-edits` read_only baseline and
-dry_run as for the first verify pass. With no shared edit the final brief is empty,
-so each domain still runs exactly twice. The runner compares disk content, not
+verify wave and guard it with the claim's `baseline` and dry_run as for the first
+verify pass. With no shared edit the final brief is empty, so each domain still
+runs exactly twice; with edits, the runner's round bound caps the extra verify waves. The runner compares disk content, not
 attribution, so no label can narrow or suppress verification.
 
 Hooks: a loaded planning command runs its own mandatory hooks (`optional:
@@ -1020,15 +1023,18 @@ for phase in PHASES starting from first_pending:
        the verify baseline: a refusal means a verify run wrote an artifact.
        Build the consensus queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
        Request the phase brief with items and verify_items, preserving initial apply conflicts.
+       Claim the final verify round first: `checklist-edits`, mode apply, with only
+       the verify_baseline saved before consensus.
        Always request the final phase brief with the original domains, verify_baseline
        saved before consensus and max_agents before marking any domain completed.
-       Consume its returned verify waves using a fresh baseline and dry_run guard.
+       Consume its returned verify waves using the claim's baseline and dry_run guard.
        The final verify-pass unresolved items return to consensus under the existing
        shared reservation and round bounds; preserve pending items, append verify_items,
        and repeat the checkpoint using the just-verified baseline before further edits.
        Exhaustion follows Failure Escalation; tasks remain incomplete.
-       The runner compares shared spec.md/plan.md digests: any change verifies every
-       domain, no change returns no final wave, and missing evidence fails closed.
+       The runner compares shared spec.md/plan.md digests: a claimed change verifies
+       every domain, no change or a spent round limit (`bounded`: log the unverified
+       edits) returns no final wave, and missing evidence fails closed.
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
     5. Tasks only: call publish-tasks-output, mode apply, with
        inputs=brief.inputs.tasks_output unchanged. A refusal blocks hooks,
