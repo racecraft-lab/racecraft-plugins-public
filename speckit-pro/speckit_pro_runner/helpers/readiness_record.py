@@ -125,6 +125,7 @@ def caller_item(raw: Any, root: Path, observed_at: str) -> tuple[str, dict[str, 
         action = clean_text(raw["action"], f"{name}.action")
     fingerprints = {**fingerprint_files(raw.get("files", []), root, name),
                     **fingerprint_values(raw.get("values", {}), name)}
+    require_surface_fingerprint(name, status, fingerprints)
     require_verified_fingerprints(name, status, fingerprints)
     return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
                            observed_at, fingerprints, action)
@@ -140,6 +141,14 @@ def require_verified_fingerprints(name: str, status: str, fingerprints: dict[str
             "value:spec_id" not in fingerprints or not any(key.startswith("file:") and value.startswith("sha256:")
                                                           for key, value in fingerprints.items())):
         raise SelectionError("reviewability_report: verified evidence needs a report or roadmap file and spec_id")
+
+
+def require_surface_fingerprint(name: str, status: str, fingerprints: dict[str, str]) -> None:
+    """A terminal preview answer needs a digest, or `preview_surface()` reads it back as `unknown` (#1312)."""
+    if name == "preview_surface" and status in ("verified", "unavailable") \
+            and not any(value.startswith("sha256:") for value in fingerprints.values()):
+        raise SelectionError(f"preview_surface: a {status} answer needs values.surface naming the observed surface "
+                             "(or its absence), or the record reads back as unknown")
 
 
 def probe_temporary_directory(directory: Path) -> str | None:

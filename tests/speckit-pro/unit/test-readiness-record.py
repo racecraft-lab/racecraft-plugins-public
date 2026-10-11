@@ -45,6 +45,8 @@ def observation(item: str, status: str = "verified", **extra: object) -> dict[st
             record.update(files=[".specify/roadmap.md"], values={"spec_id": "TEST-001"})
     if status in {"unavailable", "unknown"}:
         record["action"] = f"Fix {item}, then rerun scaffold."
+    if item == "preview_surface" and status == "unavailable" and not {"files", "values"} & extra.keys():
+        record["values"] = {"surface": "none"}
     record.update(extra)
     return record
 
@@ -133,8 +135,26 @@ class ReadinessRecordTest(unittest.TestCase):
                 self.assertEqual(surface, readiness_record.preview_surface(self.root, "claude"))
         self.assertEqual("unknown", readiness_record.preview_surface(self.root, "codex"))
 
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_headless_run_without_a_surface_reads_back_unavailable_on_both_hosts(self, _probe) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                response = self.run_helper([observation("preview_surface", "unavailable", values={"surface": "none"})],
+                                           host=host)
+                assert_runner_response(self, response, "ok", 0)
+                self.assertEqual("unavailable", readiness_record.preview_surface(self.root, host))
+
+    def test_a_terminal_surface_answer_without_a_fingerprint_is_refused_at_write_time(self) -> None:
+        # Without a digest the record would read back as `unknown` and the observer would still be dispatched (#1312).
+        for status in ("verified", "unavailable"):
+            with self.subTest(status=status):
+                response = self.run_helper([observation("preview_surface", status, values={})])
+                assert_runner_response(self, response, "input_error", 2)
+                self.assertIn("values.surface", json.dumps(response))
+                self.assertFalse(self.record_path().exists())
+
     def test_preview_surface_is_unknown_unless_a_current_record_vouches_for_it(self) -> None:
-        self.run_helper([observation("preview_surface", "unavailable")])
+        self.run_helper([observation("preview_surface", "unavailable", values={"surface": "none"})])
         path = self.record_path()
         good = json.loads(path.read_text(encoding="utf-8"))
         broken = {"unparseable": "{", "not an object": "[]", "other schema": {**good, "schema_version": "readiness-record/v0"},
