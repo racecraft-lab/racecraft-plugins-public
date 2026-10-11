@@ -443,16 +443,19 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
                 self.assertEqual({}, result["data"], result)
                 self.assertEqual(verified, self.baseline())
 
-    def test_equal_digests_refuse_a_missing_application_record(self) -> None:
-        self.record.unlink()
+    def assert_missing_checkpoint_refused(self, target: Path) -> None:
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
         self.assert_checkpoint_refused(self.verified)
-        self.assertFalse(self.record.exists())
+        self.assertFalse(target.exists())
+
+    def test_equal_digests_refuse_a_missing_application_record(self) -> None:
+        self.assert_missing_checkpoint_refused(self.record)
 
     def test_equal_digests_refuse_a_missing_record_directory(self) -> None:
-        directory = self.record.parent
-        shutil.rmtree(directory)
-        self.assert_checkpoint_refused(self.verified)
-        self.assertFalse(directory.exists())
+        self.assert_missing_checkpoint_refused(self.record.parent)
 
     def test_equal_digests_refuse_a_renamed_record_directory(self) -> None:
         directory = self.record.parent
@@ -503,7 +506,7 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
         self.record.unlink()
         self.record.mkdir()
         self.assert_checkpoint_refused(self.verified)
-        self.assertTrue(self.record.is_dir())
+        self.assertEqual(stat.S_IFDIR, stat.S_IFMT(self.record.stat().st_mode))
 
     def test_equal_digests_refuse_linked_records_and_record_directories(self) -> None:
         record = self.record
@@ -1975,6 +1978,15 @@ class _TasksMutationSupport:
     def task_target_cases(targets: dict[str, tuple[str, ...]]) -> list[tuple[str, str]]:
         return [(relative, variant) for relative, variants in targets.items() for variant in variants]
 
+    def shared_artifact_mutation_cases(self, windows: tuple[str, ...]) -> Iterator[tuple[str, tuple[str, str]]]:
+        """The same artifact/report mutations at each caller's observation windows."""
+        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
+        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
+        targets = {"spec.md": leaves, "plan.md": leaves,
+                   "checklists/security.md": (*leaves, "add report", "add nested report"),
+                   "checklists": directories, ".": directories}
+        return product(windows, self.task_target_cases(targets))
+
     def mutate_task_target(self, target: Path, variant: str, forge_receipt: bool = False) -> None:
         if variant in ("add report", "add nested report"):
             parent = target.parent / "nested" if variant == "add nested report" else target.parent
@@ -2320,13 +2332,8 @@ class GateFourNamespaceMutationTests(_GateFourTestSupport, ChecklistEditsCase):
 
 class GateFourPostValidationTests(_GateFourTestSupport, ChecklistEditsCase):
     def test_tasks_refuses_every_post_g4_validation_mutation(self) -> None:
-        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
-        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
-        targets = {"spec.md": leaves, "plan.md": leaves,
-                   "checklists/security.md": (*leaves, "add report", "add nested report"),
-                   "checklists": directories, ".": directories}
         windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
-        for window, (relative, variant) in product(windows, self.task_target_cases(targets)):
+        for window, (relative, variant) in self.shared_artifact_mutation_cases(windows):
             with self.subTest(window=window, target=relative, variant=variant):
                 self.reset_tree()
                 target = self.feature / relative
@@ -2348,13 +2355,8 @@ class GateFourPostValidationTests(_GateFourTestSupport, ChecklistEditsCase):
 
 class TasksCheckedBytesTests(_GateFourTestSupport, ChecklistEditsCase):
     def test_tasks_consumes_checked_bytes_after_every_post_check_mutation(self) -> None:
-        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
-        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
-        targets = {"spec.md": leaves, "plan.md": leaves,
-                   "checklists/security.md": (*leaves, "add report", "add nested report"),
-                   "checklists": directories, ".": directories}
         windows = ("after check", "before consumption")
-        for window, (relative, variant) in product(windows, self.task_target_cases(targets)):
+        for window, (relative, variant) in self.shared_artifact_mutation_cases(windows):
             with self.subTest(window=window, target=relative, variant=variant):
                 self.reset_tree()
                 judged = self.gate()["judged"]
@@ -2467,12 +2469,8 @@ class TasksSnapshotWriteTests(_GateFourTestSupport, ChecklistEditsCase):
 
 class TasksRecheckTests(_GateFourTestSupport, ChecklistEditsCase):
     def test_tasks_recheck_windows_bind_the_exact_captured_bytes(self) -> None:
-        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
-        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
-        targets = {"spec.md": leaves, "plan.md": leaves, "checklists/security.md": (*leaves, "add report", "add nested report"),
-                   "checklists": directories, ".": directories}
         windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
-        for window, (relative, variant) in product(windows, self.task_target_cases(targets)):
+        for window, (relative, variant) in self.shared_artifact_mutation_cases(windows):
             with self.subTest(window=window, target=relative, variant=variant):
                 self.reset_tree()
                 judged = self.gate()["judged"]
