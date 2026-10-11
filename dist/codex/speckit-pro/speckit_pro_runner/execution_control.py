@@ -21,7 +21,7 @@ from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
-from .strict_input import require_text as require_nonempty_text
+from .strict_input import SelectionError, require_text as require_nonempty_text
 from .task_partition import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
 from .trusted_io import is_test_path, trusted_text
 from .workflow_stage import parse_stage_args, workflow_stage_signals
@@ -154,6 +154,40 @@ def confined_path(root: Path, value: str) -> Path:
         if path.is_symlink():
             raise ValueError("symlink paths are not permitted")
     return path
+
+
+def _root_relative(root: Path, value: str) -> str:
+    """An absolute path under the root as root-relative text; relative text passes through.
+
+    Same rule as `resolve-workflow-binding`: links above the root resolve, but the root's
+    own name stays literal, so a link aliasing the root is refused. A link below the root
+    stays in the remainder for `confined_path` to refuse.
+    """
+    path = Path(value)
+    if not path.is_absolute():
+        return value
+    real_root = Path(os.path.realpath(root))
+    for ancestor in reversed(path.parents):
+        if ancestor.parent != ancestor and Path(os.path.realpath(ancestor.parent)) / ancestor.name == real_root:
+            return path.relative_to(ancestor).as_posix()
+    raise ValueError("path must be inside the repository")
+
+
+def contained_workflow_file(root: Path, value: Any) -> str:
+    """The workflow file as repository-relative text, once it names an existing contained file.
+
+    Workflow binding hands helpers a canonical absolute path, so both forms are accepted;
+    every refusal is a `SelectionError` that names the field.
+    """
+    workflow = require_nonempty_text(value, "workflow_file")
+    try:
+        workflow = _root_relative(root, workflow)
+        contained = confined_path(root, workflow).is_file()
+    except (ValueError, OSError) as error:
+        raise SelectionError(f"workflow_file: {error}") from error
+    if not contained:
+        raise SelectionError("workflow_file must be an existing contained file")
+    return workflow
 
 
 def ignore_owned_directory(directory: Path) -> None:
