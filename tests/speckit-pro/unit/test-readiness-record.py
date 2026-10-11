@@ -45,6 +45,8 @@ def observation(item: str, status: str = "verified", **extra: object) -> dict[st
             record.update(files=[".specify/roadmap.md"], values={"spec_id": "TEST-001"})
     if status in {"unavailable", "unknown"}:
         record["action"] = f"Fix {item}, then rerun scaffold."
+    if item == "preview_surface" and status in {"verified", "unavailable"} and "values" not in extra:
+        record["values"] = {"surface": "none" if status == "unavailable" else "browser"}
     record.update(extra)
     return record
 
@@ -68,6 +70,17 @@ class ReadinessRecordTest(unittest.TestCase):
         completed, response, _ = run_runner(request(observations, mode, **inputs), cwd=self.root,
                                             extra_env={"PATH": str(self.tools)})
         self.assertIn(completed.returncode, (0, 1, 2, 3), completed.stderr)
+        return response
+
+    def run_helper_with_response(
+        self,
+        observations: list[dict[str, object]],
+        expected_response: tuple[str, int],
+        mode: str = "apply",
+        **inputs: object,
+    ) -> dict:
+        response = self.run_helper(observations, mode, **inputs)
+        assert_runner_response(self, response, *expected_response)
         return response
 
     def all_verified(self) -> list[dict[str, object]]:
@@ -128,13 +141,35 @@ class ReadinessRecordTest(unittest.TestCase):
         for status, surface in (("verified", "available"), ("unavailable", "unavailable"),
                                 ("unknown", "unknown"), ("not_applicable", "unknown")):
             with self.subTest(status=status):
-                response = self.run_helper([observation("preview_surface", status, values={"probe": "observed"})])
+                response = self.run_helper([observation("preview_surface", status)])
                 assert_runner_response(self, response, "ok", 0)
                 self.assertEqual(surface, readiness_record.preview_surface(self.root, "claude"))
         self.assertEqual("unknown", readiness_record.preview_surface(self.root, "codex"))
 
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_headless_run_without_a_surface_reads_back_unavailable_on_both_hosts(self, _probe) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.run_helper_with_response(
+                    [observation("preview_surface", "unavailable", values={"surface": "none"})],
+                    ("ok", 0),
+                    host=host,
+                )
+                self.assertEqual("unavailable", readiness_record.preview_surface(self.root, host))
+
+    def test_a_terminal_surface_answer_without_a_fingerprint_is_refused_at_write_time(self) -> None:
+        # Without a digest the record would read back as `unknown` and the observer would still be dispatched (#1312).
+        for status in ("verified", "unavailable"):
+            with self.subTest(status=status):
+                response = self.run_helper_with_response(
+                    [observation("preview_surface", status, values={})],
+                    ("input_error", 2),
+                )
+                self.assertIn("values.surface", json.dumps(response))
+                self.assertFalse(self.record_path().exists())
+
     def test_preview_surface_is_unknown_unless_a_current_record_vouches_for_it(self) -> None:
-        self.run_helper([observation("preview_surface", "unavailable")])
+        self.run_helper([observation("preview_surface", "unavailable", values={"surface": "none"})])
         path = self.record_path()
         good = json.loads(path.read_text(encoding="utf-8"))
         broken = {"unparseable": "{", "not an object": "[]", "other schema": {**good, "schema_version": "readiness-record/v0"},
@@ -586,6 +621,91 @@ class ReadinessRecordTest(unittest.TestCase):
                     shutil.rmtree(readiness, ignore_errors=True)
 
 
+class PreviewSurfaceWriterFixture(unittest.TestCase):
+    setUp = ReadinessRecordTest.setUp
+    record_path = ReadinessRecordTest.record_path
+    run_helper = ReadinessRecordTest.run_helper
+    run_helper_with_response = ReadinessRecordTest.run_helper_with_response
+
+    def assert_preview_refused(self, status: str, **evidence: object) -> None:
+        for host, mode in itertools.product(("claude", "codex"), ("apply", "dry_run")):
+            with self.subTest(status=status, host=host, mode=mode, evidence=evidence):
+                response = self.run_helper([observation("preview_surface", status, **evidence)], mode, host=host)
+                assert_runner_response(self, response, "input_error", 2)
+                self.assertIn("values.surface", json.dumps(response))
+                self.assertEqual([], list(self.root.glob(".specify/readiness/*.json")))
+
+
+class TerminalPreviewEvidenceTest(PreviewSurfaceWriterFixture):
+    def test_verified_preview_rejects_unrelated_value(self) -> None:
+        self.assert_preview_refused("verified", values={"probe": "observed"})
+
+    def test_unavailable_preview_rejects_unrelated_value(self) -> None:
+        self.assert_preview_refused("unavailable", values={"probe": "observed"})
+
+    def test_verified_preview_rejects_unrelated_file(self) -> None:
+        self.assert_preview_refused("verified", files=[".specify/roadmap.md"], values={})
+
+    def test_unavailable_preview_rejects_unrelated_file(self) -> None:
+        self.assert_preview_refused("unavailable", files=[".specify/roadmap.md"], values={})
+
+    def test_verified_preview_rejects_absent_surface_label(self) -> None:
+        self.assert_preview_refused("verified", values={"surface": "none"})
+
+    def test_unavailable_preview_rejects_present_surface_label(self) -> None:
+        self.assert_preview_refused("unavailable", values={"surface": "browser"})
+
+
+class PreviewEvidenceBoundaryTest(PreviewSurfaceWriterFixture):
+    def test_nonterminal_preview_keeps_surface_optional(self) -> None:
+        for host, status in itertools.product(("claude", "codex"), ("unknown", "not_applicable")):
+            with self.subTest(host=host, status=status):
+                response = self.run_helper([observation("preview_surface", status, values={"probe": "observed"})],
+                                           "dry_run", host=host)
+                assert_runner_response(self, response, "ok", 0)
+                self.assertEqual(status, response["data"]["record"]["items"]["preview_surface"]["status"])
+        # The same evidence cannot cross the terminal-status boundary.
+        self.assert_preview_refused("verified", values={"probe": "observed"})
+        self.assert_preview_refused("unavailable", values={"probe": "observed"})
+
+    def test_empty_or_unreadable_preview_evidence_cannot_be_rescued_by_other_fingerprints(self) -> None:
+        (self.root / "linked.txt").symlink_to(self.root / ".specify/roadmap.md")
+        for status, files in itertools.product(("verified", "unavailable"), ([], ["missing.txt"], ["linked.txt"])):
+            with self.subTest(status=status, files=files):
+                self.assert_preview_refused(status, values={}, files=files)
+                self.assert_preview_refused(status, values={"probe": "observed"}, files=files)
+
+    def test_supplementary_preview_evidence_cannot_replace_a_surface(self) -> None:
+        (self.root / ".specify/roadmap.md").rename(self.root / "renamed.txt")
+        (self.root / "linked.txt").symlink_to(self.root / "renamed.txt")
+        for status, name, files in itertools.product(("verified", "unavailable"),
+                                                     ("probe", "browser", "preview_surface"),
+                                                     (["renamed.txt"], ["linked.txt"])):
+            with self.subTest(status=status, value_name=name, files=files):
+                self.assert_preview_refused(status, values={name: "observed"}, files=files)
+
+    def test_terminal_preview_rejects_an_empty_surface_value(self) -> None:
+        for status in ("verified", "unavailable"):
+            self.assert_preview_refused(status, values={"surface": "", "probe": "observed"})
+
+    def test_file_named_like_a_surface_value_is_not_surface_evidence(self) -> None:
+        (self.root / "value:surface").write_text("browser")
+        for status in ("verified", "unavailable"):
+            self.assert_preview_refused(status, values={}, files=["value:surface"])
+
+    def test_absence_label_is_exact_and_surface_names_remain_caller_observations(self) -> None:
+        for label in ("None", " none", "headless"):
+            for host in ("claude", "codex"):
+                with self.subTest(host=host, label=label):
+                    self.run_helper_with_response(
+                        [observation("preview_surface", "verified", values={"surface": label})],
+                        ("ok", 0),
+                        "dry_run",
+                        host=host,
+                    )
+            self.assert_preview_refused("unavailable", values={"surface": label})
+
+
 class PreviewEvidenceSecurityTest(unittest.TestCase):
     """The reader must fail closed on the entire snapshot, on both supported hosts."""
 
@@ -618,6 +738,22 @@ class PreviewEvidenceSecurityTest(unittest.TestCase):
             with self.subTest(host=host):
                 (self.directory / f"{host}.json").write_text(json.dumps(record))
                 self.assertEqual("unavailable", readiness_record.preview_surface(self.root, host))
+
+    def test_terminal_preview_requires_named_matching_surface_after_readback(self) -> None:
+        evidence = ({"value:probe": readiness_record.digest("observed")},
+                    {"file:surface.txt": readiness_record.digest(b"no preview tools")},
+                    {"value:surface": readiness_record.digest("")})
+        cases = [(status, prints) for status, prints in itertools.product(("verified", "unavailable"), evidence)]
+        cases.extend((("verified", {"value:surface": readiness_record.digest("none")}),
+                      ("unavailable", {"value:surface": readiness_record.digest("browser")})))
+        for status, prints in cases:
+            with self.subTest(status=status, fingerprints=prints):
+                def change(record):
+                    item = record["items"]["preview_surface"]
+                    item.update(status=status, fingerprints=prints)
+                    if status == "verified":
+                        item.pop("action")
+                self.assert_unknown(change)
 
     def test_preview_surface_only_inventory(self) -> None:
         self.assert_unknown(lambda record: record.update(items={"preview_surface": record["items"]["preview_surface"]}))
@@ -1705,6 +1841,26 @@ class G0RecordValidationTests(G0ReadinessFixture):
         self.assert_logged_once("plugin_payload", f"plugin revision changed from 0.0.1 to {self.revision}")
 
 
+class G0PreviewEvidenceTests(G0ReadinessFixture):
+    def test_saved_terminal_preview_without_matching_surface_is_not_evidence(self) -> None:
+        unrelated = ({"value:probe": readiness_record.digest("observed")},
+                     {"file:.specify/constitution.md": readiness_record.digest(b"principles\n")})
+        cases = [(status, prints) for status, prints in itertools.product(("verified", "unavailable"), unrelated)]
+        cases.extend((("verified", {"value:surface": readiness_record.digest("none")}),
+                      ("unavailable", {"value:surface": readiness_record.digest("browser")})))
+        for host, (status, prints) in itertools.product(("claude", "codex"), cases):
+            with self.subTest(host=host, status=status, fingerprints=prints):
+                self.write_record(self.all_verified(), host=host)
+                self.assertNotIn("record", [row["item"] for row in self.g0(host)["stale"]])
+                record = json.loads(self.record_path(host).read_text(encoding="utf-8"))
+                record["items"]["preview_surface"] = {**record["items"]["preview_surface"],
+                                                       "status": status, "fingerprints": prints}
+                if status == "unavailable":
+                    record["items"]["preview_surface"]["action"] = "Rerun scaffold."
+                self.record_path(host).write_text(json.dumps(record), encoding="utf-8")
+                self.assertIn("record", [row["item"] for row in self.g0(host)["stale"]])
+
+
 class G0SavedEvidenceTests(G0ReadinessFixture):
     def test_unknown_item_is_logged_without_markup_or_local_paths(self) -> None:
         observations = self.all_verified()
@@ -1917,8 +2073,8 @@ class G0WorkflowPathTests(G0ReadinessFixture):
 
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    cases = (ReadinessRecordTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
-             G0RecordValidationTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests, G0WorkflowPathTests)
+    cases = (ReadinessRecordTest, TerminalPreviewEvidenceTest, PreviewEvidenceBoundaryTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
+             G0RecordValidationTests, G0PreviewEvidenceTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests, G0WorkflowPathTests)
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
 

@@ -338,11 +338,31 @@ class ArtifactReviewTests(_ReviewFixture):
                 self.assertEqual(review["observer_dispatches"], ["implementation-plan", "spec-explainer"])
                 self.assertNotIn("preview_note", review)
 
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_false_preview_evidence_keeps_observers_on_both_hosts(self, _probe) -> None:
+        (self.root / "workflow.md").write_text(self.workflow(self.record))
+        unrelated = ({"value:probe": digest("observed")},
+                     {"file:workflow.md": digest((self.root / "workflow.md").read_bytes())})
+        cases = [(status, prints) for status in ("verified", "unavailable") for prints in unrelated]
+        cases.extend((("verified", {"value:surface": digest("none")}),
+                      ("unavailable", {"value:surface": digest("browser")})))
+        for host in ("claude", "codex"):
+            for status, prints in cases:
+                with self.subTest(host=host, status=status, fingerprints=prints):
+                    record = self.readiness(host, status)
+                    record["items"]["preview_surface"]["fingerprints"] = prints
+                    self.write_readiness(host, status, record)
+                    inputs = {"workflow_file": "workflow.md", "autopilot_args": [], "host": host}
+                    review = json.loads(resolve_autopilot_stage(inputs, self.root)["stdout"])["artifact_review"]
+                    self.assertEqual(["implementation-plan", "spec-explainer"], review["observer_dispatches"])
+                    self.assertNotIn("preview_note", review)
+
     def readiness(self, host: str, status: str, action: str | None = "Run autopilot where a preview pane exists.") -> dict:
         """A record shaped like the writer's, so only the field under test differs."""
         inputs = {"host": host, "host_version": "2.1.0", "execution_mode": "interactive", "plugin_revision": current_plugin_revision(),
                   "observations": [{"item": "preview_surface", "status": status, "evidence_source": "session tools",
-                                    "values": {"surface": "pane"}, **({"action": action or "Rerun scaffold."} if status != "verified" else {})}]}
+                                    "values": {"surface": "none" if status == "unavailable" else "pane"},
+                                    **({"action": action or "Rerun scaffold."} if status != "verified" else {})}]}
         with unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
             record = readiness_record.build_record(inputs, self.root)
         if action is None:

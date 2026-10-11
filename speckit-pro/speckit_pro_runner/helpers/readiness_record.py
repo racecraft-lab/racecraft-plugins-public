@@ -125,6 +125,7 @@ def caller_item(raw: Any, root: Path, observed_at: str) -> tuple[str, dict[str, 
         action = clean_text(raw["action"], f"{name}.action")
     fingerprints = {**fingerprint_files(raw.get("files", []), root, name),
                     **fingerprint_values(raw.get("values", {}), name)}
+    require_surface_fingerprint(name, status, fingerprints)
     require_verified_fingerprints(name, status, fingerprints)
     return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
                            observed_at, fingerprints, action)
@@ -140,6 +141,17 @@ def require_verified_fingerprints(name: str, status: str, fingerprints: dict[str
             "value:spec_id" not in fingerprints or not any(key.startswith("file:") and value.startswith("sha256:")
                                                           for key, value in fingerprints.items())):
         raise SelectionError("reviewability_report: verified evidence needs a report or roadmap file and spec_id")
+
+
+def require_surface_fingerprint(name: str, status: str, fingerprints: dict[str, str]) -> None:
+    """Terminal preview evidence names a surface, or explicitly names its absence as `none`."""
+    if name != "preview_surface" or status not in ("verified", "unavailable"):
+        return
+    surface = fingerprints.get("value:surface", "")
+    if not DIGEST_RE.fullmatch(surface) or surface == digest("") \
+            or (status == "unavailable") != (surface == digest("none")):
+        raise SelectionError(f"preview_surface: a {status} answer needs values.surface naming the observed surface "
+                             "(verified), or none (unavailable), or the record reads back as unknown")
 
 
 def probe_temporary_directory(directory: Path) -> str | None:
@@ -315,6 +327,10 @@ def preview_surface(root: Path, host: str) -> str:
     # Missing/unreadable sentinels and an empty observation cannot prove a terminal surface answer.
     if not item["fingerprints"] or not all(DIGEST_RE.fullmatch(value) for value in item["fingerprints"].values()):
         return "unknown"
+    try:
+        require_surface_fingerprint("preview_surface", item["status"], item["fingerprints"])
+    except SelectionError:
+        return "unknown"
     return {"verified": "available", "unavailable": "unavailable"}.get(item["status"], "unknown")
 
 
@@ -473,6 +489,7 @@ def check_saved_item(name: str, item: Any) -> None:
     # The writer's own key rules: a key it would clean or normalize could never be read back by that name.
     if not all(sound_fingerprint(key, value) for key, value in item["fingerprints"].items()):
         raise SelectionError("a fingerprint has a noncanonical, unsafe or unknown key or value")
+    require_surface_fingerprint(name, item["status"], item["fingerprints"])
 
 
 def changed_inputs(fingerprints: dict[str, str], root: Path, cache: dict[str, str]) -> list[str]:
