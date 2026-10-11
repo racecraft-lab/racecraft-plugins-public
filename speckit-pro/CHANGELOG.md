@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.42.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.2...speckit-pro-v2.42.3) (2026-10-11)
+
+
+### Bug Fixes
+
+* **speckit-pro:** accept an absolute workflow path in the G0 setup probes ([#1315](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1315)) ([43ed044](https://github.com/racecraft-lab/racecraft-plugins-public/commit/43ed044d5896a7fb10b1c21b1864810f660a0b0d)), closes [#1311](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1311)
+* **speckit-pro:** make installed runner imports deterministic ([#1309](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1309)) ([a1ad172](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a1ad172061ebe211c6d484c3549e45fb098070e7)), closes [#1307](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1307)
+* **speckit-pro:** record a headless preview surface as unavailable so no observer runs ([#1314](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1314)) ([5af33a7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5af33a7bb0effc7b6323aa0de33e3c7d53f3b2a2)), closes [#1312](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1312)
+* **speckit-pro:** route the plan-stage terminal step only to requests a user repository can run ([#1310](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1310)) ([7596012](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7596012ffd94ffbc701941fc272b13e2986caed4))
+
 ## [2.42.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.1...speckit-pro-v2.42.2) (2026-10-10)
 
 
