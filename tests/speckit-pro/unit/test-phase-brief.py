@@ -1281,18 +1281,31 @@ class ChecklistVerifyBoundTests(_ChecklistCheckpointSupport):
         spec = Path(self.BRIEF["feature_dir"], "spec.md")
         spec.write_text(spec.read_text() + f"Wording fix {number}.\n")
 
+    def checkpoint(self, verified, host=None):
+        """Claim the round, then read the final brief; both answer the same outcome. Returns (waves, outcome, baseline)."""
+        claim = checklist_edits_request("apply", {**self.context(), "verify_baseline": verified}, host)
+        brief = host_brief(self.final_inputs(verified), host)
+        self.assertEqual((claim["status"], brief["status"]), ("ok", "ok"), (claim, brief))
+        self.assertEqual(claim["data"]["final_checkpoint"], brief["data"].get("final_checkpoint"))
+        self.assertEqual(claim["data"]["baseline"], checklist_edits_request("read_only", self.context(), host)["data"]["baseline"])
+        return len(brief["data"]["waves"]), brief["data"]["final_checkpoint"], claim["data"]["baseline"]
+
     def verify_rounds(self, host=None, rounds=4):
-        """Every round edits, claims the checkpoint, reads the final brief, then saves the just-verified baseline."""
+        """Every round edits, claims the checkpoint, reads the final brief, then keeps the claim's baseline."""
         verified = self.checklist_snapshot()["baseline"]
         outcomes = []
         for number in range(rounds):
             self.wording_edit(number)
-            checklist_edits_request("apply", {**self.context(), "verify_baseline": verified}, host)
-            brief = host_brief(self.final_inputs(verified), host)
-            self.assertEqual(brief["status"], "ok", brief)
-            outcomes.append((len(brief["data"]["waves"]), brief["data"].get("final_checkpoint")))
-            verified = checklist_edits_request("read_only", self.context(), host)["data"]["baseline"]
+            waves, outcome, verified = self.checkpoint(verified, host)
+            outcomes.append((waves, outcome))
         return outcomes
+
+    def test_resending_the_first_baseline_after_the_waves_returns_no_more_waves(self):
+        first = self.checklist_snapshot()["baseline"]
+        self.wording_edit(0)
+        self.assertEqual(self.checkpoint(first)[:2], (1, "reverify"))
+        for _ in range(3):
+            self.assertEqual(self.checkpoint(first)[:2], (0, "bounded"))
 
     def test_a_changed_checkpoint_no_apply_claimed_is_refused_on_both_hosts(self):
         verified = self.checklist_snapshot()["baseline"]
@@ -1300,6 +1313,14 @@ class ChecklistVerifyBoundTests(_ChecklistCheckpointSupport):
         for result in [dispatch_brief(self.final_inputs(verified)), *payload_briefs(self.final_inputs(verified), include_status=True)]:
             self.assertEqual((result["status"], result["data"]), ("input_error", {}), result)
             self.assertEqual([item["code"] for item in result["diagnostics"]], ["checklist_checkpoint_unclaimed"])
+
+    def test_a_changed_checkpoint_without_the_application_record_is_refused_on_both_hosts(self):
+        verified = self.checklist_snapshot()["baseline"]
+        Path(self.BRIEF["workflow_file"]).parent.joinpath(".process/checklist-edits/applied.json").unlink()
+        self.wording_edit(0)
+        for result in [dispatch_brief(self.final_inputs(verified)), *payload_briefs(self.final_inputs(verified), include_status=True)]:
+            self.assertEqual((result["status"], result["data"]), ("input_error", {}), result)
+            self.assertEqual([item["code"] for item in result["diagnostics"]], ["checklist_checkpoint_record_unusable"])
 
     def test_a_dry_run_claim_leaves_the_round_unclaimed(self):
         verified = self.checklist_snapshot()["baseline"]

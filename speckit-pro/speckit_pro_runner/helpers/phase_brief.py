@@ -12,7 +12,7 @@ from ..agent_inventory import AGENT_INVENTORY
 from ..envelope import diagnostic, response
 from ..strict_input import has_hidden_characters, require_fields, require_text
 from ..trusted_io import resolve_repo_root
-from .checklist_edits import UnclaimedCheckpoint, final_checkpoint
+from .checklist_edits import CheckpointRefused, final_checkpoint
 from .dispatch_waves import WAVE_INPUTS, WaveRequest, checked_wave_request, compose_waves
 from .extension_hooks import optional_hooks
 from .read_only import G4InputDrift, checked_g4_judged, check_g4_inputs
@@ -242,11 +242,12 @@ def _phase_brief_response(
                 "snapshot_dir": data["inputs"]["tasks_snapshot"]["snapshot_dir"],
                 "feature_identity": identity,
             }
-    except UnclaimedCheckpoint as exc:
+    except CheckpointRefused as exc:
         return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
-            "checklist_checkpoint_unclaimed", str(exc),
+            exc.code, str(exc),
             remediation_summary="Claim the final verify round with checklist-edits before the final brief.",
-            remediation_actions=["Run checklist-edits, mode apply, with workflow_file, feature_dir and this verify_baseline.",
+            remediation_actions=["Without an application record, run checklist-edits apply for the domains first.",
+                                 "Run checklist-edits, mode apply, with workflow_file, feature_dir and this verify_baseline.",
                                  "Request the final phase brief again with the same verify_baseline."])])
     except G4InputDrift as exc:
         return response(
@@ -287,8 +288,8 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         host-neutral role, JSON prompt inputs and its own model selection (the shape of
         model below); empty without domains or items.
     final_checkpoint: str, only with verify_baseline: `unchanged` (no wave), `reverify` (verify waves for
-        the round checklist-edits apply claimed) or `bounded` (artifacts changed after the last allowed
-        round: no wave; complete without re-verifying).
+        the open round checklist-edits apply claimed) or `bounded` (the round limit is spent: no wave).
+        A change with no usable record or no claim is an input_error naming the checkpoint.
     model: {claude: {model: str, effort: str},
         codex: {model: str, effort: str}}, host-specific dispatch configuration;
         top-level dispatch only; Claude passes model, Codex passes both.

@@ -1024,17 +1024,17 @@ for phase in PHASES starting from first_pending:
        Build the consensus queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
        Request the phase brief with items and verify_items, preserving initial apply conflicts.
        Claim the final verify round first: `checklist-edits`, mode apply, with only
-       the verify_baseline saved before consensus.
+       the verify_baseline saved before consensus, then the last claim's baseline.
        Always request the final phase brief with the original domains, verify_baseline
        saved before consensus and max_agents before marking any domain completed.
        Consume its returned verify waves using the claim's baseline and dry_run guard.
        The final verify-pass unresolved items return to consensus under the existing
        shared reservation and round bounds; preserve pending items, append verify_items,
-       and repeat the checkpoint using the just-verified baseline before further edits.
+       and repeat the checkpoint using the claim's baseline as verify_baseline.
        Exhaustion follows Failure Escalation; tasks remain incomplete.
        The runner compares shared spec.md/plan.md digests: a claimed change verifies
-       every domain, no change or a spent round limit (`bounded`: log the unverified
-       edits) returns no final wave, and missing evidence fails closed.
+       every domain, no change or a spent round limit (`bounded`) returns no final
+       wave, and missing evidence fails closed.
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
     5. Tasks only: call publish-tasks-output, mode apply, with
        inputs=brief.inputs.tasks_output unchanged. A refusal blocks hooks,

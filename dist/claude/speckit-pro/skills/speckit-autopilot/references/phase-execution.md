@@ -581,23 +581,23 @@ edits in domain order, run the verify waves, then resolve all domains' gaps:
       Round 2 escape-hatch: also batched across all queued gaps.
       [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
 7. Claim the final verify round: runner helper `checklist-edits`, mode apply, with
-   only the verify_baseline saved in step 5 before consensus. It returns `baseline`,
-   the current digests of both files.
+   only a verify_baseline: the one saved in step 5 the first time, then the
+   `baseline` of the last claim, which its verify waves covered. The claim returns
+   `baseline`, the current digests of both files.
    Always request the final phase brief with the original domains, that verify_baseline
    and max_agents, even with no queued items or
    edit labels, before marking any domain completed. The runner compares both
    shared artifacts on disk and bounds the rounds; `final_checkpoint` says which:
    `reverify` returns only verify waves for every original domain, `unchanged`
-   returns none, and `bounded` returns none because the round limit is spent:
-   complete without re-verifying and log the unverified edits in the Consensus
-   Resolution Log. Missing or unreadable evidence fails closed, an unclaimed change
+   returns none, and `bounded` returns none because the round limit is spent,
+   so complete without re-verifying. Missing or unreadable evidence fails closed, an unclaimed change
    is refused, and edit labels are not inputs. For returned waves,
    launch every verify wave as in step 5, consume all results,
    then run checklist-edits in dry_run mode with the claim's `baseline`. Keep Consensus
    items incomplete until this checkpoint succeeds. The final verify-pass unresolved items return to consensus
    before completion, under the existing shared repair reservation and consensus-round
-   bounds: retain pending items, append new verify_items, save the just-verified baseline
-   before further edits, and return to step 6. If the reservation is exhausted, use the
+   bounds: retain pending items, append new verify_items, keep the claim's `baseline`
+   as the next verify_baseline, and return to step 6. If the reservation is exhausted, use the
    Failure Escalation Protocol and keep tasks incomplete.
    Then mark Consensus items completed.
 8. autopilot-state.json: every domain task → completed

@@ -49,7 +49,7 @@ A checklist domain executor's return: its gaps and proposed plain prose changes 
 _Avoid_: patch, remediation, fix pass
 
 **Final verify round**:
-One re-verify wave of every checklist domain after consensus changed the spec or plan. The runner claims each round in the application record and allows a fixed number per apply; edits made after the last round are applied and logged as unverified, never answered with another wave.
+One re-verify wave of every checklist domain after consensus changed the spec or plan. Each round is claimed in the application record, and the runner allows a fixed number per apply; edits made after the last round stay applied without another wave.
 _Avoid_: verify loop, re-check pass
 
 **Gate**:

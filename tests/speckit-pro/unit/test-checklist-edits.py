@@ -334,8 +334,11 @@ class _FinalVerifyRoundCase(ChecklistEditsCase):
     def wording_edit(self, text: str) -> None:
         (self.root / FEATURE / "spec.md").write_text(self.text("spec.md") + text, encoding="utf-8")
 
+    def record(self) -> dict[str, Any]:
+        return dict(json.loads((self.root / RECORD).read_text(encoding="utf-8")))
+
     def rounds(self) -> list[Any]:
-        return json.loads((self.root / RECORD).read_text(encoding="utf-8")).get(checklist_edits.ROUNDS_FIELD, [])
+        return list(self.record().get(checklist_edits.ROUNDS_FIELD, []))
 
     def assert_claim_writes_nothing(self, edit: str, mode: str, outcome: str) -> None:
         """Claim after an optional wording edit; the outcome is reported and the record keeps its bytes."""
@@ -361,13 +364,32 @@ class FinalVerifyRoundTests(_FinalVerifyRoundCase):
         self.assertEqual(("ok", "reverify", True, 1), (first["status"], first["data"]["final_checkpoint"],
                                                        first["data"]["writes_state"], first["data"]["rounds"]))
         self.assertEqual([{"verify_baseline": verified, "observed": first["data"]["baseline"]}], self.rounds())
-        again = self.claim(verified)
-        self.assertEqual(("reverify", False), (again["data"]["final_checkpoint"], again["data"]["writes_state"]))
+        self.assertTrue(self.record()[checklist_edits.OPEN_FIELD])
         self.wording_edit("Wording fix two.\n")
         bounded = self.claim(first["data"]["baseline"])
-        self.assertEqual(("ok", "bounded", False, checklist_edits.FINAL_VERIFY_ROUNDS),
+        self.assertEqual(("ok", "bounded", True, checklist_edits.FINAL_VERIFY_ROUNDS),
                          (bounded["status"], bounded["data"]["final_checkpoint"], bounded["data"]["writes_state"], bounded["data"]["rounds"]))
-        self.assertEqual(checklist_edits.FINAL_VERIFY_ROUNDS, len(self.rounds()))
+        self.assertEqual((checklist_edits.FINAL_VERIFY_ROUNDS, False), (len(self.rounds()), self.record()[checklist_edits.OPEN_FIELD]))
+        again = self.claim(first["data"]["baseline"])
+        self.assertEqual(("bounded", False), (again["data"]["final_checkpoint"], again["data"]["writes_state"]))
+
+    def test_a_repeated_claim_spends_the_round_instead_of_granting_it_again(self) -> None:
+        # Resending the first baseline after the waves ran, with no further edit, must not reopen the round.
+        verified = self.applied()
+        self.wording_edit("Wording fix.\n")
+        self.assertEqual("reverify", self.claim(verified)["data"]["final_checkpoint"])
+        for _ in range(3):
+            repeat = self.claim(verified)
+            self.assertEqual(("ok", "bounded"), (repeat["status"], repeat["data"]["final_checkpoint"]))
+        self.assertEqual((1, False), (len(self.rounds()), self.record()[checklist_edits.OPEN_FIELD]))
+
+    def test_a_claim_whose_record_write_is_interrupted_reports_an_unconfirmed_claim(self) -> None:
+        verified = self.applied()
+        self.wording_edit("Wording fix.\n")
+        with patch.object(checklist_edits, "write_file_atomic", lambda *args, **kwargs: raise_error(atomic_write.AtomicWriteInterrupted("swap failed"))):
+            result = self.claim(verified)
+        self.assertEqual(("expected_failure", ["final_verify_claim_unconfirmed"]),
+                         (result["status"], [item["code"] for item in result["diagnostics"]]))
 
     def test_a_dry_run_claim_reports_the_round_and_writes_nothing(self) -> None:
         self.assert_claim_writes_nothing("Wording fix.\n", "dry_run", "reverify")
@@ -397,7 +419,9 @@ class FinalVerifyRoundRefusalTests(_FinalVerifyRoundCase):
         for label, content in {"not JSON": "{", "other schema": json.dumps({**valid, "schema_version": "other/v1"}),
                                "rounds not a list": json.dumps({**valid, "final_verify_rounds": {}}),
                                "too many rounds": json.dumps({**valid, "final_verify_rounds": [pair] * (checklist_edits.FINAL_VERIFY_ROUNDS + 1)}),
-                               "malformed round": json.dumps({**valid, "final_verify_rounds": [{"observed": verified}]})}.items():
+                               "malformed round": json.dumps({**valid, "final_verify_rounds": [{"observed": verified}]}),
+                               "open with no round": json.dumps({**valid, "final_verify_open": True}),
+                               "open flag not a boolean": json.dumps({**valid, "final_verify_rounds": [pair], "final_verify_open": 1})}.items():
             with self.subTest(record=label):
                 record.write_text(content, encoding="utf-8")
                 self.assertEqual("input_error", self.claim(verified)["status"])
