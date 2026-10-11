@@ -156,18 +156,19 @@ def confined_path(root: Path, value: str) -> Path:
     return path
 
 
-def repository_relative(root: Path, value: str) -> str:
+def _root_relative(root: Path, value: str) -> str:
     """An absolute path under the root as root-relative text; relative text passes through.
 
-    Only ancestors resolve, shortest first, so a link above the root is followed and a
-    link below it stays in the remainder for `confined_path` to refuse.
+    Same rule as `resolve-workflow-binding`: links above the root resolve, but the root's
+    own name stays literal, so a link aliasing the root is refused. A link below the root
+    stays in the remainder for `confined_path` to refuse.
     """
     path = Path(value)
     if not path.is_absolute():
         return value
-    real_root = os.path.realpath(root)
+    real_root = Path(os.path.realpath(root))
     for ancestor in reversed(path.parents):
-        if os.path.realpath(ancestor) == real_root:
+        if ancestor.parent != ancestor and Path(os.path.realpath(ancestor.parent)) / ancestor.name == real_root:
             return path.relative_to(ancestor).as_posix()
     raise ValueError("path must be inside the repository")
 
@@ -180,9 +181,9 @@ def contained_workflow_file(root: Path, value: Any) -> str:
     """
     workflow = require_nonempty_text(value, "workflow_file")
     try:
-        workflow = repository_relative(root, workflow)
+        workflow = _root_relative(root, workflow)
         contained = confined_path(root, workflow).is_file()
-    except ValueError as error:
+    except (ValueError, OSError) as error:
         raise SelectionError(f"workflow_file: {error}") from error
     if not contained:
         raise SelectionError("workflow_file must be an existing contained file")

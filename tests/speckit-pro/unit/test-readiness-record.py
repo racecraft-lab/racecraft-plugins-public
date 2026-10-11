@@ -1864,12 +1864,13 @@ class G0WorkflowPathTests(G0ReadinessFixture):
         return response
 
     def test_absolute_workflow_path_reads_like_the_relative_one_on_either_host(self) -> None:
-        alias = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve() / "checkout"
-        alias.symlink_to(self.root, target_is_directory=True)
+        # A link above the root resolves, as in workflow binding (a symlinked temp directory, say).
+        alias = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve() / "parent"
+        alias.symlink_to(self.root.parent, target_is_directory=True)
         for host in ("claude", "codex"):
             relative = self.g0(host)
             self.assertTrue(relative["decisions"], "a missing record must log a note, or the comparison is vacuous")
-            for name, workflow in (("canonical", self.root / "workflow.md"), ("aliased root", alias / "workflow.md")):
+            for name, workflow in (("canonical", self.root / "workflow.md"), ("aliased parent", alias / self.root.name / "workflow.md")):
                 with self.subTest(host=host, path=name):
                     response = self.g0_response(host, str(workflow))
                     assert_runner_response(self, response, "ok", 0)
@@ -1891,12 +1892,20 @@ class G0WorkflowPathTests(G0ReadinessFixture):
         outside = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         (outside / "workflow.md").write_text("fixture\n", encoding="utf-8")
         (self.root / "link").symlink_to(self.root, target_is_directory=True)
+        root_alias = outside / "checkout"
+        root_alias.symlink_to(self.root, target_is_directory=True)
+        locked = self.root / "locked"
+        (locked / "inner").mkdir(parents=True)
+        locked.chmod(0)
+        self.addCleanup(locked.chmod, 0o700)
         cases = {
             "absolute outside": outside / "workflow.md",
             "absolute traversal": self.root / ".." / outside.name / "workflow.md",
             "relative traversal": Path("..") / outside.name / "workflow.md",
             "symlink inside the root": self.root / "link" / "workflow.md",
             "missing file": self.root / "absent.md",
+            "link aliasing the root": root_alias / "workflow.md",
+            "unreadable directory": locked / "inner" / "workflow.md",
         }
         for host in ("claude", "codex"):
             for name, workflow in cases.items():

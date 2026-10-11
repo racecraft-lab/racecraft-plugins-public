@@ -305,13 +305,6 @@ class RefusalTests(ChecklistEditsCase):
                          (result["diagnostics"][0]["code"], self.text("spec.md"), self.text("plan.md")))
         self.assertFalse(feature_locked(self.root))
 
-    def test_an_absolute_workflow_path_inside_the_repository_reads_like_the_relative_one(self) -> None:
-        result = self.call("read_only", workflow_file=str(self.root / WORKFLOW))
-        self.assertEqual(("ok", self.baseline()), (result["status"], result["data"]["baseline"]))
-        refused = self.call("read_only", workflow_file=str(self.root.parent / WORKFLOW))
-        self.assertEqual("input_error", refused["status"])
-        self.assertIn("workflow_file", json.dumps(refused["diagnostics"]))
-
     def test_a_feature_directory_outside_the_repository_is_refused(self) -> None:
         for bad in ("../elsewhere", "/etc"):
             with self.subTest(bad):
@@ -352,6 +345,17 @@ def target_changes(root: Path, name: str) -> dict[str, Callable[[], None]]:
 
     return {"content mutation": mutate, "regular-file replacement": replace, "deletion": delete,
             "hard-link substitution": link("# Linked\n"), "same-text hard-link substitution": link(target.read_text(encoding="utf-8"))}
+
+
+class WorkflowPathTests(ChecklistEditsCase):
+    """Workflow binding hands the helper a canonical absolute workflow path (#1311)."""
+
+    def test_an_absolute_workflow_path_inside_the_repository_reads_like_the_relative_one(self) -> None:
+        result = self.call("read_only", workflow_file=str(self.root / WORKFLOW))
+        self.assertEqual(("ok", self.baseline()), (result["status"], result["data"]["baseline"]))
+        refused = self.call("read_only", workflow_file=str(self.root.parent / WORKFLOW))
+        self.assertEqual("input_error", refused["status"])
+        self.assertIn("workflow_file", json.dumps(refused["diagnostics"]))
 
 
 class CompetingWriterTests(ChecklistEditsCase):
@@ -2472,7 +2476,7 @@ if __name__ == "__main__":
         run_counted(
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
+                for case in (ProposalTests, ConflictTests, RefusalTests, WorkflowPathTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
                              UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests,
                              GateFourHostParityTests, GateFourResourceTests, GateFourCoverageTests,
