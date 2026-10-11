@@ -48,6 +48,10 @@ _Avoid_: parallel group, fan-out
 A checklist domain executor's return: its gaps and proposed plain prose changes to the spec and plan. Structural or reference changes remain gaps for review; the executor never writes either artifact.
 _Avoid_: patch, remediation, fix pass
 
+**Final verify round**:
+One re-verify wave of every checklist domain after consensus changed the spec or plan. Each round is claimed in the application record, and the runner allows a fixed number per apply; edits made after the last round stay applied without another wave.
+_Avoid_: verify loop, re-check pass
+
 **Gate**:
 A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.
 _Avoid_: quality gate, phase

@@ -1218,10 +1218,16 @@ class _ChecklistCheckpointSupport(InProjectCase):
             "proposals": [{"domain": name, "gaps": [], "edits": []} for name in domains]}, "apply")
         return baseline
 
-    def assert_final_wave(self, inputs, expected):
+    def assert_final_wave(self, inputs, expected, outcome="reverify"):
         for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
             self.assertEqual(result["status"], "ok", result)
             self.assertEqual([[entry["inputs"] for entry in wave] for wave in result["data"]["waves"]], expected)
+            self.assertEqual(result["data"]["final_checkpoint"], outcome)
+
+    def claim_round(self, verified):
+        """checklist-edits apply claims the final verify round the brief then returns waves for."""
+        context = {key: self.BRIEF[key] for key in ("workflow_file", "feature_dir")}
+        return checklist_edits.checklist_edits(Path.cwd(), {**context, "verify_baseline": verified}, "apply")
 
     def shared_edit_checkpoint(self, artifact, max_agents=20):
         """Change one shared artifact (in place, or by atomic rename under a one-agent host limit), then checkpoint."""
@@ -1230,10 +1236,107 @@ class _ChecklistCheckpointSupport(InProjectCase):
         written = target if max_agents > 1 else target.with_name("replacement.md")
         written.write_text("Changed shared requirements\n")
         written.replace(target)
+        self.assertEqual(self.claim_round(baseline["baseline"])["final_checkpoint"], "reverify")
         inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"],
                   "verify_baseline": baseline["baseline"], "max_agents": max_agents}
         entries = [{"domain": "security", "pass": "verify"}, {"domain": "ux", "pass": "verify"}]
         self.assert_final_wave(inputs, [entries[start:start + max_agents] for start in range(0, len(entries), max_agents)])
+
+
+CHECKLIST_EDITS_FIXTURE = REPO / "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/checklist-edits.json"
+
+
+def checklist_edits_request(mode, inputs, host=None):
+    """Replay the committed checklist-edits fixture through the source dispatcher, or one shipped payload's runner."""
+    document = json.loads(CHECKLIST_EDITS_FIXTURE.read_text(encoding="utf-8"))
+    document.update(mode=mode, inputs={**document["inputs"], **inputs})
+    if host is None:
+        return dispatch_helper(SimpleNamespace(**document))
+    done = run_isolated(REPO / "dist" / host / "speckit-pro", RUN_RUNNER, cwd=Path.cwd(), input=json.dumps(document))
+    return json.loads(done.stdout)
+
+
+def host_brief(inputs, host=None):
+    """The phase brief from the source dispatcher, or from one shipped payload's runner."""
+    if host is None:
+        return dispatch_brief(inputs)
+    request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief", "mode": "read_only", "inputs": inputs}
+    done = run_isolated(REPO / "dist" / host / "speckit-pro", RUN_RUNNER, cwd=Path.cwd(), input=json.dumps(request))
+    return json.loads(done.stdout)
+
+
+class ChecklistVerifyBoundTests(_ChecklistCheckpointSupport):
+    """The runner bounds the final verify waves, so verify passes that keep yielding wording edits cannot loop."""
+
+    DOMAINS = ["security", "ux"]
+
+    def context(self):
+        return {key: self.BRIEF[key] for key in ("workflow_file", "feature_dir")}
+
+    def final_inputs(self, verified):
+        return {"phase": "Checklist", **self.BRIEF, "domains": self.DOMAINS, "verify_baseline": verified}
+
+    def wording_edit(self, number):
+        """What consensus does with a verify-pass gap: one serial wording edit to spec.md."""
+        spec = Path(self.BRIEF["feature_dir"], "spec.md")
+        spec.write_text(spec.read_text() + f"Wording fix {number}.\n")
+
+    def checkpoint(self, verified, host=None):
+        """Claim the round, then read the final brief; both answer the same outcome. Returns (waves, outcome, baseline)."""
+        claim = checklist_edits_request("apply", {**self.context(), "verify_baseline": verified}, host)
+        brief = host_brief(self.final_inputs(verified), host)
+        self.assertEqual((claim["status"], brief["status"]), ("ok", "ok"), (claim, brief))
+        self.assertEqual(claim["data"]["final_checkpoint"], brief["data"].get("final_checkpoint"))
+        self.assertEqual(claim["data"]["baseline"], checklist_edits_request("read_only", self.context(), host)["data"]["baseline"])
+        return len(brief["data"]["waves"]), brief["data"]["final_checkpoint"], claim["data"]["baseline"]
+
+    def verify_rounds(self, host=None, rounds=4):
+        """Every round edits, claims the checkpoint, reads the final brief, then keeps the claim's baseline."""
+        verified = self.checklist_snapshot()["baseline"]
+        outcomes = []
+        for number in range(rounds):
+            self.wording_edit(number)
+            waves, outcome, verified = self.checkpoint(verified, host)
+            outcomes.append((waves, outcome))
+        return outcomes
+
+    def test_resending_the_first_baseline_after_the_waves_returns_no_more_waves(self):
+        first = self.checklist_snapshot()["baseline"]
+        self.wording_edit(0)
+        self.assertEqual(self.checkpoint(first)[:2], (1, "reverify"))
+        for _ in range(3):
+            self.assertEqual(self.checkpoint(first)[:2], (0, "bounded"))
+
+    def assert_edited_checkpoint_refused(self, code, *, keep_record=True):
+        """After a wording edit, the source and both payload briefs refuse the checkpoint with `code`."""
+        verified = self.checklist_snapshot()["baseline"]
+        if not keep_record:
+            Path(self.BRIEF["workflow_file"]).parent.joinpath(".process/checklist-edits/applied.json").unlink()
+        self.wording_edit(0)
+        for result in [dispatch_brief(self.final_inputs(verified)), *payload_briefs(self.final_inputs(verified), include_status=True)]:
+            self.assertEqual((result["status"], result["data"]), ("input_error", {}), result)
+            self.assertEqual([item["code"] for item in result["diagnostics"]], [code])
+
+    def test_a_changed_checkpoint_no_apply_claimed_is_refused_on_both_hosts(self):
+        self.assert_edited_checkpoint_refused("checklist_checkpoint_unclaimed")
+
+    def test_a_changed_checkpoint_without_the_application_record_is_refused_on_both_hosts(self):
+        self.assert_edited_checkpoint_refused("checklist_checkpoint_record_unusable", keep_record=False)
+
+    def test_a_dry_run_claim_leaves_the_round_unclaimed(self):
+        verified = self.checklist_snapshot()["baseline"]
+        self.wording_edit(0)
+        self.assertEqual(checklist_edits_request("dry_run", {**self.context(), "verify_baseline": verified})["data"]["final_checkpoint"],
+                         "reverify")
+        self.assertEqual(dispatch_brief(self.final_inputs(verified))["status"], "input_error")
+
+    def test_verify_waves_stop_at_the_runner_bound_when_every_verify_pass_edits_on_both_hosts(self):
+        bound = checklist_edits.FINAL_VERIFY_ROUNDS
+        expected = [(1, "reverify")] * bound + [(0, "bounded")] * 3
+        for host in (None, "claude", "codex"):
+            with self.subTest(host=host or "source"), project():
+                self.assertEqual(self.verify_rounds(host, rounds=bound + 3), expected)
+
 
 class ChecklistCheckpointEditTests(_ChecklistCheckpointSupport):
     """Shared spec and plan changes determine which domains run verification again."""
@@ -1261,6 +1364,7 @@ class ChecklistCheckpointEditTests(_ChecklistCheckpointSupport):
                        *payload_briefs(inputs | {"verify_baseline": snapshot["baseline"]}, include_status=True)]:
             self.assertEqual(result["status"], "ok", result)
             self.assertEqual(result["data"]["waves"], [])
+            self.assertEqual(result["data"]["final_checkpoint"], "unchanged")
             self.assertEqual([entry["inputs"]["domain"] for wave in first for entry in wave],
                              ["security", "ux", "security", "ux"])
 
@@ -2025,5 +2129,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, TasksG4DriftTests, TasksG4EvidenceTests, TasksOutputTests, TasksG4IdentityTests, PhaseBriefWaveTests, ChecklistWaveHostTests, ChecklistCheckpointEditTests, ChecklistCheckpointEvidenceTests, PhaseBriefPathTests, PhaseBriefModelTests, PhaseBriefWaitTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, TasksG4DriftTests, TasksG4EvidenceTests, TasksOutputTests, TasksG4IdentityTests, PhaseBriefWaveTests, ChecklistWaveHostTests, ChecklistCheckpointEditTests, ChecklistCheckpointEvidenceTests, ChecklistVerifyBoundTests, PhaseBriefPathTests, PhaseBriefModelTests, PhaseBriefWaitTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

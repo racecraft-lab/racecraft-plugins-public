@@ -56,7 +56,16 @@ class WaveRequest(NamedTuple):
     items: list[dict[str, Any]]
     max_agents: int
     verify_baseline: dict[str, str] | None = None
-    shared_changed: bool = False
+    # The final checkpoint's outcome from checklist_edits.final_checkpoint: unchanged, reverify or bounded.
+    final_checkpoint: str | None = None
+
+
+def checked_digests(value: Any, label: str) -> dict[str, str]:
+    """Both shared-artifact digests, each a lowercase SHA-256 hex string."""
+    digests = require_fields(value, set(SHARED_ARTIFACTS), label)
+    if any(not isinstance(item, str) or not re.fullmatch(r"[0-9a-f]{64}", item) for item in digests.values()):
+        raise ValueError(f"{label} must contain SHA-256 digests")
+    return {name: digests[name] for name in SHARED_ARTIFACTS}
 
 
 def checked_verify_baseline(phase: str, domains: list[str], raw: dict[str, Any]) -> dict[str, str] | None:
@@ -65,9 +74,7 @@ def checked_verify_baseline(phase: str, domains: list[str], raw: dict[str, Any])
     if "verify_baseline" in raw:
         if phase != CHECKLIST_PHASE or not domains or "items" in raw or "verify_items" in raw:
             raise ValueError("verify_baseline requires original Checklist domains and no consensus items")
-        baseline = require_fields(raw["verify_baseline"], set(SHARED_ARTIFACTS), "verify_baseline")
-        if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value) for value in baseline.values()):
-            raise ValueError("verify_baseline must contain SHA-256 digests")
+        baseline = checked_digests(raw["verify_baseline"], "verify_baseline")
     return baseline
 
 
@@ -128,13 +135,14 @@ def checklist_waves(domains: list[str], model_for: ModelFor) -> tuple[list[list[
 def compose_waves(request: WaveRequest, model_for: ModelFor) -> list[list[dict[str, Any]]]:
     """Domain waves ({domain}), the verify wave ({domain, pass: "verify"}), then the security and low-confidence
     waves ({item}). A verify_baseline request is the final checkpoint: it emits one verify wave for every requested
-    domain when phase_brief observed a spec.md or plan.md change, and no wave otherwise.
+    domain when its outcome is `reverify` (a changed spec.md or plan.md within the claimed round bound), and no wave
+    when the artifacts are unchanged or the bound is reached.
     A wave with no agents is dropped.
 
     A wave larger than the host's limit becomes consecutive sub-waves of at most `max_agents`, in entry order.
     """
     if request.verify_baseline is not None:
-        waves = [verify_wave(request.domains if request.shared_changed else [], model_for)]
+        waves = [verify_wave(request.domains if request.final_checkpoint == "reverify" else [], model_for)]
     else:
         runs, verify = checklist_waves(request.domains, model_for)
         waves = [*runs, verify, *consensus_waves(request.items, model_for)]

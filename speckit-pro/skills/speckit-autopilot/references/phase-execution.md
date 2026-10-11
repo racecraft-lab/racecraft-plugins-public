@@ -446,17 +446,23 @@ for phase in PHASES starting from first_pending:
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
-       Checklist only: Always request the final phase brief with the original domains,
-       verify_baseline saved before consensus and max_agents=subagent_slots, even with
+       Checklist only: first claim the final verify round: run `checklist-edits` in
+       apply mode with only a verify_baseline: the one saved before consensus the first
+       time, then the `baseline` of the last claim, which its verify waves covered. The
+       claim returns `baseline`, the current digests of both files.
+       Always request the final phase brief with the original domains,
+       that verify_baseline and max_agents=subagent_slots, even with
        no queued items or edit labels, before marking any domain completed.
-       The runner compares both shared artifacts on disk: any spec.md/plan.md change
-       returns only verify waves for every original domain; no change returns none.
-       Missing or unreadable evidence fails closed; edit labels are not inputs.
-       Consume every returned wave with a fresh read_only baseline and dry_run guard
+       The runner compares both shared artifacts on disk and bounds the rounds;
+       `final_checkpoint` says which: `reverify` returns only verify waves for every
+       original domain, `unchanged` returns none, and `bounded` returns none because
+       the round limit is spent, so complete without re-verifying. Missing or
+       unreadable evidence fails closed, an unclaimed change is refused, and edit labels are not inputs.
+       Consume every returned wave with the claim's `baseline` and dry_run guard
        as above. The final verify-pass unresolved items return to consensus before completion,
        under the existing shared repair reservation and consensus-round bounds.
-       Preserve pending items, append new verify_items, save the just-verified baseline
-       before further consensus edits, and repeat the final checkpoint after them.
+       Preserve pending items, append new verify_items, keep the claim's `baseline` as
+       the next verify_baseline, and repeat the final checkpoint after further consensus edits.
        If resolution exhausts its reservation, use the Failure Escalation Protocol;
        keep domain and Consensus tasks incomplete.
        Keep Consensus items incomplete until this checkpoint succeeds.
@@ -876,18 +882,24 @@ edits in domain order, run the verify waves, then resolve all domains' gaps:
       message; apply each Artifact Edit SERIALLY to spec.md or plan.md.
       Round 2 escape-hatch: also batched across all queued gaps.
       [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
-7. Always request the final phase brief with the original domains, verify_baseline
-   saved in step 5 before consensus and max_agents, even with no queued items or
+7. Claim the final verify round: runner helper `checklist-edits`, mode apply, with
+   only a verify_baseline: the one saved in step 5 the first time, then the
+   `baseline` of the last claim, which its verify waves covered. The claim returns
+   `baseline`, the current digests of both files.
+   Always request the final phase brief with the original domains, that verify_baseline
+   and max_agents, even with no queued items or
    edit labels, before marking any domain completed. The runner compares both
-   shared artifacts on disk: any spec.md/plan.md change returns only verify waves
-   for every original domain; no change returns none. Missing or unreadable evidence
-   fails closed; edit labels are not inputs. For returned waves, take a fresh
-   read_only baseline, launch every verify wave as in step 5, consume all results,
-   then run checklist-edits in dry_run mode with that baseline. Keep Consensus
+   shared artifacts on disk and bounds the rounds; `final_checkpoint` says which:
+   `reverify` returns only verify waves for every original domain, `unchanged`
+   returns none, and `bounded` returns none because the round limit is spent,
+   so complete without re-verifying. Missing or unreadable evidence fails closed, an unclaimed change
+   is refused, and edit labels are not inputs. For returned waves,
+   launch every verify wave as in step 5, consume all results,
+   then run checklist-edits in dry_run mode with the claim's `baseline`. Keep Consensus
    items incomplete until this checkpoint succeeds. The final verify-pass unresolved items return to consensus
    before completion, under the existing shared repair reservation and consensus-round
-   bounds: retain pending items, append new verify_items, save the just-verified baseline
-   before further edits, and return to step 6. If the reservation is exhausted, use the
+   bounds: retain pending items, append new verify_items, keep the claim's `baseline`
+   as the next verify_baseline, and return to step 6. If the reservation is exhausted, use the
    Failure Escalation Protocol and keep tasks incomplete.
    Then mark Consensus items completed.
 8. autopilot-state.json: every domain task → completed

@@ -97,6 +97,13 @@ def feature_locked(root: Path) -> bool:
     return False
 
 
+def dispatch_phase_brief(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
+    """Request a read-only phase brief at the public dispatcher seam in the test checkout."""
+    with patch.object(phase_brief, "resolve_repo_root", return_value=root):
+        return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
+                               request_id=None, inputs=inputs))
+
+
 class ChecklistEditsCase(MutationRequestCase):
     """A checkout with a spec and a plan; the helpers send one batch of proposals."""
 
@@ -318,6 +325,259 @@ class RefusalTests(ChecklistEditsCase):
         self.assertEqual("apply_interrupted", result["diagnostics"][0]["code"])
         self.assertIn("Restore", result["diagnostics"][0]["remediation"]["summary"])
         self.assertIn("private", self.text("spec.md"))
+
+
+class _FinalVerifyRoundCase(ChecklistEditsCase):
+    """Claims of the final verify round: checklist-edits with only a verify_baseline."""
+
+    def claim(self, verified: dict[str, str], mode: str = "apply") -> dict[str, Any]:
+        return self.call(mode, verify_baseline=verified)
+
+    def applied(self) -> dict[str, str]:
+        """Apply clean proposals, so the record exists, and return the just-verified baseline."""
+        self.assertEqual("ok", self.apply()["status"])
+        return self.baseline()
+
+    def wording_edit(self, text: str) -> None:
+        (self.root / FEATURE / "spec.md").write_text(self.text("spec.md") + text, encoding="utf-8")
+
+    def record_state(self) -> tuple[list[Any], bool]:
+        """The record's claimed rounds and whether the last one is still open."""
+        value = json.loads((self.root / RECORD).read_bytes())
+        return value.get(checklist_edits.ROUNDS_FIELD, []), value.get(checklist_edits.OPEN_FIELD, False)
+
+    def rounds(self) -> list[Any]:
+        return self.record_state()[0]
+
+    def assert_claim_writes_nothing(self, edit: str, mode: str, outcome: str) -> None:
+        """Claim after an optional wording edit; the outcome is reported and the record keeps its bytes."""
+        verified = self.applied()
+        self.wording_edit(edit)
+        before = (self.root / RECORD).read_bytes()
+        result = self.claim(verified, mode=mode)
+        self.assertEqual(("ok", outcome, False), (result["status"], result["data"]["final_checkpoint"], result["data"]["writes_state"]))
+        self.assertEqual(self.baseline(), result["data"]["baseline"])
+        self.assertEqual(before, (self.root / RECORD).read_bytes())
+
+
+class FinalVerifyRoundTests(_FinalVerifyRoundCase):
+    """A verify_baseline request claims one bounded final verify round in the application record."""
+
+    def test_unchanged_artifacts_claim_nothing_and_write_nothing(self) -> None:
+        self.assert_claim_writes_nothing("", "apply", "unchanged")
+
+    def test_a_changed_checkpoint_claims_one_round_then_reports_the_bound(self) -> None:
+        verified = self.applied()
+        self.wording_edit("Wording fix one.\n")
+        first = self.claim(verified)
+        self.assertEqual(("ok", "reverify", True, 1), (first["status"], first["data"]["final_checkpoint"],
+                                                       first["data"]["writes_state"], first["data"]["rounds"]))
+        self.assertEqual([{"verify_baseline": verified, "observed": first["data"]["baseline"]}], self.rounds())
+        self.assertTrue(self.record_state()[1])
+        self.wording_edit("Wording fix two.\n")
+        bounded = self.claim(first["data"]["baseline"])
+        self.assertEqual(("ok", "bounded", True, checklist_edits.FINAL_VERIFY_ROUNDS),
+                         (bounded["status"], bounded["data"]["final_checkpoint"], bounded["data"]["writes_state"], bounded["data"]["rounds"]))
+        self.assertEqual((checklist_edits.FINAL_VERIFY_ROUNDS, False), (len(self.rounds()), self.record_state()[1]))
+        again = self.claim(first["data"]["baseline"])
+        self.assertEqual(("bounded", False), (again["data"]["final_checkpoint"], again["data"]["writes_state"]))
+
+    def test_a_repeated_claim_spends_the_round_instead_of_granting_it_again(self) -> None:
+        # Resending the first baseline after the waves ran, with no further edit, must not reopen the round.
+        verified = self.applied()
+        self.wording_edit("Wording fix.\n")
+        self.assertEqual("reverify", self.claim(verified)["data"]["final_checkpoint"])
+        for _ in range(3):
+            repeat = self.claim(verified)
+            self.assertEqual(("ok", "bounded"), (repeat["status"], repeat["data"]["final_checkpoint"]))
+        self.assertEqual((1, False), (len(self.rounds()), self.record_state()[1]))
+
+    def test_a_claim_whose_record_write_is_interrupted_reports_an_unconfirmed_claim(self) -> None:
+        verified = self.applied()
+        self.wording_edit("Wording fix.\n")
+        with patch.object(checklist_edits, "write_file_atomic", lambda *args, **kwargs: raise_error(atomic_write.AtomicWriteInterrupted("swap failed"))):
+            result = self.claim(verified)
+        self.assertEqual(("expected_failure", ["final_verify_claim_unconfirmed"]),
+                         (result["status"], [item["code"] for item in result["diagnostics"]]))
+
+    def test_a_dry_run_claim_reports_the_round_and_writes_nothing(self) -> None:
+        self.assert_claim_writes_nothing("Wording fix.\n", "dry_run", "reverify")
+
+    def test_a_fresh_apply_starts_with_no_claimed_rounds(self) -> None:
+        verified = self.applied()
+        self.wording_edit("Wording fix.\n")
+        self.assertEqual("reverify", self.claim(verified)["data"]["final_checkpoint"])
+        self.assertEqual(1, len(self.rounds()))
+        self.applied()
+        self.assertEqual([], self.rounds())
+
+
+class _FinalCheckpointEvidenceCase(_FinalVerifyRoundCase):
+    """Shared setup and assertions for final-checkpoint evidence tests."""
+    def setUp(self) -> None:
+        super().setUp()
+        self.verified = self.applied()
+        self.record = self.root / RECORD
+
+    def checkpoint_result(self, verified: dict[str, str], mode: str) -> dict[str, Any]:
+        if mode != "phase-brief":
+            return self.claim(verified, mode)
+        return dispatch_phase_brief(self.root, {"phase": "Checklist", **self.fixed_inputs,
+            "domains": DOMAINS, "max_agents": 20, "verify_baseline": verified})
+
+    def assert_checkpoint_modes(self, verified: dict[str, str], *, accepted: bool) -> None:
+        before = self.record.read_bytes() if accepted else None
+        for mode in ("apply", "dry_run", "phase-brief"):
+            with self.subTest(mode=mode):
+                result = self.checkpoint_result(verified, mode)
+                if accepted:
+                    self.assertEqual("ok", result["status"], result)
+                    self.assertEqual("unchanged", result["data"]["final_checkpoint"])
+                    self.assertEqual(before, self.record.read_bytes())
+                else:
+                    self.assertNotEqual("ok", result["status"], result)
+                    self.assertEqual({}, result["data"], result)
+                    self.assertEqual(verified, self.baseline())
+
+    def assert_checkpoint_refused(self, verified: dict[str, str]) -> None:
+        self.assert_checkpoint_modes(verified, accepted=False)
+
+    def assert_missing_checkpoint_refused(self, target: Path) -> None:
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
+        self.assert_checkpoint_refused(self.verified)
+        self.assertFalse(target.exists())
+
+    def assert_unreadable_checkpoint_refused(self, name: str) -> None:
+        before = self.record.read_bytes()
+        original = os.open
+
+        def unreadable(path: Any, *args: Any, **kwargs: Any) -> int:
+            if os.fspath(path) == name:
+                raise PermissionError(errno.EACCES, "checkpoint evidence unreadable")
+            return original(path, *args, **kwargs)
+
+        with patch.object(os, "open", unreadable):
+            self.assert_checkpoint_refused(self.verified)
+        self.assertEqual(before, self.record.read_bytes())
+
+
+class FinalCheckpointValidRecordTests(_FinalCheckpointEvidenceCase):
+    def test_equal_digests_accept_a_valid_application_record_without_writing(self) -> None:
+        self.assert_checkpoint_modes(self.verified, accepted=True)
+
+
+class FinalCheckpointMissingEvidenceTests(_FinalCheckpointEvidenceCase):
+    def test_equal_digests_refuse_a_missing_application_record(self) -> None:
+        self.assert_missing_checkpoint_refused(self.record)
+
+    def test_equal_digests_refuse_a_missing_record_directory(self) -> None:
+        self.assert_missing_checkpoint_refused(self.record.parent)
+
+    def test_equal_digests_refuse_a_renamed_record_directory(self) -> None:
+        directory = self.record.parent
+        renamed = directory.with_name("renamed-record")
+        directory.rename(renamed)
+        before = (renamed / "applied.json").read_bytes()
+        self.assert_checkpoint_refused(self.verified)
+        self.assertFalse(directory.exists())
+        self.assertEqual(before, (renamed / "applied.json").read_bytes())
+
+
+class FinalCheckpointMalformedEvidenceTests(_FinalCheckpointEvidenceCase):
+    def test_equal_digests_refuse_malformed_application_records(self) -> None:
+        verified, record = self.verified, self.record
+        valid = json.loads(record.read_bytes())
+        pair = {"verify_baseline": verified, "observed": verified}
+        records = {"not JSON": b"{", "invalid encoding": b"\xff", "not an object": b"[]"}
+        invalid = {"schema_version": "other/v1", "domains": {}, "final_verify_rounds": {},
+                   "final_verify_open": True}
+        records.update({field: json.dumps({**valid, field: value}).encode() for field, value in invalid.items()})
+        records.update({"too many rounds": json.dumps({**valid, "final_verify_rounds": [pair] * (checklist_edits.FINAL_VERIFY_ROUNDS + 1)}).encode(),
+                        "malformed round": json.dumps({**valid, "final_verify_rounds": [{"observed": verified}]}).encode(),
+                        "invalid open flag": json.dumps({**valid, "final_verify_rounds": [pair], "final_verify_open": 1}).encode()})
+        for label, content in records.items():
+            with self.subTest(record=label):
+                record.write_bytes(content)
+                self.assert_checkpoint_refused(verified)
+                self.assertEqual(content, record.read_bytes())
+
+
+class FinalCheckpointUnreadableEvidenceTests(_FinalCheckpointEvidenceCase):
+    def test_equal_digests_refuse_an_unreadable_application_record(self) -> None:
+        self.assert_unreadable_checkpoint_refused("applied.json")
+
+    def test_equal_digests_refuse_an_unreadable_record_directory(self) -> None:
+        self.assert_unreadable_checkpoint_refused("checklist-edits")
+
+
+class FinalCheckpointLinkEvidenceTests(_FinalCheckpointEvidenceCase):
+    def test_equal_digests_refuse_a_nonregular_application_record(self) -> None:
+        self.record.unlink()
+        self.record.mkdir()
+        self.assert_checkpoint_refused(self.verified)
+        self.assertEqual(stat.S_IFDIR, stat.S_IFMT(self.record.stat().st_mode))
+
+    def test_equal_digests_refuse_linked_records_and_record_directories(self) -> None:
+        record = self.record
+        for target in (record, record.parent):
+            with self.subTest(target=target.name):
+                saved = target.with_name("saved-" + target.name)
+                target.rename(saved)
+                target.symlink_to(saved.name)
+                try:
+                    self.assert_checkpoint_refused(self.verified)
+                    self.assertTrue(target.is_symlink())
+                finally:
+                    target.unlink()
+                    saved.rename(target)
+
+
+class FinalCheckpointEvidenceTests(
+    FinalCheckpointValidRecordTests,
+    FinalCheckpointMissingEvidenceTests,
+    FinalCheckpointMalformedEvidenceTests,
+    FinalCheckpointUnreadableEvidenceTests,
+    FinalCheckpointLinkEvidenceTests,
+):
+    """Collect the focused evidence cases for the suite and host-parity matrix."""
+
+
+class FinalVerifyRoundRefusalTests(_FinalVerifyRoundCase):
+    """A claim with no usable application record, or with extra inputs, is refused and writes nothing."""
+
+    def test_a_changed_checkpoint_without_a_usable_record_is_refused(self) -> None:
+        verified = self.baseline()
+        self.wording_edit("Wording fix.\n")
+        self.assertEqual("input_error", self.claim(verified)["status"])
+        self.assertFalse((self.root / RECORD).exists())
+        self.applied()
+        record = self.root / RECORD
+        valid = json.loads(record.read_text(encoding="utf-8"))
+        self.wording_edit("Another fix.\n")
+        pair = {"verify_baseline": verified, "observed": verified}
+        for label, content in {"not JSON": "{", "other schema": json.dumps({**valid, "schema_version": "other/v1"}),
+                               "rounds not a list": json.dumps({**valid, "final_verify_rounds": {}}),
+                               "too many rounds": json.dumps({**valid, "final_verify_rounds": [pair] * (checklist_edits.FINAL_VERIFY_ROUNDS + 1)}),
+                               "malformed round": json.dumps({**valid, "final_verify_rounds": [{"observed": verified}]}),
+                               "open with no round": json.dumps({**valid, "final_verify_open": True}),
+                               "open flag not a boolean": json.dumps({**valid, "final_verify_rounds": [pair], "final_verify_open": 1})}.items():
+            with self.subTest(record=label):
+                record.write_text(content, encoding="utf-8")
+                self.assertEqual("input_error", self.claim(verified)["status"])
+                self.assertEqual(content, record.read_text(encoding="utf-8"))
+
+    def test_a_claim_takes_only_the_verify_baseline_and_read_only_refuses_it(self) -> None:
+        verified = self.applied()
+        bad = (("apply", {"verify_baseline": verified, "domains": DOMAINS}),
+               ("apply", {"verify_baseline": {"spec.md": "0" * 64}}),
+               ("apply", {"verify_baseline": {**verified, "plan.md": "bad"}}),
+               ("read_only", {"verify_baseline": verified}))
+        for mode, inputs in bad:
+            with self.subTest(mode=mode, inputs=sorted(inputs)):
+                self.assertEqual("input_error", self.call(mode, **inputs)["status"])
 
 
 def target_changes(root: Path, name: str) -> dict[str, Callable[[], None]]:
@@ -1373,6 +1633,9 @@ sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
 
 
 class HostParityTests(_HostParitySupport, unittest.TestCase):
+    def test_equal_digest_checkpoints_require_usable_records_on_both_hosts(self) -> None:
+        self.assert_payload_cases(("FinalCheckpointEvidenceTests",))
+
     def test_displaced_fifos_never_block_a_checked_write_or_hide_its_outcome(self) -> None:
         program = """
 import os, stat, sys
@@ -1723,10 +1986,8 @@ class _GateFourFinalValidationSupport:
 class _TasksInputSupport:
 
     def tasks_brief(self, judged: dict[str, str]) -> dict[str, Any]:
-        with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
-            return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
-                                   request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW,
-                                   "feature_dir": FEATURE, "g4_judged": judged, "g4_feature_identity": self.feature_identity}))
+        return dispatch_phase_brief(self.root, {"phase": "Tasks", "workflow_file": WORKFLOW,
+            "feature_dir": FEATURE, "g4_judged": judged, "g4_feature_identity": self.feature_identity})
 
 
     def consume_tasks(self, brief: dict[str, Any]) -> dict[str, Any]:
@@ -1735,9 +1996,27 @@ class _TasksInputSupport:
 
 
 class _TasksMutationSupport:
+    RECHECK_WINDOWS = ("entry recheck", "last check", "snapshot return", "verdict serialization")
+
     @staticmethod
     def task_target_cases(targets: dict[str, tuple[str, ...]]) -> list[tuple[str, str]]:
         return [(relative, variant) for relative, variants in targets.items() for variant in variants]
+
+    def shared_artifact_mutation_cases(self, windows: tuple[str, ...]) -> Iterator[tuple[str, tuple[str, str]]]:
+        """The same artifact/report mutations at each caller's observation windows."""
+        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
+        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
+        targets = {"spec.md": leaves, "plan.md": leaves,
+                   "checklists/security.md": (*leaves, "add report", "add nested report"),
+                   "checklists": directories, ".": directories}
+        return product(windows, self.task_target_cases(targets))
+
+    def assert_shared_artifact_mutations(self, windows: tuple[str, ...], check: Callable[[str, str, str], None]) -> None:
+        """Reset the checkout and count each shared-artifact mutation as its own observation."""
+        for window, (relative, variant) in self.shared_artifact_mutation_cases(windows):
+            with self.subTest(window=window, target=relative, variant=variant):
+                self.reset_tree()
+                check(window, relative, variant)
 
     def mutate_task_target(self, target: Path, variant: str, forge_receipt: bool = False) -> None:
         if variant in ("add report", "add nested report"):
@@ -2083,54 +2362,34 @@ class GateFourNamespaceMutationTests(_GateFourTestSupport, ChecklistEditsCase):
 
 
 class GateFourPostValidationTests(_GateFourTestSupport, ChecklistEditsCase):
+    def gate_then_brief(self, window: str, relative: str, variant: str) -> None:
+        target = self.feature / relative
+        mutate = partial(self.mutate_task_target, target, variant, True)
+        with self.after_last_validation(relative, mutate, window):
+            verdict = self.gate()
+        if not verdict["pass"]:
+            self.assertNotIn("judged", verdict, "unsafe capture must not supply dispatch evidence")
+            return
+        judged = verdict["judged"]
+        result = self.tasks_brief(judged)
+        self.assertEqual("input_error", result["status"])
+        self.assertEqual({}, result["data"])
+        self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
+
     def test_tasks_refuses_every_post_g4_validation_mutation(self) -> None:
-        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
-        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
-        targets = {"spec.md": leaves, "plan.md": leaves,
-                   "checklists/security.md": (*leaves, "add report", "add nested report"),
-                   "checklists": directories, ".": directories}
-        windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
-        for window, (relative, variant) in product(windows, self.task_target_cases(targets)):
-            with self.subTest(window=window, target=relative, variant=variant):
-                self.reset_tree()
-                target = self.feature / relative
-                mutate = partial(self.mutate_task_target, target, variant, True)
-                with self.after_last_validation(relative, mutate, window):
-                    verdict = self.gate()
-                if not verdict["pass"]:
-                    self.assertNotIn("judged", verdict, "unsafe capture must not supply dispatch evidence")
-                    continue
-                judged = verdict["judged"]
-                with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
-                    result = dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
-                             request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW, "feature_dir": FEATURE,
-                             "g4_judged": judged, "g4_feature_identity": self.feature_identity}))
-                self.assertEqual("input_error", result["status"])
-                self.assertEqual({}, result["data"])
-                self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
-
-
-
+        self.assert_shared_artifact_mutations(self.RECHECK_WINDOWS, self.gate_then_brief)
 
 
 class TasksCheckedBytesTests(_GateFourTestSupport, ChecklistEditsCase):
+    def consume_after_mutation(self, window: str, relative: str, variant: str) -> None:
+        judged = self.gate()["judged"]
+        mutate = partial(self.mutate_task_target, self.feature / relative, variant)
+        brief = self.tasks_brief_after_mutation(judged, mutate, window)
+        self.assert_checked_bytes_consumed(brief, judged)
+
     def test_tasks_consumes_checked_bytes_after_every_post_check_mutation(self) -> None:
-        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
-        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
-        targets = {"spec.md": leaves, "plan.md": leaves,
-                   "checklists/security.md": (*leaves, "add report", "add nested report"),
-                   "checklists": directories, ".": directories}
         windows = ("after check", "before consumption")
-        for window, (relative, variant) in product(windows, self.task_target_cases(targets)):
-            with self.subTest(window=window, target=relative, variant=variant):
-                self.reset_tree()
-                judged = self.gate()["judged"]
-                mutate = partial(self.mutate_task_target, self.feature / relative, variant)
-                brief = self.tasks_brief_after_mutation(judged, mutate, window)
-                self.assert_checked_bytes_consumed(brief, judged)
-
-
-
+        self.assert_shared_artifact_mutations(windows, self.consume_after_mutation)
 
 
 class TasksSnapshotMutationTests(_GateFourTestSupport, ChecklistEditsCase):
@@ -2233,32 +2492,24 @@ class TasksSnapshotWriteTests(_GateFourTestSupport, ChecklistEditsCase):
 
 
 class TasksRecheckTests(_GateFourTestSupport, ChecklistEditsCase):
+    def brief_then_consume(self, window: str, relative: str, variant: str) -> None:
+        judged = self.gate()["judged"]
+        mutate = partial(self.mutate_task_target, self.feature / relative, variant)
+        with self.after_last_validation(relative, mutate, window):
+            brief = self.tasks_brief(judged)
+        if brief["status"] != "ok":
+            self.assertEqual("input_error", brief["status"])
+            self.assertEqual({}, brief["data"])
+            return
+        snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+        self.addCleanup(shutil.rmtree, snapshot)
+        consumed = self.consume_tasks(brief)
+        self.assertEqual("ok", consumed["status"])
+        self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT},
+                         consumed["data"]["files"])
+
     def test_tasks_recheck_windows_bind_the_exact_captured_bytes(self) -> None:
-        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
-        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
-        targets = {"spec.md": leaves, "plan.md": leaves, "checklists/security.md": (*leaves, "add report", "add nested report"),
-                   "checklists": directories, ".": directories}
-        windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
-        for window, (relative, variant) in product(windows, self.task_target_cases(targets)):
-            with self.subTest(window=window, target=relative, variant=variant):
-                self.reset_tree()
-                judged = self.gate()["judged"]
-                mutate = partial(self.mutate_task_target, self.feature / relative, variant)
-                with self.after_last_validation(relative, mutate, window):
-                    brief = self.tasks_brief(judged)
-                if brief["status"] != "ok":
-                    self.assertEqual("input_error", brief["status"])
-                    self.assertEqual({}, brief["data"])
-                    continue
-                snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
-                self.addCleanup(shutil.rmtree, snapshot)
-                consumed = self.consume_tasks(brief)
-                self.assertEqual("ok", consumed["status"])
-                self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT},
-                                 consumed["data"]["files"])
-
-
-
+        self.assert_shared_artifact_mutations(self.RECHECK_WINDOWS, self.brief_then_consume)
 
 
 class GateFourDiagnosticTests(_GateFourTestSupport, ChecklistEditsCase):
@@ -2476,7 +2727,9 @@ if __name__ == "__main__":
         run_counted(
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                for case in (ProposalTests, ConflictTests, RefusalTests, WorkflowPathTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
+                for case in (ProposalTests, ConflictTests, RefusalTests, FinalVerifyRoundTests,
+                             FinalVerifyRoundRefusalTests, FinalCheckpointEvidenceTests, WorkflowPathTests,
+                             CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
                              UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests,
                              GateFourHostParityTests, GateFourResourceTests, GateFourCoverageTests,
