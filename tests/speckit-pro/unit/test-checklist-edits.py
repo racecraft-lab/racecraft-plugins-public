@@ -334,11 +334,13 @@ class _FinalVerifyRoundCase(ChecklistEditsCase):
     def wording_edit(self, text: str) -> None:
         (self.root / FEATURE / "spec.md").write_text(self.text("spec.md") + text, encoding="utf-8")
 
-    def record(self) -> dict[str, Any]:
-        return dict(json.loads((self.root / RECORD).read_text(encoding="utf-8")))
+    def record_state(self) -> tuple[list[Any], bool]:
+        """The record's claimed rounds and whether the last one is still open."""
+        value = json.loads((self.root / RECORD).read_bytes())
+        return value.get(checklist_edits.ROUNDS_FIELD, []), value.get(checklist_edits.OPEN_FIELD, False)
 
     def rounds(self) -> list[Any]:
-        return list(self.record().get(checklist_edits.ROUNDS_FIELD, []))
+        return self.record_state()[0]
 
     def assert_claim_writes_nothing(self, edit: str, mode: str, outcome: str) -> None:
         """Claim after an optional wording edit; the outcome is reported and the record keeps its bytes."""
@@ -364,12 +366,12 @@ class FinalVerifyRoundTests(_FinalVerifyRoundCase):
         self.assertEqual(("ok", "reverify", True, 1), (first["status"], first["data"]["final_checkpoint"],
                                                        first["data"]["writes_state"], first["data"]["rounds"]))
         self.assertEqual([{"verify_baseline": verified, "observed": first["data"]["baseline"]}], self.rounds())
-        self.assertTrue(self.record()[checklist_edits.OPEN_FIELD])
+        self.assertTrue(self.record_state()[1])
         self.wording_edit("Wording fix two.\n")
         bounded = self.claim(first["data"]["baseline"])
         self.assertEqual(("ok", "bounded", True, checklist_edits.FINAL_VERIFY_ROUNDS),
                          (bounded["status"], bounded["data"]["final_checkpoint"], bounded["data"]["writes_state"], bounded["data"]["rounds"]))
-        self.assertEqual((checklist_edits.FINAL_VERIFY_ROUNDS, False), (len(self.rounds()), self.record()[checklist_edits.OPEN_FIELD]))
+        self.assertEqual((checklist_edits.FINAL_VERIFY_ROUNDS, False), (len(self.rounds()), self.record_state()[1]))
         again = self.claim(first["data"]["baseline"])
         self.assertEqual(("bounded", False), (again["data"]["final_checkpoint"], again["data"]["writes_state"]))
 
@@ -381,7 +383,7 @@ class FinalVerifyRoundTests(_FinalVerifyRoundCase):
         for _ in range(3):
             repeat = self.claim(verified)
             self.assertEqual(("ok", "bounded"), (repeat["status"], repeat["data"]["final_checkpoint"]))
-        self.assertEqual((1, False), (len(self.rounds()), self.record()[checklist_edits.OPEN_FIELD]))
+        self.assertEqual((1, False), (len(self.rounds()), self.record_state()[1]))
 
     def test_a_claim_whose_record_write_is_interrupted_reports_an_unconfirmed_claim(self) -> None:
         verified = self.applied()

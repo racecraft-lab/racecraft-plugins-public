@@ -1307,20 +1307,21 @@ class ChecklistVerifyBoundTests(_ChecklistCheckpointSupport):
         for _ in range(3):
             self.assertEqual(self.checkpoint(first)[:2], (0, "bounded"))
 
-    def test_a_changed_checkpoint_no_apply_claimed_is_refused_on_both_hosts(self):
+    def assert_edited_checkpoint_refused(self, code, *, keep_record=True):
+        """After a wording edit, the source and both payload briefs refuse the checkpoint with `code`."""
         verified = self.checklist_snapshot()["baseline"]
+        if not keep_record:
+            Path(self.BRIEF["workflow_file"]).parent.joinpath(".process/checklist-edits/applied.json").unlink()
         self.wording_edit(0)
         for result in [dispatch_brief(self.final_inputs(verified)), *payload_briefs(self.final_inputs(verified), include_status=True)]:
             self.assertEqual((result["status"], result["data"]), ("input_error", {}), result)
-            self.assertEqual([item["code"] for item in result["diagnostics"]], ["checklist_checkpoint_unclaimed"])
+            self.assertEqual([item["code"] for item in result["diagnostics"]], [code])
+
+    def test_a_changed_checkpoint_no_apply_claimed_is_refused_on_both_hosts(self):
+        self.assert_edited_checkpoint_refused("checklist_checkpoint_unclaimed")
 
     def test_a_changed_checkpoint_without_the_application_record_is_refused_on_both_hosts(self):
-        verified = self.checklist_snapshot()["baseline"]
-        Path(self.BRIEF["workflow_file"]).parent.joinpath(".process/checklist-edits/applied.json").unlink()
-        self.wording_edit(0)
-        for result in [dispatch_brief(self.final_inputs(verified)), *payload_briefs(self.final_inputs(verified), include_status=True)]:
-            self.assertEqual((result["status"], result["data"]), ("input_error", {}), result)
-            self.assertEqual([item["code"] for item in result["diagnostics"]], ["checklist_checkpoint_record_unusable"])
+        self.assert_edited_checkpoint_refused("checklist_checkpoint_record_unusable", keep_record=False)
 
     def test_a_dry_run_claim_leaves_the_round_unclaimed(self):
         verified = self.checklist_snapshot()["baseline"]
