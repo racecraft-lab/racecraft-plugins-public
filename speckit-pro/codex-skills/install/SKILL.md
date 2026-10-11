@@ -9,6 +9,13 @@ description: >
 
 # SpecKit Install
 
+## Installed Runtime Contract
+
+Before any runner helper call, follow
+[Installed runner transport](../speckit-autopilot/references/installed-runtime.md).
+Invoke `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` from
+the current project using the root of this loaded plugin.
+
 ## Scope
 
 Use this skill when the user wants to install, refresh, repair, or

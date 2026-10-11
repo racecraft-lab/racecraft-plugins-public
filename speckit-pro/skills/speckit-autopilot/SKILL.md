@@ -46,8 +46,11 @@ a prerequisite failure and does not authorize stopping the workflow.
 <!-- /host -->
 ## Installed Runtime Contract
 
+Before the first runner call, resolve `<plugin-root>` and keep the caller's
+working directory per [Installed runner transport](./references/installed-runtime.md).
+
 Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
-`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
+`[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]`, send one JSON request on
 stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
@@ -659,8 +662,8 @@ invariant and fail-closed recovery.
 Run the pre-flight sequence before any phase work. A failure goes to the owning agent for repair; only an exhausted repair defers.
 
 1. **Use runner helper operation IDs**. Invoke read-only helper behavior through
-   `resolved_python -m speckit_pro_runner` with one JSON request on stdin; do not rely on
-   plugin-local script files.
+   `resolved_python "<plugin-root>/scripts/run-speckit-pro.py"` with one JSON request on stdin; do not rely on
+   retired per-helper script files. The installed launcher owns import setup.
 <!-- host:claude: Claude runs the archive extension's generated slash command -->
 2. **Archive Sweep** — run helper `list-archive-candidates` with the current
    spec directory, then on feature/spec branches run

@@ -611,7 +611,7 @@ RUNTIME_GUARD_POLICY = GuardPolicy(
     blocked_summary="Move active installed-runtime behavior to argv-only Python runner invocation.",
     blocked_actions=(
         "Inspect data.findings for blocking_active_runtime entries.",
-        "Use a resolved Python 3.11+ executable with -m speckit_pro_runner and JSON stdin/stdout.",
+        "Use a resolved Python 3.11+ executable with <plugin-root>/scripts/run-speckit-pro.py and JSON stdin/stdout.",
     ),
 )
 

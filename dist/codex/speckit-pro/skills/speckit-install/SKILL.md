@@ -5,6 +5,14 @@ description: "Install the SpecKit CLI and initialize the current repository for 
 
 # SpecKit Install
 
+## Installed Runtime Contract
+
+Before the first runner call, resolve `<plugin-root>` and keep the caller's
+working directory per [Installed runner transport](../speckit-autopilot/references/installed-runtime.md).
+
+Invoke `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]`
+for runner helper requests.
+
 Install the official SpecKit CLI (https://github.com/github/spec-kit)
 if missing, then initialize this repository to use it with Claude
 Code, Codex CLI, or both. Safe to run on any repo — detects an
@@ -44,7 +52,7 @@ If the operator does not specify, ask before proceeding.
 ### 1. Ensure the SpecKit CLI is available
 
 The runner owns the pinned Spec Kit version. Invoke
-`[resolved_python, "-m", "speckit_pro_runner"]` with this request on
+`[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` with this request on
 stdin, parse `data.stdout.text` as JSON, and read its `spec_kit` object
 (`status`, `installed_version`, `pinned_version`, `install_argv`, `cli_argv`):
 

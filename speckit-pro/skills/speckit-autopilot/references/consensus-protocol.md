@@ -186,7 +186,7 @@ whatever the executor put in the bracket or wrote as its confidence,
 and a tag it does not recognize routes to the generic domain analyst.
 
 ```text
-resolved_python -m speckit_pro_runner < request.json
+resolved_python "<plugin-root>/scripts/run-speckit-pro.py" < request.json
 
 request.json:
 {

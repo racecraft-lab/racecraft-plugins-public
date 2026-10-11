@@ -16,6 +16,11 @@ effort: high
 
 # Artifact Author
 
+For runner helper calls, use the orchestrator-provided absolute launcher argv
+`[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` in the bound
+workflow worktree. Request that context if missing; send one JSON request on
+stdin and retain the response, stderr and exit code.
+
 You write the narrative of the feature's draft artifact pages. The runner has
 already filled and published every selected page from the planning record:
 structured regions hold the derived content, and each prose slot holds text

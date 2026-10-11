@@ -20,6 +20,14 @@ description: >
 
 # SpecKit Archive Cleanup
 
+## Installed Runtime Contract
+
+Before the first runner call, resolve `<plugin-root>` and keep the caller's
+working directory per [Installed runner transport](../speckit-autopilot/references/installed-runtime.md).
+
+Invoke `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]`
+for runner helper requests.
+
 Use this skill after a SpecKit implementation PR has merged and the repository
 still contains active workflow or `specs/**` residue for that completed work.
 The goal is to preserve recovery evidence in project memory, remove only the
@@ -138,7 +146,7 @@ Then update the project state in this order:
 6. Regenerate the active spec index with SpecKit Pro's runner helpers, so the
    generated MOC or index no longer points at the archived spec directory.
    Send each request as one JSON object on stdin to
-   `resolved_python -m speckit_pro_runner`, run from the repository root. Run
+   `resolved_python "<plugin-root>/scripts/run-speckit-pro.py"`, run from the repository root. Run
    runner helper `generate-spec-index-write` in `apply` mode first:
    ```json
    {"schema_version":"1.0","request_id":"archive-cleanup-spec-index-write","helper_id":"generate-spec-index-write","operation":"generate-spec-index-write","mode":"apply","inputs":{"repo_root":"."}}

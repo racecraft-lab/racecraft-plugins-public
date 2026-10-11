@@ -447,7 +447,7 @@
         "value": "speckit_pro_runner/gates/active_path_guard/runtime_guard.py",
         "display": "speckit_pro_runner/gates/active_path_guard/runtime_guard.py"
       },
-      "sha256": "7756a1af56f994e0eb7f086ba680c3768c532cd8b6ec61b7d0481c10fdb02dbb"
+      "sha256": "203b54080f55b51088802ec6f4b5589282726ccaa9d639b58c75608f483c4889"
     },
     {
       "path": {
@@ -735,7 +735,7 @@
         "value": "speckit_pro_runner/helpers/readiness_host_items.py",
         "display": "speckit_pro_runner/helpers/readiness_host_items.py"
       },
-      "sha256": "bf00a74ac482d621903ceb068bf742a5099a0317df241420d6b25a4f21413774"
+      "sha256": "385dbba946bacb1b4a1ab908f8e0d415e8addeaddbd00466d678e332470cabd1"
     },
     {
       "path": {
