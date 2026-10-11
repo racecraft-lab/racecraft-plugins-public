@@ -19,6 +19,10 @@ replacement for the surface observation.
   without claiming to prevent a caller from lying about its tools. The
   reported `verified/none` and `unavailable/browser` contradictions add no
   access for that reason, but are nevertheless rejected for consistency.
+  Only the exact label `none` denotes absence; labels such as `None`, ` none`,
+  or `headless` remain opaque caller observations when paired with `verified`
+  and are rejected with `unavailable`. This adds no ability to assert a false
+  terminal status beyond supplying any other label.
 - `unknown` and `not_applicable` intentionally need no surface label. Neither
   status can reach the terminal preview branch: read-back is `unknown`, so
   observer dispatch remains enabled.

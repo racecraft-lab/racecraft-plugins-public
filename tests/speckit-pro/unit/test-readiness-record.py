@@ -677,6 +677,15 @@ class PreviewEvidenceBoundaryTest(PreviewSurfaceWriterFixture):
         for status in ("verified", "unavailable"):
             self.assert_preview_refused(status, values={}, files=["value:surface"])
 
+    def test_absence_label_is_exact_and_surface_names_remain_caller_observations(self) -> None:
+        for label in ("None", " none", "headless"):
+            for host in ("claude", "codex"):
+                with self.subTest(host=host, label=label):
+                    response = self.run_helper([observation("preview_surface", "verified", values={"surface": label})],
+                                               "dry_run", host=host)
+                    assert_runner_response(self, response, "ok", 0)
+            self.assert_preview_refused("unavailable", values={"surface": label})
+
 
 class PreviewEvidenceSecurityTest(unittest.TestCase):
     """The reader must fail closed on the entire snapshot, on both supported hosts."""
@@ -713,7 +722,7 @@ class PreviewEvidenceSecurityTest(unittest.TestCase):
 
     def test_terminal_preview_requires_named_matching_surface_after_readback(self) -> None:
         evidence = ({"value:probe": readiness_record.digest("observed")},
-                    {"file:surface.txt": readiness_record.digest("no preview tools")},
+                    {"file:surface.txt": readiness_record.digest(b"no preview tools")},
                     {"value:surface": readiness_record.digest("")})
         cases = [(status, prints) for status, prints in itertools.product(("verified", "unavailable"), evidence)]
         cases.extend((("verified", {"value:surface": readiness_record.digest("none")}),
@@ -1816,13 +1825,14 @@ class G0RecordValidationTests(G0ReadinessFixture):
 class G0PreviewEvidenceTests(G0ReadinessFixture):
     def test_saved_terminal_preview_without_matching_surface_is_not_evidence(self) -> None:
         unrelated = ({"value:probe": readiness_record.digest("observed")},
-                     {"file:.specify/constitution.md": readiness_record.digest("principles\n")})
+                     {"file:.specify/constitution.md": readiness_record.digest(b"principles\n")})
         cases = [(status, prints) for status, prints in itertools.product(("verified", "unavailable"), unrelated)]
         cases.extend((("verified", {"value:surface": readiness_record.digest("none")}),
                       ("unavailable", {"value:surface": readiness_record.digest("browser")})))
         for host, (status, prints) in itertools.product(("claude", "codex"), cases):
             with self.subTest(host=host, status=status, fingerprints=prints):
                 self.write_record(self.all_verified(), host=host)
+                self.assertNotIn("record", [row["item"] for row in self.g0(host)["stale"]])
                 record = json.loads(self.record_path(host).read_text(encoding="utf-8"))
                 record["items"]["preview_surface"] = {**record["items"]["preview_surface"],
                                                        "status": status, "fingerprints": prints}
