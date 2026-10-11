@@ -305,6 +305,13 @@ class RefusalTests(ChecklistEditsCase):
                          (result["diagnostics"][0]["code"], self.text("spec.md"), self.text("plan.md")))
         self.assertFalse(feature_locked(self.root))
 
+    def test_an_absolute_workflow_path_inside_the_repository_reads_like_the_relative_one(self) -> None:
+        result = self.call("read_only", workflow_file=str(self.root / WORKFLOW))
+        self.assertEqual(("ok", self.baseline()), (result["status"], result["data"]["baseline"]))
+        refused = self.call("read_only", workflow_file=str(self.root.parent / WORKFLOW))
+        self.assertEqual("input_error", refused["status"])
+        self.assertIn("workflow_file", json.dumps(refused["diagnostics"]))
+
     def test_a_feature_directory_outside_the_repository_is_refused(self) -> None:
         for bad in ("../elsewhere", "/etc"):
             with self.subTest(bad):
