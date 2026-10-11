@@ -35,7 +35,7 @@ from ..atomic_write import (AtomicSwapUnavailable, AtomicWriteInterrupted, Write
                             write_bytes_atomic, write_file_atomic, write_target_matches_snapshot)
 from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
-from ..execution_control import confined_path, ignore_owned_directory, workflow_process_directory
+from ..execution_control import confined_path, contained_workflow_file, ignore_owned_directory, workflow_process_directory
 from ..strict_input import SelectionError, has_hidden_characters, next_fence, require_fields, require_text
 from ..sweep_isolation import secret_matches
 from .dispatch_waves import DOMAIN_NAME
@@ -381,9 +381,7 @@ def checklist_edits(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, 
     """Snapshot (read_only), plan (dry_run) or apply (apply) one batch of domain proposals."""
     fields = {"workflow_file", "feature_dir"} | (set() if mode == "read_only" else {"domains", "baseline", "proposals"})
     request = require_fields({key: value for key, value in inputs.items() if key != "repo_root"}, fields, "inputs")
-    workflow = require_text(request["workflow_file"], "workflow_file")
-    if not confined_path(root, workflow).is_file():
-        raise SelectionError("workflow_file must be an existing contained file")
+    workflow = contained_workflow_file(root, request["workflow_file"])
     feature = confined_path(root, require_text(request["feature_dir"], "feature_dir"))
     if mode == "read_only":
         with held_feature(root, feature, exclusive=False) as directory:

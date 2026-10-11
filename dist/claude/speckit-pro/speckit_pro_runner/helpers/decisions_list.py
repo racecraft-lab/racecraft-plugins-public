@@ -11,7 +11,7 @@ import json
 from contextlib import nullcontext
 from typing import Any
 
-from ..execution_control import confined_path, durable_json, exclusive_ledger, workflow_process_directory
+from ..execution_control import confined_path, contained_workflow_file, durable_json, exclusive_ledger, workflow_process_directory
 from ..strict_input import SelectionError, require_fields, require_text, unique_object
 from .execution_requests import Refusal, run_contained_helper
 
@@ -84,9 +84,7 @@ def decisions_list(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, An
     """Read the list, or append a batch (planned in dry_run, written in apply)."""
     fields = {"workflow_file"} if mode == "read_only" else {"workflow_file", "entries"}
     request = require_fields({key: value for key, value in inputs.items() if key != "repo_root"}, fields, "inputs")
-    workflow = require_text(request["workflow_file"], "workflow_file")
-    if not confined_path(root, workflow).is_file():
-        raise SelectionError("workflow_file must be an existing contained file")
+    workflow = contained_workflow_file(root, request["workflow_file"])
     link = workflow_process_directory(workflow).joinpath("decisions-list", "decisions.json").as_posix()
     path = confined_path(root, link)
     batch = request.get("entries", [])

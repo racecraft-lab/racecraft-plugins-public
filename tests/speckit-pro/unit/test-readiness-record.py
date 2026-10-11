@@ -1990,10 +1990,72 @@ class G0WorkflowTests(G0ReadinessFixture):
                     self.assertIn("`readiness stale: formal_methods`", text)
 
 
+class G0WorkflowPathTests(G0ReadinessFixture):
+    """Workflow binding hands both hosts a canonical absolute WORKFLOW_FILE (#1311)."""
+
+    def g0_response(self, host: str, workflow: str, probe: str = "readiness") -> dict:
+        _, response, _ = run_runner({"schema_version": "1.0", "request_id": "test-g0", "helper_id": "g0-setup",
+                                     "operation": "g0-setup", "mode": "read_only",
+                                     "inputs": {"probe": probe, "surface": host, "workflow_file": workflow}},
+                                    cwd=self.root, extra_env={"PATH": str(self.tools)})
+        return response
+
+    def test_absolute_workflow_path_reads_like_the_relative_one_on_either_host(self) -> None:
+        # A link above the root resolves, as in workflow binding (a symlinked temp directory, say).
+        alias = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve() / "parent"
+        alias.symlink_to(self.root.parent, target_is_directory=True)
+        for host in ("claude", "codex"):
+            relative = self.g0(host)
+            self.assertTrue(relative["decisions"], "a missing record must log a note, or the comparison is vacuous")
+            for name, workflow in (("canonical", self.root / "workflow.md"), ("aliased parent", alias / self.root.name / "workflow.md")):
+                with self.subTest(host=host, path=name):
+                    response = self.g0_response(host, str(workflow))
+                    assert_runner_response(self, response, "ok", 0)
+                    self.assertEqual(relative, response["data"]["readiness"])
+        result = self.runner("decisions-list", "apply", {"workflow_file": str(self.root / "workflow.md"),
+                                                         "entries": self.g0()["decisions"]})
+        self.assertEqual(".process/decisions-list/decisions.json", result["link"])
+        self.assertNotIn(str(self.root), json.dumps(result))
+        self.assertEqual([], self.g0()["decisions"], "both path forms share one decisions list")
+
+    def test_absolute_workflow_path_reaches_the_commands_probe_decision_on_either_host(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                response = self.g0_response(host, str(self.root / "workflow.md"), probe="commands")
+                assert_runner_response(self, response, "ok", 0)
+                self.assertTrue(response["data"]["quality_gate"]["unratified_defaults"]["record_decision"])
+
+    def test_workflow_path_outside_the_repository_is_an_input_error_naming_the_field(self) -> None:
+        outside = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        (outside / "workflow.md").write_text("fixture\n", encoding="utf-8")
+        (self.root / "link").symlink_to(self.root, target_is_directory=True)
+        root_alias = outside / "checkout"
+        root_alias.symlink_to(self.root, target_is_directory=True)
+        locked = self.root / "locked"
+        (locked / "inner").mkdir(parents=True)
+        locked.chmod(0)
+        self.addCleanup(locked.chmod, 0o700)
+        cases = {
+            "absolute outside": outside / "workflow.md",
+            "absolute traversal": self.root / ".." / outside.name / "workflow.md",
+            "relative traversal": Path("..") / outside.name / "workflow.md",
+            "symlink inside the root": self.root / "link" / "workflow.md",
+            "missing file": self.root / "absent.md",
+            "link aliasing the root": root_alias / "workflow.md",
+            "unreadable directory": locked / "inner" / "workflow.md",
+        }
+        for host in ("claude", "codex"):
+            for name, workflow in cases.items():
+                with self.subTest(host=host, case=name):
+                    response = self.g0_response(host, str(workflow))
+                    assert_runner_response(self, response, "input_error", 2)
+                    self.assertIn("workflow_file", json.dumps(response["data"]["problems"]))
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     cases = (ReadinessRecordTest, TerminalPreviewEvidenceTest, PreviewEvidenceBoundaryTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
-             G0RecordValidationTests, G0PreviewEvidenceTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests)
+             G0RecordValidationTests, G0PreviewEvidenceTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests, G0WorkflowPathTests)
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
 
