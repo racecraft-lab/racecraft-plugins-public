@@ -239,7 +239,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "28bacbc6ed630b82fde36e3c97ac003cde357c3092dde8f644c4b4d8445c99ca"
+      "sha256": "5c5bd2c0d75c5fcccbf730b2dd7948a4a71c1658dc4bb6861b55fe18a82fead7"
     },
     {
       "path": {
@@ -559,7 +559,7 @@
         "value": "speckit_pro_runner/helpers/checklist_edits.py",
         "display": "speckit_pro_runner/helpers/checklist_edits.py"
       },
-      "sha256": "0eb7e37d86f0c45918e192fc8ee247d9b9fe470822f6b98f9021eb4f325ec2b6"
+      "sha256": "bf8a89a5869bfc9a7422c7fb5142fd2c55783e7d9962102d10524c7f88afb852"
     },
     {
       "path": {
@@ -575,7 +575,7 @@
         "value": "speckit_pro_runner/helpers/decisions_list.py",
         "display": "speckit_pro_runner/helpers/decisions_list.py"
       },
-      "sha256": "1afe557ee5ffc39b9b18bffd7c2937b6fae847e5f805506daeabd6258d607553"
+      "sha256": "1bb7fea2a1ba7a732cea92d8d57e1c6cae3d02b6cd260b14b6452e1135389d7b"
     },
     {
       "path": {

@@ -21,7 +21,7 @@ from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
-from .strict_input import require_text as require_nonempty_text
+from .strict_input import SelectionError, require_text as require_nonempty_text
 from .task_partition import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
 from .trusted_io import is_test_path, trusted_text
 from .workflow_stage import parse_stage_args, workflow_stage_signals
@@ -154,6 +154,14 @@ def confined_path(root: Path, value: str) -> Path:
         if path.is_symlink():
             raise ValueError("symlink paths are not permitted")
     return path
+
+
+def contained_workflow_file(root: Path, value: Any) -> str:
+    """The workflow file as repository-relative text, once it names an existing contained file."""
+    workflow = require_nonempty_text(value, "workflow_file")
+    if not confined_path(root, workflow).is_file():
+        raise SelectionError("workflow_file must be an existing contained file")
+    return workflow
 
 
 def ignore_owned_directory(directory: Path) -> None:
