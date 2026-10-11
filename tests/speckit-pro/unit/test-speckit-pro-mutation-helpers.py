@@ -9348,13 +9348,16 @@ This line must not be copied.
 class GeneratedTitleScopeTests(unittest.TestCase):
     """The packet normalizer builds only titles the PR-title gate accepts."""
 
-    def test_generated_title_rejects_a_scope_the_title_gate_rejects(self) -> None:
-        for scope in ("PRSG-998", "FEATURE-001", "Demo", "demo scope", "demo_scope"):
-            with self.subTest(scope=scope):
+    def test_generated_title_rejects_a_type_or_scope_the_title_gate_rejects(self) -> None:
+        # The draft title has no other check: the plan-stage terminal step creates the PR with the packet's title.
+        cases = [("title_scope", scope) for scope in ("PRSG-998", "FEATURE-001", "Demo", "demo scope", "demo_scope")]
+        cases += [("title_type", title_type) for title_type in ("feature", "Feat", "perf", 7)]
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
                 title = pr_packet.normalize_generated_title(
-                    {"title_type": "feat", "title_scope": scope, "title_description": "add a demo feature"}
+                    {"title_type": "feat", "title_scope": "demo", "title_description": "add a demo feature", field: value}
                 )
-                self.assertEqual(title["diagnostic"]["details"]["field"], "title_scope")
+                self.assertEqual(title["diagnostic"]["details"]["field"], field)
         supplied = pr_packet.normalize_generated_title(
             {
                 "generated_title": {
