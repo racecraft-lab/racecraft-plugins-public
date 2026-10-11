@@ -72,6 +72,17 @@ class ReadinessRecordTest(unittest.TestCase):
         self.assertIn(completed.returncode, (0, 1, 2, 3), completed.stderr)
         return response
 
+    def run_helper_with_response(
+        self,
+        observations: list[dict[str, object]],
+        expected_response: tuple[str, int],
+        mode: str = "apply",
+        **inputs: object,
+    ) -> dict:
+        response = self.run_helper(observations, mode, **inputs)
+        assert_runner_response(self, response, *expected_response)
+        return response
+
     def all_verified(self) -> list[dict[str, object]]:
         return [observation(item) for item in CALLER_ITEMS]
 
@@ -139,17 +150,21 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_headless_run_without_a_surface_reads_back_unavailable_on_both_hosts(self, _probe) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
-                response = self.run_helper([observation("preview_surface", "unavailable", values={"surface": "none"})],
-                                           host=host)
-                assert_runner_response(self, response, "ok", 0)
+                self.run_helper_with_response(
+                    [observation("preview_surface", "unavailable", values={"surface": "none"})],
+                    ("ok", 0),
+                    host=host,
+                )
                 self.assertEqual("unavailable", readiness_record.preview_surface(self.root, host))
 
     def test_a_terminal_surface_answer_without_a_fingerprint_is_refused_at_write_time(self) -> None:
         # Without a digest the record would read back as `unknown` and the observer would still be dispatched (#1312).
         for status in ("verified", "unavailable"):
             with self.subTest(status=status):
-                response = self.run_helper([observation("preview_surface", status, values={})])
-                assert_runner_response(self, response, "input_error", 2)
+                response = self.run_helper_with_response(
+                    [observation("preview_surface", status, values={})],
+                    ("input_error", 2),
+                )
                 self.assertIn("values.surface", json.dumps(response))
                 self.assertFalse(self.record_path().exists())
 
@@ -610,6 +625,7 @@ class PreviewSurfaceWriterFixture(unittest.TestCase):
     setUp = ReadinessRecordTest.setUp
     record_path = ReadinessRecordTest.record_path
     run_helper = ReadinessRecordTest.run_helper
+    run_helper_with_response = ReadinessRecordTest.run_helper_with_response
 
     def assert_preview_refused(self, status: str, **evidence: object) -> None:
         for host, mode in itertools.product(("claude", "codex"), ("apply", "dry_run")):
@@ -681,9 +697,12 @@ class PreviewEvidenceBoundaryTest(PreviewSurfaceWriterFixture):
         for label in ("None", " none", "headless"):
             for host in ("claude", "codex"):
                 with self.subTest(host=host, label=label):
-                    response = self.run_helper([observation("preview_surface", "verified", values={"surface": label})],
-                                               "dry_run", host=host)
-                    assert_runner_response(self, response, "ok", 0)
+                    self.run_helper_with_response(
+                        [observation("preview_surface", "verified", values={"surface": label})],
+                        ("ok", 0),
+                        "dry_run",
+                        host=host,
+                    )
             self.assert_preview_refused("unavailable", values={"surface": label})
 
 
