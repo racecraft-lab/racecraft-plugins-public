@@ -320,8 +320,8 @@ class RefusalTests(ChecklistEditsCase):
         self.assertIn("private", self.text("spec.md"))
 
 
-class FinalVerifyRoundTests(ChecklistEditsCase):
-    """A verify_baseline request claims one bounded final verify round in the application record."""
+class _FinalVerifyRoundCase(ChecklistEditsCase):
+    """Claims of the final verify round: checklist-edits with only a verify_baseline."""
 
     def claim(self, verified: dict[str, str], mode: str = "apply") -> dict[str, Any]:
         return self.call(mode, verify_baseline=verified)
@@ -337,13 +337,22 @@ class FinalVerifyRoundTests(ChecklistEditsCase):
     def rounds(self) -> list[Any]:
         return json.loads((self.root / RECORD).read_text(encoding="utf-8")).get(checklist_edits.ROUNDS_FIELD, [])
 
-    def test_unchanged_artifacts_claim_nothing_and_write_nothing(self) -> None:
+    def assert_claim_writes_nothing(self, edit: str, mode: str, outcome: str) -> None:
+        """Claim after an optional wording edit; the outcome is reported and the record keeps its bytes."""
         verified = self.applied()
+        self.wording_edit(edit)
         before = (self.root / RECORD).read_bytes()
-        result = self.claim(verified)
-        self.assertEqual(("ok", "unchanged", False), (result["status"], result["data"]["final_checkpoint"], result["data"]["writes_state"]))
-        self.assertEqual(verified, result["data"]["baseline"])
+        result = self.claim(verified, mode=mode)
+        self.assertEqual(("ok", outcome, False), (result["status"], result["data"]["final_checkpoint"], result["data"]["writes_state"]))
+        self.assertEqual(self.baseline(), result["data"]["baseline"])
         self.assertEqual(before, (self.root / RECORD).read_bytes())
+
+
+class FinalVerifyRoundTests(_FinalVerifyRoundCase):
+    """A verify_baseline request claims one bounded final verify round in the application record."""
+
+    def test_unchanged_artifacts_claim_nothing_and_write_nothing(self) -> None:
+        self.assert_claim_writes_nothing("", "apply", "unchanged")
 
     def test_a_changed_checkpoint_claims_one_round_then_reports_the_bound(self) -> None:
         verified = self.applied()
@@ -361,12 +370,7 @@ class FinalVerifyRoundTests(ChecklistEditsCase):
         self.assertEqual(checklist_edits.FINAL_VERIFY_ROUNDS, len(self.rounds()))
 
     def test_a_dry_run_claim_reports_the_round_and_writes_nothing(self) -> None:
-        verified = self.applied()
-        self.wording_edit("Wording fix.\n")
-        before = (self.root / RECORD).read_bytes()
-        result = self.claim(verified, mode="dry_run")
-        self.assertEqual(("ok", "reverify", False), (result["status"], result["data"]["final_checkpoint"], result["data"]["writes_state"]))
-        self.assertEqual(before, (self.root / RECORD).read_bytes())
+        self.assert_claim_writes_nothing("Wording fix.\n", "dry_run", "reverify")
 
     def test_a_fresh_apply_starts_with_no_claimed_rounds(self) -> None:
         verified = self.applied()
@@ -375,6 +379,10 @@ class FinalVerifyRoundTests(ChecklistEditsCase):
         self.assertEqual(1, len(self.rounds()))
         self.applied()
         self.assertEqual([], self.rounds())
+
+
+class FinalVerifyRoundRefusalTests(_FinalVerifyRoundCase):
+    """A claim with no usable application record, or with extra inputs, is refused and writes nothing."""
 
     def test_a_changed_checkpoint_without_a_usable_record_is_refused(self) -> None:
         verified = self.baseline()
@@ -2562,7 +2570,7 @@ if __name__ == "__main__":
         run_counted(
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                for case in (ProposalTests, ConflictTests, RefusalTests, FinalVerifyRoundTests, WorkflowPathTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
+                for case in (ProposalTests, ConflictTests, RefusalTests, FinalVerifyRoundTests, FinalVerifyRoundRefusalTests, WorkflowPathTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
                              UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests,
                              GateFourHostParityTests, GateFourResourceTests, GateFourCoverageTests,
