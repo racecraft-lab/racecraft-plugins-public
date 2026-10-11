@@ -412,9 +412,8 @@ class FinalVerifyRoundTests(_FinalVerifyRoundCase):
         self.assertEqual([], self.rounds())
 
 
-class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
-    """Equal artifact digests never substitute for a usable application record, at either public seam."""
-
+class _FinalCheckpointEvidenceCase(_FinalVerifyRoundCase):
+    """Shared setup and assertions for final-checkpoint evidence tests."""
     def setUp(self) -> None:
         super().setUp()
         self.verified = self.applied()
@@ -426,22 +425,22 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
         return dispatch_phase_brief(self.root, {"phase": "Checklist", **self.fixed_inputs,
             "domains": DOMAINS, "max_agents": 20, "verify_baseline": verified})
 
-    def test_equal_digests_accept_a_valid_application_record_without_writing(self) -> None:
-        before = self.record.read_bytes()
-        for mode in ("apply", "dry_run", "phase-brief"):
-            with self.subTest(mode=mode):
-                result = self.checkpoint_result(self.verified, mode)
-                self.assertEqual("ok", result["status"], result)
-                self.assertEqual("unchanged", result["data"]["final_checkpoint"])
-                self.assertEqual(before, self.record.read_bytes())
-
-    def assert_checkpoint_refused(self, verified: dict[str, str]) -> None:
+    def assert_checkpoint_modes(self, verified: dict[str, str], *, accepted: bool) -> None:
+        before = self.record.read_bytes() if accepted else None
         for mode in ("apply", "dry_run", "phase-brief"):
             with self.subTest(mode=mode):
                 result = self.checkpoint_result(verified, mode)
-                self.assertNotEqual("ok", result["status"], result)
-                self.assertEqual({}, result["data"], result)
-                self.assertEqual(verified, self.baseline())
+                if accepted:
+                    self.assertEqual("ok", result["status"], result)
+                    self.assertEqual("unchanged", result["data"]["final_checkpoint"])
+                    self.assertEqual(before, self.record.read_bytes())
+                else:
+                    self.assertNotEqual("ok", result["status"], result)
+                    self.assertEqual({}, result["data"], result)
+                    self.assertEqual(verified, self.baseline())
+
+    def assert_checkpoint_refused(self, verified: dict[str, str]) -> None:
+        self.assert_checkpoint_modes(verified, accepted=False)
 
     def assert_missing_checkpoint_refused(self, target: Path) -> None:
         if target.is_dir():
@@ -451,6 +450,26 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
         self.assert_checkpoint_refused(self.verified)
         self.assertFalse(target.exists())
 
+    def assert_unreadable_checkpoint_refused(self, name: str) -> None:
+        before = self.record.read_bytes()
+        original = os.open
+
+        def unreadable(path: Any, *args: Any, **kwargs: Any) -> int:
+            if os.fspath(path) == name:
+                raise PermissionError(errno.EACCES, "checkpoint evidence unreadable")
+            return original(path, *args, **kwargs)
+
+        with patch.object(os, "open", unreadable):
+            self.assert_checkpoint_refused(self.verified)
+        self.assertEqual(before, self.record.read_bytes())
+
+
+class FinalCheckpointValidRecordTests(_FinalCheckpointEvidenceCase):
+    def test_equal_digests_accept_a_valid_application_record_without_writing(self) -> None:
+        self.assert_checkpoint_modes(self.verified, accepted=True)
+
+
+class FinalCheckpointMissingEvidenceTests(_FinalCheckpointEvidenceCase):
     def test_equal_digests_refuse_a_missing_application_record(self) -> None:
         self.assert_missing_checkpoint_refused(self.record)
 
@@ -466,6 +485,8 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
         self.assertFalse(directory.exists())
         self.assertEqual(before, (renamed / "applied.json").read_bytes())
 
+
+class FinalCheckpointMalformedEvidenceTests(_FinalCheckpointEvidenceCase):
     def test_equal_digests_refuse_malformed_application_records(self) -> None:
         verified, record = self.verified, self.record
         valid = json.loads(record.read_bytes())
@@ -483,25 +504,16 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
                 self.assert_checkpoint_refused(verified)
                 self.assertEqual(content, record.read_bytes())
 
-    def assert_unreadable_checkpoint_refused(self, name: str) -> None:
-        before = self.record.read_bytes()
-        original = os.open
 
-        def unreadable(path: Any, *args: Any, **kwargs: Any) -> int:
-            if os.fspath(path) == name:
-                raise PermissionError(errno.EACCES, "checkpoint evidence unreadable")
-            return original(path, *args, **kwargs)
-
-        with patch.object(os, "open", unreadable):
-            self.assert_checkpoint_refused(self.verified)
-        self.assertEqual(before, self.record.read_bytes())
-
+class FinalCheckpointUnreadableEvidenceTests(_FinalCheckpointEvidenceCase):
     def test_equal_digests_refuse_an_unreadable_application_record(self) -> None:
         self.assert_unreadable_checkpoint_refused("applied.json")
 
     def test_equal_digests_refuse_an_unreadable_record_directory(self) -> None:
         self.assert_unreadable_checkpoint_refused("checklist-edits")
 
+
+class FinalCheckpointLinkEvidenceTests(_FinalCheckpointEvidenceCase):
     def test_equal_digests_refuse_a_nonregular_application_record(self) -> None:
         self.record.unlink()
         self.record.mkdir()
@@ -521,6 +533,16 @@ class FinalCheckpointEvidenceTests(_FinalVerifyRoundCase):
                 finally:
                     target.unlink()
                     saved.rename(target)
+
+
+class FinalCheckpointEvidenceTests(
+    FinalCheckpointValidRecordTests,
+    FinalCheckpointMissingEvidenceTests,
+    FinalCheckpointMalformedEvidenceTests,
+    FinalCheckpointUnreadableEvidenceTests,
+    FinalCheckpointLinkEvidenceTests,
+):
+    """Collect the focused evidence cases for the suite and host-parity matrix."""
 
 
 class FinalVerifyRoundRefusalTests(_FinalVerifyRoundCase):
@@ -2705,7 +2727,9 @@ if __name__ == "__main__":
         run_counted(
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                for case in (ProposalTests, ConflictTests, RefusalTests, FinalVerifyRoundTests, FinalVerifyRoundRefusalTests, FinalCheckpointEvidenceTests, WorkflowPathTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
+                for case in (ProposalTests, ConflictTests, RefusalTests, FinalVerifyRoundTests,
+                             FinalVerifyRoundRefusalTests, FinalCheckpointEvidenceTests, WorkflowPathTests,
+                             CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
                              UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests,
                              GateFourHostParityTests, GateFourResourceTests, GateFourCoverageTests,
