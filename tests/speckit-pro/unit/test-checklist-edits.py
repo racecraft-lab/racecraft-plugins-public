@@ -1987,6 +1987,13 @@ class _TasksMutationSupport:
                    "checklists": directories, ".": directories}
         return product(windows, self.task_target_cases(targets))
 
+    def assert_shared_artifact_mutations(self, windows: tuple[str, ...], check: Callable[[str, str, str], None]) -> None:
+        """Reset the checkout and count each shared-artifact mutation as its own observation."""
+        for window, (relative, variant) in self.shared_artifact_mutation_cases(windows):
+            with self.subTest(window=window, target=relative, variant=variant):
+                self.reset_tree()
+                check(window, relative, variant)
+
     def mutate_task_target(self, target: Path, variant: str, forge_receipt: bool = False) -> None:
         if variant in ("add report", "add nested report"):
             parent = target.parent / "nested" if variant == "add nested report" else target.parent
@@ -2333,39 +2340,35 @@ class GateFourNamespaceMutationTests(_GateFourTestSupport, ChecklistEditsCase):
 class GateFourPostValidationTests(_GateFourTestSupport, ChecklistEditsCase):
     def test_tasks_refuses_every_post_g4_validation_mutation(self) -> None:
         windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
-        for window, (relative, variant) in self.shared_artifact_mutation_cases(windows):
-            with self.subTest(window=window, target=relative, variant=variant):
-                self.reset_tree()
-                target = self.feature / relative
-                mutate = partial(self.mutate_task_target, target, variant, True)
-                with self.after_last_validation(relative, mutate, window):
-                    verdict = self.gate()
-                if not verdict["pass"]:
-                    self.assertNotIn("judged", verdict, "unsafe capture must not supply dispatch evidence")
-                    continue
-                judged = verdict["judged"]
-                result = self.tasks_brief(judged)
-                self.assertEqual("input_error", result["status"])
-                self.assertEqual({}, result["data"])
-                self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
 
+        def gate_then_brief(window: str, relative: str, variant: str) -> None:
+            target = self.feature / relative
+            mutate = partial(self.mutate_task_target, target, variant, True)
+            with self.after_last_validation(relative, mutate, window):
+                verdict = self.gate()
+            if not verdict["pass"]:
+                self.assertNotIn("judged", verdict, "unsafe capture must not supply dispatch evidence")
+                return
+            judged = verdict["judged"]
+            result = self.tasks_brief(judged)
+            self.assertEqual("input_error", result["status"])
+            self.assertEqual({}, result["data"])
+            self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
 
-
+        self.assert_shared_artifact_mutations(windows, gate_then_brief)
 
 
 class TasksCheckedBytesTests(_GateFourTestSupport, ChecklistEditsCase):
     def test_tasks_consumes_checked_bytes_after_every_post_check_mutation(self) -> None:
         windows = ("after check", "before consumption")
-        for window, (relative, variant) in self.shared_artifact_mutation_cases(windows):
-            with self.subTest(window=window, target=relative, variant=variant):
-                self.reset_tree()
-                judged = self.gate()["judged"]
-                mutate = partial(self.mutate_task_target, self.feature / relative, variant)
-                brief = self.tasks_brief_after_mutation(judged, mutate, window)
-                self.assert_checked_bytes_consumed(brief, judged)
 
+        def consume_after_mutation(window: str, relative: str, variant: str) -> None:
+            judged = self.gate()["judged"]
+            mutate = partial(self.mutate_task_target, self.feature / relative, variant)
+            brief = self.tasks_brief_after_mutation(judged, mutate, window)
+            self.assert_checked_bytes_consumed(brief, judged)
 
-
+        self.assert_shared_artifact_mutations(windows, consume_after_mutation)
 
 
 class TasksSnapshotMutationTests(_GateFourTestSupport, ChecklistEditsCase):
@@ -2470,26 +2473,24 @@ class TasksSnapshotWriteTests(_GateFourTestSupport, ChecklistEditsCase):
 class TasksRecheckTests(_GateFourTestSupport, ChecklistEditsCase):
     def test_tasks_recheck_windows_bind_the_exact_captured_bytes(self) -> None:
         windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
-        for window, (relative, variant) in self.shared_artifact_mutation_cases(windows):
-            with self.subTest(window=window, target=relative, variant=variant):
-                self.reset_tree()
-                judged = self.gate()["judged"]
-                mutate = partial(self.mutate_task_target, self.feature / relative, variant)
-                with self.after_last_validation(relative, mutate, window):
-                    brief = self.tasks_brief(judged)
-                if brief["status"] != "ok":
-                    self.assertEqual("input_error", brief["status"])
-                    self.assertEqual({}, brief["data"])
-                    continue
-                snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
-                self.addCleanup(shutil.rmtree, snapshot)
-                consumed = self.consume_tasks(brief)
-                self.assertEqual("ok", consumed["status"])
-                self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT},
-                                 consumed["data"]["files"])
 
+        def brief_then_consume(window: str, relative: str, variant: str) -> None:
+            judged = self.gate()["judged"]
+            mutate = partial(self.mutate_task_target, self.feature / relative, variant)
+            with self.after_last_validation(relative, mutate, window):
+                brief = self.tasks_brief(judged)
+            if brief["status"] != "ok":
+                self.assertEqual("input_error", brief["status"])
+                self.assertEqual({}, brief["data"])
+                return
+            snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+            self.addCleanup(shutil.rmtree, snapshot)
+            consumed = self.consume_tasks(brief)
+            self.assertEqual("ok", consumed["status"])
+            self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT},
+                             consumed["data"]["files"])
 
-
+        self.assert_shared_artifact_mutations(windows, brief_then_consume)
 
 
 class GateFourDiagnosticTests(_GateFourTestSupport, ChecklistEditsCase):
