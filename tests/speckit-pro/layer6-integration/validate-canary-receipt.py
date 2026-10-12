@@ -181,6 +181,7 @@ def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
     """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
     problems, value = receipt_snapshot(value)
     if not problems:
+        # The schema owns run mode and base plan-segment root-load requirements for both hosts.
         schema = json_schema_failures(value, SCHEMA, SCHEMA, "receipt")
         problems = [f"receipt.schema: {len(schema)}"] if schema else variant_identity_failures(value)
     if problems:
@@ -268,6 +269,32 @@ def gate_failures(variant, failures):
     return [failure for failure in failures if failure not in expected]
 
 
+def root_context_consistent(load):
+    """Bound the summary by its call count, preserving rounded fractional averages."""
+    calls, average, peak = (load[key] for key in (
+        "root_calls", "root_context_avg_tokens", "root_context_peak_tokens"))
+    if calls == 1 or average == 0:
+        return average == peak
+    if isinstance(average, int):
+        return average <= peak <= calls * average
+    try:
+        return peak / calls <= average <= peak
+    except OverflowError:
+        # A finite float average cannot describe a lower bound above float range.
+        return False
+
+
+def root_load_failures(variant):
+    """Check every supplied plan summary and attribute independently known root usage."""
+    plan = variant["stages"]["plan"]
+    segments = plan.get("segments", {})
+    failures = [f"{variant['name']}.plan.segments.{name}.root_context"
+                for name, load in segments.items() if not root_context_consistent(load)]
+    if segments and not any(load["root_calls"] for load in segments.values()) and plan.get("codex_tokens", {}).get("root_tokens", 0):
+        failures.append(f"{variant['name']}.plan.segments.root_calls")
+    return failures
+
+
 def variant_failures(variant):
     failures = []
     conditions = {
@@ -307,7 +334,7 @@ def variant_failures(variant):
     for key, passed in conditions.items():
         if not passed:
             failures.append(f"{variant['name']}.{key}")
-    return failures + stage_failures(variant)
+    return failures + stage_failures(variant) + root_load_failures(variant)
 
 
 def stage_failures(variant):
