@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 from typing import Any
@@ -81,12 +82,11 @@ def envelope_failures(value: Any) -> list[dict[str, Any]]:
 def directory_has_entries(path: Path, root: Path) -> bool:
     """List through the held descriptor, so a swapped path cannot redirect the listing."""
     fd = trusted_open_directory(path, root)
-    if fd is None:
-        return False
-    try:
+    with ExitStack() as stack:
+        if fd is None:
+            return False
+        stack.callback(os.close, fd)
         return bool(os.listdir(fd))
-    finally:
-        os.close(fd)
 
 
 def check_artifacts(envelope: dict[str, Any], root: Path) -> None:
