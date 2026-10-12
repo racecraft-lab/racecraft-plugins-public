@@ -170,6 +170,7 @@
         { "path": "tests/speckit-pro/unit/test-parity-runner.py", "label": "test-parity-runner" },
         { "path": "tests/speckit-pro/unit/test-performance-fixtures.py", "label": "test-performance-fixtures" },
         { "path": "tests/speckit-pro/unit/test-phase-brief.py", "label": "test-phase-brief" },
+        { "path": "tests/speckit-pro/unit/test-compact-answers.py", "label": "test-compact-answers" },
         { "path": "tests/speckit-pro/unit/test-phase-lock.py", "label": "test-phase-lock" },
         { "path": "tests/speckit-pro/unit/test-phase7-task-partition.py", "label": "test-phase7-task-partition" },
         { "path": "tests/speckit-pro/unit/test-plain-ci-entry-points.py", "label": "test-plain-ci-entry-points" },

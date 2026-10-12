@@ -18,7 +18,11 @@ effort: high
 For runner helper calls, use the orchestrator-provided absolute launcher argv
 `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` in the bound
 workflow worktree. Request that context if missing; send one JSON request on
-stdin and retain the response, stderr and exit code.
+stdin and retain the response, stderr and exit code. Set `"answer_format":
+"detailed"` for phase-local artifact consumers. Keep artifact inspection and
+runner-source investigation in this phase context; return decisions and paths
+to the parent. For a requested autonomy preflight inventory, return the planned
+action descriptors from the bound inputs without executing those actions.
 
 You receive a workflow
 <!-- host:claude: Claude runs a slash command in its own context and delegates with a subagent -->

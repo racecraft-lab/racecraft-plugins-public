@@ -19,7 +19,7 @@ from . import (
     SELECTED_RUNTIME_NAME,
     SOURCE_CONTEXT,
 )
-from .envelope import diagnostic, response
+from .envelope import answer_response, diagnostic, response
 from .path_utils import parse_version_tuple, sha256_file
 
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
@@ -37,14 +37,14 @@ def handle_request(request: Any) -> dict[str, Any]:
         # Gate helper ids are registry-driven so US2 operations stay on the
         # same runner envelope without widening the base runner operation list.
         if is_gate_helper_id(request.helper_id):
-            return dispatch_gate(request)
+            return answer_response(request, dispatch_gate(request))
 
         from .helpers.registry import dispatch_helper
 
-        return dispatch_helper(request)
+        return answer_response(request, dispatch_helper(request))
     retired_inputs = sorted({"fixture_category", "test_overrides"} & request.inputs.keys())
     if retired_inputs:
-        return response(
+        body = response(
             "input_error",
             request_id=request.request_id,
             diagnostics=[
@@ -57,15 +57,17 @@ def handle_request(request: Any) -> dict[str, Any]:
                 )
             ],
         )
+        return answer_response(request, body)
     if request.operation == "runtime-info":
-        return runtime_info(request.request_id, request.inputs)
+        return answer_response(request, runtime_info(request.request_id, request.inputs))
     if request.operation == "preflight":
-        return preflight(request.request_id, request.inputs)
-    return response(
+        return answer_response(request, preflight(request.request_id, request.inputs))
+    body = response(
         "input_error",
         request_id=request.request_id,
         diagnostics=[diagnostic("invalid_envelope", "unsupported runner operation")],
     )
+    return answer_response(request, body)
 
 
 def runtime_info(request_id: str | None, _inputs: dict[str, Any]) -> dict[str, Any]:
