@@ -59,7 +59,7 @@ CONFIDENCE_GATE_RUNBOOKS = (
 import runner_invocation  # noqa: E402
 from runner_invocation import assert_runner_response, command_stdin_fixture  # noqa: E402
 
-from speckit_pro_runner.helpers import registry  # noqa: E402
+from speckit_pro_runner.helpers import readiness_record, registry  # noqa: E402
 from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
@@ -5539,23 +5539,32 @@ class CanaryFeatureOfferTests(CanaryVariantCase):
         del value["variants"][0]["feature_offers"]
         self.assertTrue(self.validator.validate_receipt(value))
 
-    def recorded_offers(self, offer_answers):
+    def recorded_offers(self, offer_answers, host="claude", after_offer=None):
         """The `feature_offers` a scaffold run leaves in the readiness record, as the canary copies them."""
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
             (root / ".specify").mkdir()
             tools = root / "no-tools"
             tools.mkdir()
+            checker = root / "checker.json"
+            checker.write_text("old input", encoding="utf-8")
             written = runner_invocation.run_runner(readiness_request([{"item": "formal_methods", "status": "unavailable", "evidence_source": "formal methods probe",
-                                                     "action": "Install a checker, then rerun scaffold."}], mode="apply"), cwd=root,
+                                                     "action": "Install a checker, then rerun scaffold.", "files": [checker.name]}], host=host, mode="apply"), cwd=root,
                                                    extra_env={"PATH": str(tools)})[1]
             self.assertEqual("ok", written["status"])
             if offer_answers is not None:
-                offered = runner_invocation.run_runner(feature_offers_request(offer_answers), cwd=root)[1]
+                offered = runner_invocation.run_runner(feature_offers_request(offer_answers, host,
+                                                       readiness_digest=written["data"]["readiness_digest"]), cwd=root)[1]
                 self.assertEqual("ok", offered["status"])
-            record = json.loads((root / ".specify/readiness/claude.json").read_text(encoding="utf-8"))
+            if after_offer == "changed_file":
+                checker.write_text("changed input", encoding="utf-8")
+            elif after_offer == "failed_evaluation":
+                failed = runner_invocation.run_runner(readiness_request([{"item": "formal_methods", "status": "unknown",
+                                                       "evidence_source": "bad\ninput", "action": "Retry."}], host=host), cwd=root)[1]
+                self.assertEqual("input_error", failed["status"])
+            offers = readiness_record.feature_offers(root, host)
         return {feature: {key: offer[key] for key in ("evaluated", "offered", "answer")}
-                for feature, offer in record["feature_offers"].items()}
+                for feature, offer in offers.items()}
 
     def test_a_scaffold_run_that_skips_the_offer_fails_the_receipt_and_a_declined_offer_passes(self):
         value = receipt()
@@ -5563,6 +5572,13 @@ class CanaryFeatureOfferTests(CanaryVariantCase):
         self.assertEqual(["base.feature_offers"], self.validator.validate_receipt(value))
         value["variants"][0]["feature_offers"] = self.recorded_offers(dict.fromkeys(("formal_methods", "verification_docker"), "declined"))
         self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_stale_or_failed_evaluations_cannot_pass_canary_offer_coverage_on_either_host(self):
+        for host, variant in itertools.product(("claude", "codex"), ("changed_file", "failed_evaluation")):
+            with self.subTest(host=host, variant=variant):
+                value = receipt()
+                value["variants"][0]["feature_offers"] = self.recorded_offers(dict.fromkeys(("formal_methods", "verification_docker"), "accepted"), host, variant)
+                self.assertEqual(["base.feature_offers"], self.validator.validate_receipt(value))
 
 
 class CanaryVariantAssertionsTests(CanaryVariantCase):

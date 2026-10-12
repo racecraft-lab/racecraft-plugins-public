@@ -25,11 +25,13 @@ def readiness_request(observations: list[dict[str, object]], host: str = "claude
             "operation": "write-readiness-record", "mode": mode, "inputs": body}
 
 
-def feature_offers_request(answers: dict[str, str], host: str = "claude", mode: str = "apply") -> dict[str, object]:
+def feature_offers_request(answers: dict[str, str], host: str = "claude", mode: str = "apply",
+                           readiness_digest: str | None = None) -> dict[str, object]:
     """The step 6.6 request: the answers scaffold collected for the two feature offers."""
     request = readiness_request([], host, "test-feature-offers", mode)
+    evidence = {} if readiness_digest is None else {"readiness_digest": readiness_digest}
     return {**request, "helper_id": "record-feature-offers", "operation": "record-feature-offers",
-            "inputs": {"host": host, "answers": answers}}
+            "inputs": {"host": host, "answers": answers, **evidence}}
 
 
 def scaffold_step(host: str) -> str:

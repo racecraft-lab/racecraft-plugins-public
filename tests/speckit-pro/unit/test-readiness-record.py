@@ -16,6 +16,7 @@ import tempfile
 import unittest
 import unittest.mock
 from pathlib import Path
+from types import SimpleNamespace
 
 TEST_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TEST_DIR.parents[2]
@@ -23,6 +24,7 @@ LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
+from speckit_pro_runner import atomic_write  # noqa: E402
 from speckit_pro_runner.helpers import readiness_record  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 from readiness_case import current_plugin_revision, feature_offers_request, readiness_request  # noqa: E402
@@ -2075,13 +2077,14 @@ FEATURES = ("formal_methods", "verification_docker")
 NOT_OFFERED = {"offered": False, "answer": "declined"}
 
 
-class FeatureOffersTest(unittest.TestCase):
+class FeatureOfferCase(unittest.TestCase):
     """Step 6.6 (ADR 0005): the runner records, per feature, that it was evaluated, offered and answered."""
 
     def setUp(self) -> None:
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         self.root.joinpath(".specify").mkdir()
         self.tools = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.readiness_digests = {}
         self.enterContext(unittest.mock.patch.object(readiness_record.cli_probe, "probe",
                                                      return_value={"exit_status": 0, "stdout_tail": "2.1.0"}))
 
@@ -2092,14 +2095,19 @@ class FeatureOffersTest(unittest.TestCase):
         body = request(observations or [observation("formal_methods", "unavailable")], host=host)
         _, response, _ = run_runner(body, cwd=self.root, extra_env={"PATH": str(self.tools)})
         assert_runner_response(self, response, "ok", 0)
+        self.readiness_digests[host] = response["data"].get("readiness_digest")
         return response
 
     def offer(self, answers: dict[str, str], host: str = "claude", mode: str = "apply") -> dict:
-        _, response, _ = run_runner(feature_offers_request(answers, host, mode), cwd=self.root)
+        _, response, _ = run_runner(feature_offers_request(answers, host, mode, self.readiness_digests.get(host)), cwd=self.root)
         return response
 
     def read_offers(self, host: str = "claude") -> dict:
         return readiness_record.feature_offers(self.root, host)
+
+
+class FeatureOffersTest(FeatureOfferCase):
+    """The feature-offer helper and record contract."""
 
     def test_a_scaffold_run_that_skips_the_offer_leaves_both_features_not_offered(self) -> None:
         response = self.write_record()
@@ -2113,11 +2121,11 @@ class FeatureOffersTest(unittest.TestCase):
         self.assertEqual({**NOT_OFFERED, "evaluated": False}, offers["formal_methods"])
 
     def test_each_answer_is_recorded_as_offered_and_a_decline_stays_offered(self) -> None:
-        self.write_record()
         for host_answers in ({"formal_methods": "declined", "verification_docker": "declined"},
                              {"formal_methods": "accepted", "verification_docker": "declined"},
                              {"formal_methods": "declined", "verification_docker": "accepted"}):
             with self.subTest(answers=host_answers):
+                self.write_record()
                 assert_runner_response(self, self.offer(host_answers), "ok", 0)
                 offers = self.read_offers()
                 for feature, answer in host_answers.items():
@@ -2142,7 +2150,7 @@ class FeatureOffersTest(unittest.TestCase):
     def test_a_missing_or_unreadable_record_reads_as_not_offered_and_takes_no_offer(self) -> None:
         unoffered = {feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}
         self.assertEqual(unoffered, self.read_offers())
-        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "declined")), "missing_prerequisite", 3)
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "declined")), "input_error", 2)
         self.assertFalse(self.record_path().exists())
         self.write_record()
         self.record_path().write_text("{", encoding="utf-8")
@@ -2217,18 +2225,333 @@ class FeatureOffersTest(unittest.TestCase):
                 rows = re.findall(r"\| `record-feature-offers` \| `apply` \| `(\{[^`]*\})`", skill)
                 self.assertEqual(1, len(rows))
                 documented = json.loads(rows[0])
-                self.assertEqual({"host", "answers"}, set(documented))
+                self.assertEqual({"host", "answers", "readiness_digest"}, set(documented))
                 step = skill.split("### 6.6 Offer Formal Methods", 1)[1].split("\n### ", 1)[0]
                 self.assertIn("`record-feature-offers`", step)
                 self.assertIn(f"`host` to `{host}`", step)
-                replay = {**feature_offers_request(dict.fromkeys(FEATURES, "declined"), host), "mode": "dry_run"}
                 self.write_record(host)
+                replay = feature_offers_request(dict.fromkeys(FEATURES, "declined"), host, "dry_run", self.readiness_digests[host])
                 assert_runner_response(self, run_runner(replay, cwd=self.root)[1], "ok", 0)
+
+
+class FeatureOfferEvidenceTest(FeatureOfferCase):
+    """Current-evaluation binding and guarded publication on both hosts."""
+
+    def offer_in_process(self, host: str) -> dict:
+        body = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host,
+                                      readiness_digest=self.readiness_digests.get(host))
+        with unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root):
+            return readiness_record.run_feature_offers_helper(SimpleNamespace(**body), SimpleNamespace(**body))
+
+    def test_failed_step_6_5_cannot_offer_an_older_same_revision_record(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                old = self.write_record(host)
+                failed = run_runner(request([observation("formal_methods", "unavailable",
+                                                         evidence_source="bad\nobservation")], host=host),
+                                    cwd=self.root, extra_env={"PATH": str(self.tools)})[1]
+                assert_runner_response(self, failed, "input_error", 2)
+                legacy = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host,
+                                                readiness_digest=old["data"].get("readiness_digest"))
+                offered = run_runner(legacy, cwd=self.root)[1]
+                self.assertNotEqual("ok", offered["status"])
+                self.assertTrue(failed["data"]["writes_state"])
+                self.assertEqual(old["data"]["record"]["items"], json.loads(self.record_path(host).read_bytes())["items"])
+                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
+                reconstructed = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host,
+                                                       readiness_digest=readiness_record.digest(self.record_path(host).read_bytes()))
+                self.assertNotEqual("ok", run_runner(reconstructed, cwd=self.root)[1]["status"])
+
+    def test_changed_file_fingerprints_cannot_supply_evaluated_offers(self) -> None:
+        source = self.root / "checker.json"
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                source.write_text("old input", encoding="utf-8")
+                observations = [observation("formal_methods", "unavailable", files=[source.name])]
+                self.write_record(host, observations)
+                before = self.record_path(host).read_bytes()
+                source.write_text("changed input", encoding="utf-8")
+                self.assertNotEqual("ok", self.offer(dict.fromkeys(FEATURES, "accepted"), host)["status"])
+                self.assertEqual(before, self.record_path(host).read_bytes())
+                self.assertTrue(all(not offer["offered"] for offer in self.read_offers(host).values()))
+
+    def test_file_inputs_changed_between_offer_validation_and_publication_are_refused(self) -> None:
+        real_write = readiness_record.write_record
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                source = self.root / "checker.json"
+                source.write_text("old input", encoding="utf-8")
+                self.write_record(host, [observation("formal_methods", "unavailable", files=[source.name])])
+                before = self.record_path(host).read_bytes()
+                reached = []
+
+                def change_input(root, record, **kwargs):
+                    source.write_text("changed input", encoding="utf-8")
+                    reached.append(record["host"])
+                    return real_write(root, record, **kwargs)
+
+                with unittest.mock.patch.object(readiness_record, "write_record", side_effect=change_input):
+                    reply = self.offer_in_process(host)
+                self.assertEqual([host], reached)
+                assert_runner_response(self, reply, "expected_failure", 1)
+                self.assertEqual("write_failure", reply["diagnostics"][0]["code"])
+                self.assertEqual(before, self.record_path(host).read_bytes())
+                self.assertTrue(all(not offer["offered"] for offer in self.read_offers(host).values()))
+
+    def test_file_input_change_after_the_atomic_write_reports_unconfirmed_publication(self) -> None:
+        real_write = readiness_record.write_bytes_atomic
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                source = self.root / "checker.json"
+                source.write_text("old input", encoding="utf-8")
+                self.write_record(host, [observation("formal_methods", "unavailable", files=[source.name])])
+                reached = []
+
+                def change_after_write(target, content, **kwargs):
+                    result = real_write(target, content, **kwargs)
+                    if target.name == f"{host}.json":
+                        source.write_text("changed input", encoding="utf-8")
+                        reached.append(result["digest"])
+                    return result
+
+                with unittest.mock.patch.object(readiness_record, "write_bytes_atomic", side_effect=change_after_write):
+                    reply = self.offer_in_process(host)
+                assert_runner_response(self, reply, "expected_failure", 1)
+                self.assertEqual([readiness_record.digest(self.record_path(host).read_bytes()).removeprefix("sha256:")], reached)
+                self.assertTrue(reply["data"]["writes_state"])
+                self.assertEqual("write_failure", reply["diagnostics"][0]["code"])
+                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
+
+    def test_failed_evaluation_retirement_preserves_a_racing_fresh_record(self) -> None:
+        real_write = readiness_record.write_bytes_atomic
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.write_record(host)
+                fresh = {}
+
+                def race_retirement(target, content, **kwargs):
+                    if target.name == f"{host}.json" and not fresh:
+                        fresh.update(self.write_record(host, [observation("formal_methods", "unknown")]))
+                    return real_write(target, content, **kwargs)
+
+                body = request([observation("formal_methods", "unavailable", evidence_source="bad\ninput")], host=host)
+                with unittest.mock.patch.object(readiness_record, "write_bytes_atomic", side_effect=race_retirement), \
+                        unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root):
+                    reply = readiness_record.run_readiness_record_helper(SimpleNamespace(**body), SimpleNamespace(**body))
+                assert_runner_response(self, reply, "expected_failure", 1)
+                self.assertEqual("write_failure", reply["diagnostics"][0]["code"])
+                self.assertNotIn("readiness_digest", reply["data"])
+                self.assertEqual(fresh["data"]["record"], json.loads(self.record_path(host).read_bytes()))
+
+    def test_unavailable_checked_swap_refuses_retirement_and_offer_without_fallback(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                old = self.write_record(host)
+                before = self.record_path(host).read_bytes()
+                body = request([observation("formal_methods", "unavailable")], host=host)
+                with unittest.mock.patch.object(atomic_write, "swap_entries", return_value=False), \
+                        unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root):
+                    failed = readiness_record.run_readiness_record_helper(SimpleNamespace(**body), SimpleNamespace(**body))
+                    offered = self.offer_in_process(host)
+                assert_runner_response(self, failed, "expected_failure", 1)
+                assert_runner_response(self, offered, "expected_failure", 1)
+                self.assertNotIn("readiness_digest", failed["data"])
+                self.assertFalse(failed["data"]["writes_state"])
+                self.assertEqual(before, self.record_path(host).read_bytes())
+                self.assertEqual(old["data"]["record"]["items"], json.loads(before)["items"])
+                self.assertTrue(all(not offer["offered"] for offer in self.read_offers(host).values()))
+
+    def test_reader_refuses_offers_when_a_file_changes_after_publication(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                source = self.root / "checker.json"
+                source.write_text("old input", encoding="utf-8")
+                self.write_record(host, [observation("formal_methods", "unavailable", files=[source.name])])
+                assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted"), host), "ok", 0)
+                source.write_text("changed input", encoding="utf-8")
+                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
+
+    def test_old_runtime_observations_cannot_be_offered_after_a_new_evaluation(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                old = self.write_record(host)
+                self.write_record(host, [observation("formal_methods", "unknown")])
+                before = self.record_path(host).read_bytes()
+                body = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host,
+                                              readiness_digest=old["data"].get("readiness_digest"))
+                self.assertNotEqual("ok", run_runner(body, cwd=self.root)[1]["status"])
+                self.assertEqual(before, self.record_path(host).read_bytes())
+
+    def test_unverifiable_file_fingerprints_cannot_authorize_offer_evidence(self) -> None:
+        for host, variant in itertools.product(("claude", "codex"), ("unreadable", "byte_bound", "file_bound")):
+            with self.subTest(host=host, variant=variant):
+                prefix = f"{host}-{variant}"
+                source = self.root / f"{prefix}.dat"
+                if variant == "unreadable":
+                    target = self.root / f"{prefix}-target.dat"
+                    target.write_text("probe input", encoding="utf-8")
+                    source.symlink_to(target)
+                    files = [source.name]
+                elif variant == "byte_bound":
+                    source.write_bytes(b"x" * (readiness_record.FINGERPRINT_LIMIT_BYTES + 1))
+                    files = [source.name]
+                else:
+                    files = [f"{prefix}-{n}.dat" for n in range(readiness_record.MAX_FINGERPRINT_FILES + 1)]
+                    for name in files:
+                        (self.root / name).write_text("probe input", encoding="utf-8")
+                self.write_record(host, [observation("formal_methods", "unavailable", files=files)])
+                before = self.record_path(host).read_bytes()
+                assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted"), host), "missing_prerequisite", 3)
+                self.assertEqual(before, self.record_path(host).read_bytes())
+                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
+
+    def test_a_fresh_step_6_5_write_between_offer_read_and_write_is_preserved(self) -> None:
+        real_write = readiness_record.write_record
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.write_record(host)
+                fresh = {}
+
+                def publish_fresh(root, record, **kwargs):
+                    fresh.update(self.write_record(host, [observation("formal_methods", "unknown")]))
+                    return real_write(root, record, **kwargs)
+
+                with unittest.mock.patch.object(readiness_record, "write_record", side_effect=publish_fresh):
+                    reply = self.offer_in_process(host)
+                self.assertNotEqual("ok", reply["status"])
+                self.assertFalse(reply["data"]["writes_state"])
+                self.assertEqual(fresh["data"]["record"], json.loads(self.record_path(host).read_bytes()))
+
+    def test_identical_evaluations_have_distinct_receipts_and_old_receipts_are_refused(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                body = request([observation("formal_methods", "unavailable")], host=host)
+                with unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root), \
+                        unittest.mock.patch.object(readiness_record, "now", return_value="2026-01-01T00:00:00Z"), \
+                        unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
+                    old = readiness_record.run_readiness_record_helper(SimpleNamespace(**body), SimpleNamespace(**body))
+                    new = readiness_record.run_readiness_record_helper(SimpleNamespace(**body), SimpleNamespace(**body))
+                assert_runner_response(self, old, "ok", 0)
+                assert_runner_response(self, new, "ok", 0)
+                self.assertNotEqual(old["data"].get("readiness_digest"), new["data"].get("readiness_digest"))
+                self.readiness_digests[host] = old["data"].get("readiness_digest")
+                self.assertNotEqual("ok", self.offer(dict.fromkeys(FEATURES, "accepted"), host)["status"])
+                self.assertEqual(new["data"]["record"], json.loads(self.record_path(host).read_bytes()))
+
+    def test_a_fresh_evaluation_at_the_atomic_swap_boundary_is_preserved(self) -> None:
+        real_swap = atomic_write.swap_entries
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.write_record(host)
+                fresh = {}
+
+                def race_swap(directory_fd, first, second):
+                    if second == f"{host}.json" and not fresh:
+                        fresh.update(self.write_record(host, [observation("formal_methods", "unknown")]))
+                    return real_swap(directory_fd, first, second)
+
+                with unittest.mock.patch.object(atomic_write, "swap_entries", side_effect=race_swap):
+                    reply = self.offer_in_process(host)
+                self.assertNotEqual("ok", reply["status"])
+                self.assertFalse(reply["data"]["writes_state"])
+                self.assertEqual(fresh["data"]["record"], json.loads(self.record_path(host).read_bytes()))
+
+    def test_a_competing_offer_write_is_preserved(self) -> None:
+        real_write = readiness_record.write_record
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.write_record(host)
+                competing = {}
+
+                def publish_competitor(root, record, **kwargs):
+                    competing.update(json.loads(self.record_path(host).read_bytes()))
+                    competing["feature_offers"] = {feature: {"evaluated": True, "offered": True, "answer": "declined"}
+                                                    for feature in FEATURES}
+                    real_write(root, competing)
+                    return real_write(root, record, **kwargs)
+
+                with unittest.mock.patch.object(readiness_record, "write_record", side_effect=publish_competitor):
+                    reply = self.offer_in_process(host)
+                self.assertNotEqual("ok", reply["status"])
+                self.assertEqual(competing, json.loads(self.record_path(host).read_bytes()))
+
+    def test_record_link_and_rename_substitutions_are_refused(self) -> None:
+        real_write = readiness_record.write_record
+        for host, variant in itertools.product(("claude", "codex"), ("inode", "hardlink", "symlink", "directory")):
+            with self.subTest(host=host, variant=variant):
+                self.write_record(host)
+                path = self.record_path(host)
+                before = path.read_bytes()
+                displaced = self.root / f"displaced-record-{host}-{variant}"
+                displaced_directory = self.root / f"displaced-directory-{host}-{variant}"
+
+                def substitute(root, record, **kwargs):
+                    if variant == "directory":
+                        path.parent.rename(displaced_directory)
+                        path.parent.mkdir()
+                        (displaced_directory / path.name).rename(path)
+                    else:
+                        path.rename(displaced)
+                        if variant == "inode":
+                            path.write_bytes(before)
+                            path.chmod(0o600)
+                        elif variant == "hardlink":
+                            os.link(displaced, path)
+                        else:
+                            path.symlink_to(displaced)
+                    return real_write(root, record, **kwargs)
+
+                with unittest.mock.patch.object(readiness_record, "write_record", side_effect=substitute):
+                    reply = self.offer_in_process(host)
+                self.assertNotEqual("ok", reply["status"])
+                self.assertEqual(before, path.read_bytes())
+                if path.is_symlink() or variant == "hardlink":
+                    path.unlink()
+                if displaced.exists():
+                    displaced.unlink()
+                if variant == "directory":
+                    shutil.rmtree(displaced_directory)
+
+    def test_invalid_or_dry_run_receipts_supply_no_offer_evidence(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.write_record(host)
+                before = self.record_path(host).read_bytes()
+                for receipt in (None, "", "sha256:" + "0" * 64, True, [], {}):
+                    with self.subTest(receipt=receipt):
+                        body = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host)
+                        body["inputs"]["readiness_digest"] = receipt
+                        self.assertNotEqual("ok", run_runner(body, cwd=self.root)[1]["status"])
+                        self.assertEqual(before, self.record_path(host).read_bytes())
+                dry = run_runner(request([], host=host, mode="dry_run"), cwd=self.root,
+                                 extra_env={"PATH": str(self.tools)})[1]
+                self.assertNotIn("readiness_digest", dry["data"])
+
+    def test_unusable_records_refuse_offers_and_read_fail_closed_on_both_hosts(self) -> None:
+        for host, variant in itertools.product(("claude", "codex"),
+                                              ("missing", "unreadable", "host", "worktree", "revision")):
+            with self.subTest(host=host, variant=variant):
+                self.write_record(host)
+                path = self.record_path(host)
+                record = json.loads(path.read_bytes())
+                if variant == "missing":
+                    path.unlink()
+                elif variant == "unreadable":
+                    path.write_text("{", encoding="utf-8")
+                else:
+                    replacement = {"host": ("codex" if host == "claude" else "claude"),
+                                   "worktree": {"worktree": "sha256:" + "0" * 64}, "revision": "0.0.0"}
+                    record["binding" if variant == "worktree" else "plugin_revision" if variant == "revision" else variant] = replacement[variant]
+                    path.write_text(json.dumps(record), encoding="utf-8")
+                before = path.read_bytes() if path.exists() else None
+                self.assertNotEqual("ok", self.offer(dict.fromkeys(FEATURES, "accepted"), host)["status"])
+                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
+                self.assertEqual(before, path.read_bytes() if path.exists() else None)
 
 
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    cases = (ReadinessRecordTest, FeatureOffersTest, TerminalPreviewEvidenceTest, PreviewEvidenceBoundaryTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
+    cases = (ReadinessRecordTest, FeatureOffersTest, FeatureOfferEvidenceTest, TerminalPreviewEvidenceTest, PreviewEvidenceBoundaryTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
              G0RecordValidationTests, G0PreviewEvidenceTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests, G0WorkflowPathTests)
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 

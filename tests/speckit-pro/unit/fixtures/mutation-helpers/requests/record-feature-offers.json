@@ -6,6 +6,7 @@
   "mode": "dry_run",
   "inputs": {
     "host": "claude",
+    "readiness_digest": null,
     "answers": {"formal_methods": "declined", "verification_docker": "declined"}
   }
 }

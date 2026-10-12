@@ -123,7 +123,7 @@ What a runner helper returns to the root thread: a status and the next action, u
 _Avoid_: helper output, summary
 
 **Feature offer**:
-Scaffold's step-6.6 offer of formal methods and verification Docker (ADR 0005). A runner helper records in the readiness record, per feature, that it was evaluated, that it was offered and the answer; a decline still counts as offered. A missing or unreadable record reads as not offered, and the canary receipt copies the record.
+Scaffold's step-6.6 offer of formal methods and verification Docker (ADR 0005). A runner helper records in the readiness record, per feature, that it was evaluated, that it was offered and the answer; a decline still counts as offered. Offers require the current successful readiness write's digest and unchanged file inputs, and cannot overwrite a newer record. A missing or unreadable record reads as not offered, and the canary receipt copies the record.
 _Avoid_: opt-in prompt, feature flag
 
 **Preview surface**:
@@ -143,7 +143,7 @@ The repository's user-confirmed limits that the complexity, mutation and depende
 _Avoid_: gate config, quality settings
 
 **Readiness record**:
-Scaffold's snapshot of a project's preparation for a particular host. Autopilot reads that snapshot; new run observations belong to the decisions list and run state. It also holds the feature offers.
+Scaffold's snapshot of a project's preparation for a particular host. Autopilot reads that snapshot; new run observations belong to the decisions list and run state. It also holds the feature offers. Each evaluation has a runner-generated `evaluation_id`, so identical observations from separate evaluations still have distinct digests. An apply attempt naming a supported host retires previous evidence with a null `evaluation_id` before evaluating new inputs, preserving observations but supplying no readiness or offer evidence. If safe retirement is unavailable, the attempt is refused. Only a successful applied write returns `readiness_digest` for the next feature-offer request.
 _Avoid_: preflight approval, readiness certificate
 
 **Retry ladder**:
