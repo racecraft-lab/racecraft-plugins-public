@@ -11,7 +11,9 @@ exceed 2,048 UTF-8 bytes; an envelope over the cap fails before any other check.
 
 The helper never trusts a claim. It checks, in order, and returns the first
 mismatch: the contract, every artifact path (repository-relative, present,
-non-empty, no links out), that the phase's own gate is claimed, every claimed
+non-empty, no links out; a directory must hold an entry), that the phase's own gate is claimed, that every file a claimed gate reads
+(its sources, plus the workflow for G6) is present, non-empty and valid UTF-8
+whatever the driver listed, every claimed
 gate re-run through `validate-gate` against the files on disk, that a `pass`
 status carries no failed gate, that the driver did not report a failure, and
 that the `markers` and `task_count` counts equal what the gate reports. A gate

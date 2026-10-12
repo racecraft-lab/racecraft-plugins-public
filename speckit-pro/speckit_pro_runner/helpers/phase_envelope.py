@@ -23,6 +23,10 @@ SCHEMA_VERSION = "phase-envelope/v1"
 ENVELOPE_LIMIT_BYTES = 2048
 # Gate fields a driver may restate as counts; each must equal what the gate reports on disk.
 VERIFIED_COUNTS = ("markers", "task_count")
+# Files each gate reads. validate-gate counts an absent or undecodable file as zero markers, so the runner
+# insists the sources are present, non-empty and valid UTF-8 before it trusts a verdict. G6 also reads the workflow.
+GATE_SOURCES = {"G1": ("spec.md",), "G2": ("spec.md",), "G3": ("plan.md",), "G4": ("spec.md", "plan.md"),
+                "G5": ("tasks.md",), "G6": ("spec.md", "plan.md", "tasks.md"), "G7": ("tasks.md",)}
 GATE_IDS = [f"G{number}" for number in range(1, 8)]
 COUNTER = {"type": "integer", "minimum": 0}
 
@@ -82,8 +86,24 @@ def check_artifacts(envelope: dict[str, Any], root: Path) -> None:
             raise Mismatch("artifact_path_invalid", str(exc)) from exc
         resolved = resolve_input_path(path, root)
         # Absolute paths and links that leave the repository read back as None here.
-        if not trusted_dir_exists(resolved, root) and not trusted_bytes(resolved, root):
+        if trusted_dir_exists(resolved, root):
+            if not any(resolved.iterdir()):
+                raise Mismatch("artifact_missing", f"{path} is an empty directory")
+        elif not trusted_bytes(resolved, root):
             raise Mismatch("artifact_missing", f"{path} is missing, empty or unreadable")
+
+
+def check_gate_sources(gate: str, workflow: str, feature: str, root: Path) -> None:
+    """Fail unless every file the gate reads is present, non-empty and strict UTF-8."""
+    names = [f"{feature}/{name}" for name in GATE_SOURCES[gate]] + ([workflow] if gate == "G6" else [])
+    for name in names:
+        data = trusted_bytes(resolve_input_path(name, root), root)
+        if not data:
+            raise Mismatch("gate_evidence_missing", f"{gate} reads {name}, which is missing, empty or unreadable")
+        try:
+            data.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise Mismatch("gate_evidence_unparseable", f"{gate} reads {name}, which is not valid UTF-8") from exc
 
 
 def disk_gate(gate: str, workflow: str, feature: str, root: Path) -> dict[str, Any]:
@@ -103,6 +123,8 @@ def check_gates(envelope: dict[str, Any], workflow: str, feature: str, root: Pat
     phase_gate = PHASES[envelope["phase"]][1]
     if phase_gate not in claimed:
         raise Mismatch("phase_gate_missing", f"{envelope['phase']} must report {phase_gate}")
+    for gate in claimed:
+        check_gate_sources(gate, workflow, feature, root)
     verdicts = {gate: disk_gate(gate, workflow, feature, root) for gate in claimed}
     for gate, verdict in verdicts.items():
         observed = "pass" if verdict["pass"] else "fail"
@@ -142,7 +164,7 @@ def run_phase_envelope_helper(entry: Any, request: Any) -> dict[str, Any]:
 
     pass: status ok, data {verdict: "pass", phase, next_action}.
     mismatch: status expected_failure, data {verdict: "fail", mismatch: {code, detail}} with code one of
-        envelope_invalid, artifact_path_invalid, artifact_missing, phase_gate_missing, gate_evidence_unparseable,
+        envelope_invalid, artifact_path_invalid, artifact_missing, phase_gate_missing, gate_evidence_missing, gate_evidence_unparseable,
         gate_claim_mismatch, status_contradicts_gates, phase_not_passed, count_mismatch.
     Malformed request inputs are an input_error; an envelope that breaks the contract fails the phase instead.
     """

@@ -39,8 +39,10 @@ def good_envelope(**fields):
 @contextmanager
 def project(spec_text="# Spec\n\nNo open questions.\n"):
     """A throwaway Spec Kit project, so verification never reads this repository's own specs."""
+    # The project sits inside an owned outer directory, so a test can place an outside file next to it safely.
     with tempfile.TemporaryDirectory() as directory:
-        root = Path(directory).resolve()
+        root = Path(directory).resolve() / "project"
+        root.mkdir()
         (root / ".specify").mkdir()
         (root / FEATURE).mkdir(parents=True)
         (root / "docs").mkdir()
@@ -108,6 +110,38 @@ class EnvelopeContractTests(unittest.TestCase):
     def test_a_non_object_envelope_is_rejected(self):
         rejected = [phase_envelope.envelope_failures(value) != [] for value in (None, [], "text", 3)]
         self.assertEqual(rejected, [True] * 4)
+
+
+class SourceEvidenceTests(unittest.TestCase):
+    """The gate's source files must be readable and valid whatever the driver lists as changed."""
+
+    def test_an_analyze_pass_over_absent_planning_files_fails(self):
+        with project() as root:
+            (root / FEATURE / "spec.md").unlink()
+            (root / WORKFLOW).write_text("| Severity | Resolution |\n| --- | --- |\n", encoding="utf-8")
+            envelope = good_envelope(phase="Analyze", artifacts=[], gates=[{"id": "G6", "result": "pass"}], counts={"markers": 0})
+            result = verify(envelope)
+        self.assertEqual(result["status"], "expected_failure")
+        self.assertEqual(mismatch(result), "gate_evidence_missing")
+
+    def test_invalid_utf8_source_evidence_fails_even_when_listed_or_unlisted(self):
+        for artifacts in ([], [f"{FEATURE}/spec.md"]):
+            with self.subTest(artifacts=artifacts), project() as root:
+                (root / FEATURE / "spec.md").write_bytes(b"\xff")
+                result = verify(good_envelope(artifacts=artifacts))
+                self.assertEqual(result["status"], "expected_failure")
+                self.assertIn(mismatch(result), ("gate_evidence_unparseable", "artifact_missing"))
+
+    def test_an_empty_source_file_fails(self):
+        with project() as root:
+            (root / FEATURE / "spec.md").write_bytes(b"")
+            self.assertEqual(mismatch(verify(good_envelope(artifacts=[]))), "gate_evidence_missing")
+
+    def test_an_empty_artifact_directory_fails(self):
+        with project() as root:
+            (root / FEATURE / "checklists").mkdir()
+            result = verify(good_envelope(artifacts=[f"{FEATURE}/checklists"]))
+        self.assertEqual(mismatch(result), "artifact_missing")
 
 
 class ReverifyTests(unittest.TestCase):
@@ -239,5 +273,5 @@ class ReverifyTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (EnvelopeContractTests, ReverifyTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (EnvelopeContractTests, SourceEvidenceTests, ReverifyTests))
     sys.exit(run_counted(suite, label="test-phase-envelope"))
