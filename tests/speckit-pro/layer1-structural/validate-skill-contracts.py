@@ -1313,6 +1313,42 @@ class ValidateScaffoldRoadmapFreshness(unittest.TestCase):
                 self.assertIn('Base a new branch on the `base_revision` from step 1', skill)
         self.assertFalse((REPO_ROOT / 'speckit-pro' / 'codex-skills' / 'speckit-scaffold-spec' / 'SKILL.md').exists(), 'scaffold keeps one shared skill source')
 
+
+class CompactRootGuidanceTests(unittest.TestCase):
+    DIRECTIVE = re.compile(
+        r"(?i)\b(?:read(?!-)|open(?! findings)|inspect|load|consult|root(?: thread)? reads)\b[^.!?]{0,180}"
+        r"(?:\b(?:spec|plan|tasks)\.md|planning artifacts?|runner source|speckit_pro_runner/[^\s`]+\.py)"
+    )
+
+    @classmethod
+    def root_reads(cls, text: str) -> list[str]:
+        return [hit for paragraph in re.split(r"\n\s*\n", text)
+                for hit in cls.DIRECTIVE.findall(" ".join(paragraph.split()))]
+
+    def test_each_host_root_guidance_keeps_artifact_reads_phase_local(self) -> None:
+        for host, root in (("claude", CLAUDE_VIEW), ("codex", CODEX_VIEW)):
+            autopilot = root / "speckit-autopilot"
+            self.assertIn('"answer_format": "compact"', (autopilot / "SKILL.md").read_text(encoding="utf-8"))
+            for path in (autopilot / "SKILL.md", *sorted((autopilot / "references").rglob("*.md"))):
+                with self.subTest(host=host, file=str(path.relative_to(root))):
+                    self.assertEqual([], self.root_reads(path.read_text(encoding="utf-8")))
+
+    def test_root_read_mutants_are_rejected(self) -> None:
+        mutants = ("Read plan.md to learn the helper decision.",
+                   "Consult plan.md to learn the helper decision.",
+                   "After refusal, inspect\n tasks.md before retrying.",
+                   "Open planning artifacts to decide the next action.",
+                   "Read runner source to interpret the helper status.",
+                   "Load speckit_pro_runner/helpers/read_only.py to decide.",
+                   "The root thread reads plan.md to interpret the result.")
+        missed = [directive for directive in mutants if not self.root_reads(directive)]
+        self.assertEqual(missed, [], f"root-read mutations escaped: {missed}")
+
+    def test_runner_and_phase_consumer_descriptions_are_allowed(self) -> None:
+        self.assertEqual([], self.root_reads(
+            "The runner re-reads spec.md and plan.md. "
+            "The phase executor consumes data.files text from read-tasks-inputs."))
+
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     return run_counted(suite, label="validate-skill-contracts")
