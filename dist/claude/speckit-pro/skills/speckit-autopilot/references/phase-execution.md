@@ -2966,8 +2966,8 @@ inputs.
 #### Step 1: Parse tasks.md
 
 ```text
-1. Read tasks.md from specs/<feature>/
-2. Parse phase groups (## Phase 1: Setup, ## Phase 2: ..., etc.)
+1. Call runner helper partition-phase7-tasks with the bound feature directory.
+2. Consume its returned phase groups and task records.
 3. Within each phase group:
    - Identify [P] (parallel) vs sequential tasks
    - Classify: test-only, implementation, verification

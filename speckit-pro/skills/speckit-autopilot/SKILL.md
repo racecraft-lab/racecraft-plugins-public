@@ -52,6 +52,17 @@ working directory per [Installed runner transport](./references/installed-runtim
 Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
 `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]`, send one JSON request on
 stdin, read one JSON response from stdout, and surface stderr diagnostics.
+
+For every root-thread runner request, include `"answer_format": "compact"`
+in the envelope. Consume its `status`, `next_action`, diagnostics and decision
+data. The runner caps the serialized answer, removes duplicate transport
+evidence and refuses an oversized answer with `compact_answer_overflow`. On
+that refusal, stop and reconcile the existing helper result through phase-local
+work without repeating the helper, especially a mutation. Phase-local consumers
+use `"answer_format": "detailed"` when they need artifact text. Omitted format
+retains the detailed interface for existing consumers. Keep artifact inspection
+and runner-source investigation in the owning phase's context; the root uses
+the returned decision and paths.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 

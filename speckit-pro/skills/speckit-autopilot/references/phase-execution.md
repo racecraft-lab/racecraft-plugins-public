@@ -1293,10 +1293,11 @@ surface a remediation hint, or stop.
 ### Autonomy Boundary Preflight
 
 Run this preflight before scoring confidence or taking the plan-stage boundary
-commit. Read the current workflow, `plan.md`, `tasks.md`, canonical Post list,
-resolved project commands, current execution-surface permissions, and explicit
-authorization already present in the active conversation. Inventory every
-planned action in any of these categories:
+commit. Have the phase-local executor inventory the planned actions from its
+bound planning inputs and canonical Post list, returning only action descriptors
+and paths. Combine that inventory with resolved project commands, current
+execution-surface permissions, and explicit authorization already present in
+the active conversation. Inventory every planned action in these categories:
 
 - a write outside the current writable roots;
 - a privileged or administrator command, including `sudo` and system-wide
@@ -4008,8 +4009,8 @@ inputs.
 #### Step 1: Parse tasks.md
 
 ```text
-1. Read tasks.md from specs/<feature>/
-2. Parse phase groups (## Phase 1: Setup, ## Phase 2: ..., etc.)
+1. Call runner helper partition-phase7-tasks with the bound feature directory.
+2. Consume its returned phase groups and task records.
 3. Within each phase group:
    - Identify [P] (parallel) vs sequential tasks
    - Classify: test-only, implementation, verification
