@@ -1,13 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Canary receipt v2", "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "commit", "host", "host_version", "plugin_version", "fixture_tag", "trigger", "dirty_tree", "release_status_allowed", "install_probe", "variants"],
+  "required": ["schema_version", "commit", "host", "host_version", "plugin_version", "fixture_tag", "trigger", "mode", "dirty_tree", "release_status_allowed", "install_probe", "variants"],
   "properties": {
     "schema_version": {"const": "canary-receipt/v2"},
     "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "host": {"enum": ["claude-code", "codex"]},
     "host_version": {"$ref": "#/$defs/text"}, "plugin_version": {"$ref": "#/$defs/text"},
     "fixture_tag": {"$ref": "#/$defs/text"}, "trigger": {"enum": ["local", "scheduled", "on_demand"]},
+    "mode": {"enum": ["flat", "nested"], "description": "Effective planning dispatch mode on either host; flat mode never fails a run by itself (ADR 0026)."},
     "dirty_tree": {"type": "boolean"}, "release_status_allowed": {"type": "boolean"},
     "install_probe": {"type": "object"},
     "variants": {"description": "Each variant name appears at most once; the validator rejects a repeated name before it reports any variant.", "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/variant"}}
@@ -41,7 +42,25 @@
       "required": ["wall_seconds", "tokens"],
       "properties": {"wall_seconds": {"type": "number", "minimum": 0}, "tokens": {"$ref": "#/$defs/count"},
         "codex_tokens": {"$ref": "#/$defs/codex_tokens"},
+        "segments": {"$ref": "#/$defs/plan_segments"},
         "artifact_author_seconds": {"type": "number", "minimum": 0, "description": "Plan stage only: time from the runner's artifact fill to the narrative dispatch's last outcome (ADR 0019)."}}
+    },
+    "root_load": {
+      "description": "Root thread load for one plan-stage segment. Context sizes are tokens per root model call, not token usage totals; the average may be fractional. A segment with no root calls records zero for all three fields.",
+      "type": "object", "additionalProperties": false,
+      "required": ["root_calls", "root_context_avg_tokens", "root_context_peak_tokens"],
+      "properties": {"root_calls": {"$ref": "#/$defs/count"},
+        "root_context_avg_tokens": {"type": "number", "minimum": 0},
+        "root_context_peak_tokens": {"$ref": "#/$defs/count"}}
+    },
+    "plan_segments": {
+      "description": "Plan stage only: the six planning phases and terminal artifact/draft-PR/completion work, required on base. Include preparation in specify and between-phase handoff in the phase just completed. Every root call in the plan stage belongs to exactly one segment. Root load is attribution only: ADR 0023 totals still include root plus all children.",
+      "type": "object", "additionalProperties": false,
+      "required": ["specify", "clarify", "plan", "checklist", "tasks", "analyze", "terminal"],
+      "properties": {"specify": {"$ref": "#/$defs/root_load"}, "clarify": {"$ref": "#/$defs/root_load"},
+        "plan": {"$ref": "#/$defs/root_load"}, "checklist": {"$ref": "#/$defs/root_load"},
+        "tasks": {"$ref": "#/$defs/root_load"}, "analyze": {"$ref": "#/$defs/root_load"},
+        "terminal": {"$ref": "#/$defs/root_load"}}
     },
     "codex_tokens": {
       "description": "Stage-scoped root usage and one token count per descendant rollout, including nested children. Each count excludes inherited history and usage outside this stage; repeated cumulative snapshots are not separate counts.",
@@ -109,7 +128,8 @@
           "properties": {"scaffold": {"$ref": "#/$defs/stage"}, "plan": {"$ref": "#/$defs/stage"}, "plan_review": {"$ref": "#/$defs/stage"}, "implement": {"$ref": "#/$defs/stage"}}
         }
       },
-      "allOf": [{"if": {"properties": {"name": {"const": "base"}}}, "then": {"required": ["feature_offers"]}},
+      "allOf": [{"if": {"properties": {"name": {"const": "base"}}}, "then": {"required": ["feature_offers"],
+        "properties": {"stages": {"properties": {"plan": {"required": ["segments"]}}}}}},
         {"if": {"properties": {"name": {"const": "oversized_plan"}}},
         "then": {"required": ["split_recommendation_recorded", "full_plan_built", "stops"]}},
         {"if": {"properties": {"name": {"const": "security_interrupt"}}}, "then": {"required": ["security_interrupt"]}},

@@ -181,6 +181,7 @@ def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
     """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
     problems, value = receipt_snapshot(value)
     if not problems:
+        # The schema owns run mode and base plan-segment root-load requirements for both hosts.
         schema = json_schema_failures(value, SCHEMA, SCHEMA, "receipt")
         problems = [f"receipt.schema: {len(schema)}"] if schema else variant_identity_failures(value)
     if problems:
