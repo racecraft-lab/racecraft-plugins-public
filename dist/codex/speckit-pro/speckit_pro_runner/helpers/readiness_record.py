@@ -568,18 +568,22 @@ def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
             for name in dict(stale)]
 
 
+class MissingRecord(SelectionError):
+    """No usable readiness record to read or extend."""
+
+
 def saved_record(root: Path, host: str) -> dict[str, Any]:
-    """This host's record for this worktree and plugin revision, or SelectionError."""
+    """This host's record for this worktree and plugin revision, or MissingRecord."""
     content = trusted_bytes(root / RECORD_DIRECTORY / f"{host}.json", root, limit=RECORD_LIMIT_BYTES)
     if content is None:
-        raise SelectionError("the readiness record is missing or unreadable")
+        raise MissingRecord("the readiness record is missing or unreadable")
     try:
         record = json.loads(content, object_pairs_hook=unique_object)
-    except (ValueError, RecursionError) as error:
-        raise SelectionError(f"the readiness record is not valid JSON: {safe_reason(str(error))}") from error
-    checked_items(record, root, host)
-    if record["plugin_revision"] != loaded_revision():
-        raise SelectionError("the readiness record belongs to another plugin revision")
+        checked_items(record, root, host)
+        if record["plugin_revision"] != loaded_revision():
+            raise SelectionError("the record belongs to another plugin revision")
+    except (ValueError, RecursionError, SelectionError) as error:
+        raise MissingRecord(f"the readiness record is unusable: {safe_reason(str(error))}") from error
     return record
 
 
@@ -587,7 +591,7 @@ def feature_offers(root: Path, host: str) -> dict[str, dict[str, Any]]:
     """What the record says about each feature offer; a missing, unreadable or foreign record reads as not offered."""
     try:
         return dict(saved_record(root, host)["feature_offers"])
-    except SelectionError:
+    except MissingRecord:
         return {feature: {"evaluated": False, "offered": False, "answer": "declined"} for feature in OFFER_FEATURES}
 
 
@@ -605,24 +609,13 @@ def record_offers(inputs: Any, root: Path) -> dict[str, Any]:
                                          for feature in OFFER_FEATURES}}
 
 
-def run_feature_offers_helper(entry: Any, request: Any) -> dict[str, Any]:
-    root = find_repo_root(Path.cwd())
-    if root is None:
-        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[diagnostic(
-            "missing_prerequisite", "the feature offers need a SpecKit project",
-            remediation_summary="Scaffold continues; the offers read as not offered.",
-            remediation_actions=["Report the gap in the scaffold closing report."])])
-    try:
-        record = record_offers(request.inputs, root)
-    except SelectionError as error:
-        record_gap = "readiness record" in str(error)
-        return response("missing_prerequisite" if record_gap else "input_error", request_id=request.request_id,
-                        diagnostics=[diagnostic(
-                            "missing_prerequisite" if record_gap else "invalid_input", str(error),
-                            remediation_summary="Scaffold continues; the offers read as not offered." if record_gap
-                            else "Send the host and one answer per feature.",
-                            remediation_actions=["Report the gap in the scaffold closing report."] if record_gap
-                            else ["Correct the named field.", "Retry the request."])])
+def refusal(request: Any, status: str, code: str, message: str, summary: str, actions: list[str]) -> dict[str, Any]:
+    return response(status, request_id=request.request_id, diagnostics=[diagnostic(
+        code, message, remediation_summary=summary, remediation_actions=actions)])
+
+
+def record_response(entry: Any, request: Any, root: Path, record: dict[str, Any], noun: str) -> dict[str, Any]:
+    """The `ok` envelope for a built record, writing it first in `apply` mode."""
     data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
                             "writes_state": False, "record": record}
     if request.mode == "apply":
@@ -630,37 +623,42 @@ def run_feature_offers_helper(entry: Any, request: Any) -> dict[str, Any]:
             data["record_path"] = write_record(root, record)
         except (OSError, SelectionError) as error:
             return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
-                "write_failure", f"the feature offers could not be written: {getattr(error, 'strerror', None) or error}",
-                remediation_summary="Scaffold continues; the offers read as not offered.",
-                remediation_actions=["Report the failure in the scaffold closing report."])])
-        data["writes_state"] = True
-    return response("ok", request_id=request.request_id, data=data)
-
-
-def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
-    root = find_repo_root(Path.cwd())
-    if root is None or not (root / ".specify").is_dir():
-        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[diagnostic(
-            "missing_prerequisite", "the readiness record needs a SpecKit project with a .specify directory",
-            remediation_summary="Initialize SpecKit in this project, then rerun scaffold.",
-            remediation_actions=["Run the SpecKit install flow.", "Rerun scaffold."])])
-    try:
-        record = build_record(request.inputs, root)
-    except SelectionError as error:
-        return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
-            "invalid_input", str(error), remediation_summary="Send observations the record can hold.",
-            remediation_actions=["Correct the named field.", "Retry the request."])])
-    data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
-                            "writes_state": False, "record": record,
-                            "allow_rules": host_items.allow_rules(request.inputs)}
-    if request.mode == "apply":
-        try:
-            data["record_path"] = write_record(root, record)
-        except (OSError, SelectionError) as error:
-            return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
-                "write_failure", f"the readiness record could not be written: {getattr(error, 'strerror', None) or error}",
+                "write_failure", f"the {noun} could not be written: {getattr(error, 'strerror', None) or error}",
                 remediation_summary="Scaffold continues; autopilot treats a missing record as no evidence.",
                 remediation_actions=["Report the failure in the scaffold closing report.",
                                      "Fix the .specify directory permissions and rerun scaffold."])])
         data["writes_state"] = True
     return response("ok", request_id=request.request_id, data=data)
+
+
+def run_feature_offers_helper(entry: Any, request: Any) -> dict[str, Any]:
+    root = find_repo_root(Path.cwd())
+    try:
+        if root is None:
+            raise MissingRecord("the feature offers need a SpecKit project with a readiness record")
+        record = record_offers(request.inputs, root)
+    except MissingRecord as error:
+        return refusal(request, "missing_prerequisite", "missing_prerequisite", str(error),
+                       "Scaffold continues; both features read as not offered.",
+                       ["Report the gap in the scaffold closing report."])
+    except SelectionError as error:
+        return refusal(request, "input_error", "invalid_input", str(error),
+                       "Send the host and one answer per feature.", ["Correct the named field.", "Retry the request."])
+    return record_response(entry, request, root, record, "feature offers")
+
+
+def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
+    root = find_repo_root(Path.cwd())
+    if root is None or not (root / ".specify").is_dir():
+        return refusal(request, "missing_prerequisite", "missing_prerequisite",
+                       "the readiness record needs a SpecKit project with a .specify directory",
+                       "Initialize SpecKit in this project, then rerun scaffold.",
+                       ["Run the SpecKit install flow.", "Rerun scaffold."])
+    try:
+        record = build_record(request.inputs, root)
+    except SelectionError as error:
+        return refusal(request, "input_error", "invalid_input", str(error),
+                       "Send observations the record can hold.", ["Correct the named field.", "Retry the request."])
+    reply = record_response(entry, request, root, record, "readiness record")
+    reply["data"]["allow_rules"] = host_items.allow_rules(request.inputs)
+    return reply

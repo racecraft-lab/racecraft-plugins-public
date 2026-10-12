@@ -918,11 +918,8 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "generate-spec-index-write":
         return run_spec_index_write(entry, request)
 
-    if entry.helper_id == "write-readiness-record":
-        return run_readiness_record_helper(entry, request)
-
-    if entry.helper_id == "record-feature-offers":
-        return run_feature_offers_helper(entry, request)
+    if entry.helper_id in READINESS_HANDLERS:
+        return READINESS_HANDLERS[entry.helper_id](entry, request)
 
     if entry.helper_id in ARTIFACT_PAGE_HANDLERS:
         return ARTIFACT_PAGE_HANDLERS[entry.helper_id](entry, request)
@@ -942,6 +939,11 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     return run_mutation_helper(entry, request)
 
 
+# The one table that routes a scaffold readiness helper id to its handler.
+READINESS_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "write-readiness-record": run_readiness_record_helper,
+    "record-feature-offers": run_feature_offers_helper,
+}
 # The one table that routes a PR-emission helper id to its handler.
 PR_EMISSION_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "generate-pr-body": generate_pr_body,

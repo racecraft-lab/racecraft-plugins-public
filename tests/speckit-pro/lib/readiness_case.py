@@ -17,18 +17,21 @@ def current_plugin_revision() -> str:
     return json.loads(manifest.read_text(encoding="utf-8"))["plugin_version"]
 
 
+def helper_request(helper_id: str, request_id: str, mode: str, inputs: dict[str, object]) -> dict[str, object]:
+    return {"schema_version": "1.0", "request_id": request_id, "helper_id": helper_id, "operation": helper_id,
+            "mode": mode, "inputs": inputs}
+
+
 def readiness_request(observations: list[dict[str, object]], host: str = "claude", request_id: str = "test-readiness",
                       mode: str = "apply", **inputs: object) -> dict[str, object]:
     body = {"host": host, "execution_mode": "interactive", "plugin_revision": current_plugin_revision(),
             "observations": observations, **inputs}
-    return {"schema_version": "1.0", "request_id": request_id, "helper_id": "write-readiness-record",
-            "operation": "write-readiness-record", "mode": mode, "inputs": body}
+    return helper_request("write-readiness-record", request_id, mode, body)
 
 
 def feature_offers_request(answers: dict[str, str], host: str = "claude", mode: str = "apply") -> dict[str, object]:
     """The step 6.6 request: the answers scaffold collected for the two feature offers."""
-    return {"schema_version": "1.0", "request_id": "test-feature-offers", "helper_id": "record-feature-offers",
-            "operation": "record-feature-offers", "mode": mode, "inputs": {"host": host, "answers": answers}}
+    return helper_request("record-feature-offers", "test-feature-offers", mode, {"host": host, "answers": answers})
 
 
 def scaffold_step(host: str) -> str:
