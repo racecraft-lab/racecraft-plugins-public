@@ -4009,8 +4009,8 @@ inputs.
 #### Step 1: Parse tasks.md
 
 ```text
-1. Call runner helper partition-phase7-tasks with the bound feature directory.
-2. Consume its returned phase groups and task records.
+1. Call partition-phase7-tasks with tasks_file and the complete Step 3a request below.
+2. Consume its returned runs or batches/waves and task IDs.
 3. Within each phase group:
    - Identify [P] (parallel) vs sequential tasks
    - Classify: test-only, implementation, verification

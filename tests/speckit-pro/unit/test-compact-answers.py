@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 import sys
 import unittest
 from pathlib import Path
@@ -95,6 +96,40 @@ class CompactAnswerTests(unittest.TestCase):
         self.assertEqual(len(decisions), 3)
         self.assertEqual(decisions[0], decisions[1])
         self.assertEqual(decisions[0], decisions[2])
+
+    def test_full_sized_tasks_bindings_survive_compact_publish_and_consumption(self):
+        text = "# Tasks\n" + "\x00" * (32768 - len("# Tasks\n"))
+        for payload in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(binding_payload=payload), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                (root / ".specify").mkdir()
+                feature = root / "feature"
+                feature.mkdir()
+                snapshot = root / "snapshot"
+                snapshot.mkdir(mode=0o700)
+                (snapshot / "tasks.md").write_text(text, encoding="utf-8")
+                identity = feature.stat()
+                raw = {"schema_version": "1.0", "helper_id": "publish-tasks-output",
+                       "operation": "publish-tasks-output", "mode": "apply", "answer_format": "compact",
+                       "inputs": {"feature_dir": "feature", "snapshot_dir": str(snapshot),
+                                  "feature_identity": {"device": identity.st_dev, "inode": identity.st_ino}}}
+                command = [sys.executable, str(REPO / payload / "scripts/run-speckit-pro.py")]
+                published = subprocess.run(command, input=json.dumps(raw), capture_output=True, text=True,
+                                           cwd=root, check=False, timeout=30)
+                answer = json.loads(published.stdout)
+                self.assertEqual(answer["status"], "ok", answer)
+                binding = answer["data"]["tasks_binding"]
+                self.assertEqual(binding["text"], text)
+                self.assertLessEqual(len(published.stdout.encode()) + len(published.stderr.encode()), 212992)
+                raw.update(helper_id="read-tasks-output", operation="read-tasks-output", mode="read_only",
+                           inputs={"tasks_binding": binding, "live_path": "feature/tasks.md"})
+                consumed = subprocess.run(command, input=json.dumps(raw), capture_output=True, text=True,
+                                          cwd=root, check=False, timeout=30)
+                verified = json.loads(consumed.stdout)
+                self.assertEqual(verified["status"], "ok", verified)
+                self.assertEqual(verified["data"]["text"], text)
+                self.assertTrue(verified["data"]["after_hooks_ready"])
+                self.assertLessEqual(len(consumed.stdout.encode()) + len(consumed.stderr.encode()), 212992)
 
     def test_answer_format_rejects_unsupported_values(self):
         for value in (None, [], {}, True, "unbounded"):

@@ -231,7 +231,7 @@
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },
-      "sha256": "f41dd2fc2969ae483b8e892858b6726023d0366d0bd86261afd96bccad2b96a9"
+      "sha256": "9e49c20f91dfa12f2c716da9c562162724069c76acf18ae21e477ebc66e62d07"
     },
     {
       "path": {
@@ -943,7 +943,7 @@
         "value": "speckit_pro_runner/runtime.py",
         "display": "speckit_pro_runner/runtime.py"
       },
-      "sha256": "f9b8663596f66529b8f7bfe353571b44b86faffb918d3ba0c8ba11b494f974b0"
+      "sha256": "3e8e1a7f49ee8e178d275daa66fb0834736ab91896688533f15cfe6267531453"
     },
     {
       "path": {

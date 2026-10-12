@@ -1316,7 +1316,7 @@ class ValidateScaffoldRoadmapFreshness(unittest.TestCase):
 
 class CompactRootGuidanceTests(unittest.TestCase):
     DIRECTIVE = re.compile(
-        r"(?i)\b(?:read(?!-)|open(?! findings)|inspect|load|root(?: thread)? reads)\b[^.!?]{0,180}"
+        r"(?i)\b(?:read(?!-)|open(?! findings)|inspect|load|consult|root(?: thread)? reads)\b[^.!?]{0,180}"
         r"(?:\b(?:spec|plan|tasks)\.md|planning artifacts?|runner source|speckit_pro_runner/[^\s`]+\.py)"
     )
 
@@ -1335,6 +1335,7 @@ class CompactRootGuidanceTests(unittest.TestCase):
 
     def test_root_read_mutants_are_rejected(self) -> None:
         mutants = ("Read plan.md to learn the helper decision.",
+                   "Consult plan.md to learn the helper decision.",
                    "After refusal, inspect\n tasks.md before retrying.",
                    "Open planning artifacts to decide the next action.",
                    "Read runner source to interpret the helper status.",

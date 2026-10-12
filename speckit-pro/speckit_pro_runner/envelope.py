@@ -141,7 +141,7 @@ def answer_next_action(body: dict[str, Any]) -> str:
             else "Stop and resolve the returned diagnostic before continuing.")
 
 
-def answer_response(request: Any, body: dict[str, Any]) -> dict[str, Any]:
+def answer_response(request: Any, body: dict[str, Any], *, limit_bytes: int = COMPACT_ANSWER_LIMIT_BYTES) -> dict[str, Any]:
     """One capped root interface for every helper, including gates and mutations."""
     if getattr(request, "answer_format", "detailed") != "compact":
         return body
@@ -151,11 +151,11 @@ def answer_response(request: Any, body: dict[str, Any]) -> dict[str, Any]:
     records = [answer, *answer.get("diagnostics", [])]
     size = sum(len(json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")) + 1
                for record in records)
-    if size <= COMPACT_ANSWER_LIMIT_BYTES:
+    if size <= limit_bytes:
         return answer
     action = "Stop; reconcile the existing helper result through phase-local work without repeating the helper."
     refused = response("internal_failure", data={"helper_status": body["status"],
-                       "helper_exit_code": body["exit_code"], "answer_limit_bytes": COMPACT_ANSWER_LIMIT_BYTES},
+                       "helper_exit_code": body["exit_code"], "answer_limit_bytes": limit_bytes},
                        diagnostics=[diagnostic("compact_answer_overflow", "helper answer exceeded the root size cap",
                                               remediation_actions=[action])])
     refused["next_action"] = action

@@ -1,5 +1,5 @@
 {
-  "schema_version": "trigger-experiment-template/v1",
+  "schema_version": "trigger-experiment/v1",
   "experiment_id": "issue-573-pilot-2026-09-12",
   "trials": 3,
   "trial_timeout_seconds": 180,
@@ -87,5 +87,10 @@
   "draft_status": "pending-output-selection-and-separate-user-budget-approval",
   "launch_budget_requested": 48,
   "launch_authorized": false,
-  "qualification_established": false
+  "qualification_established": false,
+  "identities": {
+    "observer": "6d0b24db8de4e91668d6f7836e879e68287b9d39f59753edadcc0f19465dfc29",
+    "catalog": "8ab93df23d9bb4645587088665d8761ff3748b6f6c6d2ce61bee0393dd7dc077",
+    "fixture": "c094071e16a77dab28275236262066f77b78fd9ee7cdc3cbfbcb78147b36edfe"
+  }
 }

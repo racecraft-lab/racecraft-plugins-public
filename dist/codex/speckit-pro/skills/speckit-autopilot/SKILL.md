@@ -31,7 +31,9 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 
 For every root-thread runner request, include `"answer_format": "compact"`
 in the envelope. Consume its `status`, `next_action`, diagnostics and decision
-data. The runner caps the serialized answer, removes duplicate transport
+data. The runner caps the serialized answer; Tasks binding hand-offs retain
+the complete bound text under a cap derived from the existing input bound.
+It removes duplicate transport
 evidence and refuses an oversized answer with `compact_answer_overflow`. On
 that refusal, stop and reconcile the existing helper result through phase-local
 work without repeating the helper, especially a mutation. Phase-local consumers

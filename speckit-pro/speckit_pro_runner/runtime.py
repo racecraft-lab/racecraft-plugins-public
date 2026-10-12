@@ -19,8 +19,9 @@ from . import (
     SELECTED_RUNTIME_NAME,
     SOURCE_CONTEXT,
 )
-from .envelope import answer_response, diagnostic, response
+from .envelope import COMPACT_ANSWER_LIMIT_BYTES, answer_response, diagnostic, response
 from .path_utils import parse_version_tuple, sha256_file
+from .trusted_io import BOUNDED_TEXT_INPUT_BYTES
 
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
 CHECKSUM_NAME = "speckit-pro-runner.sha256"
@@ -30,6 +31,15 @@ class MetadataFormatError(ValueError):
     """Raised when runner metadata exists but does not match the expected shape."""
 
 
+def runner_answer(request: Any, body: dict[str, Any]) -> dict[str, Any]:
+    limit = COMPACT_ANSWER_LIMIT_BYTES
+    if getattr(request, "helper_id", "runner") in {"publish-tasks-output", "read-tasks-output"}:
+        # These hand-offs carry one bound text value. JSON can expand one input
+        # byte to six escaped bytes; retain the ordinary cap for envelope metadata.
+        limit += 6 * BOUNDED_TEXT_INPUT_BYTES
+    return answer_response(request, body, limit_bytes=limit)
+
+
 def handle_request(request: Any) -> dict[str, Any]:
     if getattr(request, "helper_id", "runner") != "runner":
         from .gates.registry import dispatch_gate, is_gate_helper_id
@@ -37,11 +47,11 @@ def handle_request(request: Any) -> dict[str, Any]:
         # Gate helper ids are registry-driven so US2 operations stay on the
         # same runner envelope without widening the base runner operation list.
         if is_gate_helper_id(request.helper_id):
-            return answer_response(request, dispatch_gate(request))
+            return runner_answer(request, dispatch_gate(request))
 
         from .helpers.registry import dispatch_helper
 
-        return answer_response(request, dispatch_helper(request))
+        return runner_answer(request, dispatch_helper(request))
     retired_inputs = sorted({"fixture_category", "test_overrides"} & request.inputs.keys())
     if retired_inputs:
         body = response(
@@ -57,17 +67,17 @@ def handle_request(request: Any) -> dict[str, Any]:
                 )
             ],
         )
-        return answer_response(request, body)
+        return runner_answer(request, body)
     if request.operation == "runtime-info":
-        return answer_response(request, runtime_info(request.request_id, request.inputs))
+        return runner_answer(request, runtime_info(request.request_id, request.inputs))
     if request.operation == "preflight":
-        return answer_response(request, preflight(request.request_id, request.inputs))
+        return runner_answer(request, preflight(request.request_id, request.inputs))
     body = response(
         "input_error",
         request_id=request.request_id,
         diagnostics=[diagnostic("invalid_envelope", "unsupported runner operation")],
     )
-    return answer_response(request, body)
+    return runner_answer(request, body)
 
 
 def runtime_info(request_id: str | None, _inputs: dict[str, Any]) -> dict[str, Any]:
