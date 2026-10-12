@@ -106,6 +106,22 @@ _Avoid_: hook approval, automatic hook, project consent
 One of the six steps inside the plan stage: specify, clarify, plan, checklist, tasks and analyze. Every SPEC runs all six.
 _Avoid_: stage, step, gate, quality gate, optional phase
 
+**Phase driver**:
+The subagent that runs one planning phase in a fresh phase-local context, keeping phase work outside the root thread. It runs the SpecKit skill itself or dispatches that phase's executors, and hands back a phase envelope. The `phase-executor` agent plays this role.
+_Avoid_: phase runner, sub-orchestrator
+
+**Phase envelope**:
+The fixed, size-capped result a phase driver returns: the phase, its status, the next action, changed artifact paths, gate results, counts, one blocker line and a usage receipt. The runner re-verifies it from disk before the run moves on; the envelope alone never passes a gate.
+_Avoid_: phase summary, handoff note
+
+**Flat mode**:
+How the plan stage runs when the host cannot nest subagents two levels deep: the root dispatches each phase's executors directly, under the compact-answer contract. The canary receipt records it, and a run never fails just for being flat.
+_Avoid_: degraded mode, fallback run
+
+**Compact answer**:
+What a runner helper returns to the root thread: a status and the next action, under a size cap a test enforces. The root never reads planning artifacts or runner source to learn what a helper decided.
+_Avoid_: helper output, summary
+
 **Preview surface**:
 A place in the host where the agent can open a generated HTML page and see it rendered. Scaffold records whether the host has one in the readiness record; a run spawns a preview observer for a page only when the record does not say there is none.
 _Avoid_: preview support, browser access
