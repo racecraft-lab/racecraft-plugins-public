@@ -125,14 +125,21 @@ def compact_decision_data(data: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def decision_action(payload: Any) -> str | None:
+    if isinstance(payload, dict):
+        for field in ("next_action", "action"):
+            action = payload.get(field)
+            if isinstance(action, str) and action.strip():
+                return action
+    return None
+
+
 def answer_next_action(body: dict[str, Any]) -> str:
     data = body.get("data", {})
     for payload in (body, data, data.get("stdout_json", {})):
-        if isinstance(payload, dict):
-            for field in ("next_action", "action"):
-                action = payload.get(field)
-                if isinstance(action, str) and action.strip():
-                    return action
+        action = decision_action(payload)
+        if action is not None:
+            return action
     for diag in body.get("diagnostics", []):
         actions = diag.get("remediation", {}).get("actions", [])
         if actions and isinstance(actions[0], str):

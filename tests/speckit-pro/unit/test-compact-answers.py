@@ -77,6 +77,8 @@ class CompactAnswerTests(unittest.TestCase):
             result = handle_request(self.request("count-markers", answer_format="detailed"))
         self.assertEqual(result, body)
 
+
+class CompactLauncherTests(unittest.TestCase):
     def test_source_and_both_host_launchers_return_compact_decisions(self):
         raw = {"schema_version": "1.0", "helper_id": "count-markers", "operation": "count-markers",
                "mode": "read_only", "answer_format": "compact",
@@ -131,6 +133,8 @@ class CompactAnswerTests(unittest.TestCase):
                 self.assertTrue(verified["data"]["after_hooks_ready"])
                 self.assertLessEqual(len(consumed.stdout.encode()) + len(consumed.stderr.encode()), 212992)
 
+
+class CompactRequestTests(unittest.TestCase):
     def test_answer_format_rejects_unsupported_values(self):
         for value in (None, [], {}, True, "unbounded"):
             raw = {"schema_version": "1.0", "helper_id": "runner", "operation": "runtime-info",
@@ -142,4 +146,4 @@ class CompactAnswerTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(CompactAnswerTests), label="test-compact-answers"))
+    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]), label="test-compact-answers"))
