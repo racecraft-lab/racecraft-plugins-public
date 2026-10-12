@@ -5680,7 +5680,8 @@ class CanaryRootContextTests(CanaryRootLoadConsistencyCase):
         self.assert_context_cases(((1, 100, 180),), rejected=True, segments=self.SEGMENTS)
 
     def test_root_peak_cannot_exceed_total_implied_by_average(self):
-        self.assert_context_cases(((2, 50, 180),), rejected=True, segments=self.SEGMENTS)
+        impossible_load = (2, 50, 180)
+        self.assert_context_cases((impossible_load,), rejected=True, segments=self.SEGMENTS)
 
     def test_impossible_root_context_rejects_fractional_and_large_summaries(self):
         self.assert_context_cases(((3, 0.5, 2), (2, 1.5, 4), (1, float(2 ** 53), 2 ** 53 + 1),
