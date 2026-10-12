@@ -1181,7 +1181,7 @@ For each feature, print one line: the feature, its `status`, its
 feature:
 
 - Answers-file mode: use the file's `formal_methods` and `verification_docker`
-  booleans; ask nothing.
+  booleans (`true` is `accepted`, `false` is `declined`); ask nothing.
 - Interactive mode: ask both with one `request_user_input` call, or in free text
   in an active foreground chat; recommend the decline for a feature whose
   status is not `verified`.

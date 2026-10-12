@@ -1342,7 +1342,7 @@ For each feature, print one line: the feature, its `status`, its
 feature:
 
 - Answers-file mode: use the file's `formal_methods` and `verification_docker`
-  booleans; ask nothing.
+  booleans (`true` is `accepted`, `false` is `declined`); ask nothing.
 <!-- host:claude: Claude asks through AskUserQuestion -->
 - Interactive mode: ask both with one `AskUserQuestion`, recommending the
   decline for a feature whose status is not `verified`.
