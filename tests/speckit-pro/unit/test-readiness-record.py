@@ -2102,12 +2102,52 @@ class FeatureOfferCase(unittest.TestCase):
         _, response, _ = run_runner(feature_offers_request(answers, host, mode, self.readiness_digests.get(host)), cwd=self.root)
         return response
 
+    def offer_in_process(self, host: str) -> dict:
+        body = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host,
+                                      readiness_digest=self.readiness_digests.get(host))
+        with unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root):
+            return readiness_record.run_feature_offers_helper(SimpleNamespace(**body), SimpleNamespace(**body))
+
     def read_offers(self, host: str = "claude") -> dict:
         return readiness_record.feature_offers(self.root, host)
 
 
+class FeatureOfferPublicationCase(FeatureOfferCase):
+    """Interleave a competing publication at the writer or final swap seam."""
+
+    def interleave_evaluation(self, host: str, boundary: str):
+        owner = atomic_write if boundary == "swap_entries" else readiness_record
+        operation = getattr(owner, boundary)
+        matches = {"write_record": lambda args: True,
+                   "write_bytes_atomic": lambda args: args[0].name == f"{host}.json",
+                   "swap_entries": lambda args: args[2] == f"{host}.json"}[boundary]
+        fresh = {}
+
+        def publish_fresh(*args, **kwargs):
+            if matches(args) and not fresh:
+                fresh.update(self.write_record(host, [observation("formal_methods", "unknown")])["data"]["record"])
+            return operation(*args, **kwargs)
+
+        return unittest.mock.patch.object(owner, boundary, side_effect=publish_fresh), fresh
+
+    def offer_during_publication(self, host: str, interleaving: tuple) -> dict:
+        patched, published = interleaving
+        with patched:
+            reply = self.offer_in_process(host)
+        self.assertNotEqual("ok", reply["status"])
+        self.assertEqual(published, json.loads(self.record_path(host).read_bytes()))
+        return reply
+
+    def assert_fresh_evaluation_preserved(self, boundary: str) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.write_record(host)
+                reply = self.offer_during_publication(host, self.interleave_evaluation(host, boundary))
+                self.assertFalse(reply["data"]["writes_state"])
+
+
 class FeatureOffersTest(FeatureOfferCase):
-    """The feature-offer helper and record contract."""
+    """Offer answers, evaluation state and publication modes."""
 
     def test_a_scaffold_run_that_skips_the_offer_leaves_both_features_not_offered(self) -> None:
         response = self.write_record()
@@ -2146,6 +2186,10 @@ class FeatureOffersTest(FeatureOfferCase):
         self.assertFalse(response["data"]["writes_state"])
         self.assertTrue(response["data"]["record"]["feature_offers"]["formal_methods"]["offered"])
         self.assertFalse(self.read_offers()["formal_methods"]["offered"])
+
+
+class FeatureOfferRecordValidationTest(FeatureOfferCase):
+    """Malformed and foreign saved records fail closed."""
 
     def test_a_missing_or_unreadable_record_reads_as_not_offered_and_takes_no_offer(self) -> None:
         unoffered = {feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}
@@ -2191,6 +2235,10 @@ class FeatureOffersTest(FeatureOfferCase):
         self.record_path().write_text(json.dumps(good), encoding="utf-8")
         self.assertFalse(self.read_offers()["formal_methods"]["offered"])
 
+
+class FeatureOfferHostContractTest(FeatureOfferCase):
+    """Request validation and rendered host contracts."""
+
     def test_malformed_answers_are_refused_and_change_nothing(self) -> None:
         self.write_record()
         cases = {"unknown answer": {"formal_methods": "maybe", "verification_docker": "declined"},
@@ -2235,13 +2283,7 @@ class FeatureOffersTest(FeatureOfferCase):
 
 
 class FeatureOfferEvidenceTest(FeatureOfferCase):
-    """Current-evaluation binding and guarded publication on both hosts."""
-
-    def offer_in_process(self, host: str) -> dict:
-        body = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host,
-                                      readiness_digest=self.readiness_digests.get(host))
-        with unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root):
-            return readiness_record.run_feature_offers_helper(SimpleNamespace(**body), SimpleNamespace(**body))
+    """Only the current successful evaluation supplies a receipt."""
 
     def test_failed_step_6_5_cannot_offer_an_older_same_revision_record(self) -> None:
         for host in ("claude", "codex"):
@@ -2262,6 +2304,52 @@ class FeatureOfferEvidenceTest(FeatureOfferCase):
                                                        readiness_digest=readiness_record.digest(self.record_path(host).read_bytes()))
                 self.assertNotEqual("ok", run_runner(reconstructed, cwd=self.root)[1]["status"])
 
+    def test_old_runtime_observations_cannot_be_offered_after_a_new_evaluation(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                old = self.write_record(host)
+                self.write_record(host, [observation("formal_methods", "unknown")])
+                before = self.record_path(host).read_bytes()
+                body = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host,
+                                              readiness_digest=old["data"].get("readiness_digest"))
+                self.assertNotEqual("ok", run_runner(body, cwd=self.root)[1]["status"])
+                self.assertEqual(before, self.record_path(host).read_bytes())
+
+    def test_identical_evaluations_have_distinct_receipts_and_old_receipts_are_refused(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                body = request([observation("formal_methods", "unavailable")], host=host)
+                with unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root), \
+                        unittest.mock.patch.object(readiness_record, "now", return_value="2026-01-01T00:00:00Z"), \
+                        unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
+                    old = readiness_record.run_readiness_record_helper(SimpleNamespace(**body), SimpleNamespace(**body))
+                    new = readiness_record.run_readiness_record_helper(SimpleNamespace(**body), SimpleNamespace(**body))
+                assert_runner_response(self, old, "ok", 0)
+                assert_runner_response(self, new, "ok", 0)
+                self.assertNotEqual(old["data"].get("readiness_digest"), new["data"].get("readiness_digest"))
+                self.readiness_digests[host] = old["data"].get("readiness_digest")
+                self.assertNotEqual("ok", self.offer(dict.fromkeys(FEATURES, "accepted"), host)["status"])
+                self.assertEqual(new["data"]["record"], json.loads(self.record_path(host).read_bytes()))
+
+    def test_invalid_or_dry_run_receipts_supply_no_offer_evidence(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.write_record(host)
+                before = self.record_path(host).read_bytes()
+                for receipt in (None, "", "sha256:" + "0" * 64, True, [], {}):
+                    with self.subTest(receipt=receipt):
+                        body = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host)
+                        body["inputs"]["readiness_digest"] = receipt
+                        self.assertNotEqual("ok", run_runner(body, cwd=self.root)[1]["status"])
+                        self.assertEqual(before, self.record_path(host).read_bytes())
+                dry = run_runner(request([], host=host, mode="dry_run"), cwd=self.root,
+                                 extra_env={"PATH": str(self.tools)})[1]
+                self.assertNotIn("readiness_digest", dry["data"])
+
+
+class FeatureOfferFingerprintTest(FeatureOfferCase):
+    """Changed or unverifiable file evidence refuses coverage."""
+
     def test_changed_file_fingerprints_cannot_supply_evaluated_offers(self) -> None:
         source = self.root / "checker.json"
         for host in ("claude", "codex"):
@@ -2274,6 +2362,43 @@ class FeatureOfferEvidenceTest(FeatureOfferCase):
                 self.assertNotEqual("ok", self.offer(dict.fromkeys(FEATURES, "accepted"), host)["status"])
                 self.assertEqual(before, self.record_path(host).read_bytes())
                 self.assertTrue(all(not offer["offered"] for offer in self.read_offers(host).values()))
+
+    def test_reader_refuses_offers_when_a_file_changes_after_publication(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                source = self.root / "checker.json"
+                source.write_text("old input", encoding="utf-8")
+                self.write_record(host, [observation("formal_methods", "unavailable", files=[source.name])])
+                assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted"), host), "ok", 0)
+                source.write_text("changed input", encoding="utf-8")
+                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
+
+    def test_unverifiable_file_fingerprints_cannot_authorize_offer_evidence(self) -> None:
+        for host, variant in itertools.product(("claude", "codex"), ("unreadable", "byte_bound", "file_bound")):
+            with self.subTest(host=host, variant=variant):
+                prefix = f"{host}-{variant}"
+                source = self.root / f"{prefix}.dat"
+                if variant == "unreadable":
+                    target = self.root / f"{prefix}-target.dat"
+                    target.write_text("probe input", encoding="utf-8")
+                    source.symlink_to(target)
+                    files = [source.name]
+                elif variant == "byte_bound":
+                    source.write_bytes(b"x" * (readiness_record.FINGERPRINT_LIMIT_BYTES + 1))
+                    files = [source.name]
+                else:
+                    files = [f"{prefix}-{n}.dat" for n in range(readiness_record.MAX_FINGERPRINT_FILES + 1)]
+                    for name in files:
+                        (self.root / name).write_text("probe input", encoding="utf-8")
+                self.write_record(host, [observation("formal_methods", "unavailable", files=files)])
+                before = self.record_path(host).read_bytes()
+                assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted"), host), "missing_prerequisite", 3)
+                self.assertEqual(before, self.record_path(host).read_bytes())
+                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
+
+
+class FeatureOfferFilePublicationTest(FeatureOfferCase):
+    """File evidence is checked before and after publication."""
 
     def test_file_inputs_changed_between_offer_validation_and_publication_are_refused(self) -> None:
         real_write = readiness_record.write_record
@@ -2322,26 +2447,22 @@ class FeatureOfferEvidenceTest(FeatureOfferCase):
                 self.assertEqual("write_failure", reply["diagnostics"][0]["code"])
                 self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
 
+
+class FeatureOfferRetirementTest(FeatureOfferPublicationCase):
+    """Retirement preserves competitors and refuses unchecked swaps."""
+
     def test_failed_evaluation_retirement_preserves_a_racing_fresh_record(self) -> None:
-        real_write = readiness_record.write_bytes_atomic
         for host in ("claude", "codex"):
             with self.subTest(host=host):
                 self.write_record(host)
-                fresh = {}
-
-                def race_retirement(target, content, **kwargs):
-                    if target.name == f"{host}.json" and not fresh:
-                        fresh.update(self.write_record(host, [observation("formal_methods", "unknown")]))
-                    return real_write(target, content, **kwargs)
-
+                interleaving, fresh = self.interleave_evaluation(host, "write_bytes_atomic")
                 body = request([observation("formal_methods", "unavailable", evidence_source="bad\ninput")], host=host)
-                with unittest.mock.patch.object(readiness_record, "write_bytes_atomic", side_effect=race_retirement), \
-                        unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root):
+                with interleaving, unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root):
                     reply = readiness_record.run_readiness_record_helper(SimpleNamespace(**body), SimpleNamespace(**body))
                 assert_runner_response(self, reply, "expected_failure", 1)
                 self.assertEqual("write_failure", reply["diagnostics"][0]["code"])
                 self.assertNotIn("readiness_digest", reply["data"])
-                self.assertEqual(fresh["data"]["record"], json.loads(self.record_path(host).read_bytes()))
+                self.assertEqual(fresh, json.loads(self.record_path(host).read_bytes()))
 
     def test_unavailable_checked_swap_refuses_retirement_and_offer_without_fallback(self) -> None:
         for host in ("claude", "codex"):
@@ -2361,100 +2482,15 @@ class FeatureOfferEvidenceTest(FeatureOfferCase):
                 self.assertEqual(old["data"]["record"]["items"], json.loads(before)["items"])
                 self.assertTrue(all(not offer["offered"] for offer in self.read_offers(host).values()))
 
-    def test_reader_refuses_offers_when_a_file_changes_after_publication(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                source = self.root / "checker.json"
-                source.write_text("old input", encoding="utf-8")
-                self.write_record(host, [observation("formal_methods", "unavailable", files=[source.name])])
-                assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted"), host), "ok", 0)
-                source.write_text("changed input", encoding="utf-8")
-                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
 
-    def test_old_runtime_observations_cannot_be_offered_after_a_new_evaluation(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                old = self.write_record(host)
-                self.write_record(host, [observation("formal_methods", "unknown")])
-                before = self.record_path(host).read_bytes()
-                body = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host,
-                                              readiness_digest=old["data"].get("readiness_digest"))
-                self.assertNotEqual("ok", run_runner(body, cwd=self.root)[1]["status"])
-                self.assertEqual(before, self.record_path(host).read_bytes())
-
-    def test_unverifiable_file_fingerprints_cannot_authorize_offer_evidence(self) -> None:
-        for host, variant in itertools.product(("claude", "codex"), ("unreadable", "byte_bound", "file_bound")):
-            with self.subTest(host=host, variant=variant):
-                prefix = f"{host}-{variant}"
-                source = self.root / f"{prefix}.dat"
-                if variant == "unreadable":
-                    target = self.root / f"{prefix}-target.dat"
-                    target.write_text("probe input", encoding="utf-8")
-                    source.symlink_to(target)
-                    files = [source.name]
-                elif variant == "byte_bound":
-                    source.write_bytes(b"x" * (readiness_record.FINGERPRINT_LIMIT_BYTES + 1))
-                    files = [source.name]
-                else:
-                    files = [f"{prefix}-{n}.dat" for n in range(readiness_record.MAX_FINGERPRINT_FILES + 1)]
-                    for name in files:
-                        (self.root / name).write_text("probe input", encoding="utf-8")
-                self.write_record(host, [observation("formal_methods", "unavailable", files=files)])
-                before = self.record_path(host).read_bytes()
-                assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted"), host), "missing_prerequisite", 3)
-                self.assertEqual(before, self.record_path(host).read_bytes())
-                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
+class FeatureOfferConcurrentPublicationTest(FeatureOfferPublicationCase):
+    """A stale offer cannot overwrite a competing publication."""
 
     def test_a_fresh_step_6_5_write_between_offer_read_and_write_is_preserved(self) -> None:
-        real_write = readiness_record.write_record
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                self.write_record(host)
-                fresh = {}
-
-                def publish_fresh(root, record, **kwargs):
-                    fresh.update(self.write_record(host, [observation("formal_methods", "unknown")]))
-                    return real_write(root, record, **kwargs)
-
-                with unittest.mock.patch.object(readiness_record, "write_record", side_effect=publish_fresh):
-                    reply = self.offer_in_process(host)
-                self.assertNotEqual("ok", reply["status"])
-                self.assertFalse(reply["data"]["writes_state"])
-                self.assertEqual(fresh["data"]["record"], json.loads(self.record_path(host).read_bytes()))
-
-    def test_identical_evaluations_have_distinct_receipts_and_old_receipts_are_refused(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                body = request([observation("formal_methods", "unavailable")], host=host)
-                with unittest.mock.patch.object(readiness_record, "find_repo_root", return_value=self.root), \
-                        unittest.mock.patch.object(readiness_record, "now", return_value="2026-01-01T00:00:00Z"), \
-                        unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
-                    old = readiness_record.run_readiness_record_helper(SimpleNamespace(**body), SimpleNamespace(**body))
-                    new = readiness_record.run_readiness_record_helper(SimpleNamespace(**body), SimpleNamespace(**body))
-                assert_runner_response(self, old, "ok", 0)
-                assert_runner_response(self, new, "ok", 0)
-                self.assertNotEqual(old["data"].get("readiness_digest"), new["data"].get("readiness_digest"))
-                self.readiness_digests[host] = old["data"].get("readiness_digest")
-                self.assertNotEqual("ok", self.offer(dict.fromkeys(FEATURES, "accepted"), host)["status"])
-                self.assertEqual(new["data"]["record"], json.loads(self.record_path(host).read_bytes()))
+        self.assert_fresh_evaluation_preserved("write_record")
 
     def test_a_fresh_evaluation_at_the_atomic_swap_boundary_is_preserved(self) -> None:
-        real_swap = atomic_write.swap_entries
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                self.write_record(host)
-                fresh = {}
-
-                def race_swap(directory_fd, first, second):
-                    if second == f"{host}.json" and not fresh:
-                        fresh.update(self.write_record(host, [observation("formal_methods", "unknown")]))
-                    return real_swap(directory_fd, first, second)
-
-                with unittest.mock.patch.object(atomic_write, "swap_entries", side_effect=race_swap):
-                    reply = self.offer_in_process(host)
-                self.assertNotEqual("ok", reply["status"])
-                self.assertFalse(reply["data"]["writes_state"])
-                self.assertEqual(fresh["data"]["record"], json.loads(self.record_path(host).read_bytes()))
+        self.assert_fresh_evaluation_preserved("swap_entries")
 
     def test_a_competing_offer_write_is_preserved(self) -> None:
         real_write = readiness_record.write_record
@@ -2470,10 +2506,39 @@ class FeatureOfferEvidenceTest(FeatureOfferCase):
                     real_write(root, competing)
                     return real_write(root, record, **kwargs)
 
-                with unittest.mock.patch.object(readiness_record, "write_record", side_effect=publish_competitor):
-                    reply = self.offer_in_process(host)
-                self.assertNotEqual("ok", reply["status"])
-                self.assertEqual(competing, json.loads(self.record_path(host).read_bytes()))
+                interleaving = unittest.mock.patch.object(readiness_record, "write_record", side_effect=publish_competitor)
+                self.offer_during_publication(host, (interleaving, competing))
+
+
+class FeatureOfferEntrySubstitutionTest(FeatureOfferCase):
+    """Inode, link and parent substitutions cannot authorize publication."""
+
+    def substitute_record_entry(self, host: str, variant: str) -> None:
+        path = self.record_path(host)
+        displaced = self.root / f"displaced-record-{host}-{variant}"
+        if variant == "directory":
+            directory = self.root / f"displaced-directory-{host}-{variant}"
+            path.parent.rename(directory)
+            path.parent.mkdir()
+            (directory / path.name).rename(path)
+            return
+        before = path.read_bytes()
+        path.rename(displaced)
+        if variant == "inode":
+            path.write_bytes(before)
+            path.chmod(0o600)
+        elif variant == "hardlink":
+            os.link(displaced, path)
+        else:
+            path.symlink_to(displaced)
+
+    def cleanup_record_substitution(self, host: str, variant: str) -> None:
+        path = self.record_path(host)
+        if path.is_symlink() or variant == "hardlink":
+            path.unlink()
+        (self.root / f"displaced-record-{host}-{variant}").unlink(missing_ok=True)
+        if variant == "directory":
+            shutil.rmtree(self.root / f"displaced-directory-{host}-{variant}")
 
     def test_record_link_and_rename_substitutions_are_refused(self) -> None:
         real_write = readiness_record.write_record
@@ -2482,50 +2547,33 @@ class FeatureOfferEvidenceTest(FeatureOfferCase):
                 self.write_record(host)
                 path = self.record_path(host)
                 before = path.read_bytes()
-                displaced = self.root / f"displaced-record-{host}-{variant}"
-                displaced_directory = self.root / f"displaced-directory-{host}-{variant}"
 
                 def substitute(root, record, **kwargs):
-                    if variant == "directory":
-                        path.parent.rename(displaced_directory)
-                        path.parent.mkdir()
-                        (displaced_directory / path.name).rename(path)
-                    else:
-                        path.rename(displaced)
-                        if variant == "inode":
-                            path.write_bytes(before)
-                            path.chmod(0o600)
-                        elif variant == "hardlink":
-                            os.link(displaced, path)
-                        else:
-                            path.symlink_to(displaced)
+                    self.substitute_record_entry(host, variant)
                     return real_write(root, record, **kwargs)
 
                 with unittest.mock.patch.object(readiness_record, "write_record", side_effect=substitute):
                     reply = self.offer_in_process(host)
                 self.assertNotEqual("ok", reply["status"])
                 self.assertEqual(before, path.read_bytes())
-                if path.is_symlink() or variant == "hardlink":
-                    path.unlink()
-                if displaced.exists():
-                    displaced.unlink()
-                if variant == "directory":
-                    shutil.rmtree(displaced_directory)
+                self.cleanup_record_substitution(host, variant)
 
-    def test_invalid_or_dry_run_receipts_supply_no_offer_evidence(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                self.write_record(host)
-                before = self.record_path(host).read_bytes()
-                for receipt in (None, "", "sha256:" + "0" * 64, True, [], {}):
-                    with self.subTest(receipt=receipt):
-                        body = feature_offers_request(dict.fromkeys(FEATURES, "accepted"), host)
-                        body["inputs"]["readiness_digest"] = receipt
-                        self.assertNotEqual("ok", run_runner(body, cwd=self.root)[1]["status"])
-                        self.assertEqual(before, self.record_path(host).read_bytes())
-                dry = run_runner(request([], host=host, mode="dry_run"), cwd=self.root,
-                                 extra_env={"PATH": str(self.tools)})[1]
-                self.assertNotIn("readiness_digest", dry["data"])
+
+class FeatureOfferUnusableEvidenceTest(FeatureOfferCase):
+    """Missing, malformed and foreign evidence refuses both host offers."""
+
+    def invalidate_saved_record(self, host: str, variant: str) -> None:
+        path = self.record_path(host)
+        if variant == "missing":
+            path.unlink()
+        elif variant == "unreadable":
+            path.write_text("{", encoding="utf-8")
+        else:
+            record = json.loads(path.read_bytes())
+            replacements = {"host": {"host": "codex" if host == "claude" else "claude"},
+                            "worktree": {"binding": {"worktree": "sha256:" + "0" * 64}},
+                            "revision": {"plugin_revision": "0.0.0"}}
+            path.write_text(json.dumps({**record, **replacements[variant]}), encoding="utf-8")
 
     def test_unusable_records_refuse_offers_and_read_fail_closed_on_both_hosts(self) -> None:
         for host, variant in itertools.product(("claude", "codex"),
@@ -2533,16 +2581,7 @@ class FeatureOfferEvidenceTest(FeatureOfferCase):
             with self.subTest(host=host, variant=variant):
                 self.write_record(host)
                 path = self.record_path(host)
-                record = json.loads(path.read_bytes())
-                if variant == "missing":
-                    path.unlink()
-                elif variant == "unreadable":
-                    path.write_text("{", encoding="utf-8")
-                else:
-                    replacement = {"host": ("codex" if host == "claude" else "claude"),
-                                   "worktree": {"worktree": "sha256:" + "0" * 64}, "revision": "0.0.0"}
-                    record["binding" if variant == "worktree" else "plugin_revision" if variant == "revision" else variant] = replacement[variant]
-                    path.write_text(json.dumps(record), encoding="utf-8")
+                self.invalidate_saved_record(host, variant)
                 before = path.read_bytes() if path.exists() else None
                 self.assertNotEqual("ok", self.offer(dict.fromkeys(FEATURES, "accepted"), host)["status"])
                 self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers(host))
@@ -2551,7 +2590,10 @@ class FeatureOfferEvidenceTest(FeatureOfferCase):
 
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    cases = (ReadinessRecordTest, FeatureOffersTest, FeatureOfferEvidenceTest, TerminalPreviewEvidenceTest, PreviewEvidenceBoundaryTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
+    cases = (ReadinessRecordTest, FeatureOffersTest, FeatureOfferRecordValidationTest, FeatureOfferHostContractTest,
+             FeatureOfferEvidenceTest, FeatureOfferFingerprintTest, FeatureOfferFilePublicationTest, FeatureOfferRetirementTest,
+             FeatureOfferConcurrentPublicationTest, FeatureOfferEntrySubstitutionTest, FeatureOfferUnusableEvidenceTest,
+             TerminalPreviewEvidenceTest, PreviewEvidenceBoundaryTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
              G0RecordValidationTests, G0PreviewEvidenceTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests, G0WorkflowPathTests)
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
