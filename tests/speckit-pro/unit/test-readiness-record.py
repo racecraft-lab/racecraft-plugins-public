@@ -1726,7 +1726,7 @@ class FeasibilityTest(unittest.TestCase):
                 self.assertIn("data.record.items.formal_methods", offer)
                 self.assertIn("data.record.items.verification_docker", offer)
                 self.assertIn("whatever its feasibility result", offer)
-                self.assertIn("booleans; ask nothing", offer)
+                self.assertIn("`declined`); ask nothing", offer)
                 self.assertIn(question, offer)
                 self.assertNotIn(questions["codex" if host == "claude" else "claude"], offer)
 
