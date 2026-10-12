@@ -27,7 +27,8 @@ We decided five things.
    phase driver. For specify, plan and tasks it runs the SpecKit skill itself.
    For clarify, checklist and analyze it dispatches the existing executors and
    consensus agents one level down. The root keeps only briefs and envelopes,
-   so its context resets between phases. The agent count stays at 12 on both
+   limiting its context growth while each driver starts with fresh phase-local
+   context. The agent count stays at 12 on both
    hosts.
 4. **The driver returns a fixed envelope.** A runner-owned JSON contract holds
    the phase, its status, the next action, changed artifact paths, gate ids with
@@ -39,7 +40,7 @@ We decided five things.
    Below 2, the root dispatches executors directly under the compact-answer
    contract, and the receipt records `mode=flat`. Codex defaults to
    `agents.max_depth = 1`, so flat mode is what most Codex installs run.
-   Prerequisites tell the user that a depth of 2 enables the phase reset. Depth
+   Prerequisites tell the user that a depth of 2 enables phase-local contexts. Depth
    never fails a run.
 
 Proof comes in two parts. Repo tests fail first: the terminal helper finishes
@@ -57,3 +58,10 @@ nesting level and a dispatch to the three single-command phases. We rejected
 trusting the envelope's gate results, which would let a model's claim decide a
 phase. We rejected failing closed on depth below 2, which would block default
 Codex installs.
+
+## Known limits
+
+Phase drivers do not reset the root thread's existing transcript. They keep
+phase work in fresh child contexts and return compact envelopes to limit root
+context growth. Token savings remain subject to the canary acceptance above;
+this documentation-only PR changes no execution path or gate result.

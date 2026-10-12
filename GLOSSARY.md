@@ -107,7 +107,7 @@ One of the six steps inside the plan stage: specify, clarify, plan, checklist, t
 _Avoid_: stage, step, gate, quality gate, optional phase
 
 **Phase driver**:
-The subagent that runs one planning phase for the root thread, so the root's context resets between phases. It runs the SpecKit skill itself or dispatches that phase's executors, and hands back a phase envelope. The `phase-executor` agent plays this role.
+The subagent that runs one planning phase in a fresh phase-local context, keeping phase work outside the root thread. It runs the SpecKit skill itself or dispatches that phase's executors, and hands back a phase envelope. The `phase-executor` agent plays this role.
 _Avoid_: phase runner, sub-orchestrator
 
 **Phase envelope**:
