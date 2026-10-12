@@ -5376,11 +5376,16 @@ class ScaffoldAnswersTests(unittest.TestCase):
         self.assertEqual(["answers.json"], sorted(path.name for path in self.root.iterdir()))
 
 
+def plan_segments():
+    return {name: {"root_calls": 2, "root_context_avg_tokens": 120.5, "root_context_peak_tokens": 180}
+            for name in ("specify", "clarify", "plan", "checklist", "tasks", "analyze", "terminal")}
+
+
 def receipt():
-    return {
+    value = {
         "schema_version": "canary-receipt/v2", "commit": "a" * 40, "host": "codex",
         "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "fixture-v5",
-        "trigger": "local", "dirty_tree": True, "release_status_allowed": False,
+        "trigger": "local", "mode": "nested", "dirty_tree": True, "release_status_allowed": False,
         "install_probe": {"headless_install": "passed", "skill_expansion": "passed", "evidence": "probe.json"},
         "variants": [{
             "name": "base", "verdict": "pass", "failed_assertions": [],
@@ -5400,6 +5405,8 @@ def receipt():
             "stages": {name: {"wall_seconds": 1, "tokens": 10, "codex_tokens": {"root_tokens": 10, "child_rollout_tokens": []}} for name in ("scaffold", "plan", "plan_review", "implement")},
         }],
     }
+    value["variants"][0]["stages"]["plan"]["segments"] = plan_segments()
+    return value
 
 
 def hook_counters():
@@ -5519,6 +5526,208 @@ class CanaryVariantCase(unittest.TestCase):
                     (target[parent[0]] if parent else target)[key] = bad
                 with self.subTest(host=host, changes=changes):
                     self.assertEqual([f"{name}.{assertion}"], self.validator.validate_receipt(mutated))
+
+
+class CanaryRootLoadCase(CanaryVariantCase):
+    SEGMENTS = ("specify", "clarify", "plan", "checklist", "tasks", "analyze", "terminal")
+    ROOT_FIELDS = ("root_calls", "root_context_avg_tokens", "root_context_peak_tokens")
+
+    def assert_missing_evidence(self, value):
+        self.assertTrue(self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
+        self.assert_receipt_rejected(value)
+
+    def assert_receipt_rejected(self, value):
+        report = self.validator.receipt_report(value)
+        self.assertFalse(report["valid"], report)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            source.write_text(json.dumps(value), encoding="utf-8")
+            completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                       capture_output=True, text=True, check=False)
+            self.assertEqual(1, completed.returncode, completed.stdout)
+            self.assertFalse(json.loads(completed.stdout)["valid"])
+
+    def assert_nonbase_can_omit_root_load(self):
+        for host, original in self.receipts.items():
+            value = copy.deepcopy(original)
+            variant = value["variants"][0]
+            variant.update(name="oversized_plan", split_recommendation_recorded=True, full_plan_built=True, stops=0)
+            del variant["stages"]["plan"]["segments"]
+            with self.subTest(host=host):
+                self.assertEqual([], self.validator.validate_receipt(value))
+
+    def assert_plan_target_includes_children(self):
+        for host, original in self.receipts.items():
+            value = copy.deepcopy(original)
+            plan = value["variants"][0]["stages"]["plan"]
+            plan["tokens"] = 15000001
+            if host == "codex":
+                plan["codex_tokens"] = {"root_tokens": 1, "child_rollout_tokens": [15000000]}
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertTrue(report["valid"], report)
+                target = report["variants"][0]["plan_target"]
+                self.assertEqual(15000001, target["tokens"])
+                self.assertEqual((15000000, 1800), (target["tokens_limit"], target["wall_seconds_limit"]))
+                self.assertFalse(target["target_met"])
+
+
+class CanaryRootLoadTests(CanaryRootLoadCase):
+    def test_base_requires_mode_and_the_segment_map_through_schema_api_and_cli(self):
+        for host, original in self.receipts.items():
+            for field in ("mode", "segments"):
+                value = copy.deepcopy(original)
+                container = value if field == "mode" else value["variants"][0]["stages"]["plan"]
+                del container[field]
+                with self.subTest(host=host, field=field):
+                    self.assert_missing_evidence(value)
+
+    def test_base_requires_every_plan_segment_and_root_field_on_both_hosts(self):
+        for host, original in self.receipts.items():
+            for segment, field in itertools.product(self.SEGMENTS, (None, *self.ROOT_FIELDS)):
+                value = copy.deepcopy(original)
+                segments = value["variants"][0]["stages"]["plan"]["segments"]
+                if field is None:
+                    del segments[segment]
+                else:
+                    del segments[segment][field]
+                with self.subTest(host=host, segment=segment, field=field):
+                    self.assert_missing_evidence(value)
+
+    def test_complete_root_load_accepts_flat_and_nested_on_both_hosts(self):
+        for host, original in self.receipts.items():
+            contexts = (original["variants"][0]["stages"]["plan"]["segments"]["plan"], dict.fromkeys(self.ROOT_FIELDS, 0))
+            for mode, context in itertools.product(("flat", "nested"), contexts):
+                value = copy.deepcopy(original)
+                value["mode"] = mode
+                value["variants"][0]["stages"]["plan"]["segments"]["plan"] = context
+                with self.subTest(host=host, mode=mode, context=context):
+                    self.assertEqual([], self.validator.validate_receipt(value))
+                    self.assertEqual([], self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
+
+    def test_malformed_mode_and_root_metrics_fail_closed(self):
+        for host, original in self.receipts.items():
+            for bad in (None, "", "NESTED", True):
+                with self.subTest(host=host, mode=bad):
+                    self.assert_receipt_rejected(dict(original, mode=bad))
+            invalid_metrics = itertools.chain(
+                ({field: bad} for field, bad in itertools.product(self.ROOT_FIELDS, (None, True, -1, "2", float("nan"), float("inf")))),
+                ({"root_calls": 0}, {"root_context_avg_tokens": 181},
+                 {"root_calls": 0, "root_context_avg_tokens": 0}, {"root_calls": 0, "root_context_peak_tokens": 0}),
+            )
+            for replacements in invalid_metrics:
+                value = copy.deepcopy(original)
+                value["variants"][0]["stages"]["plan"]["segments"]["plan"].update(replacements)
+                with self.subTest(host=host, replacements=replacements):
+                    self.assert_receipt_rejected(value)
+
+    def test_nonbase_variants_can_omit_root_load(self):
+        self.assert_nonbase_can_omit_root_load()
+
+    def test_root_load_does_not_replace_root_plus_children_in_the_plan_target(self):
+        self.assert_plan_target_includes_children()
+
+
+def root_context_receipt(original, segment, load):
+    value = copy.deepcopy(original)
+    value["variants"][0]["stages"]["plan"]["segments"][segment] = dict(zip(CanaryRootLoadCase.ROOT_FIELDS, load, strict=True))
+    return value
+
+
+class CanaryRootLoadConsistencyCase(CanaryRootLoadCase):
+
+    def root_load_receipts(self):
+        for host, mode, name in itertools.product(self.receipts, ("flat", "nested"), self.variant_evidence):
+            value = copy.deepcopy(self.receipts[host])
+            value["mode"] = mode
+            value["variants"][0].update(name=name, **copy.deepcopy(self.variant_evidence[name]))
+            yield host, mode, name, value
+
+    def assert_root_load_result(self, value, failure=None):
+        report = self.validator.receipt_report(value)
+        self.assertEqual(failure is None, report["valid"], report)
+        if failure is not None:
+            self.assertIn(failure, report["failed_assertions"])
+            for variant in report["variants"]:
+                if "plan_target" in variant:
+                    self.assertFalse(variant["plan_target"]["target_met"])
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            source.write_text(json.dumps(value), encoding="utf-8")
+            completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                       capture_output=True, text=True, check=False)
+            self.assertEqual(int(failure is not None), completed.returncode, completed.stdout + completed.stderr)
+            cli_report = json.loads(completed.stdout)
+            self.assertEqual(report, cli_report)
+
+    def assert_context_cases(self, loads, *, rejected=False, segments=("plan",)):
+        for host, mode, name, original in self.root_load_receipts():
+            for segment, load in itertools.product(segments, loads):
+                value = root_context_receipt(original, segment, load)
+                with self.subTest(host=host, mode=mode, variant=name, segment=segment, load=load):
+                    failure = f"{name}.plan.segments.{segment}.root_context" if rejected else None
+                    self.assert_root_load_result(value, failure)
+
+
+class CanaryRootContextTests(CanaryRootLoadConsistencyCase):
+    def test_consistent_root_context_accepts_boundaries_rounding_and_large_counts(self):
+        self.assert_context_cases(((1, 180.0, 180), (2, 120.5, 180), (2, 0.5, 1),
+                                   (3, 1 / 3, 1), (7, 180 / 7, 180),
+                                   (10 ** 400, 1.0, 180), (10, 1e308, 10 ** 309),
+                                   (1, 10 ** 400, 10 ** 400), (0, 0.0, 0)))
+
+    def test_single_root_call_requires_equal_average_and_peak(self):
+        self.assert_context_cases(((1, 100, 180),), rejected=True, segments=self.SEGMENTS)
+
+    def test_root_peak_cannot_exceed_total_implied_by_average(self):
+        impossible_load = (2, 50, 180)
+        self.assert_context_cases((impossible_load,), rejected=True, segments=self.SEGMENTS)
+
+    def test_impossible_root_context_rejects_fractional_and_large_summaries(self):
+        self.assert_context_cases(((3, 0.5, 2), (2, 1.5, 4), (1, float(2 ** 53), 2 ** 53 + 1),
+                                   (10, 1e308, 10 ** 310), (10 ** 400, 0.0, 1),
+                                   (2, 10 ** 400, 3 * 10 ** 400)), rejected=True)
+
+
+class CanaryRootAttributionCase(CanaryRootLoadConsistencyCase):
+    def assert_attribution_cases(self, calls, host=None, child_only=False, failure=None):
+        for current_host, mode, name, value in self.root_load_receipts():
+            if host is not None and current_host != host:
+                continue
+            plan = value["variants"][0]["stages"]["plan"]
+            if calls is not None:
+                plan["segments"] = {segment: dict(root_calls=calls, root_context_avg_tokens=0, root_context_peak_tokens=0)
+                                    for segment in self.SEGMENTS}
+            if child_only and current_host == "codex":
+                plan["codex_tokens"] = {"root_tokens": 0, "child_rollout_tokens": [10]}
+            with self.subTest(host=current_host, mode=mode, variant=name):
+                expected = f"{name}.plan.segments.{failure}" if failure is not None else None
+                self.assert_root_load_result(value, expected)
+
+
+class CanaryRootAttributionTests(CanaryRootAttributionCase):
+    def test_attributed_root_calls_do_not_prove_measured_root_token_usage(self):
+        self.assert_attribution_cases(None, host="codex", child_only=True)
+
+    def test_codex_root_usage_requires_an_attributed_plan_call(self):
+        self.assert_attribution_cases(0, host="codex", failure="root_calls")
+
+    def test_zero_root_calls_allow_child_only_or_unattributed_claude_totals(self):
+        self.assert_attribution_cases(0, child_only=True)
+
+    def test_claimed_root_call_with_zero_context_remains_a_telemetry_limit(self):
+        self.assert_attribution_cases(1)
+
+    def test_zero_calls_with_nonzero_context_and_average_above_peak_fail(self):
+        for host, mode, name, original in self.root_load_receipts():
+            for load in (dict(root_calls=0, root_context_avg_tokens=1, root_context_peak_tokens=0),
+                         dict(root_calls=0, root_context_avg_tokens=0, root_context_peak_tokens=1),
+                         dict(root_calls=2, root_context_avg_tokens=181, root_context_peak_tokens=180)):
+                value = copy.deepcopy(original)
+                value["variants"][0]["stages"]["plan"]["segments"]["terminal"] = load
+                with self.subTest(host=host, mode=mode, variant=name, load=load):
+                    failure = f"{name}.plan.segments.terminal.root_context" if load["root_calls"] else "receipt.schema: 1"
+                    self.assert_root_load_result(value, failure)
 
 
 class CanaryFeatureOfferTests(CanaryVariantCase):
@@ -6662,7 +6871,7 @@ def main() -> int:
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (SpecKitExecutableReuseTests, ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
                                             PacketTitlePatternTests, G0SetupTests, G0BaselineStageTests, G0PinTests, G0UnratifiedDefaultsTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
-                                            CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
+                                            CanaryRootLoadTests, CanaryRootContextTests, CanaryRootAttributionTests, CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
                                             CanaryReceiptTargetValidityTests, CanaryVariantIdentityTests,
