@@ -14,6 +14,12 @@ it supplies no successful coverage result.
 
 ## Known limits
 
+- Offer fingerprint rechecks use G0's 1 MiB file-read bound, while the initial
+  evaluation fingerprints files without that bound. An observation naming a
+  larger file can be recorded but cannot authorize an offer. It fails closed
+  and reports a coverage gap, matching G0's existing stale-input behavior.
+  No current Step 6.5 input reaches this size; reaching the limit requires an
+  observation naming a readiness input over 1 MiB.
 - File and runtime evidence is a snapshot. Runtime observations belong to the
   successful Step 6.5 evaluation; they are not continuous health monitoring.
   Later runtime changes require another evaluation. This is outside the
@@ -41,5 +47,4 @@ it supplies no successful coverage result.
 - Interactive question tools and a live scaffold session were not exercised.
   The tests execute the documented request and both rendered host views.
 
-These limits do not resolve F1329-ad619431. Daybreak must recheck the pushed fix
-commits and account for every reported variant in its receipt.
+These limits do not waive current-head review or merge gates.
