@@ -106,9 +106,8 @@ class EnvelopeContractTests(unittest.TestCase):
                 self.assertTrue(phase_envelope.envelope_failures(envelope))
 
     def test_a_non_object_envelope_is_rejected(self):
-        for value in (None, [], "text", 3):
-            with self.subTest(value=value):
-                self.assertTrue(phase_envelope.envelope_failures(value))
+        rejected = [phase_envelope.envelope_failures(value) != [] for value in (None, [], "text", 3)]
+        self.assertEqual(rejected, [True] * 4)
 
 
 class ReverifyTests(unittest.TestCase):
