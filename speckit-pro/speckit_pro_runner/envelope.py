@@ -19,7 +19,14 @@ STATUS_EXIT_CODES = {
 }
 
 REQUIRED_FIELDS = ("schema_version", "helper_id", "operation", "mode", "inputs")
-ALLOWED_FIELDS = set(REQUIRED_FIELDS) | {"request_id"}
+ALLOWED_FIELDS = set(REQUIRED_FIELDS) | {"request_id", "answer_format"}
+COMPACT_ANSWER_LIMIT_BYTES = 16 * 1024
+COMPACT_HANDOFF_TEXT_FIELDS = {
+    "publish-tasks-output": ("tasks_binding", "text"),
+    "read-tasks-output": ("text",),
+    "render-plan-repair-context": ("stdout_json", "executor_message"),
+}
+ANSWER_FORMATS = ("compact", "detailed")
 SUPPORTED_RUNNER_OPERATIONS = {"preflight", "runtime-info"}
 SUPPORTED_HELPER_MODES = {"read_only", "dry_run", "apply"}
 
@@ -31,6 +38,7 @@ class RunnerRequest:
     operation: str
     mode: str
     inputs: dict[str, Any]
+    answer_format: str = "detailed"
 
 
 def remediation(summary: str, actions: list[str], deferred_to: str | None = None) -> dict[str, Any]:
@@ -104,6 +112,78 @@ def input_error(code: str, message: str, *, details: dict[str, Any] | None = Non
     return response("input_error", diagnostics=[diag])
 
 
+def invalid_request_fields(parsed: dict[str, Any]) -> list[str]:
+    fields = set(parsed) - ALLOWED_FIELDS
+    if parsed.get("answer_format", "detailed") not in ANSWER_FORMATS:
+        fields.add("answer_format")
+    return sorted(fields)
+
+
+def compact_decision_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Keep decision fields, omitting only replay metadata and duplicate stdout."""
+    omitted = {"argv", "stdin_request", "authoritative_command", "invocation_contract"}
+    if data.get("stdout_json") is not None:
+        omitted.add("stdout")
+    result = {key: value for key, value in data.items() if key not in omitted}
+    if isinstance(result.get("result"), dict):
+        result["result"] = compact_decision_data(result["result"])
+    return result
+
+
+def decision_action(payload: Any) -> str | None:
+    if isinstance(payload, dict):
+        for field in ("next_action", "action"):
+            action = payload.get(field)
+            if isinstance(action, str) and action.strip():
+                return action
+    return None
+
+
+def answer_next_action(body: dict[str, Any]) -> str:
+    data = body.get("data", {})
+    for payload in (body, data, data.get("stdout_json", {})):
+        action = decision_action(payload)
+        if action is not None:
+            return action
+    for diag in body.get("diagnostics", []):
+        actions = diag.get("remediation", {}).get("actions", [])
+        if actions and isinstance(actions[0], str):
+            return actions[0]
+    return ("Use the returned decision and dispatch inputs." if body["status"] == "ok"
+            else "Stop and resolve the returned diagnostic before continuing.")
+
+
+def compact_answer_limit_bytes(helper_id: str, data: dict[str, Any]) -> int:
+    text: Any = data
+    for field in COMPACT_HANDOFF_TEXT_FIELDS.get(helper_id, ()):
+        text = text.get(field) if isinstance(text, dict) else None
+    # Only these helpers' already-bounded handoff text earns extra room, never
+    # arbitrary metadata. One UTF-8 byte can expand to six JSON-escaped bytes.
+    return COMPACT_ANSWER_LIMIT_BYTES + (6 * len(text.encode("utf-8")) if isinstance(text, str) else 0)
+
+
+def answer_response(request: Any, body: dict[str, Any]) -> dict[str, Any]:
+    """One capped root interface for every helper, including gates and mutations."""
+    if getattr(request, "answer_format", "detailed") != "compact":
+        return body
+    limit_bytes = compact_answer_limit_bytes(getattr(request, "helper_id", "runner"), body.get("data", {}))
+    answer = {**body, "data": compact_decision_data(body.get("data", {})),
+              "next_action": answer_next_action(body)}
+    # emit_response writes the JSON plus one newline and repeats diagnostics on stderr.
+    records = [answer, *answer.get("diagnostics", [])]
+    size = sum(len(json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")) + 1
+               for record in records)
+    if size <= limit_bytes:
+        return answer
+    action = "Stop; reconcile the existing helper result through phase-local work without repeating the helper."
+    refused = response("internal_failure", data={"helper_status": body["status"],
+                       "helper_exit_code": body["exit_code"], "answer_limit_bytes": limit_bytes},
+                       diagnostics=[diagnostic("compact_answer_overflow", "helper answer exceeded the root size cap",
+                                              remediation_actions=[action])])
+    refused["next_action"] = action
+    return refused
+
+
 def parse_request(raw_stdin: str) -> tuple[RunnerRequest | None, dict[str, Any] | None]:
     try:
         parsed = json.loads(raw_stdin)
@@ -132,7 +212,7 @@ def parse_request(raw_stdin: str) -> tuple[RunnerRequest | None, dict[str, Any] 
             details={"schema_version": parsed.get("schema_version")},
         )
 
-    extra = sorted(set(parsed) - ALLOWED_FIELDS)
+    extra = invalid_request_fields(parsed)
     helper_id = parsed.get("helper_id")
     operation = parsed.get("operation")
     mode = parsed.get("mode")
@@ -171,6 +251,7 @@ def parse_request(raw_stdin: str) -> tuple[RunnerRequest | None, dict[str, Any] 
         operation=operation,
         mode=mode,
         inputs=inputs,
+        answer_format=parsed.get("answer_format", "detailed"),
     ), None
 
 

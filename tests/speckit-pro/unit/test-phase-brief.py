@@ -474,6 +474,21 @@ class InProjectCase(unittest.TestCase):
 
 
 class PhaseBriefTests(InProjectCase):
+    def test_valid_planning_briefs_fit_the_compact_root_contract(self):
+        from speckit_pro_runner.runtime import handle_request
+        phases = ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze")
+        for phase in phases:
+            inputs = with_tasks_fixture_evidence({"phase": phase, "workflow_file": "docs/workflow.md",
+                                                 "feature_dir": "specs/example"})
+            request = SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
+                                      request_id=None, answer_format="compact", inputs=inputs)
+            answer = handle_request(request)
+            with self.subTest(compact_phase=phase):
+                self.assertEqual(answer["status"], "ok", answer)
+                self.assertTrue(answer["next_action"])
+                self.assertLessEqual(len(json.dumps(answer, separators=(",", ":")).encode()) + 1, 16384)
+                self.assertEqual(answer["data"]["phase"], phase)
+
     def test_dispatch_input_names_the_action(self):
         cases = {"Specify": "Run the speckit-specify skill with:",
                  "Clarify": "Prepare a Clarify Question Set for:",
