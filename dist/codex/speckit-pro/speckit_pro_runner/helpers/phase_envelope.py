@@ -82,8 +82,7 @@ def check_artifacts(envelope: dict[str, Any], root: Path) -> None:
             raise Mismatch("artifact_path_invalid", str(exc)) from exc
         resolved = resolve_input_path(path, root)
         # Absolute paths and links that leave the repository read back as None here.
-        content = None if trusted_dir_exists(resolved, root) else trusted_bytes(resolved, root)
-        if not trusted_dir_exists(resolved, root) and not content:
+        if not trusted_dir_exists(resolved, root) and not trusted_bytes(resolved, root):
             raise Mismatch("artifact_missing", f"{path} is missing, empty or unreadable")
 
 
