@@ -269,12 +269,30 @@ def gate_failures(variant, failures):
     return [failure for failure in failures if failure not in expected]
 
 
+def root_context_consistent(load):
+    """Bound the summary by its call count, preserving rounded fractional averages."""
+    calls, average, peak = (load[key] for key in (
+        "root_calls", "root_context_avg_tokens", "root_context_peak_tokens"))
+    if calls == 1 or average == 0:
+        return average == peak
+    if isinstance(average, int):
+        return average <= peak <= calls * average
+    try:
+        return peak / calls <= average <= peak
+    except OverflowError:
+        # A finite float average cannot describe a lower bound above float range.
+        return False
+
+
 def root_load_failures(variant):
-    """A segment's average context cannot exceed its peak; zero-call evidence is schema-owned."""
-    segments = variant["stages"]["plan"].get("segments", {})
-    return [f"{variant['name']}.plan.segments.{name}.root_context"
-            for name, load in segments.items()
-            if load["root_context_avg_tokens"] > load["root_context_peak_tokens"]]
+    """Check every supplied plan summary and attribute independently known root usage."""
+    plan = variant["stages"]["plan"]
+    segments = plan.get("segments", {})
+    failures = [f"{variant['name']}.plan.segments.{name}.root_context"
+                for name, load in segments.items() if not root_context_consistent(load)]
+    if segments and not any(load["root_calls"] for load in segments.values()) and plan.get("codex_tokens", {}).get("root_tokens", 0):
+        failures.append(f"{variant['name']}.plan.segments.root_calls")
+    return failures
 
 
 def variant_failures(variant):

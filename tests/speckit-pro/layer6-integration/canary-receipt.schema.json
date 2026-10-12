@@ -46,7 +46,7 @@
         "artifact_author_seconds": {"type": "number", "minimum": 0, "description": "Plan stage only: time from the runner's artifact fill to the narrative dispatch's last outcome (ADR 0019)."}}
     },
     "root_load": {
-      "description": "Root thread load for one plan-stage segment. Context sizes are tokens per root model call, not token usage totals; the average may be fractional. A segment with no root calls records zero for all three fields.",
+      "description": "Root thread load for one plan-stage segment. Context sizes are tokens per root model call, not token usage totals; the average may be fractional. A segment with no root calls records zero for all three fields. The validator requires a single-call average to equal its peak and a multi-call average to lie between peak divided by call count and peak (rounded for fractional averages).",
       "type": "object", "additionalProperties": false,
       "required": ["root_calls", "root_context_avg_tokens", "root_context_peak_tokens"],
       "properties": {"root_calls": {"$ref": "#/$defs/count"},
@@ -56,7 +56,7 @@
         "then": {"properties": {"root_context_avg_tokens": {"const": 0}, "root_context_peak_tokens": {"const": 0}}}}]
     },
     "plan_segments": {
-      "description": "Plan stage only: the six planning phases and terminal artifact/draft-PR/completion work, required on base. Include preparation in specify and between-phase handoff in the phase just completed. Every root call in the plan stage belongs to exactly one segment. Root load is attribution only: ADR 0023 totals still include root plus all children.",
+      "description": "Plan stage only: the six planning phases and terminal artifact/draft-PR/completion work, required on base. Include preparation in specify and between-phase handoff in the phase just completed. Every root call in the plan stage belongs to exactly one segment. When this map is supplied, the validator rejects positive Codex plan root_tokens with no attributed root call; Claude aggregate tokens alone cannot establish root usage. Root load is attribution only: ADR 0023 totals still include root plus all children.",
       "type": "object", "additionalProperties": false,
       "required": ["specify", "clarify", "plan", "checklist", "tasks", "analyze", "terminal"],
       "properties": {"specify": {"$ref": "#/$defs/root_load"}, "clarify": {"$ref": "#/$defs/root_load"},
