@@ -7,6 +7,7 @@ against the artifacts on disk and rejects any disagreement. Missing or unparseab
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
@@ -52,13 +53,12 @@ ENVELOPE_SCHEMA: dict[str, Any] = {
 }
 
 
+@dataclass
 class Mismatch(Exception):
     """The first place the driver's claim and the evidence on disk disagree."""
 
-    def __init__(self, code: str, detail: str) -> None:
-        super().__init__(detail)
-        self.code = code
-        self.detail = detail
+    code: str
+    detail: str
 
 
 def envelope_failures(value: Any) -> list[dict[str, Any]]:
