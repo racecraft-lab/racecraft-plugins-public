@@ -21,6 +21,11 @@ STATUS_EXIT_CODES = {
 REQUIRED_FIELDS = ("schema_version", "helper_id", "operation", "mode", "inputs")
 ALLOWED_FIELDS = set(REQUIRED_FIELDS) | {"request_id", "answer_format"}
 COMPACT_ANSWER_LIMIT_BYTES = 16 * 1024
+COMPACT_HANDOFF_TEXT_FIELDS = {
+    "publish-tasks-output": ("tasks_binding", "text"),
+    "read-tasks-output": ("text",),
+    "render-plan-repair-context": ("stdout_json", "executor_message"),
+}
 ANSWER_FORMATS = ("compact", "detailed")
 SUPPORTED_RUNNER_OPERATIONS = {"preflight", "runtime-info"}
 SUPPORTED_HELPER_MODES = {"read_only", "dry_run", "apply"}
@@ -148,10 +153,20 @@ def answer_next_action(body: dict[str, Any]) -> str:
             else "Stop and resolve the returned diagnostic before continuing.")
 
 
-def answer_response(request: Any, body: dict[str, Any], *, limit_bytes: int = COMPACT_ANSWER_LIMIT_BYTES) -> dict[str, Any]:
+def compact_answer_limit_bytes(helper_id: str, data: dict[str, Any]) -> int:
+    text: Any = data
+    for field in COMPACT_HANDOFF_TEXT_FIELDS.get(helper_id, ()):
+        text = text.get(field) if isinstance(text, dict) else None
+    # Only these helpers' already-bounded handoff text earns extra room, never
+    # arbitrary metadata. One UTF-8 byte can expand to six JSON-escaped bytes.
+    return COMPACT_ANSWER_LIMIT_BYTES + (6 * len(text.encode("utf-8")) if isinstance(text, str) else 0)
+
+
+def answer_response(request: Any, body: dict[str, Any]) -> dict[str, Any]:
     """One capped root interface for every helper, including gates and mutations."""
     if getattr(request, "answer_format", "detailed") != "compact":
         return body
+    limit_bytes = compact_answer_limit_bytes(getattr(request, "helper_id", "runner"), body.get("data", {}))
     answer = {**body, "data": compact_decision_data(body.get("data", {})),
               "next_action": answer_next_action(body)}
     # emit_response writes the JSON plus one newline and repeats diagnostics on stderr.

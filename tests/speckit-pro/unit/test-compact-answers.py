@@ -134,6 +134,30 @@ class CompactLauncherTests(unittest.TestCase):
                 self.assertLessEqual(len(consumed.stdout.encode()) + len(consumed.stderr.encode()), 212992)
 
 
+class CompactPlanRepairTests(unittest.TestCase):
+    def test_real_sized_plan_repair_preserves_complete_executor_message(self):
+        fixtures = REPO / "tests/speckit-pro/unit/fixtures/read-only-helpers"
+        raw = json.loads((fixtures / "requests/render-plan-repair-context.json").read_text())
+        raw["inputs"]["context_paths"]["source-evidence"] = str(fixtures.relative_to(REPO) / "read-only-helper-feature/plan.md")
+        for payload in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            command = [sys.executable, str(REPO / payload / "scripts/run-speckit-pro.py")]
+            with self.subTest(repair_payload=payload):
+                raw["answer_format"] = "detailed"
+                detailed = subprocess.run(command, input=json.dumps(raw), capture_output=True, text=True,
+                                          cwd=REPO, check=False, timeout=30)
+                evidence = json.loads(detailed.stdout)
+                self.assertEqual(evidence["status"], "ok", evidence)
+                self.assertGreater(evidence["data"]["stdout_json"]["message_bytes"], 23000)
+                raw["answer_format"] = "compact"
+                compact = subprocess.run(command, input=json.dumps(raw), capture_output=True, text=True,
+                                         cwd=REPO, check=False, timeout=30)
+                answer = json.loads(compact.stdout)
+                self.assertEqual(answer["status"], "ok", answer)
+                self.assertEqual(answer["data"]["stdout_json"], evidence["data"]["stdout_json"])
+                self.assertLessEqual(len(compact.stdout.encode()) + len(compact.stderr.encode()), 1196032)
+                self.assertTrue(answer["next_action"])
+
+
 class CompactRequestTests(unittest.TestCase):
     def test_answer_format_rejects_unsupported_values(self):
         for value in (None, [], {}, True, "unbounded"):

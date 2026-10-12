@@ -6,8 +6,10 @@ answers. Compact answers retain status, next action, and decision data. The
 default remains detailed for existing consumers.
 
 The cap includes serialized stdout and duplicate stderr diagnostics. Ordinary
-answers allow 16 KiB. Tasks binding handoffs allow that metadata budget plus six
-times the existing 32 KiB text input bound, preserving even fully escaped text.
+answers allow 16 KiB. The envelope alone selects caps: Tasks and Plan-repair
+handoffs add six times their accepted UTF-8 text bytes to that metadata budget.
+Their existing 32 KiB and 192 KiB helper bounds remain authoritative; complete
+text, G3 evidence, and binding digests survive even fully escaped text.
 An oversized answer stops after dispatch, preserves the helper outcome, and
 instructs reconciliation without repeating a mutation.
 
@@ -31,3 +33,7 @@ instructs reconciliation without repeating a mutation.
   minor contract registration and generated guidance growth. No gating regression
   or acknowledgement is introduced. Its reported architecture edge from
   `gates/payloads.py` to `runtime.py` is also present on the base revision.
+- Very long execution ledgers may approach the ordinary cap; no real overflow
+  was reproduced. Root examples omit the compact field, but the shared skill
+  rule applies. No guidance consumes the removed dry-run top-level `argv`;
+  apply retains its record. Overflow omits `request_id` after stopping the run.
