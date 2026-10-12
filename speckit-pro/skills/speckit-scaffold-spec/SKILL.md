@@ -49,6 +49,7 @@ These examples name the runner's contract; the steps below determine when a chec
 | `propose-quality-gates` | `dry_run` | `{"measured": true}` (`false` when nothing was measured) |
 | `propose-quality-gates` | `apply` | `{"measured": true, "confirmed": true, "proposal_digest": "<dry-run digest>"}` (`confirmed` is `false` after a decline) |
 | `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>", "values": {"probe": "<observed-result>"}}]}` (add `action` and `files` per observation; add `host_version` when reported) |
+| `record-feature-offers` | `apply` | `{"host": "<host>", "answers": {"formal_methods": "<accepted or declined>", "verification_docker": "<accepted or declined>"}}` |
 
 ## Capability discovery & grounding
 
@@ -1334,7 +1335,7 @@ learns each capability exists even when declining (ADR 0005). Read the two
 results from the Step 6.5 response: `data.record.items.formal_methods` and
 `data.record.items.verification_docker`. When the response holds no record,
 show both as `unknown`. The step is done when each offer was shown with its
-result and its answer is printed.
+result, its answer is printed, and the runner has recorded both answers.
 
 For each feature, print one line: the feature, its `status`, its
 `evidence_source`, and the `action` when present. Then collect one answer per
@@ -1352,10 +1353,23 @@ feature:
   status is not `verified`.
 <!-- /host -->
 
-Print `accepted` or `declined` beside each feature. An accepted offer
-changes nothing in this run: the opt-in setup
-flow ships in a later release, so scaffold installs nothing and leaves the
-workflow's Formal Methods selection as the Design Concept decided.
+Print `accepted` or `declined` beside each feature. Then run helper
+`record-feature-offers` in `apply` mode with both answers, so the runner
+records in the Step 6.5 record that each feature was evaluated, offered and
+answered. A decline is recorded as offered, with answer `declined`.
+Without the call, or when the record is missing or the write fails, both
+features read as not offered: report the gap and finish normally.
+
+<!-- host:claude: Claude names its own host -->
+Set `host` to `claude`.
+<!-- /host -->
+<!-- host:codex: Codex names its own host -->
+Set `host` to `codex`.
+<!-- /host -->
+
+An accepted offer changes nothing in this run: the opt-in setup flow ships in a
+later release, so scaffold installs nothing and leaves the workflow's Formal
+Methods selection as the Design Concept decided.
 
 ### 7. Commit and Verify (IN the Worktree)
 

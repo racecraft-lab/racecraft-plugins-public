@@ -56,7 +56,11 @@ OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "fi
 VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
 EXECUTION_MODES = ("interactive", "answers-file")
 RECORD_KEYS = frozenset({"schema_version", "binding", "host", "host_version", "execution_mode", "plugin_revision",
-                         "observed_at", "items"})
+                         "observed_at", "items", "feature_offers"})
+# ADR 0005: scaffold offers each feature once. The record holds the offer in the shape the canary receipt copies.
+OFFER_FEATURES = ("formal_methods", "verification_docker")
+OFFER_ANSWERS = ("accepted", "declined")
+OFFER_KEYS = frozenset({"evaluated", "offered", "answer"})
 ITEM_KEYS = frozenset({"status", "evidence_source", "observed_at", "fingerprints"})
 TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
 DOCKER_PROBE_SECONDS = 10
@@ -249,6 +253,22 @@ def observe_verification_docker(root: Path) -> dict[str, Any]:
     return unavailable(f"the Docker daemon does not report {PLATFORM}")
 
 
+def unoffered(items: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Fail closed: no offer was shown, so `answer` is the receipt's closed `declined` with `offered` false.
+
+    A feature counts as evaluated once its item holds a feasibility answer other than `unknown`.
+    """
+    return {feature: {"evaluated": items[feature]["status"] != "unknown", "offered": False, "answer": "declined"}
+            for feature in OFFER_FEATURES}
+
+
+def sound_offers(offers: Any) -> bool:
+    return isinstance(offers, dict) and offers.keys() == set(OFFER_FEATURES) and all(
+        isinstance(offer, dict) and offer.keys() == OFFER_KEYS and isinstance(offer["evaluated"], bool)
+        and isinstance(offer["offered"], bool) and offer["answer"] in OFFER_ANSWERS
+        and (offer["offered"] or offer["answer"] == "declined") for offer in offers.values())
+
+
 def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     if not isinstance(inputs, dict) or not {"host", "execution_mode", "plugin_revision", "observations"} <= inputs.keys() \
             or not inputs.keys() <= INPUT_KEYS:
@@ -289,6 +309,7 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         "plugin_revision": plugin_revision,
         "observed_at": observed_at,
         "items": {name: items[name] for name in sorted(items)},
+        "feature_offers": unoffered(items),
     }
 
 
@@ -453,8 +474,7 @@ def loaded_revision() -> str | None:
 
 def checked_items(record: Any, root: Path, host: str) -> dict[str, Any]:
     """The record's items, or SelectionError when it cannot be this host's record for this worktree."""
-    require_fields(record, {"schema_version", "host", "binding", "host_version", "execution_mode",
-                            "plugin_revision", "observed_at", "items"}, "record")
+    require_fields(record, set(RECORD_KEYS), "record")
     for field in ("plugin_revision", "observed_at"):
         require_text(record[field], field)
     if not timestamp(record["observed_at"]):
@@ -472,6 +492,8 @@ def checked_items(record: Any, root: Path, host: str) -> dict[str, Any]:
         raise SelectionError("the record has missing or unknown readiness items")
     for name, item in items.items():
         check_saved_item(name, item)
+    if not sound_offers(record["feature_offers"]):
+        raise SelectionError("the record's feature offers are malformed")
     return items
 
 
@@ -544,6 +566,75 @@ def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
                      for changed in changed_inputs(item["fingerprints"], root, reads))
     return [(name, safe_reason("; ".join(dict.fromkeys(reason for item, reason in stale if item == name))))
             for name in dict(stale)]
+
+
+def saved_record(root: Path, host: str) -> dict[str, Any]:
+    """This host's record for this worktree and plugin revision, or SelectionError."""
+    content = trusted_bytes(root / RECORD_DIRECTORY / f"{host}.json", root, limit=RECORD_LIMIT_BYTES)
+    if content is None:
+        raise SelectionError("the readiness record is missing or unreadable")
+    try:
+        record = json.loads(content, object_pairs_hook=unique_object)
+    except (ValueError, RecursionError) as error:
+        raise SelectionError(f"the readiness record is not valid JSON: {safe_reason(str(error))}") from error
+    checked_items(record, root, host)
+    if record["plugin_revision"] != loaded_revision():
+        raise SelectionError("the readiness record belongs to another plugin revision")
+    return record
+
+
+def feature_offers(root: Path, host: str) -> dict[str, dict[str, Any]]:
+    """What the record says about each feature offer; a missing, unreadable or foreign record reads as not offered."""
+    try:
+        return dict(saved_record(root, host)["feature_offers"])
+    except SelectionError:
+        return {feature: {"evaluated": False, "offered": False, "answer": "declined"} for feature in OFFER_FEATURES}
+
+
+def record_offers(inputs: Any, root: Path) -> dict[str, Any]:
+    """The saved record with both offers marked shown and answered (Step 6.6)."""
+    answers = require_fields(inputs, {"host", "answers"}, "inputs")["answers"]
+    if inputs["host"] not in HOSTS:
+        raise SelectionError(f"host must be one of {list(HOSTS)}")
+    require_fields(answers, set(OFFER_FEATURES), "answers")
+    if any(answer not in OFFER_ANSWERS for answer in answers.values()):
+        raise SelectionError(f"each answer must be one of {list(OFFER_ANSWERS)}")
+    record = saved_record(root, inputs["host"])
+    offers = unoffered(record["items"])
+    return {**record, "feature_offers": {feature: {**offers[feature], "offered": True, "answer": answers[feature]}
+                                         for feature in OFFER_FEATURES}}
+
+
+def run_feature_offers_helper(entry: Any, request: Any) -> dict[str, Any]:
+    root = find_repo_root(Path.cwd())
+    if root is None:
+        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[diagnostic(
+            "missing_prerequisite", "the feature offers need a SpecKit project",
+            remediation_summary="Scaffold continues; the offers read as not offered.",
+            remediation_actions=["Report the gap in the scaffold closing report."])])
+    try:
+        record = record_offers(request.inputs, root)
+    except SelectionError as error:
+        record_gap = "readiness record" in str(error)
+        return response("missing_prerequisite" if record_gap else "input_error", request_id=request.request_id,
+                        diagnostics=[diagnostic(
+                            "missing_prerequisite" if record_gap else "invalid_input", str(error),
+                            remediation_summary="Scaffold continues; the offers read as not offered." if record_gap
+                            else "Send the host and one answer per feature.",
+                            remediation_actions=["Report the gap in the scaffold closing report."] if record_gap
+                            else ["Correct the named field.", "Retry the request."])])
+    data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
+                            "writes_state": False, "record": record}
+    if request.mode == "apply":
+        try:
+            data["record_path"] = write_record(root, record)
+        except (OSError, SelectionError) as error:
+            return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
+                "write_failure", f"the feature offers could not be written: {getattr(error, 'strerror', None) or error}",
+                remediation_summary="Scaffold continues; the offers read as not offered.",
+                remediation_actions=["Report the failure in the scaffold closing report."])])
+        data["writes_state"] = True
+    return response("ok", request_id=request.request_id, data=data)
 
 
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:

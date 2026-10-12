@@ -25,6 +25,12 @@ def readiness_request(observations: list[dict[str, object]], host: str = "claude
             "operation": "write-readiness-record", "mode": mode, "inputs": body}
 
 
+def feature_offers_request(answers: dict[str, str], host: str = "claude", mode: str = "apply") -> dict[str, object]:
+    """The step 6.6 request: the answers scaffold collected for the two feature offers."""
+    return {"schema_version": "1.0", "request_id": "test-feature-offers", "helper_id": "record-feature-offers",
+            "operation": "record-feature-offers", "mode": mode, "inputs": {"host": host, "answers": answers}}
+
+
 def scaffold_step(host: str) -> str:
     path = host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md"
     return path.read_text(encoding="utf-8").split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]

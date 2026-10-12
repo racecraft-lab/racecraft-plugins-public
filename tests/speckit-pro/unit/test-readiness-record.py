@@ -25,7 +25,7 @@ sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
 from speckit_pro_runner.helpers import readiness_record  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
-from readiness_case import current_plugin_revision, readiness_request  # noqa: E402
+from readiness_case import current_plugin_revision, feature_offers_request, readiness_request  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -2071,9 +2071,164 @@ class G0WorkflowPathTests(G0ReadinessFixture):
                     self.assertIn("workflow_file", json.dumps(response["data"]["problems"]))
 
 
+FEATURES = ("formal_methods", "verification_docker")
+NOT_OFFERED = {"offered": False, "answer": "declined"}
+
+
+class FeatureOffersTest(unittest.TestCase):
+    """Step 6.6 (ADR 0005): the runner records, per feature, that it was evaluated, offered and answered."""
+
+    def setUp(self) -> None:
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.root.joinpath(".specify").mkdir()
+        self.tools = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.enterContext(unittest.mock.patch.object(readiness_record.cli_probe, "probe",
+                                                     return_value={"exit_status": 0, "stdout_tail": "2.1.0"}))
+
+    def record_path(self, host: str = "claude") -> Path:
+        return self.root / ".specify" / "readiness" / f"{host}.json"
+
+    def write_record(self, host: str = "claude", observations: list[dict[str, object]] | None = None) -> dict:
+        body = request(observations or [observation("formal_methods", "unavailable")], host=host)
+        _, response, _ = run_runner(body, cwd=self.root, extra_env={"PATH": str(self.tools)})
+        assert_runner_response(self, response, "ok", 0)
+        return response
+
+    def offer(self, answers: dict[str, str], host: str = "claude", mode: str = "apply") -> dict:
+        _, response, _ = run_runner(feature_offers_request(answers, host, mode), cwd=self.root)
+        return response
+
+    def read_offers(self, host: str = "claude") -> dict:
+        return readiness_record.feature_offers(self.root, host)
+
+    def test_a_scaffold_run_that_skips_the_offer_leaves_both_features_not_offered(self) -> None:
+        response = self.write_record()
+        expected = {feature: {**NOT_OFFERED, "evaluated": True} for feature in FEATURES}
+        self.assertEqual(expected, response["data"]["record"]["feature_offers"])
+        self.assertEqual(expected, json.loads(self.record_path().read_text(encoding="utf-8"))["feature_offers"])
+        self.assertEqual(expected, self.read_offers())
+
+    def test_a_feature_with_no_feasibility_answer_is_not_evaluated(self) -> None:
+        offers = self.write_record(observations=[observation("formal_methods", "unknown")])["data"]["record"]["feature_offers"]
+        self.assertEqual({**NOT_OFFERED, "evaluated": False}, offers["formal_methods"])
+
+    def test_each_answer_is_recorded_as_offered_and_a_decline_stays_offered(self) -> None:
+        self.write_record()
+        for host_answers in ({"formal_methods": "declined", "verification_docker": "declined"},
+                             {"formal_methods": "accepted", "verification_docker": "declined"},
+                             {"formal_methods": "declined", "verification_docker": "accepted"}):
+            with self.subTest(answers=host_answers):
+                assert_runner_response(self, self.offer(host_answers), "ok", 0)
+                offers = self.read_offers()
+                for feature, answer in host_answers.items():
+                    self.assertEqual({"evaluated": True, "offered": True, "answer": answer}, offers[feature])
+
+    def test_the_offer_changes_nothing_else_in_the_record(self) -> None:
+        self.write_record()
+        before = json.loads(self.record_path().read_text(encoding="utf-8"))
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "declined")), "ok", 0)
+        after = json.loads(self.record_path().read_text(encoding="utf-8"))
+        self.assertEqual({key: before[key] for key in before if key != "feature_offers"},
+                         {key: after[key] for key in after if key != "feature_offers"})
+
+    def test_dry_run_reports_the_offers_without_writing_them(self) -> None:
+        self.write_record()
+        response = self.offer(dict.fromkeys(FEATURES, "declined"), mode="dry_run")
+        assert_runner_response(self, response, "ok", 0)
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertTrue(response["data"]["record"]["feature_offers"]["formal_methods"]["offered"])
+        self.assertFalse(self.read_offers()["formal_methods"]["offered"])
+
+    def test_a_missing_or_unreadable_record_reads_as_not_offered_and_takes_no_offer(self) -> None:
+        unoffered = {feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}
+        self.assertEqual(unoffered, self.read_offers())
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "declined")), "missing_prerequisite", 3)
+        self.assertFalse(self.record_path().exists())
+        self.write_record()
+        self.record_path().write_text("{", encoding="utf-8")
+        self.assertEqual(unoffered, self.read_offers())
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "declined")), "missing_prerequisite", 3)
+        self.record_path().unlink()
+        self.assertEqual(unoffered, self.read_offers())
+
+    def test_a_record_for_another_host_worktree_or_revision_reads_as_not_offered(self) -> None:
+        self.write_record()
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "declined")), "ok", 0)
+        good = json.loads(self.record_path().read_text(encoding="utf-8"))
+        self.assertTrue(self.read_offers()["formal_methods"]["offered"])
+        other = {"worktree": {**good, "binding": {"worktree": "sha256:0"}},
+                 "host": {**good, "host": "codex"}, "revision": {**good, "plugin_revision": "0.0.0"}}
+        for label, content in other.items():
+            with self.subTest(label):
+                self.record_path().write_text(json.dumps(content), encoding="utf-8")
+                self.assertFalse(self.read_offers()["formal_methods"]["offered"])
+
+    def test_a_hand_edited_offer_that_contradicts_itself_reads_as_not_offered(self) -> None:
+        self.write_record()
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "declined")), "ok", 0)
+        good = json.loads(self.record_path().read_text(encoding="utf-8"))
+        offers = good["feature_offers"]
+        broken = {"unoffered answer": {**offers, "formal_methods": {"evaluated": True, "offered": False, "answer": "accepted"}},
+                  "unknown answer": {**offers, "formal_methods": {"evaluated": True, "offered": True, "answer": "maybe"}},
+                  "extra key": {**offers, "formal_methods": {**offers["formal_methods"], "note": "trust me"}},
+                  "not a boolean": {**offers, "formal_methods": {**offers["formal_methods"], "offered": 1}},
+                  "one feature": {"formal_methods": offers["formal_methods"]},
+                  "extra feature": {**offers, "sandbox": offers["formal_methods"]},
+                  "a list": []}
+        for label, value in broken.items():
+            with self.subTest(label):
+                self.record_path().write_text(json.dumps({**good, "feature_offers": value}), encoding="utf-8")
+                self.assertEqual({feature: {"evaluated": False, **NOT_OFFERED} for feature in FEATURES}, self.read_offers())
+        del good["feature_offers"]
+        self.record_path().write_text(json.dumps(good), encoding="utf-8")
+        self.assertFalse(self.read_offers()["formal_methods"]["offered"])
+
+    def test_malformed_answers_are_refused_and_change_nothing(self) -> None:
+        self.write_record()
+        cases = {"unknown answer": {"formal_methods": "maybe", "verification_docker": "declined"},
+                 "none answer": {"formal_methods": "none", "verification_docker": "declined"},
+                 "one feature": {"formal_methods": "declined"},
+                 "extra feature": {**dict.fromkeys(FEATURES, "declined"), "sandbox": "declined"},
+                 "a boolean": {"formal_methods": True, "verification_docker": "declined"}}
+        for label, answers in cases.items():
+            with self.subTest(label):
+                assert_runner_response(self, self.offer(answers), "input_error", 2)
+                self.assertFalse(self.read_offers()["formal_methods"]["offered"])
+        bad_host = feature_offers_request(dict.fromkeys(FEATURES, "declined"), "gemini")
+        assert_runner_response(self, run_runner(bad_host, cwd=self.root)[1], "input_error", 2)
+
+    def test_the_offer_names_one_host_and_leaves_the_other_hosts_record_alone(self) -> None:
+        self.write_record("claude")
+        self.write_record("codex")
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted"), "codex"), "ok", 0)
+        self.assertTrue(self.read_offers("codex")["formal_methods"]["offered"])
+        self.assertFalse(self.read_offers("claude")["formal_methods"]["offered"])
+
+    def test_a_record_with_offers_still_passes_g0_and_the_preview_reader(self) -> None:
+        self.write_record(observations=[observation("preview_surface", "unavailable", values={"surface": "none"})])
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "declined")), "ok", 0)
+        self.assertNotIn("record", dict(readiness_record.stale_items(self.root, "claude")))
+        self.assertEqual("unavailable", readiness_record.preview_surface(self.root, "claude"))
+
+    def test_scaffold_step_6_6_calls_the_helper_on_each_host_with_the_documented_request(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                rows = re.findall(r"\| `record-feature-offers` \| `apply` \| `(\{[^`]*\})`", skill)
+                self.assertEqual(1, len(rows))
+                documented = json.loads(rows[0])
+                self.assertEqual({"host", "answers"}, set(documented))
+                step = skill.split("### 6.6 Offer Formal Methods", 1)[1].split("\n### ", 1)[0]
+                self.assertIn("`record-feature-offers`", step)
+                self.assertIn(f"`host` to `{host}`", step)
+                replay = {**feature_offers_request(dict.fromkeys(FEATURES, "declined"), host), "mode": "dry_run"}
+                self.write_record(host)
+                assert_runner_response(self, run_runner(replay, cwd=self.root)[1], "ok", 0)
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    cases = (ReadinessRecordTest, TerminalPreviewEvidenceTest, PreviewEvidenceBoundaryTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
+    cases = (ReadinessRecordTest, FeatureOffersTest, TerminalPreviewEvidenceTest, PreviewEvidenceBoundaryTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
              G0RecordValidationTests, G0PreviewEvidenceTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests, G0WorkflowPathTests)
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
