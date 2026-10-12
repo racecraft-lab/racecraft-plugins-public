@@ -5528,18 +5528,9 @@ class CanaryVariantCase(unittest.TestCase):
                     self.assertEqual([f"{name}.{assertion}"], self.validator.validate_receipt(mutated))
 
 
-class CanaryRootLoadTests(CanaryVariantCase):
+class CanaryRootLoadCase(CanaryVariantCase):
     SEGMENTS = ("specify", "clarify", "plan", "checklist", "tasks", "analyze", "terminal")
     ROOT_FIELDS = ("root_calls", "root_context_avg_tokens", "root_context_peak_tokens")
-
-    def test_base_requires_mode_and_the_segment_map_through_schema_api_and_cli(self):
-        for host, original in self.receipts.items():
-            for field in ("mode", "segments"):
-                value = copy.deepcopy(original)
-                container = value if field == "mode" else value["variants"][0]["stages"]["plan"]
-                del container[field]
-                with self.subTest(host=host, field=field):
-                    self.assert_missing_evidence(value)
 
     def assert_missing_evidence(self, value):
         self.assertTrue(self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
@@ -5555,6 +5546,41 @@ class CanaryRootLoadTests(CanaryVariantCase):
                                        capture_output=True, text=True, check=False)
             self.assertEqual(1, completed.returncode, completed.stdout)
             self.assertFalse(json.loads(completed.stdout)["valid"])
+
+    def assert_nonbase_can_omit_root_load(self):
+        for host, original in self.receipts.items():
+            value = copy.deepcopy(original)
+            variant = value["variants"][0]
+            variant.update(name="oversized_plan", split_recommendation_recorded=True, full_plan_built=True, stops=0)
+            del variant["stages"]["plan"]["segments"]
+            with self.subTest(host=host):
+                self.assertEqual([], self.validator.validate_receipt(value))
+
+    def assert_plan_target_includes_children(self):
+        for host, original in self.receipts.items():
+            value = copy.deepcopy(original)
+            plan = value["variants"][0]["stages"]["plan"]
+            plan["tokens"] = 15000001
+            if host == "codex":
+                plan["codex_tokens"] = {"root_tokens": 1, "child_rollout_tokens": [15000000]}
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertTrue(report["valid"], report)
+                target = report["variants"][0]["plan_target"]
+                self.assertEqual(15000001, target["tokens"])
+                self.assertEqual((15000000, 1800), (target["tokens_limit"], target["wall_seconds_limit"]))
+                self.assertFalse(target["target_met"])
+
+
+class CanaryRootLoadTests(CanaryRootLoadCase):
+    def test_base_requires_mode_and_the_segment_map_through_schema_api_and_cli(self):
+        for host, original in self.receipts.items():
+            for field in ("mode", "segments"):
+                value = copy.deepcopy(original)
+                container = value if field == "mode" else value["variants"][0]["stages"]["plan"]
+                del container[field]
+                with self.subTest(host=host, field=field):
+                    self.assert_missing_evidence(value)
 
     def test_base_requires_every_plan_segment_and_root_field_on_both_hosts(self):
         for host, original in self.receipts.items():
@@ -5596,33 +5622,19 @@ class CanaryRootLoadTests(CanaryVariantCase):
                     self.assert_receipt_rejected(value)
 
     def test_nonbase_variants_can_omit_root_load(self):
-        for host, original in self.receipts.items():
-            value = copy.deepcopy(original)
-            variant = value["variants"][0]
-            variant.update(name="oversized_plan", split_recommendation_recorded=True, full_plan_built=True, stops=0)
-            del variant["stages"]["plan"]["segments"]
-            with self.subTest(host=host):
-                self.assertEqual([], self.validator.validate_receipt(value))
+        self.assert_nonbase_can_omit_root_load()
 
     def test_root_load_does_not_replace_root_plus_children_in_the_plan_target(self):
-        for host, original in self.receipts.items():
-            value = copy.deepcopy(original)
-            plan = value["variants"][0]["stages"]["plan"]
-            plan["tokens"] = 15000001
-            if host == "codex":
-                plan["codex_tokens"] = {"root_tokens": 1, "child_rollout_tokens": [15000000]}
-            with self.subTest(host=host):
-                report = self.validator.receipt_report(value)
-                self.assertTrue(report["valid"], report)
-                target = report["variants"][0]["plan_target"]
-                self.assertEqual(15000001, target["tokens"])
-                self.assertEqual((15000000, 1800), (target["tokens_limit"], target["wall_seconds_limit"]))
-                self.assertFalse(target["target_met"])
+        self.assert_plan_target_includes_children()
 
 
-class CanaryRootLoadConsistencyCase(CanaryVariantCase):
-    SEGMENTS = CanaryRootLoadTests.SEGMENTS
-    ROOT_FIELDS = CanaryRootLoadTests.ROOT_FIELDS
+def root_context_receipt(original, segment, load):
+    value = copy.deepcopy(original)
+    value["variants"][0]["stages"]["plan"]["segments"][segment] = dict(zip(CanaryRootLoadCase.ROOT_FIELDS, load, strict=True))
+    return value
+
+
+class CanaryRootLoadConsistencyCase(CanaryRootLoadCase):
 
     def root_load_receipts(self):
         for host, mode, name in itertools.product(self.receipts, ("flat", "nested"), self.variant_evidence):
@@ -5648,85 +5660,62 @@ class CanaryRootLoadConsistencyCase(CanaryVariantCase):
             cli_report = json.loads(completed.stdout)
             self.assertEqual(report, cli_report)
 
+    def assert_context_cases(self, loads, *, rejected=False, segments=("plan",)):
+        for host, mode, name, original in self.root_load_receipts():
+            for segment, load in itertools.product(segments, loads):
+                value = root_context_receipt(original, segment, load)
+                with self.subTest(host=host, mode=mode, variant=name, segment=segment, load=load):
+                    failure = f"{name}.plan.segments.{segment}.root_context" if rejected else None
+                    self.assert_root_load_result(value, failure)
+
 
 class CanaryRootContextTests(CanaryRootLoadConsistencyCase):
     def test_consistent_root_context_accepts_boundaries_rounding_and_large_counts(self):
-        for host, mode, name, original in self.root_load_receipts():
-            for calls, average, peak in ((1, 180.0, 180), (2, 120.5, 180), (2, 0.5, 1),
-                                         (3, 1 / 3, 1), (7, 180 / 7, 180),
-                                         (10 ** 400, 1.0, 180), (10, 1e308, 10 ** 309),
-                                         (1, 10 ** 400, 10 ** 400), (0, 0.0, 0)):
-                value = copy.deepcopy(original)
-                value["variants"][0]["stages"]["plan"]["segments"]["plan"] = dict(
-                    root_calls=calls, root_context_avg_tokens=average, root_context_peak_tokens=peak)
-                with self.subTest(host=host, mode=mode, variant=name, load=(calls, average, peak)):
-                    self.assert_root_load_result(value)
+        self.assert_context_cases(((1, 180.0, 180), (2, 120.5, 180), (2, 0.5, 1),
+                                   (3, 1 / 3, 1), (7, 180 / 7, 180),
+                                   (10 ** 400, 1.0, 180), (10, 1e308, 10 ** 309),
+                                   (1, 10 ** 400, 10 ** 400), (0, 0.0, 0)))
 
     def test_single_root_call_requires_equal_average_and_peak(self):
-        for host, mode, name, original in self.root_load_receipts():
-            for segment in self.SEGMENTS:
-                value = copy.deepcopy(original)
-                value["variants"][0]["stages"]["plan"]["segments"][segment] = dict(
-                    root_calls=1, root_context_avg_tokens=100, root_context_peak_tokens=180)
-                with self.subTest(host=host, mode=mode, variant=name, segment=segment):
-                    self.assert_root_load_result(value, f"{name}.plan.segments.{segment}.root_context")
+        self.assert_context_cases(((1, 100, 180),), rejected=True, segments=self.SEGMENTS)
 
     def test_root_peak_cannot_exceed_total_implied_by_average(self):
-        for host, mode, name, original in self.root_load_receipts():
-            for segment in self.SEGMENTS:
-                value = copy.deepcopy(original)
-                value["variants"][0]["stages"]["plan"]["segments"][segment] = dict(
-                    root_calls=2, root_context_avg_tokens=50, root_context_peak_tokens=180)
-                with self.subTest(host=host, mode=mode, variant=name, segment=segment):
-                    self.assert_root_load_result(value, f"{name}.plan.segments.{segment}.root_context")
+        self.assert_context_cases(((2, 50, 180),), rejected=True, segments=self.SEGMENTS)
 
     def test_impossible_root_context_rejects_fractional_and_large_summaries(self):
-        for host, mode, name, original in self.root_load_receipts():
-            for calls, average, peak in ((3, 0.5, 2), (2, 1.5, 4), (1, float(2 ** 53), 2 ** 53 + 1),
-                                         (10, 1e308, 10 ** 310), (10 ** 400, 0.0, 1),
-                                         (2, 10 ** 400, 3 * 10 ** 400)):
-                value = copy.deepcopy(original)
-                value["variants"][0]["stages"]["plan"]["segments"]["plan"] = dict(
-                    root_calls=calls, root_context_avg_tokens=average, root_context_peak_tokens=peak)
-                with self.subTest(host=host, mode=mode, variant=name, load=(calls, average, peak)):
-                    self.assert_root_load_result(value, f"{name}.plan.segments.plan.root_context")
+        self.assert_context_cases(((3, 0.5, 2), (2, 1.5, 4), (1, float(2 ** 53), 2 ** 53 + 1),
+                                   (10, 1e308, 10 ** 310), (10 ** 400, 0.0, 1),
+                                   (2, 10 ** 400, 3 * 10 ** 400)), rejected=True)
 
 
-class CanaryRootAttributionTests(CanaryRootLoadConsistencyCase):
-    def test_attributed_root_calls_do_not_prove_measured_root_token_usage(self):
-        for host, mode, name, value in self.root_load_receipts():
-            if host != "codex":
+class CanaryRootAttributionCase(CanaryRootLoadConsistencyCase):
+    def assert_attribution_cases(self, calls, host=None, child_only=False, failure=None):
+        for current_host, mode, name, value in self.root_load_receipts():
+            if host is not None and current_host != host:
                 continue
-            value["variants"][0]["stages"]["plan"]["codex_tokens"] = {
-                "root_tokens": 0, "child_rollout_tokens": [10]}
-            with self.subTest(mode=mode, variant=name):
-                self.assert_root_load_result(value)
+            plan = value["variants"][0]["stages"]["plan"]
+            if calls is not None:
+                plan["segments"] = {segment: dict(root_calls=calls, root_context_avg_tokens=0, root_context_peak_tokens=0)
+                                    for segment in self.SEGMENTS}
+            if child_only and current_host == "codex":
+                plan["codex_tokens"] = {"root_tokens": 0, "child_rollout_tokens": [10]}
+            with self.subTest(host=current_host, mode=mode, variant=name):
+                expected = f"{name}.plan.segments.{failure}" if failure is not None else None
+                self.assert_root_load_result(value, expected)
+
+
+class CanaryRootAttributionTests(CanaryRootAttributionCase):
+    def test_attributed_root_calls_do_not_prove_measured_root_token_usage(self):
+        self.assert_attribution_cases(None, host="codex", child_only=True)
 
     def test_codex_root_usage_requires_an_attributed_plan_call(self):
-        for host, mode, name, value in self.root_load_receipts():
-            if host != "codex":
-                continue
-            plan = value["variants"][0]["stages"]["plan"]
-            plan["segments"] = {segment: dict.fromkeys(self.ROOT_FIELDS, 0) for segment in self.SEGMENTS}
-            with self.subTest(mode=mode, variant=name):
-                self.assert_root_load_result(value, f"{name}.plan.segments.root_calls")
+        self.assert_attribution_cases(0, host="codex", failure="root_calls")
 
     def test_zero_root_calls_allow_child_only_or_unattributed_claude_totals(self):
-        for host, mode, name, value in self.root_load_receipts():
-            plan = value["variants"][0]["stages"]["plan"]
-            plan["segments"] = {segment: dict.fromkeys(self.ROOT_FIELDS, 0) for segment in self.SEGMENTS}
-            if host == "codex":
-                plan["codex_tokens"] = {"root_tokens": 0, "child_rollout_tokens": [10]}
-            with self.subTest(host=host, mode=mode, variant=name):
-                self.assert_root_load_result(value)
+        self.assert_attribution_cases(0, child_only=True)
 
     def test_claimed_root_call_with_zero_context_remains_a_telemetry_limit(self):
-        for host, mode, name, value in self.root_load_receipts():
-            plan = value["variants"][0]["stages"]["plan"]
-            plan["segments"] = {segment: dict(root_calls=1, root_context_avg_tokens=0, root_context_peak_tokens=0)
-                                for segment in self.SEGMENTS}
-            with self.subTest(host=host, mode=mode, variant=name):
-                self.assert_root_load_result(value)
+        self.assert_attribution_cases(1)
 
     def test_zero_calls_with_nonzero_context_and_average_above_peak_fail(self):
         for host, mode, name, original in self.root_load_receipts():
