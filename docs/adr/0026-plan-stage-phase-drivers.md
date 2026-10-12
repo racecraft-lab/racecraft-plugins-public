@@ -36,11 +36,13 @@ We decided five things.
    enforces the schema and a byte cap. The root then calls one runner helper
    that re-verifies the phase from disk. Missing or unparseable evidence fails
    the phase; a driver's claim never passes a gate.
-5. **Flat mode is the fallback.** A preflight reads the host's subagent depth.
-   Below 2, the root dispatches executors directly under the compact-answer
-   contract, and the receipt records `mode=flat`. Codex defaults to
-   `agents.max_depth = 1`, so flat mode is what most Codex installs run.
-   Prerequisites tell the user that a depth of 2 enables phase-local contexts. Depth
+5. **Flat mode is the fallback.** A preflight checks the host's effective
+   subagent nesting capability. If it cannot nest two levels deep, the root
+   dispatches executors directly under the compact-answer contract, and the
+   receipt records `mode=flat`. Codex's `agents.max_depth` applies only to V1
+   agent threads; V2 ignores it ([Codex 0.160.0 source](https://github.com/openai/codex/blob/rust-v0.160.0/codex-rs/config/src/config_toml.rs)).
+   Prerequisites explain how to enable two-level nesting on hosts that enforce
+   a depth limit. A configured depth alone does not select flat mode, and depth
    never fails a run.
 
 Proof comes in two parts. Repo tests fail first: the terminal helper finishes
@@ -64,4 +66,6 @@ Codex installs.
 Phase drivers do not reset the root thread's existing transcript. They keep
 phase work in fresh child contexts and return compact envelopes to limit root
 context growth. Token savings remain subject to the canary acceptance above;
-this documentation-only PR changes no execution path or gate result.
+this documentation-only PR changes no execution path or gate result. Host
+nesting support must be checked for the active agent backend rather than
+inferred from a setting that backend ignores.
