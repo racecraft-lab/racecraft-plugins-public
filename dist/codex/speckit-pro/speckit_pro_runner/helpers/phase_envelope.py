@@ -7,6 +7,7 @@ against the artifacts on disk and rejects any disagreement. Missing or unparseab
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 from typing import Any
@@ -14,7 +15,7 @@ from typing import Any
 from ..envelope import diagnostic, response
 from ..json_schema import json_schema_failures, schema_failure
 from ..strict_input import SelectionError, require_fields, require_text
-from ..trusted_io import resolve_input_path, resolve_repo_root, trusted_bytes, trusted_dir_exists
+from ..trusted_io import resolve_input_path, resolve_repo_root, trusted_bytes, trusted_dir_exists, trusted_open_directory
 from .phase_brief import PHASES, brief_path
 from .read_only import validate_gate
 
@@ -24,7 +25,8 @@ ENVELOPE_LIMIT_BYTES = 2048
 # Gate fields a driver may restate as counts; each must equal what the gate reports on disk.
 VERIFIED_COUNTS = ("markers", "task_count")
 # Files each gate reads. validate-gate counts an absent or undecodable file as zero markers, so the runner
-# insists the sources are present, non-empty and valid UTF-8 before it trusts a verdict. G6 also reads the workflow.
+# insists the sources are present, non-empty and valid UTF-8 before it trusts a verdict. The workflow is always
+# a source: G6 reads its Analysis Results table, and the formal checkpoint of G3, G5 and G7 treats an empty one as disabled.
 GATE_SOURCES = {"G1": ("spec.md",), "G2": ("spec.md",), "G3": ("plan.md",), "G4": ("spec.md", "plan.md"),
                 "G5": ("tasks.md",), "G6": ("spec.md", "plan.md", "tasks.md"), "G7": ("tasks.md",)}
 GATE_IDS = [f"G{number}" for number in range(1, 8)]
@@ -76,6 +78,17 @@ def envelope_failures(value: Any) -> list[dict[str, Any]]:
     return json_schema_failures(value, ENVELOPE_SCHEMA, ENVELOPE_SCHEMA, "envelope")
 
 
+def directory_has_entries(path: Path, root: Path) -> bool:
+    """List through the held descriptor, so a swapped path cannot redirect the listing."""
+    fd = trusted_open_directory(path, root)
+    if fd is None:
+        return False
+    try:
+        return bool(os.listdir(fd))
+    finally:
+        os.close(fd)
+
+
 def check_artifacts(envelope: dict[str, Any], root: Path) -> None:
     for raw in envelope["artifacts"]:
         try:
@@ -87,7 +100,7 @@ def check_artifacts(envelope: dict[str, Any], root: Path) -> None:
         resolved = resolve_input_path(path, root)
         # Absolute paths and links that leave the repository read back as None here.
         if trusted_dir_exists(resolved, root):
-            if not any(resolved.iterdir()):
+            if not directory_has_entries(resolved, root):
                 raise Mismatch("artifact_missing", f"{path} is an empty directory")
         elif not trusted_bytes(resolved, root):
             raise Mismatch("artifact_missing", f"{path} is missing, empty or unreadable")
@@ -105,7 +118,7 @@ def check_source(gate: str, name: str, root: Path) -> None:
 
 
 def check_gate_sources(gate: str, workflow: str, feature: str, root: Path) -> None:
-    for name in [f"{feature}/{name}" for name in GATE_SOURCES[gate]] + ([workflow] if gate == "G6" else []):
+    for name in [f"{feature}/{name}" for name in GATE_SOURCES[gate]] + [workflow]:
         check_source(gate, name, root)
 
 

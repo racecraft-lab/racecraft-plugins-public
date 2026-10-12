@@ -179,6 +179,17 @@ class SourceEvidenceTests(unittest.TestCase):
             envelope = good_envelope(artifacts=[], gates=[{"id": "G1", "result": "pass"}, {"id": "G7", "result": "pass"}], counts={})
             self.assertEqual(mismatch(verify(envelope)), "gate_evidence_unparseable")
 
+    def test_an_empty_workflow_fails_every_gate_that_consults_it(self):
+        # G3, G5 and G7 read the workflow for the formal checkpoint, where an empty file disables it.
+        cases = [("Plan", ["G3"]), ("Tasks", ["G5"]), ("Specify", ["G1", "G7"])]
+        for phase, gates in cases:
+            with self.subTest(gates=gates), project() as root:
+                for clean in ("spec.md", "plan.md", "tasks.md"):
+                    (root / FEATURE / clean).write_text("clean\n", encoding="utf-8")
+                (root / WORKFLOW).write_bytes(b"")
+                envelope = good_envelope(phase=phase, artifacts=[], gates=[{"id": gate, "result": "pass"} for gate in gates], counts={})
+                self.assertEqual(mismatch(verify(envelope)), "gate_evidence_missing")
+
     def test_an_empty_artifact_directory_fails(self):
         with project() as root:
             (root / FEATURE / "checklists").mkdir()
