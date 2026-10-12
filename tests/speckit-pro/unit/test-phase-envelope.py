@@ -137,6 +137,48 @@ class SourceEvidenceTests(unittest.TestCase):
             (root / FEATURE / "spec.md").write_bytes(b"")
             self.assertEqual(mismatch(verify(good_envelope(artifacts=[]))), "gate_evidence_missing")
 
+    def checklist_project(self, root, report=b"clean report\n"):
+        for name in ("spec.md", "plan.md"):
+            (root / FEATURE / name).write_text("clean\n", encoding="utf-8")
+        (root / FEATURE / "checklists").mkdir()
+        (root / FEATURE / "checklists" / "domain.md").write_bytes(report)
+
+    def checklist_envelope(self, artifacts):
+        return good_envelope(phase="Checklist", artifacts=artifacts, gates=[{"id": "G4", "result": "pass"}], counts={"markers": 0})
+
+    def test_a_corrupt_or_empty_checklist_report_fails_listed_or_not(self):
+        report = f"{FEATURE}/checklists/domain.md"
+        for label, content, artifacts in (("corrupt unlisted", b"\xff", []), ("corrupt listed", b"\xff", [report]),
+                                          ("empty unlisted", b"", [])):
+            with self.subTest(label), project() as root:
+                self.checklist_project(root, content)
+                result = verify(self.checklist_envelope(artifacts))
+                self.assertEqual(result["status"], "expected_failure")
+                self.assertIn(mismatch(result), ("gate_evidence_missing", "gate_evidence_unparseable"))
+
+    def test_a_clean_checklist_report_still_passes(self):
+        with project() as root:
+            self.checklist_project(root)
+            self.assertEqual(verify(self.checklist_envelope([]))["status"], "ok")
+
+    def test_every_gate_source_must_be_valid_for_every_gate(self):
+        # One corrupt byte in any file a gate reads fails that gate, whichever gate claims it.
+        cases = [("Specify", "G1", ["spec.md"]), ("Clarify", "G2", ["spec.md"]), ("Plan", "G3", ["plan.md"]),
+                 ("Tasks", "G5", ["tasks.md"]), ("Analyze", "G6", ["spec.md", "plan.md", "tasks.md", "docs/workflow.md"])]
+        for phase, gate, files in cases:
+            for name in files:
+                with self.subTest(gate=gate, file=name), project() as root:
+                    for clean in ("spec.md", "plan.md", "tasks.md"):
+                        (root / FEATURE / clean).write_text("clean\n", encoding="utf-8")
+                    target = root / name if name.startswith("docs/") else root / FEATURE / name
+                    target.write_bytes(b"\xff")
+                    envelope = good_envelope(phase=phase, artifacts=[], gates=[{"id": gate, "result": "pass"}], counts={})
+                    self.assertEqual(mismatch(verify(envelope)), "gate_evidence_unparseable")
+        with project() as root:
+            (root / FEATURE / "tasks.md").write_bytes(b"\xff")
+            envelope = good_envelope(artifacts=[], gates=[{"id": "G1", "result": "pass"}, {"id": "G7", "result": "pass"}], counts={})
+            self.assertEqual(mismatch(verify(envelope)), "gate_evidence_unparseable")
+
     def test_an_empty_artifact_directory_fails(self):
         with project() as root:
             (root / FEATURE / "checklists").mkdir()

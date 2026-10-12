@@ -93,17 +93,27 @@ def check_artifacts(envelope: dict[str, Any], root: Path) -> None:
             raise Mismatch("artifact_missing", f"{path} is missing, empty or unreadable")
 
 
+def check_source(gate: str, name: str, root: Path) -> None:
+    """Fail unless one file a gate reads is present, non-empty and strict UTF-8."""
+    data = trusted_bytes(resolve_input_path(name, root), root)
+    if not data:
+        raise Mismatch("gate_evidence_missing", f"{gate} reads {name}, which is missing, empty or unreadable")
+    try:
+        data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise Mismatch("gate_evidence_unparseable", f"{gate} reads {name}, which is not valid UTF-8") from exc
+
+
 def check_gate_sources(gate: str, workflow: str, feature: str, root: Path) -> None:
-    """Fail unless every file the gate reads is present, non-empty and strict UTF-8."""
-    names = [f"{feature}/{name}" for name in GATE_SOURCES[gate]] + ([workflow] if gate == "G6" else [])
-    for name in names:
-        data = trusted_bytes(resolve_input_path(name, root), root)
-        if not data:
-            raise Mismatch("gate_evidence_missing", f"{gate} reads {name}, which is missing, empty or unreadable")
-        try:
-            data.decode("utf-8")
-        except UnicodeDecodeError as exc:
-            raise Mismatch("gate_evidence_unparseable", f"{gate} reads {name}, which is not valid UTF-8") from exc
+    for name in [f"{feature}/{name}" for name in GATE_SOURCES[gate]] + ([workflow] if gate == "G6" else []):
+        check_source(gate, name, root)
+
+
+def check_judged_sources(gate: str, verdict: dict[str, Any], feature: str, root: Path) -> None:
+    """A gate that names the files it judged (G4 checklist reports) has each one validated too."""
+    judged = verdict.get("judged")
+    for name in judged if isinstance(judged, dict) else ():
+        check_source(gate, f"{feature}/{name}", root)
 
 
 def disk_gate(gate: str, workflow: str, feature: str, root: Path) -> dict[str, Any]:
@@ -126,6 +136,8 @@ def check_gates(envelope: dict[str, Any], workflow: str, feature: str, root: Pat
     for gate in claimed:
         check_gate_sources(gate, workflow, feature, root)
     verdicts = {gate: disk_gate(gate, workflow, feature, root) for gate in claimed}
+    for gate, verdict in verdicts.items():
+        check_judged_sources(gate, verdict, feature, root)
     for gate, verdict in verdicts.items():
         observed = "pass" if verdict["pass"] else "fail"
         if claimed[gate] != observed:
