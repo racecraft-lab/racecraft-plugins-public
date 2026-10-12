@@ -51,7 +51,9 @@
       "required": ["root_calls", "root_context_avg_tokens", "root_context_peak_tokens"],
       "properties": {"root_calls": {"$ref": "#/$defs/count"},
         "root_context_avg_tokens": {"type": "number", "minimum": 0},
-        "root_context_peak_tokens": {"$ref": "#/$defs/count"}}
+        "root_context_peak_tokens": {"$ref": "#/$defs/count"}},
+      "allOf": [{"if": {"properties": {"root_calls": {"const": 0}}},
+        "then": {"properties": {"root_context_avg_tokens": {"const": 0}, "root_context_peak_tokens": {"const": 0}}}}]
     },
     "plan_segments": {
       "description": "Plan stage only: the six planning phases and terminal artifact/draft-PR/completion work, required on base. Include preparation in specify and between-phase handoff in the phase just completed. Every root call in the plan stage belongs to exactly one segment. Root load is attribution only: ADR 0023 totals still include root plus all children.",

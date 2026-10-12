@@ -5548,7 +5548,6 @@ class CanaryRootLoadTests(CanaryVariantCase):
     def assert_receipt_rejected(self, value):
         report = self.validator.receipt_report(value)
         self.assertFalse(report["valid"], report)
-        self.assertEqual([], report["variants"])
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "receipt.json"
             source.write_text(json.dumps(value), encoding="utf-8")
@@ -5571,9 +5570,12 @@ class CanaryRootLoadTests(CanaryVariantCase):
 
     def test_complete_root_load_accepts_flat_and_nested_on_both_hosts(self):
         for host, original in self.receipts.items():
-            for mode in ("flat", "nested"):
-                value = dict(original, mode=mode)
-                with self.subTest(host=host, mode=mode):
+            contexts = (original["variants"][0]["stages"]["plan"]["segments"]["plan"], dict.fromkeys(self.ROOT_FIELDS, 0))
+            for mode, context in itertools.product(("flat", "nested"), contexts):
+                value = copy.deepcopy(original)
+                value["mode"] = mode
+                value["variants"][0]["stages"]["plan"]["segments"]["plan"] = context
+                with self.subTest(host=host, mode=mode, context=context):
                     self.assertEqual([], self.validator.validate_receipt(value))
                     self.assertEqual([], self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
 
@@ -5582,10 +5584,15 @@ class CanaryRootLoadTests(CanaryVariantCase):
             for bad in (None, "", "NESTED", True):
                 with self.subTest(host=host, mode=bad):
                     self.assert_receipt_rejected(dict(original, mode=bad))
-            for field, bad in itertools.product(self.ROOT_FIELDS, (None, True, -1, "2", float("nan"), float("inf"))):
+            invalid_metrics = itertools.chain(
+                ({field: bad} for field, bad in itertools.product(self.ROOT_FIELDS, (None, True, -1, "2", float("nan"), float("inf")))),
+                ({"root_calls": 0}, {"root_context_avg_tokens": 181},
+                 {"root_calls": 0, "root_context_avg_tokens": 0}, {"root_calls": 0, "root_context_peak_tokens": 0}),
+            )
+            for replacements in invalid_metrics:
                 value = copy.deepcopy(original)
-                value["variants"][0]["stages"]["plan"]["segments"]["plan"][field] = bad
-                with self.subTest(host=host, field=field, bad=bad):
+                value["variants"][0]["stages"]["plan"]["segments"]["plan"].update(replacements)
+                with self.subTest(host=host, replacements=replacements):
                     self.assert_receipt_rejected(value)
 
     def test_nonbase_variants_can_omit_root_load(self):

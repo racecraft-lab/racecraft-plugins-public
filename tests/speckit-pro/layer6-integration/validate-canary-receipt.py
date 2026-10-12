@@ -269,6 +269,14 @@ def gate_failures(variant, failures):
     return [failure for failure in failures if failure not in expected]
 
 
+def root_load_failures(variant):
+    """A segment's average context cannot exceed its peak; zero-call evidence is schema-owned."""
+    segments = variant["stages"]["plan"].get("segments", {})
+    return [f"{variant['name']}.plan.segments.{name}.root_context"
+            for name, load in segments.items()
+            if load["root_context_avg_tokens"] > load["root_context_peak_tokens"]]
+
+
 def variant_failures(variant):
     failures = []
     conditions = {
@@ -308,7 +316,7 @@ def variant_failures(variant):
     for key, passed in conditions.items():
         if not passed:
             failures.append(f"{variant['name']}.{key}")
-    return failures + stage_failures(variant)
+    return failures + stage_failures(variant) + root_load_failures(variant)
 
 
 def stage_failures(variant):
