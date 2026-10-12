@@ -688,7 +688,7 @@ def record_offers(inputs: Any, root: Path) -> tuple[dict[str, Any], dict[str, An
                                          for feature in OFFER_FEATURES}}, snapshot
 
 
-def record_response(entry: Any, request: Any, root: Path, record: dict[str, Any], noun: str,
+def record_response(entry: Any, request: Any, root: Path, record: dict[str, Any],
                     expected_snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
     """The `ok` envelope for a built record, writing it first in `apply` mode."""
     data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
@@ -697,6 +697,7 @@ def record_response(entry: Any, request: Any, root: Path, record: dict[str, Any]
         try:
             data["record_path"], published_digest = write_record(root, record, expected_snapshot=expected_snapshot)
         except (OSError, SelectionError) as error:
+            noun = "readiness record" if entry.helper_id == "write-readiness-record" else "feature offers"
             data["writes_state"] = isinstance(error, AtomicWriteInterrupted)
             return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
                 "write_failure", f"the {noun} could not be written: {getattr(error, 'strerror', None) or error}",
@@ -723,7 +724,7 @@ def run_feature_offers_helper(entry: Any, request: Any) -> dict[str, Any]:
                        else "Send the host, the current Step 6.5 readiness_digest and one answer per feature.",
                        remediation_actions=["Report the gap in the scaffold closing report."] if gap
                        else ["Correct the named field.", "Retry the request."])])
-    return record_response(entry, request, root, record, "feature offers", snapshot)
+    return record_response(entry, request, root, record, snapshot)
 
 
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
@@ -748,7 +749,7 @@ def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
             "write_failure", f"the previous readiness evaluation could not be retired: {getattr(error, 'strerror', None) or error}",
             remediation_summary="Scaffold continues with no successful evaluation receipt.",
             remediation_actions=["Report the failure in the scaffold closing report.", "Resolve the diagnostic and rerun Step 6.5."])])
-    reply = record_response(entry, request, root, record, "readiness record")
+    reply = record_response(entry, request, root, record)
     reply["data"]["writes_state"] = retired or reply["data"]["writes_state"]
     reply["data"]["allow_rules"] = host_items.allow_rules(request.inputs)
     return reply
