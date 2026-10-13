@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import itertools
 import json
 import sys
@@ -17,6 +16,7 @@ sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
 from host_skill_views import host_skill_root  # noqa: E402
 from runner_invocation import run_runner  # noqa: E402
+from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 from speckit_pro_runner.helpers import nesting_preflight  # noqa: E402
@@ -100,10 +100,7 @@ class ReceiptModeTests(unittest.TestCase):
         self.assertEqual(set(SCHEMA["properties"]["mode"]["enum"]), set(nesting_preflight.MODES))
 
     def test_a_flat_result_records_mode_flat_in_a_receipt(self) -> None:
-        spec = importlib.util.spec_from_file_location("canary_receipt", VALIDATOR)
-        validator = importlib.util.module_from_spec(spec)
-        sys.modules["canary_receipt"] = validator
-        spec.loader.exec_module(validator)
+        validator = load_script("canary_receipt", VALIDATOR)
         for nested_spawn, expected in (("refused", "flat"), ("allowed", "nested"), ("not_run", "flat")):
             with self.subTest(nested_spawn=nested_spawn):
                 data = resolve(host="codex", nested_spawn=nested_spawn)
