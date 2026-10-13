@@ -40,7 +40,7 @@ external trigger was identified.
 The final Linux suite executes its changed seams successfully, but the
 carry-forward filesystem tests stop on the isolated runner image ownership:
 the test user is UID 1000 while the absolute root and temporary parent have
-unmapped UID 65534. The absolute-ancestor guard permits root or the current
+UID 65534. The absolute-ancestor guard permits root or the current
 user, so it refuses before those fixtures reach their attack hooks. This is
 a remaining infrastructure failure, not a green full-suite result. The
 guard and its ownership/mode requirements are unchanged; the orchestrator
