@@ -56,7 +56,6 @@ result.
 **Errors:** None (or describe any errors)
 ```
 
-Adjust metrics to the phase: Specify reports FR/story and acceptance scenario counts, Plan reports artifact status and any rescope of plan.md, Tasks reports task counts.
 
 ## Contents
 

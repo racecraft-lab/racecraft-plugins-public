@@ -106,6 +106,8 @@ Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
 For flat mode, use the Phase executor summary in
 `<plugin-root>/skills/speckit-autopilot/references/phase-execution.md#phase-executor-summary`.
 
+Adjust metrics to the phase: Specify reports FR/story and acceptance scenario counts, Plan reports artifact status and any rescope of plan.md, Tasks reports task counts.
+
 ### Terminal Deliverable
 
 In nested mode your final message is the phase envelope of rule 7, not this summary. Otherwise,
