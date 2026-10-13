@@ -84,9 +84,10 @@ def directory_has_entries(path: Path, root: Path) -> bool:
     if fd is None:
         return False
     try:
-        return bool(os.listdir(fd))
+        entries = os.listdir(fd)
     finally:
         os.close(fd)
+    return bool(entries)
 
 
 def check_artifacts(envelope: dict[str, Any], root: Path) -> None:
