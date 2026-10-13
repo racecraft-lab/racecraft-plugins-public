@@ -50,6 +50,7 @@ if str(PLUGIN_ROOT) not in sys.path:
 sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
 from script_loader import load_script  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
+from readiness_case import feature_offers_request, readiness_request  # noqa: E402
 
 CONFIDENCE_GATE_RUNBOOKS = (
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "gate-validation.md",
@@ -58,7 +59,7 @@ CONFIDENCE_GATE_RUNBOOKS = (
 import runner_invocation  # noqa: E402
 from runner_invocation import assert_runner_response, command_stdin_fixture  # noqa: E402
 
-from speckit_pro_runner.helpers import registry  # noqa: E402
+from speckit_pro_runner.helpers import readiness_record, registry  # noqa: E402
 from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
@@ -68,6 +69,7 @@ EXPECTED_HELPERS = [
     "probe-git-write",
     "scaffold-answers",
     "phase-brief",
+    "verify-phase-envelope",
     "resolve-nesting-mode",
     "read-tasks-output",
     "read-tasks-inputs",
@@ -4743,7 +4745,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write", "phase-brief", "resolve-nesting-mode", "read-tasks-inputs", "read-tasks-output"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write", "phase-brief", "verify-phase-envelope", "resolve-nesting-mode", "read-tasks-inputs", "read-tasks-output"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
@@ -5748,6 +5750,47 @@ class CanaryFeatureOfferTests(CanaryVariantCase):
         value = receipt()
         del value["variants"][0]["feature_offers"]
         self.assertTrue(self.validator.validate_receipt(value))
+
+    def recorded_offers(self, offer_answers, host="claude", after_offer=None):
+        """The `feature_offers` a scaffold run leaves in the readiness record, as the canary copies them."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            (root / ".specify").mkdir()
+            tools = root / "no-tools"
+            tools.mkdir()
+            checker = root / "checker.json"
+            checker.write_text("old input", encoding="utf-8")
+            written = runner_invocation.run_runner(readiness_request([{"item": "formal_methods", "status": "unavailable", "evidence_source": "formal methods probe",
+                                                     "action": "Install a checker, then rerun scaffold.", "files": [checker.name]}], host=host, mode="apply"), cwd=root,
+                                                   extra_env={"PATH": str(tools)})[1]
+            self.assertEqual("ok", written["status"])
+            if offer_answers is not None:
+                offered = runner_invocation.run_runner(feature_offers_request(offer_answers, host,
+                                                       readiness_digest=written["data"]["readiness_digest"]), cwd=root)[1]
+                self.assertEqual("ok", offered["status"])
+            if after_offer == "changed_file":
+                checker.write_text("changed input", encoding="utf-8")
+            elif after_offer == "failed_evaluation":
+                failed = runner_invocation.run_runner(readiness_request([{"item": "formal_methods", "status": "unknown",
+                                                       "evidence_source": "bad\ninput", "action": "Retry."}], host=host), cwd=root)[1]
+                self.assertEqual("input_error", failed["status"])
+            offers = readiness_record.feature_offers(root, host)
+        return {feature: {key: offer[key] for key in ("evaluated", "offered", "answer")}
+                for feature, offer in offers.items()}
+
+    def test_a_scaffold_run_that_skips_the_offer_fails_the_receipt_and_a_declined_offer_passes(self):
+        value = receipt()
+        value["variants"][0]["feature_offers"] = self.recorded_offers(None)
+        self.assertEqual(["base.feature_offers"], self.validator.validate_receipt(value))
+        value["variants"][0]["feature_offers"] = self.recorded_offers(dict.fromkeys(("formal_methods", "verification_docker"), "declined"))
+        self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_stale_or_failed_evaluations_cannot_pass_canary_offer_coverage_on_either_host(self):
+        for host, variant in itertools.product(("claude", "codex"), ("changed_file", "failed_evaluation")):
+            with self.subTest(host=host, variant=variant):
+                value = receipt()
+                value["variants"][0]["feature_offers"] = self.recorded_offers(dict.fromkeys(("formal_methods", "verification_docker"), "accepted"), host, variant)
+                self.assertEqual(["base.feature_offers"], self.validator.validate_receipt(value))
 
 
 class CanaryVariantAssertionsTests(CanaryVariantCase):

@@ -679,7 +679,7 @@
         "value": "speckit_pro_runner/helpers/nesting_preflight.py",
         "display": "speckit_pro_runner/helpers/nesting_preflight.py"
       },
-      "sha256": "b460d4d8c6a78156c93ac60afbd8ea775b219d163c1115893978230ff1036949"
+      "sha256": "9e800c68fc0c69155a1993157ca98783391a4013dd8447b09604ef7b169f17bf"
     },
     {
       "path": {
@@ -688,6 +688,14 @@
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
       "sha256": "bf518205dac6230b7a90ffe8493495d140b832f6e2673548a1508e632417979f"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/phase_envelope.py",
+        "display": "speckit_pro_runner/helpers/phase_envelope.py"
+      },
+      "sha256": "23aec2946ba2ef3eebb31490fb33036ea90f9c566698ac14959cb312ca5f68ce"
     },
     {
       "path": {
@@ -759,7 +767,7 @@
         "value": "speckit_pro_runner/helpers/readiness_record.py",
         "display": "speckit_pro_runner/helpers/readiness_record.py"
       },
-      "sha256": "ee52c77718cacbf9639fc0dac843648239018d28ae24a5c3e8a4172a5b0992f4"
+      "sha256": "b01951ad3b0dc956a37c798a00ddc736ade2cde7b9b1f77c96bc2b5ddde71de4"
     },
     {
       "path": {
@@ -775,7 +783,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "e1b8e6e98918379db484c1ab89241e1c8f55ac848b960670d997c951e8bea80e"
+      "sha256": "83c84c977adaf76a8c5ce86d4a5becc42a8e3ae3958aef457b82e76d5c9ebaf0"
     },
     {
       "path": {

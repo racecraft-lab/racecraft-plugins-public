@@ -120,6 +120,16 @@
       "rollback": "Remove phase-brief consumption and registration together."
     },
     {
+      "helper_id": "verify-phase-envelope", "operation": "verify-phase-envelope",
+      "promotion_status": "python_authoritative", "failure_classes": ["invalid_input"],
+      "rejected_stdout_schema": {"status": "input_error", "data": "object"},
+      "deterministic_remediation": {"summary": "Correct the envelope request.", "actions": ["Send envelope, workflow_file and feature_dir with repository-relative paths."]},
+      "subprocess_policy": {"shell": false, "spawns": false},
+      "path_boundary_policy": {"boundary": "lexical_metadata_only", "rejects": ["parent_traversal", "absolute_feature_dir", "control_characters"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/verify-phase-envelope.json",
+      "rollback": "Remove verify-phase-envelope consumption and registration together."
+    },
+    {
       "helper_id": "resolve-nesting-mode", "operation": "resolve-nesting-mode",
       "promotion_status": "python_authoritative", "failure_classes": [],
       "rejected_stdout_schema": {"status": "ok", "data": "object"},
