@@ -67,6 +67,10 @@ def mismatch(result):
     return result["data"]["mismatch"]["code"]
 
 
+def failed_gate_envelope(**fields):
+    return good_envelope(gates=[{"id": "G1", "result": "fail"}], **fields)
+
+
 class EnvelopeContractTests(unittest.TestCase):
     def test_a_complete_envelope_is_accepted(self):
         self.assertEqual(phase_envelope.envelope_failures(good_envelope()), [])
@@ -112,17 +116,39 @@ class EnvelopeContractTests(unittest.TestCase):
         self.assertEqual(rejected, [True] * 4)
 
 
-class SourceEvidenceTests(unittest.TestCase):
-    """The gate's source files must be readable and valid whatever the driver lists as changed."""
+def verify_project(envelope, **project_inputs):
+    with project(**project_inputs):
+        return verify(envelope)
 
+
+def verify_empty_path(name, artifacts, *, directory=False):
+    with project() as root:
+        target = root / FEATURE / name
+        if directory:
+            target.mkdir()
+        else:
+            target.write_bytes(b"")
+        return verify(good_envelope(artifacts=artifacts))
+
+
+class EnvelopeAssertions(unittest.TestCase):
+    def assert_mismatch(self, result, code):
+        self.assertEqual(result["status"], "expected_failure")
+        self.assertEqual(mismatch(result), code)
+
+    def assert_empty_artifact(self, name, *, directory=False):
+        result = verify_empty_path(name, [f"{FEATURE}/{name}"], directory=directory)
+        self.assertEqual(mismatch(result), "artifact_missing")
+
+
+class SourceEvidenceTests(EnvelopeAssertions):
     def test_an_analyze_pass_over_absent_planning_files_fails(self):
         with project() as root:
             (root / FEATURE / "spec.md").unlink()
             (root / WORKFLOW).write_text("| Severity | Resolution |\n| --- | --- |\n", encoding="utf-8")
             envelope = good_envelope(phase="Analyze", artifacts=[], gates=[{"id": "G6", "result": "pass"}], counts={"markers": 0})
             result = verify(envelope)
-        self.assertEqual(result["status"], "expected_failure")
-        self.assertEqual(mismatch(result), "gate_evidence_missing")
+        self.assert_mismatch(result, "gate_evidence_missing")
 
     def test_invalid_utf8_source_evidence_fails_even_when_listed_or_unlisted(self):
         for artifacts in ([], [f"{FEATURE}/spec.md"]):
@@ -133,10 +159,10 @@ class SourceEvidenceTests(unittest.TestCase):
                 self.assertIn(mismatch(result), ("gate_evidence_unparseable", "artifact_missing"))
 
     def test_an_empty_source_file_fails(self):
-        with project() as root:
-            (root / FEATURE / "spec.md").write_bytes(b"")
-            self.assertEqual(mismatch(verify(good_envelope(artifacts=[]))), "gate_evidence_missing")
+        self.assertEqual(mismatch(verify_empty_path("spec.md", [])), "gate_evidence_missing")
 
+
+class ChecklistEvidenceTests(EnvelopeAssertions):
     def checklist_project(self, root, report=b"clean report\n"):
         for name in ("spec.md", "plan.md"):
             (root / FEATURE / name).write_text("clean\n", encoding="utf-8")
@@ -161,6 +187,8 @@ class SourceEvidenceTests(unittest.TestCase):
             self.checklist_project(root)
             self.assertEqual(verify(self.checklist_envelope([]))["status"], "ok")
 
+
+class PhaseSourceEvidenceTests(EnvelopeAssertions):
     def test_every_gate_source_must_be_valid_for_every_gate(self):
         # One corrupt byte in any file a gate reads fails that gate, whichever gate claims it.
         cases = [("Specify", "G1", ["spec.md"]), ("Clarify", "G2", ["spec.md"]), ("Plan", "G3", ["plan.md"]),
@@ -190,47 +218,18 @@ class SourceEvidenceTests(unittest.TestCase):
                 envelope = good_envelope(phase=phase, artifacts=[], gates=[{"id": gate, "result": "pass"} for gate in gates], counts={})
                 self.assertEqual(mismatch(verify(envelope)), "gate_evidence_missing")
 
-    def test_an_empty_artifact_directory_fails(self):
-        with project() as root:
-            (root / FEATURE / "checklists").mkdir()
-            result = verify(good_envelope(artifacts=[f"{FEATURE}/checklists"]))
-        self.assertEqual(mismatch(result), "artifact_missing")
 
-
-class ReverifyTests(unittest.TestCase):
-    def test_matching_evidence_passes_with_a_compact_answer(self):
-        with project():
-            result = verify(good_envelope())
-        self.assertEqual(result["status"], "ok")
-        self.assertEqual(result["data"], {"verdict": "pass", "phase": "Specify", "next_action": "Run the Clarify phase."})
-
-    def test_a_claimed_pass_over_failing_disk_evidence_is_rejected(self):
-        with project(spec_text="# Spec\n\n[NEEDS CLARIFICATION: scope]\n"):
-            result = verify(good_envelope(counts={}))
-        self.assertEqual(result["status"], "expected_failure")
-        self.assertEqual(result["data"]["verdict"], "fail")
-        self.assertEqual(mismatch(result), "gate_claim_mismatch")
-        self.assertIn("G1", result["data"]["mismatch"]["detail"])
-
-    def test_a_claimed_failure_over_passing_disk_evidence_is_also_a_mismatch(self):
-        with project():
-            envelope = good_envelope(status="fail", gates=[{"id": "G1", "result": "fail"}], blocker="G1 failed")
-            result = verify(envelope)
-        self.assertEqual(result["status"], "expected_failure")
-        self.assertEqual(mismatch(result), "gate_claim_mismatch")
-
+class ArtifactVerificationTests(EnvelopeAssertions):
     def test_a_missing_artifact_path_fails(self):
-        with project():
-            result = verify(good_envelope(artifacts=[f"{FEATURE}/spec.md", f"{FEATURE}/plan.md"]))
-        self.assertEqual(result["status"], "expected_failure")
-        self.assertEqual(mismatch(result), "artifact_missing")
+        result = verify_project(good_envelope(artifacts=[f"{FEATURE}/spec.md", f"{FEATURE}/plan.md"]))
+        self.assert_mismatch(result, "artifact_missing")
         self.assertIn("plan.md", result["data"]["mismatch"]["detail"])
 
     def test_an_empty_artifact_fails(self):
-        with project() as root:
-            (root / FEATURE / "plan.md").write_bytes(b"")
-            result = verify(good_envelope(artifacts=[f"{FEATURE}/plan.md"]))
-        self.assertEqual(mismatch(result), "artifact_missing")
+        self.assert_empty_artifact("plan.md")
+
+    def test_an_empty_artifact_directory_fails(self):
+        self.assert_empty_artifact("checklists", directory=True)
 
     def test_unsafe_artifact_paths_fail(self):
         with project() as root:
@@ -243,6 +242,19 @@ class ReverifyTests(unittest.TestCase):
             (root / "link.md").symlink_to(root.parent / "outside.md")
             result = verify(good_envelope(artifacts=["link.md"]))
             self.assertEqual(mismatch(result), "artifact_missing")
+
+
+class GateVerificationTests(EnvelopeAssertions):
+    def test_a_claimed_pass_over_failing_disk_evidence_is_rejected(self):
+        with project(spec_text="# Spec\n\n[NEEDS CLARIFICATION: scope]\n"):
+            result = verify(good_envelope(counts={}))
+        self.assertEqual(result["data"]["verdict"], "fail")
+        self.assert_mismatch(result, "gate_claim_mismatch")
+        self.assertIn("G1", result["data"]["mismatch"]["detail"])
+
+    def test_a_claimed_failure_over_passing_disk_evidence_is_also_a_mismatch(self):
+        envelope = failed_gate_envelope(status="fail", blocker="G1 failed")
+        self.assert_mismatch(verify_project(envelope), "gate_claim_mismatch")
 
     def test_unparseable_gate_evidence_fails_and_never_passes(self):
         garbage = {"stdout": "not json", "stderr": "", "exit_code": 0}
@@ -258,42 +270,48 @@ class ReverifyTests(unittest.TestCase):
     def test_a_gate_that_raises_fails_closed(self):
         with project(), patch.object(phase_envelope, "validate_gate", side_effect=OSError("unreadable")):
             result = verify(good_envelope())
-        self.assertEqual(result["status"], "expected_failure")
-        self.assertEqual(mismatch(result), "gate_evidence_unparseable")
+        self.assert_mismatch(result, "gate_evidence_unparseable")
 
     def test_the_phase_gate_must_be_claimed(self):
-        with project():
-            result = verify(good_envelope(phase="Plan", artifacts=[f"{FEATURE}/spec.md"]))
+        result = verify_project(good_envelope(phase="Plan", artifacts=[f"{FEATURE}/spec.md"]))
         self.assertEqual(mismatch(result), "phase_gate_missing")
 
     def test_a_pass_status_cannot_carry_a_failed_gate(self):
-        with project(spec_text="[NEEDS CLARIFICATION: x]\n"):
-            envelope = good_envelope(gates=[{"id": "G1", "result": "fail"}], counts={})
-            result = verify(envelope)
+        envelope = failed_gate_envelope(counts={})
+        result = verify_project(envelope, spec_text="[NEEDS CLARIFICATION: x]\n")
         self.assertEqual(mismatch(result), "status_contradicts_gates")
 
+
+class ResultVerificationTests(EnvelopeAssertions):
+    def test_matching_evidence_passes_with_a_compact_answer(self):
+        result = verify_project(good_envelope())
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["data"], {"verdict": "pass", "phase": "Specify", "next_action": "Run the Clarify phase."})
+
     def test_a_driver_reported_failure_is_not_a_pass(self):
-        with project(spec_text="[NEEDS CLARIFICATION: x]\n"):
-            envelope = good_envelope(status="blocked", gates=[{"id": "G1", "result": "fail"}], counts={},
-                                     blocker="Spec still has open questions.")
-            result = verify(envelope)
-        self.assertEqual(result["status"], "expected_failure")
-        self.assertEqual(mismatch(result), "phase_not_passed")
+        envelope = failed_gate_envelope(status="blocked", counts={}, blocker="Spec still has open questions.")
+        result = verify_project(envelope, spec_text="[NEEDS CLARIFICATION: x]\n")
+        self.assert_mismatch(result, "phase_not_passed")
         self.assertIn("open questions", result["data"]["mismatch"]["detail"])
 
     def test_a_count_that_disagrees_with_the_gate_is_rejected(self):
-        with project():
-            result = verify(good_envelope(counts={"markers": 3}))
+        result = verify_project(good_envelope(counts={"markers": 3}))
         self.assertEqual(mismatch(result), "count_mismatch")
 
     def test_a_malformed_envelope_fails_the_phase(self):
-        with project():
-            envelope = good_envelope()
-            del envelope["usage"]
-            result = verify(envelope)
-        self.assertEqual(result["status"], "expected_failure")
-        self.assertEqual(mismatch(result), "envelope_invalid")
+        envelope = good_envelope()
+        del envelope["usage"]
+        self.assert_mismatch(verify_project(envelope), "envelope_invalid")
 
+    def test_verification_does_not_mutate_the_envelope(self):
+        envelope = good_envelope()
+        before = copy.deepcopy(envelope)
+        with project():
+            verify(envelope)
+        self.assertEqual(envelope, before)
+
+
+class RequestContractTests(EnvelopeAssertions):
     def test_request_shape_errors_are_input_errors(self):
         with project():
             for label, inputs in (("workflow", {"workflow_file": ""}), ("feature", {"feature_dir": "../escape"}),
@@ -317,14 +335,17 @@ class ReverifyTests(unittest.TestCase):
         self.assertEqual(result["next_action"], "Run the Clarify phase.")
         self.assertLessEqual(len(json.dumps(result).encode()), 16384)
 
-    def test_verification_does_not_mutate_the_envelope(self):
-        envelope = good_envelope()
-        before = copy.deepcopy(envelope)
-        with project():
-            verify(envelope)
-        self.assertEqual(envelope, before)
-
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (EnvelopeContractTests, SourceEvidenceTests, ReverifyTests))
+    cases = (
+        EnvelopeContractTests,
+        SourceEvidenceTests,
+        ChecklistEvidenceTests,
+        PhaseSourceEvidenceTests,
+        ArtifactVerificationTests,
+        GateVerificationTests,
+        ResultVerificationTests,
+        RequestContractTests,
+    )
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in cases)
     sys.exit(run_counted(suite, label="test-phase-envelope"))
