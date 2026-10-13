@@ -118,6 +118,14 @@ _Avoid_: phase summary, handoff note
 How the plan stage runs when the host cannot nest subagents two levels deep: the root dispatches each phase's executors directly, under the compact-answer contract. The canary receipt records it, and a run never fails just for being flat.
 _Avoid_: degraded mode, fallback run
 
+**Nesting preflight**:
+The once-per-run test of whether the active host really lets a subagent spawn a child, run through `resolve-nesting-mode`. An observed spawn selects nested mode; anything else selects flat mode. A configured depth is recorded and never decides, and depth never fails a run.
+_Avoid_: depth check, depth gate
+
+**Nested mode**:
+How the plan stage runs when the nesting preflight observed a two-level spawn: phase drivers run each phase below the root. The canary receipt records it.
+_Avoid_: deep mode
+
 **Compact answer**:
 What a runner helper returns to the root thread: a status and the next action, under a size cap a test enforces. The root never reads planning artifacts or runner source to learn what a helper decided.
 _Avoid_: helper output, summary

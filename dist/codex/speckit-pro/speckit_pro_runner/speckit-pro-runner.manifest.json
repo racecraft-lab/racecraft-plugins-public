@@ -676,6 +676,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/nesting_preflight.py",
+        "display": "speckit_pro_runner/helpers/nesting_preflight.py"
+      },
+      "sha256": "611923a827018831169b1335c27941be4a2931d46c57e1ed125134288f7782cb"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
@@ -767,7 +775,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "524cb440e5d9d502f2b18e95abe582d60b4989502f088a81a0a8f82e497f7e5d"
+      "sha256": "e1b8e6e98918379db484c1ab89241e1c8f55ac848b960670d997c951e8bea80e"
     },
     {
       "path": {

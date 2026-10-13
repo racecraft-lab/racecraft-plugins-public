@@ -68,6 +68,7 @@ EXPECTED_HELPERS = [
     "probe-git-write",
     "scaffold-answers",
     "phase-brief",
+    "resolve-nesting-mode",
     "read-tasks-output",
     "read-tasks-inputs",
     "helper-registry-dispatch",
@@ -116,6 +117,7 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 HELPER_CASES: dict[str, dict[str, object]] = {
     "g0-setup": {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE},
     "probe-git-write": {},
+    "resolve-nesting-mode": {"host": "codex", "nested_spawn": "refused"},
     "scaffold-answers": {"answers_file": "missing-answers.json", "spec_id": "SPEC-009"},
     "formal-doctor": {"repo_root": ".", "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"},
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
@@ -4741,7 +4743,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write", "phase-brief", "read-tasks-inputs", "read-tasks-output"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write", "phase-brief", "resolve-nesting-mode", "read-tasks-inputs", "read-tasks-output"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))

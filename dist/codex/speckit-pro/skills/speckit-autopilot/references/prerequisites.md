@@ -357,6 +357,13 @@ set and the fixed Security Keywords list in `consensus-protocol.md` apply to
 every run.
 If the file doesn't exist, use all defaults.
 
+### Nesting prerequisite
+
+Two-level subagent nesting is optional. Autopilot tests it once per run in
+SKILL.md Step 1.5 and helper `resolve-nesting-mode`; when the host refuses a
+nested spawn, `data.prerequisite` tells the user the setting to change for the
+next run, and this run continues in flat mode. Missing depth never blocks a run.
+
 ## Step 0.8: Capability Coverage & Plugin Limitation Check
 
 The prerequisite script reports one `capability_coverage` advisory.
