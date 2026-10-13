@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.44.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.43.0...speckit-pro-v2.44.0) (2026-10-13)
+
+
+### Features
+
+* **speckit-pro:** add the phase envelope contract and runner re-verification ([#1334](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1334)) ([fa1b6d4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fa1b6d414ef7ced389a58d7fcd3cd8c0daf9394e))
+* **speckit-pro:** the runner records each scaffold feature offer and its answer ([#1329](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1329)) ([0e8bb8c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0e8bb8ca105f03c48684ae7ebeacf4ab76c5132c))
+
 ## [2.43.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.4...speckit-pro-v2.43.0) (2026-10-12)
 
 
