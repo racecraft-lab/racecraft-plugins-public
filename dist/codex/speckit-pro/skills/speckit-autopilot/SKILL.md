@@ -1254,7 +1254,9 @@ phase's brief with `mode=nested` and no wave inputs. `brief.agent` is always
 for Clarify, Checklist and Analyze, and is null for Specify, Plan and Tasks.
 Never dispatch an inner executor or a consensus agent from the root in this mode.
 
-Spawn `brief.agent` once per phase with `spawn_agent` and `brief.model`, and wait
+Spawn `brief.agent` once per phase with `spawn_agent`, `fork_turns="none"`,
+`model=brief.model.codex.model` and `reasoning_effort=brief.model.codex.effort`,
+so its fresh context contains only the supplied message. Wait
 with `wait_agent` using `brief.wait.codex.timeout_ms`. For Specify, Plan and
 Tasks, begin the message with `$` plus `brief.inputs.skill`, as Step 2 does.
 The prompt holds `Mode: nested`, `Phase: <phase>`, the brief, the
