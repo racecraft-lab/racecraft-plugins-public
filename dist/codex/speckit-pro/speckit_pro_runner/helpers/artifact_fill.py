@@ -296,7 +296,8 @@ def render(page: Page, entry_id: str) -> str:
 
 def html_text(markup: str) -> str:
     """Visible text, including escaped planning characters, normalized for evidence."""
-    return " ".join(unescape(re.sub(r"<[^>]+>", "", markup)).split())
+    visible = unescape(re.sub(r"<[^>]+>", "", markup))
+    return re.sub(r"\s+", " ", visible).strip()
 
 
 def generation_evidence(content: str, prose_slots: dict[str, str]) -> dict[str, str]:
