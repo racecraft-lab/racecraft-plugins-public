@@ -24,6 +24,17 @@ and comments already stopped on the reviewed head; their new red assertions
 require rejection at the planning-markup boundary before the later provenance
 check. Successful plain-text narrative edits remain covered.
 
+## Canary CLI termination
+
+The copied receipt-CLI harness previously inherited the parent input stream
+and had no child deadline. Eighteen call sites now share one invocation owner
+that supplies EOF and a five-second timeout. Deterministic regressions cover an
+open parent request stream and a CLI that does not return; both failed before
+the lifecycle fix. Existing API/CLI corruption matrices retain every case.
+The original long VM hang was not reproduced by the isolated matrices, so
+this repair establishes bounded child waits without claiming its precise
+external trigger was identified.
+
 ## Known limits
 
 - R1336-0f1bd68e: the original production diff exceeded the ticket's 400-line

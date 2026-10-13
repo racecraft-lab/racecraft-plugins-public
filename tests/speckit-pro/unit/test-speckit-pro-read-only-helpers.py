@@ -6906,9 +6906,29 @@ class CanaryReceiptInputTests(CanaryVariantCase):
                     self.assertEqual("", completed.stderr)
 
 
+class CanaryCliTerminationTests(unittest.TestCase):
+    def test_cli_receives_eof_when_the_parent_request_stream_is_open(self):
+        read_fd, write_fd = os.pipe()
+        previous = os.dup(0)
+        try:
+            os.dup2(read_fd, 0)
+            result = run_canary_cli([sys.executable, "-c", "import sys; print(sys.stdin.read())"],
+                                    capture_output=True, text=True, check=False)
+            self.assertEqual((result.returncode, result.stdout), (0, "\n"))
+        finally:
+            os.dup2(previous, 0)
+            for fd in (previous, read_fd, write_fd):
+                os.close(fd)
+
+    def test_a_nonreturning_cli_has_a_bounded_wait(self):
+        with self.assertRaises(subprocess.TimeoutExpired):
+            run_canary_cli([sys.executable, "-c", "import time; time.sleep(30)"],
+                           capture_output=True, text=True, check=False)
+
+
 def run_canary_cli(argv, **kwargs):
     """Run the receipt CLI used by both hosts and every canary variant."""
-    return subprocess.run(argv, **kwargs)
+    return subprocess.run(argv, stdin=subprocess.DEVNULL, timeout=5, **kwargs)
 
 
 def main() -> int:
@@ -6924,7 +6944,8 @@ def main() -> int:
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
                                             CanaryReceiptTargetValidityTests, CanaryVariantIdentityTests,
                                             CanaryPlanQualityTests, CanaryPlantedCatchTests, CanaryCatchInputTests, CanaryReceiptInputTests,
-                                            CanaryReceiptOutputTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
+                                            CanaryReceiptOutputTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests,
+                                            CanaryCliTerminationTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
