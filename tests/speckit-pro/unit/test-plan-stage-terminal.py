@@ -254,7 +254,7 @@ class ContentEvidenceTests(TerminalFixture):
                 record = artifact_review.record_from_workflow((self.root / WORKFLOW).read_text())
                 entry = next(p for p in record["pages"] if p["id"] == identifier)
                 self.assertEqual(entry["expected_title"], "Implementation Plan — art-007-draft-pr-emission Draft-PR Emission")
-                self.assertEqual(entry["expected_content"], "Phase 1: Setup (Worktree Preflight)")
+                self.assertEqual(entry["expected_content"], EVIDENCE_ANCHOR)
 
     def test_wrong_title_and_wrong_planning_anchor_cannot_certify_generation(self) -> None:
         self.finish(until="pages")
@@ -262,7 +262,7 @@ class ContentEvidenceTests(TerminalFixture):
         written = page.read_text()
         for variant in ("title", "body"):
             with self.subTest(variant=variant):
-                altered = re.sub(r"<title>.*?</title>", "<title>Unrelated feature title</title>", written) if variant == "title" else written.replace("Phase 1: Setup (Worktree Preflight)", "Unrelated fabricated phase")
+                altered = re.sub(r"<title>.*?</title>", "<title>Unrelated feature title</title>", written) if variant == "title" else written.replace(EVIDENCE_ANCHOR, "Unrelated fabricated phase")
                 page.write_text(altered, encoding="utf-8")
                 self.assertNotEqual(self.finish(execution_mode="headless")["status"], "ok")
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
@@ -327,11 +327,11 @@ class ConcealedPassageTests(TerminalFixture):
         self.finish(until="pages")
         page = self.root / FEATURE / "artifacts/implementation-plan.html"
         original = page.read_text()
-        anchor = "Phase 1: Setup (Worktree Preflight)"
         for wrapper in ('<span hidden>EVIDENCE</span>', '<span style="opacity:0">EVIDENCE</span>',
                         '<template>EVIDENCE</template>', '<details>EVIDENCE</details>'):
             with self.subTest(wrapper=wrapper):
-                page.write_text(original.replace(anchor, wrapper.replace("EVIDENCE", anchor)), encoding="utf-8")
+                page.write_text(original.replace(EVIDENCE_ANCHOR, wrapper.replace("EVIDENCE", EVIDENCE_ANCHOR)),
+                                encoding="utf-8")
                 result = self.finish(execution_mode="headless")
                 self.assertIn("planning markup", result["diagnostics"][0]["message"], result)
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
