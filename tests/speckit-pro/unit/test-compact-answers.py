@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 import tempfile
 import sys
@@ -16,6 +17,11 @@ sys.path.insert(0, str(REPO / "tests/speckit-pro/lib"))
 from speckit_pro_runner.envelope import parse_request, response  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
 from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noqa: E402
+from speckit_pro_runner.helpers.read_only import (  # noqa: E402
+    PLAN_REPAIR_MESSAGE_LIMIT_BYTES,
+    PLAN_REPAIR_CONTEXT_LIMIT_BYTES,
+    render_plan_repair_context,
+)
 from test_result import run_counted  # noqa: E402
 
 
@@ -133,6 +139,56 @@ class CompactLauncherTests(unittest.TestCase):
                 self.assertTrue(verified["data"]["after_hooks_ready"])
                 self.assertLessEqual(len(consumed.stdout.encode()) + len(consumed.stderr.encode()), 212992)
 
+
+class CompactPlanRepairBoundaryTests(unittest.TestCase):
+    def test_maximum_escaped_plan_repair_survives_capture_on_both_hosts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / ".specify").mkdir()
+            (root / "attempts.json").write_text('{"attempts": [{}]}', encoding="utf-8")
+            contexts = {f"evidence-{index}": f"context-{index}.md" for index in range(3)}
+            inputs = {"context_paths": contexts,
+                      "g3_attempts_path": "attempts.json", "g3_attempt_index": 0,
+                      "executor_task": "Repair.", "attempt_number": 1,
+                      "disputed_wording": "wording", "provenance_class": "assistant-inference",
+                      "prior_repair_result": "initial failure"}
+            for character in ("\x00", '"', "\\"):
+                inputs["executor_task"] = "Repair." + character * (32768 - len("Repair."))
+                for name in contexts.values():
+                    (root / name).write_text("x", encoding="utf-8")
+                baseline = json.loads(render_plan_repair_context(inputs, root)["stdout"])
+                padding = PLAN_REPAIR_MESSAGE_LIMIT_BYTES - baseline["message_bytes"]
+                for name in contexts.values():
+                    count = min(padding, PLAN_REPAIR_CONTEXT_LIMIT_BYTES - 1)
+                    (root / name).write_text("x" + character * count, encoding="utf-8")
+                    padding -= count
+                self.assertEqual(padding, 0)
+                rendered = render_plan_repair_context(inputs, root)
+                self.assertEqual(rendered["exit_code"], 0)
+                expected = json.loads(rendered["stdout"])
+                self.assertEqual(expected["message_bytes"], PLAN_REPAIR_MESSAGE_LIMIT_BYTES)
+                self.assertEqual(expected["message_sha256"], hashlib.sha256(
+                    expected["executor_message"].encode("utf-8")).hexdigest())
+                raw = {"schema_version": "1.0", "helper_id": "render-plan-repair-context",
+                       "operation": "render-plan-repair-context", "mode": "read_only", "inputs": inputs}
+                for payload in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+                    command = [sys.executable, str(REPO / payload / "scripts/run-speckit-pro.py")]
+                    for answer_format in ("compact", "detailed"):
+                        with self.subTest(character=repr(character), payload=payload, answer_format=answer_format):
+                            raw["answer_format"] = answer_format
+                            done = subprocess.run(command, input=json.dumps(raw), capture_output=True, text=True,
+                                                  cwd=root, check=False, timeout=30)
+                            answer = json.loads(done.stdout)
+                            self.assertEqual(done.returncode, 0, done.stderr)
+                            self.assertEqual(answer["status"], "ok")
+                            self.assertEqual(answer["data"]["stdout_json"], expected)
+                            if answer_format == "detailed":
+                                self.assertFalse(answer["data"]["stdout"]["truncated"])
+                inputs["executor_task"] += "x"
+                rejected = render_plan_repair_context(inputs, root)
+                self.assertEqual(rejected["exit_code"], 2)
+                self.assertEqual(json.loads(rejected["stdout"])["error"],
+                                 "rendered Plan-repair message is oversized")
 
 class CompactPlanRepairTests(unittest.TestCase):
     def test_real_sized_plan_repair_preserves_complete_executor_message(self):

@@ -153,13 +153,18 @@ def answer_next_action(body: dict[str, Any]) -> str:
             else "Stop and resolve the returned diagnostic before continuing.")
 
 
+def escaped_text_capture_limit_bytes(text_limit_bytes: int) -> int:
+    """Budget six JSON escape bytes per UTF-8 byte plus envelope metadata."""
+    return COMPACT_ANSWER_LIMIT_BYTES + 6 * text_limit_bytes
+
+
 def compact_answer_limit_bytes(helper_id: str, data: dict[str, Any]) -> int:
     text: Any = data
     for field in COMPACT_HANDOFF_TEXT_FIELDS.get(helper_id, ()):
         text = text.get(field) if isinstance(text, dict) else None
     # Only these helpers' already-bounded handoff text earns extra room, never
-    # arbitrary metadata. One UTF-8 byte can expand to six JSON-escaped bytes.
-    return COMPACT_ANSWER_LIMIT_BYTES + (6 * len(text.encode("utf-8")) if isinstance(text, str) else 0)
+    # arbitrary metadata.
+    return escaped_text_capture_limit_bytes(len(text.encode("utf-8")) if isinstance(text, str) else 0)
 
 
 def answer_response(request: Any, body: dict[str, Any]) -> dict[str, Any]:
