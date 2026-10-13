@@ -33,3 +33,6 @@ with `{verdict: "fail", mismatch: {code, detail}}`.
   historical inode identity. A populated, confined replacement before opening
   satisfies the present/non-empty contract; replacement after opening cannot
   redirect the listing to another directory.
+- When trusted descriptor reads are unavailable, directory artifacts fail
+  closed as `artifact_missing`. The descriptor cleanup tests require that
+  platform capability; they do not exercise the unsupported-platform fallback.
