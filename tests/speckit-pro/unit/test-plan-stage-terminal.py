@@ -269,8 +269,9 @@ class ContentEvidenceTests(TerminalFixture):
 
 
 class PageRefusalFixture(TerminalFixture):
-    def assert_page_edit_refused(self, page_id: str, pattern: str, replacement: str,
+    def assert_page_edit_refused(self, page_id: str, rewrite: tuple[str, str],
                                 *, replace_anchor: bool = False) -> None:
+        pattern, replacement = rewrite
         for host in ("claude", "codex"):
             with self.subTest(host=host):
                 self.setUp()
@@ -316,8 +317,8 @@ class HiddenContentEvidenceTests(PageRefusalFixture):
         )
         for variant, conceal in variants:
             with self.subTest(variant=variant):
-                self.assert_page_edit_refused("implementation-plan", r"(<!-- FILL:feature-header:END -->)",
-                                             conceal.replace("EVIDENCE", EVIDENCE_ANCHOR) + r"\1",
+                self.assert_page_edit_refused("implementation-plan", (r"(<!-- FILL:feature-header:END -->)",
+                                             conceal.replace("EVIDENCE", EVIDENCE_ANCHOR) + r"\1"),
                                              replace_anchor=True)
 
 
@@ -364,7 +365,7 @@ class StructuredContentEvidenceTests(PageRefusalFixture):
         ))
         for page_id, field, pattern, replacement in variants:
             with self.subTest(page_id=page_id, field=field):
-                self.assert_page_edit_refused(page_id, pattern, replacement)
+                self.assert_page_edit_refused(page_id, (pattern, replacement))
 
 
 class PayloadEvidenceTests(unittest.TestCase):
