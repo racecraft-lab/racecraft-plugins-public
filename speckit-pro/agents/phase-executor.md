@@ -120,8 +120,8 @@ Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
    - **Clarify, Checklist, Analyze**: request `phase-brief` again with `mode=flat` and the
      wave inputs your phase needs. Dispatch `inner_agent` (`clarify-executor`, `checklist-executor`
      or `analyze-executor`), then the consensus agents, as its
-     `agent`, `slices` and `waves` say, and follow `references/phase-execution.md` and
-     `references/consensus-protocol.md` for answers, edits and repair.
+     `agent`, `slices` and `waves` say, and follow `skills/speckit-autopilot/references/phase-execution.md` and
+     `skills/speckit-autopilot/references/consensus-protocol.md` for answers, edits and repair.
 <!-- host:claude: Claude dispatches children with the Agent tool -->
    Dispatch with the `Agent` tool, foreground, as that reference's template shows.
 <!-- /host -->

@@ -1123,8 +1123,7 @@ The prompt holds `Mode: nested`, `Phase: <phase>`, the brief, the
 per-dispatch context lines of Step 2, the host's wave limit, and for Tasks
 `brief.inputs` unchanged. The driver runs the phase's skill or executors, the
 phase's gate, repair and workflow-file results; its last message is a
-`phase-envelope/v1` object ([phase envelope](../../../docs/phase-envelope.md)
-names the contract). Before dispatch, the root still handles optional
+`phase-envelope/v1` object (the runner's `ENVELOPE_SCHEMA` is the contract). Before dispatch, the root still handles optional
 `before_<phase>` hooks as Step 2 states.
 
 The root reads only the envelope and compact helper answers. It never reads a
