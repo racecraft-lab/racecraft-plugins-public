@@ -29,3 +29,7 @@ with `{verdict: "fail", mismatch: {code, detail}}`.
   or consumes an envelope yet, so no run path calls the helper.
 - Re-verification covers the gates `validate-gate` decides from files. It does
   not re-derive a driver's usage receipt, which the runner cannot observe.
+- Directory artifacts are checked through an opened descriptor, not against a
+  historical inode identity. A populated, confined replacement before opening
+  satisfies the present/non-empty contract; replacement after opening cannot
+  redirect the listing to another directory.
