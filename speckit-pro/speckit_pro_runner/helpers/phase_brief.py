@@ -10,11 +10,11 @@ from unicodedata import category, normalize
 
 from ..agent_inventory import AGENT_INVENTORY
 from ..envelope import diagnostic, response
-from ..strict_input import has_hidden_characters, require_fields, require_text
+from ..strict_input import SelectionError, has_hidden_characters, require_fields, require_text
 from ..trusted_io import resolve_repo_root
 from .checklist_edits import CheckpointRefused, final_checkpoint
 from .dispatch_waves import WAVE_INPUTS, WaveRequest, checked_wave_request, compose_waves
-from .extension_hooks import optional_hooks
+from .extension_hooks import confirmed_after_tasks_hooks, optional_hooks
 from .read_only import G4InputDrift, checked_g4_judged, check_g4_inputs
 from .tasks_inputs import bind_tasks_snapshot, checked_feature_identity, check_tasks_parent
 
@@ -200,7 +200,7 @@ def checked_mode(raw: Any, waves: dict[str, Any]) -> str:
 def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str] | None, dict[str, int] | None, str]:
     """Validate the phase, paths, mode, waves and Tasks-only G4 digest binding."""
     optional = {key: raw[key] for key in (*WAVE_INPUTS, "g4_judged", "g4_feature_identity") if isinstance(raw, dict) and key in raw}
-    mode_inputs = {"mode": raw["mode"]} if isinstance(raw, dict) and "mode" in raw else {}
+    mode_inputs = {key: raw[key] for key in ("mode", "confirmed_after_tasks_hooks") if isinstance(raw, dict) and key in raw}
     inputs = require_fields({key: value for key, value in raw.items() if key not in optional and key not in mode_inputs}
                             if isinstance(raw, dict) else raw, {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
     mode = checked_mode(mode_inputs.get("mode", "flat"), {key: value for key, value in optional.items() if key in WAVE_INPUTS})
@@ -211,6 +211,8 @@ def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str
         raise ValueError("feature_dir must name a directory")
     if phase not in PHASES:
         raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
+    if "confirmed_after_tasks_hooks" in mode_inputs and (phase != "Tasks" or mode != "nested"):
+        raise ValueError("confirmed_after_tasks_hooks applies to nested Tasks only")
     judged = checked_g4_judged(optional.pop("g4_judged", None)) if phase == "Tasks" else None
     identity = checked_feature_identity(optional.pop("g4_feature_identity", None)) if phase == "Tasks" else None
     if "g4_judged" in optional or "g4_feature_identity" in optional:
@@ -280,6 +282,11 @@ def _phase_brief_response(
         return internal_failure(request, "phase_brief_slices_unavailable", exc)
     try:
         data["hooks"] = optional_hooks(root, ("before_" + phase.lower(), "after_" + phase.lower())) if phase in HOOK_PHASES else []
+        if phase == "Tasks" and mode == "nested":
+            data["after_tasks_hooks"] = confirmed_after_tasks_hooks(data["hooks"], request.inputs.get("confirmed_after_tasks_hooks", []))
+    except SelectionError as exc:
+        return response("input_error", request_id=request.request_id,
+                        diagnostics=[diagnostic("invalid_hook_confirmation", str(exc))])
     except ValueError as exc:
         return internal_failure(request, "phase_brief_hooks_unavailable", exc)
     return response("ok", request_id=request.request_id, data=data)
@@ -293,6 +300,8 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     every phase, `inner_agent` is the executor the driver dispatches (null for Specify, Plan and Tasks), `mode` echoes
     the request, and slices and waves are empty; it takes no wave inputs. The driver requests the inner dispatch facts
     with a flat brief. A flat brief is unchanged and carries neither field.
+    Nested Tasks accepts confirmed_after_tasks_hooks (exact extension/command/event records, default []).
+    after_tasks_hooks carries runner-selected run/skip lists; listing alone grants no approval.
     dispatch_waves.py owns optional domains, items, verify_items, verify_baseline and max_agents.
     Tasks copies exact G4-matched bytes into a private snapshot; read-tasks-inputs returns verified text.
 

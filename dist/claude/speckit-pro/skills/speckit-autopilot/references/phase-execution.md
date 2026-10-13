@@ -10,8 +10,17 @@
    - **Specify, Plan, Tasks** (`inner_agent` null): run the skill under rules 1 and 2 yourself.
      Plan then runs the formal-model-author and formal-check sequence of `formal-methods.md`
      before G3. Tasks then calls `publish-tasks-output` with `brief.inputs.tasks_output`, runs
-     the mandatory after_tasks hooks through `read-tasks-output`, and runs G5 with the returned
-     `tasks_binding`. Leave optional hooks to the parent.
+     mandatory after_tasks hooks and every `brief.after_tasks_hooks.run` hook through
+     `read-tasks-output` with the unchanged publisher `tasks_binding`, as §Phase 5's
+     bound-consumer handoff specifies. A pathname consumer also requires `live_path`.
+     Run each selected optional hook once; skip every `brief.after_tasks_hooks.skip`
+     entry. Record each run as `optional_hook_run` and each unconfirmed skip as
+     `authority_action_skipped` through `decisions-list`, with the exact extension,
+     command, event and confirmation or its absence. No workflow-level approval
+     replaces a runner-selected run entry. Stop on a hook or binding failure and
+     return a failed or blocked envelope. Then run G5 with that same `tasks_binding`.
+     Report successful optional runs and skips in envelope `counts.optional_hooks_run`
+     and `counts.optional_hooks_skipped`. Leave other phases' optional hooks to the parent.
    - **Clarify, Checklist, Analyze**: request `phase-brief` again with `mode=flat` and the
      wave inputs your phase needs. Dispatch `inner_agent` (`clarify-executor`, `checklist-executor`
      or `analyze-executor`), then the consensus agents, as its

@@ -28,6 +28,21 @@ A claimed failure that the disk contradicts is also a mismatch.
 A pass is `{verdict: "pass", advance: true, phase, next_action}`. A mismatch is
 `expected_failure` with `{verdict: "fail", advance: false, mismatch: {code, detail}}`.
 
+Nested Tasks keeps publication and after_tasks consumers in the driver. The
+root collects each optional hook's explicit operator confirmation, then requests
+the same nested Tasks brief with `confirmed_after_tasks_hooks`: a list of exact
+`{extension, command, event}` identities, defaulting to `[]`. The hook owner
+matches only enabled, runner-listed optional after_tasks hooks and returns
+`after_tasks_hooks.run` and `.skip` in listed order, with duplicates executed
+once. Missing confirmation skips; malformed or stale confirmation fails the
+request. Flat mode and other phases reject this input.
+
+The driver consumes the publisher's unchanged binding through `read-tasks-output`
+before every mandatory or selected optional hook, records runs and skips in the
+decisions list, and completes G5 before returning its envelope. It reports
+`counts.optional_hooks_run` and `counts.optional_hooks_skipped`; the root neither
+re-publishes Tasks nor repeats those hooks.
+
 ## Known limits
 
 - A failing-gate substitution between Specify and Clarify is unreachable with
@@ -42,7 +57,9 @@ A pass is `{verdict: "pass", advance: true, phase, next_action}`. A mismatch is
   the rule that a failed phase does not advance is a runner answer plus skill
   text, and no runner code blocks a model that ignores it.
 - Re-verification covers the gates `validate-gate` decides from files. It does
-  not re-derive a driver's usage receipt, which the runner cannot observe.
+  not re-derive a driver's usage receipt or optional-hook execution counts,
+  which the runner cannot observe. Hook execution remains an agent action;
+  its selection and bound input are runner-owned.
 - Directory artifacts are checked through an opened descriptor, not against a
   historical inode identity. A populated, confined replacement before opening
   satisfies the present/non-empty contract; replacement after opening cannot

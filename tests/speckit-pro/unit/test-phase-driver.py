@@ -104,6 +104,79 @@ class AdvanceTests(unittest.TestCase):
         self.assertIs(False, result["data"]["advance"])
 
 
+class OptionalTasksHookTests(unittest.TestCase):
+    AUDIT = {"extension": "audit", "command": "speckit.audit.run", "event": "after_tasks"}
+
+    def tasks_hooks(self, *, payloads=False, audit_enabled="true", **inputs):
+        configuration = BRIEF.extensions_yml(BRIEF.hook("before_tasks", "speckit.audit.run", "audit"),
+                                            BRIEF.hook("after_tasks", "speckit.audit.run", "audit", enabled=audit_enabled),
+                                            BRIEF.hook("after_tasks", "speckit.other.run", "other"))
+        with BRIEF.project(configuration):
+            request = {"phase": "Tasks", "mode": "nested", "workflow_file": "docs/workflow.md", "feature_dir": FEATURE, **inputs}
+            return BRIEF.payload_briefs(request, include_status=True) if payloads else BRIEF.dispatch_brief(request)
+
+    def test_confirmed_optional_after_tasks_hook_is_selected_for_the_driver(self):
+        result = self.tasks_hooks(confirmed_after_tasks_hooks=[self.AUDIT])
+        self.assertEqual(result["status"], "ok", result)
+        handoff = result["data"]["after_tasks_hooks"]
+        self.assertEqual([hook["command"] for hook in handoff["run"]], ["speckit.audit.run"])
+        self.assertEqual([hook["command"] for hook in handoff["skip"]], ["speckit.other.run"])
+        self.assertEqual(handoff["run"][0]["event"], "after_tasks")
+
+    def test_unconfirmed_optional_after_tasks_hooks_are_selected_for_skip(self):
+        handoff = self.tasks_hooks()["data"]["after_tasks_hooks"]
+        self.assertEqual(handoff["run"], [])
+        self.assertEqual([hook["command"] for hook in handoff["skip"]], ["speckit.audit.run", "speckit.other.run"])
+
+    def test_confirmations_match_each_identity_field_and_never_another_event(self):
+        for field, value in (("extension", "other"), ("command", "speckit.other.run"), ("event", "before_tasks"),
+                             ("command", "speckit.audit.run ")):
+            result = self.tasks_hooks(confirmed_after_tasks_hooks=[{**self.AUDIT, field: value}])
+            with self.subTest(field=field, value=value):
+                self.assertEqual(result["status"], "input_error")
+                self.assertEqual(result["data"], {})
+
+    def test_malformed_or_blanket_approvals_never_dispatch_hooks(self):
+        for value in (True, None, "approved", {}, [True], [{"approved": True}], [{**self.AUDIT, "all_events": True}],
+                      [{**self.AUDIT, "command": None}]):
+            with self.subTest(value=value):
+                self.assertEqual(self.tasks_hooks(confirmed_after_tasks_hooks=value)["status"], "input_error")
+
+    def test_repeated_exact_confirmations_select_one_run(self):
+        handoff = self.tasks_hooks(confirmed_after_tasks_hooks=[self.AUDIT, self.AUDIT])["data"]["after_tasks_hooks"]
+        self.assertEqual(len(handoff["run"]), 1)
+        self.assertEqual(len(handoff["skip"]), 1)
+
+    def test_confirmation_input_is_confined_to_nested_tasks(self):
+        results = [self.tasks_hooks(mode="flat", confirmed_after_tasks_hooks=[self.AUDIT]),
+                   self.tasks_hooks(phase="Plan", confirmed_after_tasks_hooks=[self.AUDIT])]
+        self.assertEqual([result["status"] for result in results], ["input_error", "input_error"])
+
+    def test_shipped_hosts_select_the_same_confirmed_run_and_unconfirmed_skip(self):
+        reports = self.tasks_hooks(payloads=True, confirmed_after_tasks_hooks=[self.AUDIT])
+        self.assertEqual([report["status"] for report in reports], ["ok", "ok"])
+        self.assertEqual(reports[0]["data"]["after_tasks_hooks"], reports[1]["data"]["after_tasks_hooks"])
+        self.assertEqual(len(reports[0]["data"]["after_tasks_hooks"]["run"]), 1)
+
+    def test_confirmation_cannot_override_a_disabled_hook(self):
+        refused = self.tasks_hooks(audit_enabled="false", confirmed_after_tasks_hooks=[self.AUDIT])
+        self.assertEqual(refused["status"], "input_error")
+        self.assertEqual(refused["data"], {})
+
+    def test_confirmations_survive_a_second_brief_with_the_same_g4_binding(self):
+        configuration = BRIEF.extensions_yml(BRIEF.hook("after_tasks", "speckit.audit.run", "audit"))
+        with BRIEF.project(configuration):
+            request = BRIEF.with_tasks_fixture_evidence({"phase": "Tasks", "mode": "nested",
+                                                        "workflow_file": "docs/workflow.md", "feature_dir": FEATURE})
+            initial = BRIEF.dispatch_brief(request)
+            confirmed = BRIEF.dispatch_brief({**request, "confirmed_after_tasks_hooks": [self.AUDIT]})
+        self.assertEqual((initial["status"], confirmed["status"]), ("ok", "ok"))
+        self.assertEqual(initial["data"]["after_tasks_hooks"]["run"], [])
+        self.assertEqual(len(confirmed["data"]["after_tasks_hooks"]["run"]), 1)
+        self.assertEqual(initial["data"]["inputs"]["tasks_output"]["feature_identity"],
+                         confirmed["data"]["inputs"]["tasks_output"]["feature_identity"])
+
+
 def nested_section(host: str) -> str:
     """The nested-mode part of the autopilot skill as this host loads it, whitespace folded."""
     text = (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")
@@ -119,6 +192,19 @@ HOST_TOOLS = {"claude": ("`Agent`", "spawn_agent"), "codex": ("spawn_agent", "`A
 
 
 class SkillContractTests(unittest.TestCase):
+    def test_both_hosts_delegate_confirmed_tasks_hooks_with_the_binding_and_record_skips(self) -> None:
+        root_needles = ("confirmed_after_tasks_hooks", "brief.after_tasks_hooks", "never publishes again")
+        driver_needles = ("brief.after_tasks_hooks.run", "brief.after_tasks_hooks.skip", "optional_hook_run",
+                          "authority_action_skipped", "optional_hooks_run", "optional_hooks_skipped", "read-tasks-output")
+        for host in HOST_TOOLS:
+            root = nested_section(host)
+            reference = (host_skill_root(host) / "speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
+            driver = reference[reference.index("## Nested-mode phase driver"):reference.index("## Phase executor summary")]
+            with self.subTest(host=host):
+                self.assertTrue(all(needle in root for needle in root_needles), root)
+                self.assertTrue(all(needle in driver for needle in driver_needles), driver)
+                self.assertNotIn("So it skips optional `after_tasks`", root)
+
     def test_each_host_roots_dispatch_a_driver_and_advance_only_on_the_runner_verdict(self) -> None:
         for host, (own_tool, other_tool) in HOST_TOOLS.items():
             section = nested_section(host)

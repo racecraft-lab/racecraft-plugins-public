@@ -607,7 +607,7 @@
         "value": "speckit_pro_runner/helpers/extension_hooks.py",
         "display": "speckit_pro_runner/helpers/extension_hooks.py"
       },
-      "sha256": "5f07d2f1f9d459d53e7fac1e173e69961274c23f1346428316fce2178be18c60"
+      "sha256": "f9f8b25987ab800aac6498f9a6e08533a9ee0c7418572256c0a22aa924882737"
     },
     {
       "path": {
@@ -687,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "3757830f77cab5e0ab68aa937e5131a519aa6687d204186c2ff9a78635c077ec"
+      "sha256": "d2a286d9192176550de07cb244213e51486eaca09c44ca6cdb1027e8a70f85d0"
     },
     {
       "path": {

@@ -20,7 +20,9 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+from typing import Any
 
+from ..strict_input import SelectionError, require_fields, require_text
 from ..trusted_io import trusted_open_regular_file
 
 HOOK_FILE = ".specify/extensions.yml"
@@ -210,3 +212,27 @@ def optional_hooks(root: Path, events: tuple[str, ...]) -> list[dict[str, str | 
                 ranked.append(found)
         listed.extend(hook for _, hook in sorted(ranked, key=lambda pair: pair[0]) if hook not in listed)
     return listed
+
+
+def confirmed_after_tasks_hooks(
+    hooks: list[dict[str, str | bool]], confirmations: Any,
+) -> dict[str, list[dict[str, str | bool]]]:
+    """Partition listed after_tasks hooks by exact caller-confirmed identity, once in listed order."""
+    if not isinstance(confirmations, list):
+        raise SelectionError("confirmed_after_tasks_hooks must be an array of exact hook identities")
+    fields = ("extension", "command", "event")
+    eligible = [(hook, {field: hook[field] for field in fields}) for hook in hooks if hook["event"] == "after_tasks"]
+    identities = [identity for _, identity in eligible]
+    confirmed = []
+    for raw in confirmations:
+        identity = require_fields(raw, set(fields), "optional hook confirmation")
+        for field in fields:
+            require_text(identity[field], field)
+        if identity not in identities:
+            raise SelectionError("confirmation must match an enabled optional after_tasks hook exactly")
+        if identity not in confirmed:
+            confirmed.append(identity)
+    selected: dict[str, list[dict[str, str | bool]]] = {"run": [], "skip": []}
+    for hook, identity in eligible:
+        selected["run" if identity in confirmed else "skip"].append(hook)
+    return selected

@@ -1254,6 +1254,13 @@ phase's brief with `mode=nested` and no wave inputs. `brief.agent` is always
 for Clarify, Checklist and Analyze, and is null for Specify, Plan and Tasks.
 Never dispatch an inner executor or a consensus agent from the root in this mode.
 
+For Tasks, collect optional `after_tasks` confirmations before dispatch using
+Step 2's runner-owned consent prompt and exact extension, command and event.
+Without explicit confirmation, including unattended runs, grant none. Request
+the Tasks brief again with the same request plus `confirmed_after_tasks_hooks`
+(only the confirmed identity objects, or `[]`). Pass the resulting
+`brief.after_tasks_hooks` unchanged to the driver; its run/skip lists own that window.
+
 Spawn `brief.agent` once per phase with `spawn_agent`, `fork_turns="none"`,
 `model=brief.model.codex.model` and `reasoning_effort=brief.model.codex.effort`,
 so its fresh context contains only the supplied message. Wait
@@ -1269,7 +1276,7 @@ phase's gate, repair and workflow-file results; its last message is a
 The root reads only the envelope and compact helper answers. It never reads a
 planning artifact, runner source or the driver's transcript to learn what the
 phase did. Plan's formal-model-author and formal-check sequence, and Tasks'
-`publish-tasks-output`, mandatory after_tasks hooks and G5, run in the driver
+`publish-tasks-output`, mandatory and confirmed optional after_tasks hooks and G5, run in the driver
 before it returns, so the disk holds the final evidence. Then request
 `helper_id=verify-phase-envelope operation=verify-phase-envelope mode=read_only`
 with inputs `envelope` (the driver's object, unchanged),
@@ -1283,11 +1290,10 @@ After Checklist passes, run `validate-gate` G4 (read_only) and retain its
 complete `judged` map and `feature_identity`: the Tasks brief needs them as
 Step 2 states, and the driver's envelope carries neither.
 
-After a pass, handle optional `after_<phase>` hooks as Step 2 states. The
-root holds no Tasks binding and never publishes again, since a second
-publication would overwrite tasks.md with the snapshot bytes. So it skips
-optional `after_tasks` hooks and records each skip in the decisions list with
-the evidence "nested mode: the driver holds the Tasks binding". Then record the phase from the
+After a pass, handle other phases' optional `after_<phase>` hooks as Step 2 states.
+The Tasks driver already handled its runner-selected after_tasks run/skip lists
+inside the binding and recorded those decisions. The root holds no Tasks binding
+and never publishes again or repeats those hooks. Then record the phase from the
 envelope in `autopilot-state.json`, commit per the auto-commit setting, and
 request the next brief. Implement and the later stages keep their flat dispatch.
 
