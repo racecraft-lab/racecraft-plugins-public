@@ -25,8 +25,13 @@ with `{verdict: "fail", mismatch: {code, detail}}`.
 
 ## Known limits
 
-- This change adds the contract and the helper only. No agent or skill returns
-  or consumes an envelope yet, so no run path calls the helper.
+- Only nested mode (ADR 0026) returns and consumes an envelope: the
+  `phase-executor` driver returns one and the autopilot calls the helper before
+  it advances. Flat mode never calls it.
+- The runner answers `advance` (true only on a pass) on every verified
+  answer. The autopilot's `autopilot-state.json` write is still the model's, so
+  the rule that a failed phase does not advance is a runner answer plus skill
+  text, and no runner code blocks a model that ignores it.
 - Re-verification covers the gates `validate-gate` decides from files. It does
   not re-derive a driver's usage receipt, which the runner cannot observe.
 - Directory artifacts are checked through an opened descriptor, not against a

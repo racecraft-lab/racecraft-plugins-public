@@ -311,7 +311,7 @@ class ResultVerificationTests(EnvelopeAssertions):
     def test_matching_evidence_passes_with_a_compact_answer(self):
         result = verify_project(good_envelope())
         self.assertEqual(result["status"], "ok")
-        self.assertEqual(result["data"], {"verdict": "pass", "phase": "Specify", "next_action": "Run the Clarify phase."})
+        self.assertEqual(result["data"], {"verdict": "pass", "advance": True, "phase": "Specify", "next_action": "Run the Clarify phase."})
 
     def test_a_driver_reported_failure_is_not_a_pass(self):
         envelope = failed_gate_envelope(status="blocked", counts={}, blocker="Spec still has open questions.")

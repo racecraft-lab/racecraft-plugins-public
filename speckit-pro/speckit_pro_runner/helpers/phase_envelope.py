@@ -179,7 +179,7 @@ def reverify(envelope: Any, workflow: str, feature: str, root: Path) -> dict[str
     check_artifacts(envelope, root)
     verdicts = check_gates(envelope, workflow, feature, root)
     check_status_and_counts(envelope, verdicts)
-    return {"verdict": "pass", "phase": envelope["phase"], "next_action": envelope["next_action"]}
+    return {"verdict": "pass", "advance": True, "phase": envelope["phase"], "next_action": envelope["next_action"]}
 
 
 def run_phase_envelope_helper(entry: Any, request: Any) -> dict[str, Any]:
@@ -188,11 +188,13 @@ def run_phase_envelope_helper(entry: Any, request: Any) -> dict[str, Any]:
     Closed inputs: envelope (phase-envelope/v1, see ENVELOPE_SCHEMA), workflow_file and feature_dir
     (repo-relative; no traversal). The runner re-runs every claimed gate and checks every artifact path.
 
-    pass: status ok, data {verdict: "pass", phase, next_action}.
-    mismatch: status expected_failure, data {verdict: "fail", mismatch: {code, detail}} with code one of
+    pass: status ok, data {verdict: "pass", advance: true, phase, next_action}.
+    mismatch: status expected_failure, data {verdict: "fail", advance: false, mismatch: {code, detail}} with code one of
         envelope_invalid, artifact_path_invalid, artifact_missing, phase_gate_missing, gate_evidence_missing, gate_evidence_unparseable,
         gate_claim_mismatch, status_contradicts_gates, phase_not_passed, count_mismatch.
     Malformed request inputs are an input_error; an envelope that breaks the contract fails the phase instead.
+    `advance` is the runner's one answer to whether the run may leave the phase: true only on a pass. An input_error
+    or any other non-ok status carries no `advance` and never advances.
     """
     try:
         inputs = require_fields(request.inputs, {"envelope", "workflow_file", "feature_dir"}, "verify-phase-envelope inputs")
@@ -209,7 +211,7 @@ def run_phase_envelope_helper(entry: Any, request: Any) -> dict[str, Any]:
         data = reverify(inputs["envelope"], workflow, feature, root)
     except Mismatch as exc:
         return response("expected_failure", request_id=request.request_id,
-                        data={"verdict": "fail", "mismatch": {"code": exc.code, "detail": exc.detail[:240]}},
+                        data={"verdict": "fail", "advance": False, "mismatch": {"code": exc.code, "detail": exc.detail[:240]}},
                         diagnostics=[diagnostic(exc.code, exc.detail,
                                                 remediation_summary="The phase is not verified.",
                                                 remediation_actions=["Repair the named mismatch, then return a new envelope."])])

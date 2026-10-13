@@ -484,7 +484,7 @@ for phase in PHASES starting from first_pending:
        formal-model-author dispatch and formal-check preview/execute sequence
        from the shared formal-methods.md contract. Keep Plan/G3 incomplete until
        the selected checks pass; refresh formal-doctor after authoring. Do not
-       append this work to phase-executor's single-command prompt.
+       append this work to phase-executor's single-command prompt in flat mode; a nested-mode driver runs it itself before it returns.
        After a rescope changes plan.md's scope, slices, or delivery order, the
        parent reconciles every Plan artifact before G3: `research.md`,
        `quickstart.md`, `data-model.md`, `contracts/`, and every file under

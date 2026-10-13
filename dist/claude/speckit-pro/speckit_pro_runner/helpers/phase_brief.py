@@ -50,6 +50,10 @@ EXECUTOR_SLICES = (
 # Only a loaded Spec Kit command runs hooks for its own phase. The clarify executor loads none, so Clarify lists no hooks.
 HOOK_PHASES = frozenset(PHASES) - {"Clarify"}
 SLICE_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
+# Nested mode (ADR 0026): `phase-executor` drives every phase. The root's brief names the driver only; the driver asks for
+# the inner executor's dispatch facts (slices, waves) with a flat brief inside its own context.
+DRIVER = "phase-executor"
+MODES = ("flat", "nested")
 PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enriched Checklist Prompts"}
 
 
@@ -161,9 +165,11 @@ def phase_model(phase: str, agent: str) -> dict[str, dict[str, str]]:
     return model
 
 
-def brief_data(phase: str, workflow: str, feature: str, waves: WaveRequest) -> dict[str, Any]:
+def brief_data(phase: str, workflow: str, feature: str, waves: WaveRequest, mode: str = "flat") -> dict[str, Any]:
     """Assemble one validated phase's brief; raises when a packaged reference is unreadable."""
-    agent, gate, artifacts = PHASES[phase]
+    inner, gate, artifacts = PHASES[phase]
+    nested = mode == "nested"
+    agent = DRIVER if nested else inner
     skill = None if phase == "Clarify" else f"speckit-{phase.lower()}"
     instruction = f"Run the {skill} skill with:" if skill else "Prepare a Clarify Question Set for:"
     return {
@@ -172,18 +178,32 @@ def brief_data(phase: str, workflow: str, feature: str, waves: WaveRequest) -> d
                    "prompt_section": PROMPT_SECTIONS.get(phase, phase + " Prompt"), "instruction": instruction,
                    "skill": skill},
         "readable_files": [workflow, ".specify/memory/constitution.md", ".specify/extensions.yml"] + [feature + "/" + name for name in artifacts],
-        "gate": gate, "slices": phase_slices(phase), "model": phase_model(phase, agent), "wait": {"codex": {"timeout_ms": CODEX_WAIT_TIMEOUT_MS}},
+        "gate": gate, "slices": [] if nested else phase_slices(phase), "model": phase_model(phase, agent),
+        "wait": {"codex": {"timeout_ms": CODEX_WAIT_TIMEOUT_MS}},
         "hooks": [],
         "waves": compose_waves(waves, lambda role: phase_model(phase, role)),
         **({"final_checkpoint": waves.final_checkpoint} if waves.verify_baseline is not None else {}),
+        **({"mode": mode, "inner_agent": inner if inner != DRIVER else None} if nested else {}),
     }
 
 
-def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str] | None, dict[str, int] | None]:
-    """Validate the phase, paths, waves and Tasks-only G4 digest binding."""
+def checked_mode(raw: Any, waves: dict[str, Any]) -> str:
+    """Flat unless the caller names nested; a nested brief is the driver's alone, so it carries no wave inputs."""
+    mode = raw if isinstance(raw, str) else None
+    if mode not in MODES:
+        raise ValueError("mode must be flat or nested")
+    if mode == "nested" and waves:
+        raise ValueError("a nested brief takes no wave inputs; the driver requests them with a flat brief")
+    return mode
+
+
+def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str] | None, dict[str, int] | None, str]:
+    """Validate the phase, paths, mode, waves and Tasks-only G4 digest binding."""
     optional = {key: raw[key] for key in (*WAVE_INPUTS, "g4_judged", "g4_feature_identity") if isinstance(raw, dict) and key in raw}
-    inputs = require_fields({key: value for key, value in raw.items() if key not in optional} if isinstance(raw, dict) else raw,
-                            {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
+    mode_inputs = {"mode": raw["mode"]} if isinstance(raw, dict) and "mode" in raw else {}
+    inputs = require_fields({key: value for key, value in raw.items() if key not in optional and key not in mode_inputs}
+                            if isinstance(raw, dict) else raw, {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
+    mode = checked_mode(mode_inputs.get("mode", "flat"), {key: value for key, value in optional.items() if key in WAVE_INPUTS})
     phase = require_text(inputs["phase"], "phase")
     workflow = brief_path(inputs["workflow_file"], "workflow_file")
     feature = brief_path(inputs["feature_dir"], "feature_dir").rstrip("/")
@@ -195,7 +215,7 @@ def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str
     identity = checked_feature_identity(optional.pop("g4_feature_identity", None)) if phase == "Tasks" else None
     if "g4_judged" in optional or "g4_feature_identity" in optional:
         raise ValueError("g4_judged applies to Tasks only")
-    return phase, workflow, feature, checked_wave_request(phase, optional), judged, identity
+    return phase, workflow, feature, checked_wave_request(phase, optional), judged, identity, mode
 
 
 def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
@@ -225,15 +245,16 @@ def _phase_brief_response(
         WaveRequest,
         dict[str, str] | None,
         dict[str, int] | None,
+        str,
     ],
 ) -> dict[str, Any]:
     """Build the phase brief response after input validation."""
-    phase, workflow, feature, waves, judged, identity = context
+    phase, workflow, feature, waves, judged, identity, mode = context
     try:
         if identity is not None:
             check_tasks_parent(root / feature, root, identity)
         captured = check_g4_inputs(root / feature, root, judged) if judged is not None else None
-        data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
+        data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves), mode)
         if captured is not None and judged is not None:
             bind_tasks_snapshot(data, captured, judged)
             data["inputs"]["defer_after_hooks"] = True
@@ -268,6 +289,10 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
     Closed inputs: phase, workflow_file, feature_dir; Tasks requires g4_judged and g4_feature_identity.
+    Optional `mode`: flat (the default) or nested. A nested brief names the phase driver: agent is `phase-executor` for
+    every phase, `inner_agent` is the executor the driver dispatches (null for Specify, Plan and Tasks), `mode` echoes
+    the request, and slices and waves are empty; it takes no wave inputs. The driver requests the inner dispatch facts
+    with a flat brief. A flat brief is unchanged and carries neither field.
     dispatch_waves.py owns optional domains, items, verify_items, verify_baseline and max_agents.
     Tasks copies exact G4-matched bytes into a private snapshot; read-tasks-inputs returns verified text.
 
