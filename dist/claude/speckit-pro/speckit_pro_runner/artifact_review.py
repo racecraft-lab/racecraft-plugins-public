@@ -296,7 +296,7 @@ def _inputs(inputs: Any, feature: str) -> None:
         raise ValueError("artifact review must fingerprint spec, plan, and tasks")
     for path, digest in inputs.items():
         _relative(path)
-        if path not in required and not re.fullmatch(r"docs/ai/specs/\.process/[^/]+-design-concept\.md", path):
+        if path not in required | {f"{feature}/research.md"} and not re.fullmatch(r"docs/ai/specs/\.process/[^/]+-design-concept\.md", path):
             raise ValueError("artifact review input is not a planning input")
         _hash(digest, f"input {path}", optional=path not in required)
 

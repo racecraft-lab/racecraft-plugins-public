@@ -212,6 +212,45 @@ class RerunTests(TerminalFixture):
         self.assertEqual((self.subjects(), self.cli.gh), ([], []))
 
 
+class FreshnessTests(TerminalFixture):
+    def test_research_changes_deletion_and_creation_invalidate_generation(self) -> None:
+        research = self.root / FEATURE / "research.md"
+        original = research.read_bytes()
+        for change in ("edit", "delete", "create"):
+            with self.subTest(change=change):
+                if change == "create":
+                    research.unlink(missing_ok=True)
+                else:
+                    research.write_bytes(original)
+                self.finish(until="pages")
+                if change == "delete":
+                    research.unlink()
+                else:
+                    research.write_bytes(original + b"\nNew research evidence.\n")
+                text = (self.root / WORKFLOW).read_text()
+                handoff = artifact_review.review_handoff(text, self.root, plan_stage_terminal.trusted_bytes, "unavailable")
+                self.assertFalse(handoff["reuse_artifacts"])
+                self.assertEqual(handoff["status"], "pending")
+                before = self.git("status", "--porcelain")
+                result = self.finish(execution_mode="headless")
+                self.assertNotEqual(result["status"], "ok")
+                self.assertEqual(self.git("status", "--porcelain"), before)
+                self.assertEqual(self.cli.gh, [])
+                # A fresh pages request explicitly rebuilds against the changed inputs.
+                self.assertEqual(self.finish(until="pages")["status"], "ok")
+
+    def test_other_consumed_planning_inputs_are_fingerprinted(self) -> None:
+        for path in (CONCEPT, *PLANNING.values()):
+            with self.subTest(path=path):
+                self.finish(until="pages")
+                file = self.root / path
+                file.write_bytes(file.read_bytes() + b"\nUpdated planning evidence.\n")
+                text = (self.root / WORKFLOW).read_text()
+                self.assertFalse(artifact_review.review_handoff(text, self.root, plan_stage_terminal.trusted_bytes)["reuse_artifacts"])
+                self.assertNotEqual(self.finish(execution_mode="headless")["status"], "ok")
+                self.assertEqual(self.finish(until="pages")["status"], "ok")
+
+
 class PullRequestTests(TerminalFixture):
     def record(self, number: int = 7) -> None:
         path = self.root / WORKFLOW

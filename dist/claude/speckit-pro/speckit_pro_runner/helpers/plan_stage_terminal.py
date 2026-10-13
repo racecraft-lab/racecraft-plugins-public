@@ -220,6 +220,8 @@ def fill_pages(run: Run, fresh: bool) -> dict[str, Any]:
                      {name: path for name, path in run.planning.items() if name in artifact_publication.SELECTION_INPUTS})
     if selection["status"] != "ok":
         raise Stop("integrity_failure", str(selection["diagnostics"][0]["message"]))
+    if not fresh and artifact_review.record_from_workflow(workflow_text(run)) is not None and not recorded_pages_current(run):
+        raise Stop("integrity_failure", "planning inputs changed; regenerate the pages before finishing the stage")
     selected = selection["data"]["selected_pages"]
     directory = run.root / run.feature / "artifacts"
     if fresh and artifact_review.record_from_workflow(workflow_text(run)) is not None and not recorded_pages_current(run) and directory.exists():
@@ -253,6 +255,7 @@ def page_entry(run: Run, page_id: str) -> dict[str, Any]:
 def write_record(run: Run, pages: dict[str, Any]) -> None:
     """Write the Artifact Review Handoff record, the sole store for generation and preview evidence."""
     inputs = {f"{run.feature}/{name}.md": sha256(run.root, f"{run.feature}/{name}.md") for name in ("spec", "plan", "tasks")}
+    inputs[f"{run.feature}/research.md"] = sha256(run.root, f"{run.feature}/research.md")
     inputs[run.concept] = sha256(run.root, run.concept)
     text = workflow_text(run)
     previous = artifact_review.record_from_workflow(text)
