@@ -247,6 +247,27 @@ class ArtifactVerificationTests(EnvelopeAssertions):
             self.assertEqual(mismatch(result), "artifact_missing")
 
 
+class DirectoryDescriptorTests(unittest.TestCase):
+    def test_directory_descriptors_close_after_every_listing_outcome(self):
+        for outcome in ([], ["entry"], OSError("unreadable")):
+            with self.subTest(outcome=outcome), project() as root:
+                fd = phase_envelope.trusted_open_directory(root, root)
+                self.assertIsNotNone(fd)
+                with patch.object(phase_envelope, "trusted_open_directory", return_value=fd), \
+                     patch.object(phase_envelope.os, "listdir", side_effect=[outcome]):
+                    if isinstance(outcome, OSError):
+                        self.assertRaises(OSError, phase_envelope.directory_has_entries, root, root)
+                    else:
+                        self.assertEqual(phase_envelope.directory_has_entries(root, root), bool(outcome))
+                self.assertRaises(OSError, os.fstat, fd)
+
+    def test_an_unopened_directory_has_no_descriptor_to_close(self):
+        with project() as root, patch.object(phase_envelope, "trusted_open_directory", return_value=None), \
+             patch.object(phase_envelope.os, "close") as close:
+            self.assertFalse(phase_envelope.directory_has_entries(root, root))
+            close.assert_not_called()
+
+
 class GateVerificationTests(EnvelopeAssertions):
     def test_a_claimed_pass_over_failing_disk_evidence_is_rejected(self):
         with project(spec_text="# Spec\n\n[NEEDS CLARIFICATION: scope]\n"):
@@ -343,6 +364,7 @@ if __name__ == "__main__":
         ChecklistEvidenceTests,
         PhaseSourceEvidenceTests,
         ArtifactVerificationTests,
+        DirectoryDescriptorTests,
         GateVerificationTests,
         ResultVerificationTests,
         RequestContractTests,
