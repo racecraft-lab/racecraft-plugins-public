@@ -252,11 +252,11 @@ def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
     started = time.monotonic()
     result = PY_HELPERS[entry.helper_id](inputs, repo_root)
     duration_ms = int((time.monotonic() - started) * 1000)
-    stdout_limit = (
-        PLAN_LAYERS_CAPTURE_LIMIT_BYTES
-        if entry.helper_id in {"plan-layers-feature-dir", "render-plan-repair-context"}
-        else CAPTURE_LIMIT_BYTES
-    )
+    stdout_limit = {
+        "plan-layers-feature-dir": PLAN_LAYERS_CAPTURE_LIMIT_BYTES,
+        # A message byte can become six JSON escape bytes; leave room for metadata.
+        "render-plan-repair-context": 6 * PLAN_REPAIR_MESSAGE_LIMIT_BYTES + CAPTURE_LIMIT_BYTES,
+    }.get(entry.helper_id, CAPTURE_LIMIT_BYTES)
     stdout = output_capture(result["stdout"], limit_bytes=stdout_limit)
     stderr = output_capture(result["stderr"])
     exit_code = int(result["exit_code"])

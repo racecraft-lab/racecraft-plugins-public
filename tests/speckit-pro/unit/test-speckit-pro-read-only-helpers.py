@@ -4851,11 +4851,10 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
                 self.assertEqual(data["python_operation"], helper_id)
                 self.assertTrue(data["authoritative_command"].endswith("| python -m speckit_pro_runner"))
-                expected_stdout_limit = (
-                    PLAN_LAYERS_CAPTURE_LIMIT_BYTES
-                    if helper_id in {"plan-layers-feature-dir", "render-plan-repair-context"}
-                    else GENERIC_CAPTURE_LIMIT_BYTES
-                )
+                expected_stdout_limit = {
+                    "plan-layers-feature-dir": PLAN_LAYERS_CAPTURE_LIMIT_BYTES,
+                    "render-plan-repair-context": 1196032,
+                }.get(helper_id, GENERIC_CAPTURE_LIMIT_BYTES)
                 self.assertEqual(data["stdout"]["limit_bytes"], expected_stdout_limit)
                 self.assertEqual(data["stderr"]["limit_bytes"], GENERIC_CAPTURE_LIMIT_BYTES)
                 self.assertEqual(completed.returncode, response["exit_code"])
