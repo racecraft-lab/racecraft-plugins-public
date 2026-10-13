@@ -231,7 +231,7 @@
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },
-      "sha256": "c8f127a3740ec741ee9966e0252e171c41be59989d54601b46efc5059433bf6a"
+      "sha256": "7d6b8cc27cf33e91068e54f48af6166df50e6edf139622325767705845efad4f"
     },
     {
       "path": {
@@ -727,7 +727,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "b7a2cc77306011b339bf3b4468e7f1183f33ec5bb8322b66623083e24892bd3b"
+      "sha256": "a4682b955791cbfb83bc856fcc68d4942a5ce4b5976f0b6f8718b66f127dc5db"
     },
     {
       "path": {

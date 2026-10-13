@@ -23,7 +23,7 @@ from typing import Any, Callable, cast
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..canonical_json import canonical_bytes
 from ..codex_launch import executable_path, trusted_executable
-from ..envelope import diagnostic, response
+from ..envelope import diagnostic, escaped_text_capture_limit_bytes, response
 from ..execution_control import is_implementation_notes
 from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
 from .. import quality_gates
@@ -254,8 +254,7 @@ def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
     duration_ms = int((time.monotonic() - started) * 1000)
     stdout_limit = {
         "plan-layers-feature-dir": PLAN_LAYERS_CAPTURE_LIMIT_BYTES,
-        # A message byte can become six JSON escape bytes; leave room for metadata.
-        "render-plan-repair-context": 6 * PLAN_REPAIR_MESSAGE_LIMIT_BYTES + CAPTURE_LIMIT_BYTES,
+        "render-plan-repair-context": escaped_text_capture_limit_bytes(PLAN_REPAIR_MESSAGE_LIMIT_BYTES),
     }.get(entry.helper_id, CAPTURE_LIMIT_BYTES)
     stdout = output_capture(result["stdout"], limit_bytes=stdout_limit)
     stderr = output_capture(result["stderr"])

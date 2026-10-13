@@ -59,6 +59,8 @@ import runner_invocation  # noqa: E402
 from runner_invocation import assert_runner_response, command_stdin_fixture  # noqa: E402
 
 from speckit_pro_runner.helpers import registry  # noqa: E402
+from speckit_pro_runner.envelope import escaped_text_capture_limit_bytes  # noqa: E402
+from speckit_pro_runner.helpers.read_only import PLAN_REPAIR_MESSAGE_LIMIT_BYTES  # noqa: E402
 from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
@@ -4853,7 +4855,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 self.assertTrue(data["authoritative_command"].endswith("| python -m speckit_pro_runner"))
                 expected_stdout_limit = {
                     "plan-layers-feature-dir": PLAN_LAYERS_CAPTURE_LIMIT_BYTES,
-                    "render-plan-repair-context": 1196032,
+                    "render-plan-repair-context": escaped_text_capture_limit_bytes(PLAN_REPAIR_MESSAGE_LIMIT_BYTES),
                 }.get(helper_id, GENERIC_CAPTURE_LIMIT_BYTES)
                 self.assertEqual(data["stdout"]["limit_bytes"], expected_stdout_limit)
                 self.assertEqual(data["stderr"]["limit_bytes"], GENERIC_CAPTURE_LIMIT_BYTES)
