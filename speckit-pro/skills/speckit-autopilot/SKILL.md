@@ -1597,9 +1597,11 @@ including an unparseable envelope, never advance: handle it as a failed gate
 under the existing repair and escalation policy, with a fresh driver if the
 phase is retried.
 
-After a pass, handle optional `after_<phase>` hooks as Step 2 states. For
-Tasks, request `publish-tasks-output` again with `brief.inputs.tasks_output`
-to obtain the binding those hooks read. Then record the phase from the
+After a pass, handle optional `after_<phase>` hooks as Step 2 states. The
+root holds no Tasks binding and never publishes again, since a second
+publication would overwrite tasks.md with the snapshot bytes. So it skips
+optional `after_tasks` hooks and records each skip in the decisions list with
+the evidence "nested mode: the driver holds the Tasks binding". Then record the phase from the
 envelope in `autopilot-state.json`, commit per the auto-commit setting, and
 request the next brief. Implement and the later stages keep their flat dispatch.
 
