@@ -56,6 +56,14 @@ described in the [hash transition](https://git-scm.com/docs/hash-function-transi
 
 ## Known limits
 
+- The full Linux VM CI run at the policy fix commit returned exit 1. Toolchain
+  and layers 1, 5, 6 and 7 passed; layer 4 failed. Captured failures in unchanged
+  `test-trigger-campaign-execution.py` and `test-trigger-carry-forward.py`
+  reject absolute ancestor ownership or mode before their intended checks,
+  matching the limitation recorded by the prior repair. Both layer-4 streams
+  were truncated, so this is not a complete failure inventory. Terminal
+  207/207, step requests 5/5, artifact fill 53/53 and privacy 21/21 passed in
+  that run. The suite is not green and native coverage remains outstanding.
 - The prior accepted limits in [the terminal review follow-up](pr-1336-plan-terminal-review.md)
   remain unchanged. This delta does not reopen them.
 - An actor who controls Git metadata or independently runs commits and pushes
