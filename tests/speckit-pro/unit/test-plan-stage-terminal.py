@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -224,9 +225,13 @@ class ContentEvidenceTests(TerminalFixture):
         written = page.read_text()
         for tag in ("p", "dd", "li", "h2"):
             with self.subTest(tag=tag):
-                altered = written.replace('<p class="lede">', f"<{tag}>").replace("different feature.</p>", f"different feature.</{tag}>")
+                altered = written if tag == "p" else written.replace('<p class="lede">', f"<{tag}>").replace("different feature.</p>", f"different feature.</{tag}>")
                 page.write_text(altered, encoding="utf-8")
-                self.assertEqual(self.finish(until="pages")["status"], "ok")
+                result = self.finish(until="pages")
+                if tag != "p":
+                    self.assertNotEqual(result["status"], "ok")
+                    continue
+                self.assertEqual(result["status"], "ok")
                 record = artifact_review.record_from_workflow((self.root / WORKFLOW).read_text())
                 entry = next(p for p in record["pages"] if p["id"] == identifier)
                 self.assertEqual(entry["expected_title"], "Implementation Plan — art-007-draft-pr-emission Draft-PR Emission")
@@ -242,6 +247,109 @@ class ContentEvidenceTests(TerminalFixture):
                 page.write_text(altered, encoding="utf-8")
                 self.assertNotEqual(self.finish(execution_mode="headless")["status"], "ok")
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+
+class HiddenContentEvidenceTests(TerminalFixture):
+    def assert_hidden_evidence_refused(self, conceal: str) -> None:
+        anchor = "Phase 1: Setup (Worktree Preflight)"
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                self.finish(host=host, until="pages")
+                page = self.root / FEATURE / "artifacts/implementation-plan.html"
+                altered = page.read_text().replace(anchor, "Unrelated fabricated phase")
+                page.write_text(altered.replace("<!-- FILL:feature-header:END -->",
+                                               conceal.replace("EVIDENCE", anchor) + "<!-- FILL:feature-header:END -->"),
+                                encoding="utf-8")
+                result = self.finish(host=host, execution_mode="headless")
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                self.assertIn("planning markup", result["diagnostics"][0]["message"], result)
+                self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+                self.assertEqual(json.loads((self.root / STATE).read_text())["status"], "in_progress")
+
+    def test_hidden_attribute_cannot_supply_evidence(self) -> None:
+        self.assert_hidden_evidence_refused("<p hidden>EVIDENCE</p>")
+
+    def test_display_none_cannot_supply_evidence(self) -> None:
+        self.assert_hidden_evidence_refused('<p style="display:none">EVIDENCE</p>')
+
+    def test_visibility_hidden_cannot_supply_evidence(self) -> None:
+        self.assert_hidden_evidence_refused('<p style="visibility:hidden">EVIDENCE</p>')
+
+    def test_opacity_zero_cannot_supply_evidence(self) -> None:
+        self.assert_hidden_evidence_refused('<p style="opacity:0">EVIDENCE</p>')
+
+    def test_template_cannot_supply_evidence(self) -> None:
+        self.assert_hidden_evidence_refused("<template><p>EVIDENCE</p></template>")
+
+    def test_closed_details_cannot_supply_evidence(self) -> None:
+        self.assert_hidden_evidence_refused("<details><summary>Unrelated</summary><p>EVIDENCE</p></details>")
+
+    def test_aria_hidden_cannot_supply_evidence(self) -> None:
+        self.assert_hidden_evidence_refused('<p aria-hidden="true">EVIDENCE</p>')
+
+    def test_script_evidence_stops_at_the_planning_markup_boundary(self) -> None:
+        self.assert_hidden_evidence_refused("<script>EVIDENCE</script>")
+
+    def test_comment_evidence_stops_at_the_planning_markup_boundary(self) -> None:
+        self.assert_hidden_evidence_refused("<!-- EVIDENCE -->")
+
+    def test_other_concealment_forms_cannot_supply_evidence(self) -> None:
+        for conceal in ('<p HIDDEN="false">EVIDENCE</p>',
+                        '<p style="DISPLAY:/**/none!important">EVIDENCE</p>',
+                        '<p style="opacity:0.0!important">EVIDENCE</p>',
+                        '<p style="content-visibility:hidden">EVIDENCE</p>',
+                        '<p style="font-size:0">EVIDENCE</p>',
+                        '<p style="color:transparent">EVIDENCE</p>',
+                        '<p class="fallback">EVIDENCE</p>',
+                        '<svg><text>EVIDENCE</text></svg>',
+                        '<input type="hidden" value="EVIDENCE">',
+                        '<p title="EVIDENCE">Unrelated</p>',
+                        '<p aria-hidden="true"><b>EVIDENCE</b></p>',
+                        '<details open><summary>Unrelated</summary>EVIDENCE</details>'):
+            with self.subTest(conceal=conceal):
+                self.assert_hidden_evidence_refused(conceal)
+
+    def test_concealment_cannot_wrap_the_original_structured_passage(self) -> None:
+        self.finish(until="pages")
+        page = self.root / FEATURE / "artifacts/implementation-plan.html"
+        original = page.read_text()
+        anchor = "Phase 1: Setup (Worktree Preflight)"
+        for wrapper in ('<span hidden>EVIDENCE</span>', '<span style="opacity:0">EVIDENCE</span>',
+                        '<template>EVIDENCE</template>', '<details>EVIDENCE</details>'):
+            with self.subTest(wrapper=wrapper):
+                page.write_text(original.replace(anchor, wrapper.replace("EVIDENCE", anchor)), encoding="utf-8")
+                result = self.finish(execution_mode="headless")
+                self.assertIn("planning markup", result["diagnostics"][0]["message"], result)
+                self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+    def test_prose_cannot_hide_unchanged_evidence_across_fill_boundaries(self) -> None:
+        self.finish(until="pages")
+        page = self.root / FEATURE / "artifacts/implementation-plan.html"
+        text = page.read_text().replace("<!-- FILL:feature-header:END -->", '<div hidden><!-- FILL:feature-header:END -->')
+        text = text.replace("<!-- FILL:task-inventory:START -->", "<!-- FILL:task-inventory:START --></div>")
+        page.write_text(text, encoding="utf-8")
+        result = self.finish(execution_mode="headless")
+        self.assertIn("planning markup", result["diagnostics"][0]["message"], result)
+        self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+
+class PayloadEvidenceTests(unittest.TestCase):
+    def test_both_shipped_runners_reject_every_hidden_content_variant(self) -> None:
+        for plugin in ("dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                script = (
+                    "import runpy, sys, unittest\n"
+                    "sys.path.insert(0, sys.argv[1])\n"
+                    "from speckit_pro_runner.helpers import registry\n"
+                    "scope = runpy.run_path(sys.argv[2])\n"
+                    "suite = unittest.defaultTestLoader.loadTestsFromTestCase(scope['HiddenContentEvidenceTests'])\n"
+                    "result = unittest.TextTestRunner().run(suite)\n"
+                    "sys.exit(not result.wasSuccessful())\n"
+                )
+                done = subprocess.run([sys.executable, "-c", script, str(ROOT / plugin), str(Path(__file__).resolve())],
+                                      capture_output=True, text=True, check=False)
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
 
 class FreshnessTests(TerminalFixture):

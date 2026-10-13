@@ -5,6 +5,25 @@ review reproductions cover the planning gate, confined cleanup, interrupted
 authoring, brokered preview evidence, research freshness, and independent
 planning-derived page expectations. The shared runner ships to both hosts.
 
+## Hidden-content evidence repair
+
+F1336-8430c586: hidden artifact content counted as feature evidence. The
+terminal helper now binds every structured fill to the independently rendered
+planning bytes, and every narrative fill to its generated tags and attributes.
+Only escaped narrative text may change. This keeps the existing plain-text
+authoring contract and prevents a hidden copy, an attribute, a class, or an
+unbalanced wrapper from certifying a different visible feature. Static template
+provenance and active-content checks remain mandatory before publication.
+
+Tests exercise the public terminal dispatcher with both host inputs and rerun
+the same hidden-content cases against each shipped runner. Coverage includes
+hidden, display:none, visibility:hidden, opacity:0, template, closed details,
+aria-hidden, script, comments, CSS variants, nested hiding, attribute-only
+text, hidden structured anchors, and wrappers across fill boundaries. Scripts
+and comments already stopped on the reviewed head; their new red assertions
+require rejection at the planning-markup boundary before the later provenance
+check. Successful plain-text narrative edits remain covered.
+
 ## Known limits
 
 - R1336-0f1bd68e: the original production diff exceeded the ticket's 400-line

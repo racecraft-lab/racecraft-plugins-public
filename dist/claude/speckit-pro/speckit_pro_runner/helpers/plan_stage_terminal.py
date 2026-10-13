@@ -245,6 +245,9 @@ def page_entry(run: Run, page_id: str) -> dict[str, Any]:
     filled = call(run, "fill-artifact-page", "dry_run", {**run.planning, "entry_id": page_id})
     if filled["status"] != "ok":
         raise Stop("integrity_failure", f"the planning evidence for {page_id} could not be rendered")
+    prose_slots = [slot["slot"] for slot in filled["data"]["narrative_slots"]]
+    if artifact_fill.planning_markup(html, prose_slots) != filled["data"]["planning_markup"]:
+        raise Stop("integrity_failure", f"the page {page_id} does not match its planning markup")
     title, body = (filled["data"][key] for key in ("expected_title", "expected_content"))
     found = TITLE.search(html)
     if not body or found is None or artifact_fill.html_text(found[1]) != title or body not in artifact_fill.html_text(html):

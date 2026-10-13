@@ -9,6 +9,7 @@ escapes and wraps in markup. Publication stays with artifact_publication.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import re
 from collections.abc import Callable, Iterable
 from html import escape, unescape
@@ -300,7 +301,19 @@ def html_text(markup: str) -> str:
     return re.sub(r"\s+", " ", visible).strip()
 
 
-def generation_evidence(content: str, prose_slots: dict[str, str]) -> dict[str, str]:
+def planning_markup(content: str, prose_slots: Iterable[str]) -> dict[str, str]:
+    """Bind structured fills to planning bytes and prose to its generated tags.
+
+    Narrative is plain escaped text, not arbitrary HTML. Keeping every tag and
+    attribute prevents authored prose from concealing other planning regions.
+    The trusted template's static skeleton is checked by artifact_review.
+    """
+    prose = set(prose_slots)
+    return {slot: hashlib.sha256(("".join(re.findall(r"<[^>]*>", fill)) if slot in prose else fill).encode()).hexdigest()
+            for slot, fill in artifact_publication.REGION.findall(content)}
+
+
+def generation_evidence(content: str, prose_slots: dict[str, str]) -> dict[str, Any]:
     """Lift evidence from the deterministic planning render, excluding editable prose and breadcrumbs."""
     title = re.search(r"<title>(.*?)</title>", content, re.DOTALL)
     expected_title = html_text(title[1]) if title else ""
@@ -309,7 +322,8 @@ def generation_evidence(content: str, prose_slots: dict[str, str]) -> dict[str, 
                 if slot not in {*prose_slots, "document-title", "feature-header", "plan-stats"}
                 for passage in re.findall(r"<(?:p|dd|li|h[1-6])\b[^>]*>(.*?)</(?:p|dd|li|h[1-6])>", fill, re.DOTALL))
     body = next((text for text in passages if len(text) >= 12 and text not in expected_title and text != NOT_RECORDED), "")
-    return {"expected_title": expected_title, "expected_content": body}
+    return {"expected_title": expected_title, "expected_content": body,
+            "planning_markup": planning_markup(content, prose_slots)}
 
 
 def run_artifact_fill_helper(entry: Any, request: Any) -> dict[str, Any]:
