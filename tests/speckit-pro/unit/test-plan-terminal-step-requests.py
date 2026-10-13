@@ -6,7 +6,7 @@ orchestrator's context is largest. Each request the guidance names but does not
 spell out, and each request that cannot run there, costs the orchestrator extra
 turns hunting through references and runner source. The release-readiness gate
 needs a SpecKit Pro source checkout, so its operations never belong here; the
-packet producer owns the draft title's shape instead (GeneratedTitleScopeTests).
+finish-plan-stage helper owns the draft title and packet (test-plan-stage-terminal).
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
 from host_skill_views import host_skill_root  # noqa: E402
 from speckit_pro_runner.gates.release import RELEASE_INPUT_FIELDS  # noqa: E402
+from speckit_pro_runner.helpers.plan_stage_terminal import INPUTS  # noqa: E402
 from speckit_pro_runner.helpers.read_only import workflow_draft_pr_row  # noqa: E402
 from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noqa: E402
 from speckit_pro_runner.workflow_stage import AUTOPILOT_BASIC_INFO_HEADING  # noqa: E402
@@ -34,7 +35,7 @@ START = re.compile(r"^#{3,4} Plan [Ss]tage: .*[Tt]erminal [Ss]tep\s*$", re.M)
 END = re.compile(r"^#{2,3} Phase 7: Implement", re.M)
 HELPER_ID = re.compile(r"helper_id=([a-z0-9-]+)|\"helper_id\": \"([a-z0-9-]+)\"")
 SEQUENCE_HEADING = "Draft-PR emission: the terminal-step sequence"
-DRAFT_REQUEST = re.compile(r'```json\n(\{\n  "schema_version": "1\.0",\n  "request_id": "example-draft-packet".*?)\n```', re.S)
+FINISH_REQUEST = re.compile(r'```json\n(\{\n  "schema_version": "1\.0",\n  "request_id": "plan-stage-terminal".*?)\n```', re.S)
 DRAFT_PR_ROW = re.compile(r"^\| \*\*Draft PR\*\* \|.*\|$", re.M)
 
 
@@ -76,23 +77,19 @@ class TerminalStepRequestTests(unittest.TestCase):
                                  f"{host}: the terminal step names release-gate operation {operation!r}, which needs a "
                                  "SpecKit Pro source checkout and refuses in a user repository")
 
-    def test_documented_draft_request_sends_the_checked_title_fields(self) -> None:
-        # A supplied generated_title skips the packet's type and description checks; the three fields do not.
-        for host in HOSTS:
-            match = DRAFT_REQUEST.search(terminal_step(host))
-            self.assertIsNotNone(match, f"{host}: the terminal step shows no example draft packet request")
-            inputs = json.loads(match.group(1))["inputs"]
-            self.assertLessEqual({"title_type", "title_scope", "title_description"}, set(inputs), host)
-            self.assertNotIn("generated_title", inputs, host)
-
-    def test_packet_validation_request_is_spelled_out(self) -> None:
+    def test_the_terminal_step_names_the_helper_and_one_author_dispatch(self) -> None:
         for host in HOSTS:
             text = terminal_step(host)
-            self.assertIn("validate-pr-packet-read-only", named_helpers(text),
-                          f"{host}: name the packet validator as a runner request")
-            for condition in ("`data.stdout_json.status` is `passed`", "`data.stdout_json.pr_blocked` is false",
-                              "`data.writes_state` is false"):
-                self.assertIn(condition, text, f"{host}: state the packet validator's pass condition {condition!r}")
+            self.assertEqual(named_helpers(text), {"finish-plan-stage"}, host)
+            self.assertEqual(len(re.findall(r"subagent_type: \"speckit-pro:artifact-author\"|spawn_agent\(\"artifact-author\"", text)), 1, host)
+
+    def test_documented_request_sends_only_inputs_the_helper_accepts(self) -> None:
+        for host in HOSTS:
+            match = FINISH_REQUEST.search(terminal_step(host))
+            self.assertIsNotNone(match, f"{host}: the terminal step shows no finish-plan-stage request")
+            request = json.loads(match.group(1))
+            self.assertLessEqual(set(request["inputs"]), INPUTS, host)
+            self.assertEqual(request["answer_format"], "compact", host)
 
     def test_draft_pr_row_example_parses_as_the_runner_reads_it(self) -> None:
         for host in HOSTS:

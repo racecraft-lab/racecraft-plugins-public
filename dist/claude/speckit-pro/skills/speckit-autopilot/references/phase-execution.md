@@ -1034,116 +1034,71 @@ tree-wide CI gate both fail on.
 
 #### Stage-boundary commit (plan stage only)
 
-After the gate resolves — pass, warn, or strict stop — take **one distinct
-commit**. It is not a renamed analyze-phase commit: that commit was already
-taken before the gate ran, so renaming it would leave the verdict uncommitted.
-
-```text
-git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json \
-  && git commit -m "chore(SPEC-XXX): close the plan stage boundary"
-```
-
-Three properties, each load-bearing:
-
-- **The message names the stage boundary, not a phase**, so the boundary is
-  identifiable in version history.
-- **The staged path set is the same enumeration as the per-phase bookkeeping
-  commits** — the specification directory, the workflow file, and the state
-  file. Never the workflow *directory*, which also holds untracked run
-  byproducts that a directory-wide add would sweep in.
-- **The commit is non-empty regardless of whether the `Stage` row changed**,
-  because the `Confidence Gate` row always advances off its pending state — so
-  the conditional second `Stage` write needs no empty-commit escape hatch.
-
+After the gate resolves (pass, warn, or strict stop), the stage takes **one
+distinct commit**, `chore(SPEC-XXX): close the plan stage boundary`. It is not a
+renamed analyze-phase commit: that commit was taken before the gate ran, so
+renaming it would leave the verdict uncommitted. It stages `specs/`, the
+workflow file, and `<workflow-dir>/autopilot-state.json`, never the workflow
+*directory*, which also holds untracked run byproducts. It is non-empty because
+the `Confidence Gate` row always advances off its pending state, and it is
 `chore:` because a planning-stage boundary ships no runtime change and must not
-trigger a release-please version bump, the same reasoning the spec-MOC
-regeneration commit below uses for its `docs:` subject.
+trigger a release-please version bump. On pass or warn, `finish-plan-stage`
+takes it as part of the sequence below. On a strict stop, take it yourself with
+the same staged set.
 
 #### Draft-PR emission: the terminal-step sequence (plan stage only)
 
-Once the final gate resolves **pass or warn**, the plan stage's terminal step
-does not end at the boundary commit above. It runs this sequence, in this order:
+Once the final gate resolves **pass or warn**, the terminal step is the
+`finish-plan-stage` runner helper and one `artifact-author` dispatch. The helper
+fills the artifact pages, takes the stage-boundary commit, builds and commits the
+draft packet, pushes the branch, creates or refreshes the one draft pull request,
+records it in the `Draft PR` row, records the preview as unavailable on a
+headless run, writes `plan/completed` (`stage: plan`, `status: completed` in
+`autopilot-state.json`), and returns the stop label. You decide none of those
+steps: compose no title, body, or branch, and run no `git` or `gh` command of
+your own here.
 
-```text
-1. Generate and validate the artifacts; initialize their pending review record.
-2. Take the stage-boundary commit above.
-3. On the clean worktree, run `pr-packet-output` dry-run and apply; validate the packet with `validate-pr-packet-read-only`, then commit its packet and body files.
-4. Push the branch.
-5. Create or refresh the draft pull request using the validated packet.
-6. Write the `Draft PR` record to the workflow file.
-7. Take a separate bookkeeping commit carrying that record, and push it.
-8. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
-9. Validate and commit/push the workflow-only preview evidence.
-10. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. A step that fails above ends the sequence there; print the stop report for that shape and exactly one marker selected by the precedence rule and table under the stop report.
+
+1. Send the request below with `inputs.until` set to `pages`. The helper selects
+   and fills the pages and answers `outcome: pages_ready`.
+2. When `pages.generated` is not empty, dispatch the `artifact-author` once (next
+   subsection). Skip the dispatch when it is empty.
+3. Send the same request without `inputs.until`.
+4. For `outcome: preview_pending`, deliver the previews named in
+   `preview.observer_dispatches` by the
+   [Artifact Review Handoff contract](./artifact-review.md), then commit and push
+   the workflow-only evidence. Skip this step for any other outcome.
+5. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. For `outcome: stopped`, the answer's `report` is the stop report for that shape and its `stop_label` is the one marker to print instead, as the precedence rule under the stop report requires.
+
+```json
+{
+  "schema_version": "1.0",
+  "request_id": "plan-stage-terminal",
+  "helper_id": "finish-plan-stage",
+  "operation": "finish-plan-stage",
+  "mode": "apply",
+  "answer_format": "compact",
+  "inputs": {
+    "host": "<claude or codex>",
+    "execution_mode": "<interactive or headless>",
+    "workflow_file": "<workflow file path>",
+    "plan_file": "specs/<feature>/plan.md",
+    "spec_file": "specs/<feature>/spec.md",
+    "tasks_file": "specs/<feature>/tasks.md",
+    "unratified_defaults": "<the G0 UNRATIFIED_FLAG line, only when G0 recorded one>",
+    "until": "pages"
+  }
+}
 ```
 
+The helper finds the research and design-concept files itself. A
+step that fails ends the sequence there; re-running the helper is the recovery,
+because it keeps committed pages and the author's prose, refreshes the open draft
+pull request, and repairs the `Draft PR` row.
 
-**Read the [Artifact Review Handoff contract](./artifact-review.md) before this sequence.**
-It defines the durable record, preview evidence, current-task binding, and
-preview-only resume. Publication through step 7 remains fail-open for generation
-gaps. Steps 8–9 cannot treat publication or `queued` as verified delivery.
-A preview-only resume bypasses generation and current-run artifact cleanup when
-the shared resolver reports reusable artifacts, and skips completed publication
-steps after corroboration.
+#### The `artifact-author` dispatch
 
-**Generation runs first** because the pages land under
-`specs/<feature>/artifacts/`, which the boundary commit's existing `specs/` path
-already stages. The order is what lets that commit carry the artifacts with its
-staged path set unchanged.
-
-**Step 2 is the boundary commit above, not a second one.** Its message
-(`chore(SPEC-XXX): close the plan stage boundary`), its staged path set, and its
-non-emptiness are exactly as that subsection states them. The `Draft PR` record
-is never folded into it — the record does not exist yet at step 2, and writing it
-there would put a pull-request identity in the commit that closes the boundary
-rather than in the commit that records the hand-off.
-
-**The push at step 3 is load-bearing.** No earlier plan-stage step pushes the
-branch, so without it creation has no remote head to open against and fails on
-every run. Detect the remote name rather than assuming it, the same way the PR
-Creation Protocol below does.
-
-**The bookkeeping commit at step 6 stages the workflow file** — the only file
-this step writes. Never the workflow *directory*, which also holds untracked run
-byproducts that a directory-wide add would sweep in. Its message follows the
-repository's conventional-commit shape, and `chore:` for the same reason the
-boundary commit uses it: recording an identity ships no runtime change.
-
-```text
-git add <workflow-file-path> \
-  && git commit -m "chore(SPEC-XXX): record the draft pull request"
-```
-
-**Each step is a precondition for the next, and no step is retried
-automatically.** The operator re-run is the recovery path, and the two-way
-existence test below is what makes that re-run safe. A failed step stops the
-sequence where it failed and reports through the stop-report shape for that step.
-
-**A re-run reaching a step whose content is already committed has nothing left to
-stage there.** Such a commit is a no-op, not a failed step: the sequence
-continues past the nothing-to-commit condition rather than reading it as a
-failure, and it needs no empty-commit escape hatch. This does not weaken the
-boundary commit's non-emptiness above, which describes what a first pass
-produces — that pass's `Confidence Gate` row advances off its pending state, and
-a re-run of an already-resolved stage does not repeat that advance. Treating the
-resulting empty stage as a failure would strand the operator re-run that is the
-only recovery path.
-
-#### Artifact generation: the `artifact-author` dispatch
-
-
-**Step 1a: the runner fills every page.** Invoke the loaded runner's
-`select-artifact-pages` helper in `read_only` mode, then its
-`fill-artifact-page` helper in `apply` mode once per entry in `selected_pages`,
-in returned order. Send `entry_id`, `plan_file`, `spec_file`, and `tasks_file`,
-plus `research_file` and `design_concept_file` when they exist, as
-repository-relative paths. An `ok` result with `writes_state: true` is that
-page's `generated` outcome; any other result is that page's `gap` with the
-diagnostic reason. A non-`ok` selection is one whole-set gap, and Step 1b does
-not run. Each filled page is complete: every prose slot holds text the runner
-lifted from the planning files.
-
-**Step 1b: one dispatch writes the narrative.** One dispatch of the
+**One dispatch writes the narrative.** One dispatch of the
 `speckit-pro:artifact-author` subagent replaces the lifted prose of the
 generated pages with short plain text, through the same helper, and returns one
 outcome per listed page:
@@ -1163,7 +1118,7 @@ Agent(
     - Research (when present): specs/<feature>/research.md
     - Tasks: specs/<feature>/tasks.md
     - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
-    - Pages: <the generated entry IDs from Step 1a, in order>
+    - Pages: <pages.generated from the helper answer, in order>
 
     Reference dir: <plugin_root>/skills/speckit-autopilot/references/
     Gallery dir: <plugin_root>/artifact-gallery/
@@ -1175,102 +1130,15 @@ Agent(
 ```
 
 
-**Selection lives in the runner and is driven by the manifest.** The
-orchestrator names no page list of its own. `select-artifact-pages` reads the
-shipped `manifest.json`, keeps the `shipped` entries whose `stage` is
-`draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
-selects on every run, and `{"any_of": [...]}` selects only when the feature
-carries at least one signal the entry names. A `planned` entry has no template
-yet, so it is never selected and never reported as a gap.
-
-**The gallery is input, never output.** `<plugin_root>/artifact-gallery/` holds
-the shipped manifest and the shipped templates, and writing anything into that
-directory is a defect. Finished pages are written to
-`specs/<feature>/artifacts/`, one per selected entry, keeping the manifest
-entry's `id` as the filename stem.
-
-**Each outcome is `generated` or `gap`**, one per selected page, and a gap names
-what is missing and why. **A page with any unfilled slot is a gap for that page,
-not a partial success** — the runner refuses to publish one. Step 1a's list is
-the outcome list; the author's outcome for a page replaces it only when the
-author reports a `gap` or a new `sha256`.
-Feed the outcome list to the three sinks under fail-open below. That subsection
-owns where each outcome is written and which runs reach it; this step owes it
-nothing but the outcomes themselves.
-
-**A dispatch that cannot report leaves Step 1a's outcomes standing, not a failed
-step.** An agent that errors, returns nothing, or returns something that cannot
-be read as an outcome list changes no outcome: each runner-filled page stays
-`generated` with its lifted prose. Record the reason as `narrative not
-written`. The precondition rule above binds the steps that stop the sequence;
-generation is not one of them. The sequence continues to step 2 either way.
-
-**A truncated report is not a clean one.** An agent that exhausts its budget
-while composing its summary returns a fragment. Read it only for pages it names
-with a complete outcome; every other page keeps its Step 1a outcome. A partial
-summary is missing information, never evidence of success, and a gap count read
-off one is not a measurement.
-
-**Reconcile current-run ownership before trusting any artifact file.** Read the
-manifest's `draft-pr` entry IDs after the dispatch. The merged outcome list
-owns only the IDs it reports as `generated`; a whole-set selection gap owns
-none. Delete every draft-stage final `.html` whose ID lacks
-a complete current-run `generated` outcome, and delete every sibling
-`.artifact-author-*.tmp` file. This cleanup removes stale results from prior
-runs as well as interrupted writes. After deletion, re-read the artifact
-directory and require that every remaining draft-stage final ID is owned by the
-complete current-run `generated` set and that no `.artifact-author-*.tmp` file
-remains. A successfully removed page is ordinary fail-open gap handling. A
-failed deletion or an ownership postcondition that cannot be established is an
-artifact-integrity failure: STOP before staging, the boundary commit, push, or
-pull-request creation or refresh, because fail-open cannot safely preserve an
-unowned file.
-
-#### The written pages are verified on disk, not taken on report
-
-**Every outcome above is a claim about a file; this step checks the file.** The
-agent reports what it believes it wrote, and a dispatch that dies partway through
-can leave a page on disk its own report never mentioned. Run this check after the
-dispatch returns and **before the boundary commit**, so nothing that fails it can
-reach a commit.
-
-For each page written to `specs/<feature>/artifacts/`, two positive tests:
-
-| Test | The page fails when |
-| --- | --- |
-| it is not its own template | the file is byte-identical to `<plugin_root>/artifact-gallery/templates/<entry-id>.html` |
-| it is not still sample content | the body carries a sample-banner element: `class="sample-notice"`, `class="notice"`, or `class="note"` |
-
-**The banner test covers only the templates that carry a banner.** Seven of the
-shipped templates mark theirs, under three different class names, and the rest
-carry none at all. On those, byte-identity is the only guard, and one byte of
-drift defeats it. Neither test is a substitute for reading the page when the
-outcome is in doubt.
-
-**A page that fails either test is a gap for that page — whatever the agent
-reported — and the file is deleted.** Deleting is the point. The shipped
-templates are complete worked examples built on an invented feature, so an
-unfilled page is neither empty nor obviously broken: it is a plausible-looking
-document about something else. Left on disk it is committed, pushed, and linked
-from the pull-request body as though it were real.
-
-After every verification-driven deletion, re-read that path and require it to
-be absent. If an invalid or sample page cannot be removed, STOP before staging,
-the boundary commit, push, or pull-request creation or refresh. Demoting the
-outcome remains fail-open only when the invalid file is verifiably gone; a
-surviving invalid file is the same artifact-integrity failure as a surviving
-unowned file.
-
-**This is why an emptiness check cannot stand in for these two.** "Is every
-marked region populated?" answers yes on a page that was never touched, because
-the shipped region content is populated prose. Both tests above are positive —
-they ask what the page *is*, not whether something is missing from it.
-
-**The check converts outcomes; it never blocks.** A page turned into a gap here
-reports through the same three sinks as any other gap, and a run whose every page
-fails still opens the pull request carrying a whole-set gap. Fail-open is
-unchanged. What changes is that a page no reader could tell from a template is no
-longer counted as generated.
+**A dispatch that cannot report leaves the runner's pages standing.** An agent that
+errors, returns nothing, or returns something unreadable changes no page: each
+runner-filled page keeps its lifted prose. Say `narrative not written` in the stop
+report and send the finishing call anyway. The helper treats the files on disk as
+the truth, never the agent's report: it deletes a page that is still its template,
+carries a sample banner, or has no recorded owner, reports it as a gap, and stops
+with `stop_reason:integrity_failure` when a page carries active content or an
+invalid file cannot be removed. The author never touches `artifacts/` with a
+native tool.
 
 #### Strict-mode block: the return happens before generation
 
@@ -1286,155 +1154,6 @@ therefore generates no artifact pages at all, pushes nothing, opens no pull
 request, and writes no `Draft PR` row. Emission is not something the blocked path
 fails open through; it is something the blocked path never reaches. The re-run
 that resolves pass or warn is the run that emits.
-
-#### Create or refresh: the two-way existence test
-
-Exactly one draft pull request exists per feature branch. Before creating one,
-test for an existing one **two ways**:
-
-| Test | Source |
-| --- | --- |
-| the recorded identity | the workflow file's `Draft PR` row |
-| the live identity | one read-only query for an **open** pull request on the head branch |
-
-**Either positive proves one exists.** Neither test alone is sufficient, because
-the record is written only after creation succeeds: a run interrupted between the
-two leaves a pull request with no record, which the record test alone would read
-as "none exists" and answer by opening a second one.
-
-Take the live test as one read-only query that returns structured output, and
-read the fields with a structured parser:
-
-```text
-gh pr list --head <branch> --state open --json number,url,title
-```
-
-**When either positive fires, the run refreshes rather than creates.** Refresh
-the pull request's description; refresh its title as well when the title changed;
-write or repair the workflow file's `Draft PR` row; and report that existing URL
-as the emission outcome. Never open a second pull request for the branch.
-
-```text
-gh pr edit <number> --body-file <packet.body_file> [--title <packet.generated_title.value>]
-```
-
-**Create only when neither positive fires**, and create in draft state:
-
-```text
-gh pr create --draft --base <packet.target.base_branch> --head <packet.target.head_branch> \
-  --title <packet.generated_title.value> --body-file <packet.body_file>
-```
-
-A recorded pull request that is closed or merged is a discrepancy, not grounds to
-open a second one.
-
-**A live query that cannot answer is not proof that nothing exists.** When the
-query tool is absent, unauthenticated, rate-limited, or returns output that
-cannot be parsed, and no `Draft PR` row is recorded either, the run has no basis
-for creation. It refuses to create and reports through the could-not-be-opened
-shape below, rather than risking a duplicate pull request on a branch it could
-not observe.
-
-**The packet dry run validates the title before creation.** The title is
-final-shape at creation and is not re-derived at the later ready flip:
-
-`<type>(<lowercase-scope>): <plain English description>`
-
-`type` is one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, and the
-scope is **lowercase**. Send the title as `title_type`, `title_scope` and
-`title_description`, as the request below does. The `pr-packet-output` dry run
-then refuses any other type, an uppercase scope, and a description under 8
-characters, and returns the title it accepts as `generated_title.value`. Create
-the pull request with that value. That dry run is the whole title check; no
-separate gate request runs.
-Do **not** substitute the
-`validate-pr-workflow-contract` operation, which the ready pull request's
-packet check runs later: its scope rule upper-cases `prsg-`, `spec-`, `doc-`,
-and `xplat-` slugs, so on those spec families it would demand an uppercase
-scope that this lowercase requirement can never satisfy. Draft-mode title validation
-checks the conventional shape only — it does not ask the description to reference
-verification or evidence a draft has not produced.
-
-**On a dry run that refuses the title, do not create the pull request.**
-Report through the failed PR-packet step shape below rather than opening one whose
-title a human would have to repair.
-
-#### The draft description: one H1 and two H2 sections
-
-The description begins with the matching H1 title, followed by exactly two H2 sections, Artifacts and Resume, and no other content:
-
-```text
-# feat(speckit-pro): open an example draft
-
-## Artifacts
-
-| Artifact | Purpose | Open |
-| --- | --- | --- |
-| Implementation Plan | Lay out the phases of the planned change | `open specs/<feature>/artifacts/implementation-plan.html` |
-| Spec Explainer | Explain what the feature does and why | `open specs/<feature>/artifacts/spec-explainer.html` |
-
-## Resume
-
-Stage: plan — stopped at the plan-stage boundary for review.
-Resume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`
-```
-
-- **The artifacts index** is a table of three columns: the artifact, its purpose
-  in one line, and a copy-paste command that opens it locally.
-- **The resume/status block** names the stage the run stopped at and the exact
-  command that resumes it.
-
-When G0 recorded `UNRATIFIED_FLAG`, include that exact one-line warning below the
-Artifacts table and pass it as `inputs.unratified_defaults` to the packet helper.
-This flags the initial draft as well as the final PR body; keep the draft's two
-H2 sections. Omit the warning and input when G0 found a valid ratified file.
-
-**Forbidden in a draft description**: a release-note fence, any verification
-section, any scope or UAT section, and any placeholder final-writeup content. The
-pull request sits in draft state, so the repository's PR checks do not run
-against it — no release-note fence is needed or wanted, and a placeholder section
-would read as evidence that does not exist.
-
-**The orchestrator composes the title and both blocks itself.** Send this complete
-runner request after replacing the example feature, branch, title, and body with
-the current plan-stage values. The top-level `mode` is `dry_run` first; change
-only that field to `apply` after the dry-run succeeds. `inputs.mode` selects the
-draft packet. `inputs.mode_name` is not accepted.
-
-```json
-{
-  "schema_version": "1.0",
-  "request_id": "example-draft-packet",
-  "helper_id": "pr-packet-output",
-  "operation": "pr-packet-output",
-  "mode": "dry_run",
-  "inputs": {
-    "packet_path": "specs/example-feature/.process/pr-packets/example-draft.json",
-    "source_feature_dir": "specs/example-feature",
-    "target": {"base_branch": "main", "head_branch": "codex/example-feature"},
-    "mode": "draft",
-    "title_type": "feat",
-    "title_scope": "speckit-pro",
-    "title_description": "open an example draft",
-    "changed_files": [],
-    "verification_evidence": [],
-    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
-  }
-}
-```
-
-An explicit empty `verification_evidence` array records that a draft has no
-verification yet; supplied records must match the [packet evidence schema](../contracts/pr-packet.schema.json).
-The body must have one H1 matching the generated title, then exactly the
-Artifacts and Resume H2 sections. Validate the emitted packet before opening the
-PR with `helper_id=validate-pr-packet-read-only operation=validate-pr-packet-read-only mode=read_only`
-and `inputs.packet_path` set to the packet path. Continue only when
-`data.stdout_json.status` is `passed`, `data.stdout_json.pr_blocked` is false and
-`data.writes_state` is false. Commit its packet and body files before another clean-worktree-gated helper
-runs; an unrelated dirty file blocks apply. Correct validation failures through
-the packet helper instead of bypassing them with raw PR creation. The producer
-uses `inputs.body` verbatim; the single/split `build_packet_body` fallback is not
-used for drafts.
 
 #### Fail-open: three sinks, and the runs that reach them
 
@@ -2562,9 +2281,10 @@ sequence:
 0. Invalidate the private sweep session, and confirm every amendment commit is
    pushed.
 1. Evaluate freshness through the `verdict` surface.
-2. On `stale`, run Step 1a (the runner fills every selected page) and then
-   Step 1b (one `artifact-author` narrative dispatch) of the draft-PR emission
-   sequence against the committed planning record.
+2. On `stale`, have the runner fill every selected page (`select-artifact-pages`,
+   then `fill-artifact-page` once per entry) and then dispatch the
+   `artifact-author` once, as the plan stage's author dispatch above does,
+   against the committed planning record.
 3. Compute the removal set through the `removal_diff` surface, and delete
    those files.
 3b. Delete the superseded file behind each per-page gap. Skipped entirely on
@@ -2594,8 +2314,207 @@ regenerates decides its page set the same way a first generation does.
 **Every selected page is authored fresh.** No page is patched, diffed, or
 partially updated, and there is no second page-authoring path: the runner fill,
 the narrative dispatch, their per-page `generated` and `gap` outcomes, and the
-on-disk verification are the ones the draft-PR emission sequence above
-describes.
+on-disk verification are the ones the plan stage's author dispatch and the
+page verification below describe.
+
+The plan stage's `finish-plan-stage` helper runs these same checks and the same
+existence test in code. This refresh flow still follows them as written here
+until it moves into the runner too.
+
+#### Phase 7 Setup: Pages Are Verified on Disk, Not Taken on Report
+
+**Every outcome above is a claim about a file; this step checks the file.** The
+agent reports what it believes it wrote, and a dispatch that dies partway through
+can leave a page on disk its own report never mentioned. Run this check after the
+dispatch returns and before the artifacts commit, so nothing that fails it can
+reach a commit.
+
+For each page written to `specs/<feature>/artifacts/`, two positive tests:
+
+| Test | The page fails when |
+| --- | --- |
+| it is not its own template | the file is byte-identical to `<plugin_root>/artifact-gallery/templates/<entry-id>.html` |
+| it is not still sample content | the body carries a sample-banner element: `class="sample-notice"`, `class="notice"`, or `class="note"` |
+
+**The banner test covers only the templates that carry a banner.** Seven of the
+shipped templates mark theirs, under three different class names, and the rest
+carry none at all. On those, byte-identity is the only guard, and one byte of
+drift defeats it. Neither test is a substitute for reading the page when the
+outcome is in doubt.
+
+**A page that fails either test is a gap for that page — whatever the agent
+reported — and the file is deleted.** Deleting is the point. The shipped
+templates are complete worked examples built on an invented feature, so an
+unfilled page is neither empty nor obviously broken: it is a plausible-looking
+document about something else. Left on disk it is committed, pushed, and linked
+from the pull-request body as though it were real.
+
+After every verification-driven deletion, re-read that path and require it to
+be absent. If an invalid or sample page cannot be removed, STOP before staging,
+the boundary commit, push, or pull-request creation or refresh. Demoting the
+outcome remains fail-open only when the invalid file is verifiably gone; a
+surviving invalid file is the same artifact-integrity failure as a surviving
+unowned file.
+
+**This is why an emptiness check cannot stand in for these two.** "Is every
+marked region populated?" answers yes on a page that was never touched, because
+the shipped region content is populated prose. Both tests above are positive —
+they ask what the page *is*, not whether something is missing from it.
+
+**The check converts outcomes; it never blocks.** A page turned into a gap here
+reports through the same three sinks as any other gap, and a run whose every page
+fails still opens the pull request carrying a whole-set gap. Fail-open is
+unchanged. What changes is that a page no reader could tell from a template is no
+longer counted as generated.
+
+#### Phase 7 Setup: Create or Refresh, the Two-Way Existence Test
+
+Exactly one draft pull request exists per feature branch. Before creating one,
+test for an existing one **two ways**:
+
+| Test | Source |
+| --- | --- |
+| the recorded identity | the workflow file's `Draft PR` row |
+| the live identity | one read-only query for an **open** pull request on the head branch |
+
+**Either positive proves one exists.** Neither test alone is sufficient, because
+the record is written only after creation succeeds: a run interrupted between the
+two leaves a pull request with no record, which the record test alone would read
+as "none exists" and answer by opening a second one.
+
+Take the live test as one read-only query that returns structured output, and
+read the fields with a structured parser:
+
+```text
+gh pr list --head <branch> --state open --json number,url,title
+```
+
+**When either positive fires, the run refreshes rather than creates.** Refresh
+the pull request's description; refresh its title as well when the title changed;
+write or repair the workflow file's `Draft PR` row; and report that existing URL
+as the emission outcome. Never open a second pull request for the branch.
+
+```text
+gh pr edit <number> --body-file <packet.body_file> [--title <packet.generated_title.value>]
+```
+
+**Create only when neither positive fires**, and create in draft state:
+
+```text
+gh pr create --draft --base <packet.target.base_branch> --head <packet.target.head_branch> \
+  --title <packet.generated_title.value> --body-file <packet.body_file>
+```
+
+A recorded pull request that is closed or merged is a discrepancy, not grounds to
+open a second one.
+
+**A live query that cannot answer is not proof that nothing exists.** When the
+query tool is absent, unauthenticated, rate-limited, or returns output that
+cannot be parsed, and no `Draft PR` row is recorded either, the run has no basis
+for creation. It refuses to create and reports through the could-not-be-opened
+shape below, rather than risking a duplicate pull request on a branch it could
+not observe.
+
+**The packet dry run validates the title before creation.** The title is
+final-shape at creation and is not re-derived at the later ready flip:
+
+`<type>(<lowercase-scope>): <plain English description>`
+
+`type` is one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, and the
+scope is **lowercase**. Send the title as `title_type`, `title_scope` and
+`title_description`, as the request below does. The `pr-packet-output` dry run
+then refuses any other type, an uppercase scope, and a description under 8
+characters, and returns the title it accepts as `generated_title.value`. Create
+the pull request with that value. That dry run is the whole title check; no
+separate gate request runs.
+Do **not** substitute the
+`validate-pr-workflow-contract` operation, which the ready pull request's
+packet check runs later: its scope rule upper-cases `prsg-`, `spec-`, `doc-`,
+and `xplat-` slugs, so on those spec families it would demand an uppercase
+scope that this lowercase requirement can never satisfy. Draft-mode title validation
+checks the conventional shape only — it does not ask the description to reference
+verification or evidence a draft has not produced.
+
+**On a dry run that refuses the title, do not create the pull request.**
+Report through the failed PR-packet step shape below rather than opening one whose
+title a human would have to repair.
+
+#### Phase 7 Setup: The Draft Description, One H1 and Two H2 Sections
+
+The description begins with the matching H1 title, followed by exactly two H2 sections, Artifacts and Resume, and no other content:
+
+```text
+# feat(speckit-pro): open an example draft
+
+## Artifacts
+
+| Artifact | Purpose | Open |
+| --- | --- | --- |
+| Implementation Plan | Lay out the phases of the planned change | `open specs/<feature>/artifacts/implementation-plan.html` |
+| Spec Explainer | Explain what the feature does and why | `open specs/<feature>/artifacts/spec-explainer.html` |
+
+## Resume
+
+Stage: plan — stopped at the plan-stage boundary for review.
+Resume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`
+```
+
+- **The artifacts index** is a table of three columns: the artifact, its purpose
+  in one line, and a copy-paste command that opens it locally.
+- **The resume/status block** names the stage the run stopped at and the exact
+  command that resumes it.
+
+When G0 recorded `UNRATIFIED_FLAG`, include that exact one-line warning below the
+Artifacts table and pass it as `inputs.unratified_defaults` to the packet helper.
+This flags the initial draft as well as the final PR body; keep the draft's two
+H2 sections. Omit the warning and input when G0 found a valid ratified file.
+
+**Forbidden in a draft description**: a release-note fence, any verification
+section, any scope or UAT section, and any placeholder final-writeup content. The
+pull request sits in draft state, so the repository's PR checks do not run
+against it — no release-note fence is needed or wanted, and a placeholder section
+would read as evidence that does not exist.
+
+**The orchestrator composes the title and both blocks itself.** Send this complete
+runner request after replacing the example feature, branch, title, and body with
+the current plan-stage values. The top-level `mode` is `dry_run` first; change
+only that field to `apply` after the dry-run succeeds. `inputs.mode` selects the
+draft packet. `inputs.mode_name` is not accepted.
+
+```json
+{
+  "schema_version": "1.0",
+  "request_id": "example-draft-packet",
+  "helper_id": "pr-packet-output",
+  "operation": "pr-packet-output",
+  "mode": "dry_run",
+  "inputs": {
+    "packet_path": "specs/example-feature/.process/pr-packets/example-draft.json",
+    "source_feature_dir": "specs/example-feature",
+    "target": {"base_branch": "main", "head_branch": "codex/example-feature"},
+    "mode": "draft",
+    "title_type": "feat",
+    "title_scope": "speckit-pro",
+    "title_description": "open an example draft",
+    "changed_files": [],
+    "verification_evidence": [],
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
+  }
+}
+```
+
+An explicit empty `verification_evidence` array records that a draft has no
+verification yet; supplied records must match the [packet evidence schema](../contracts/pr-packet.schema.json).
+The body must have one H1 matching the generated title, then exactly the
+Artifacts and Resume H2 sections. Validate the emitted packet before opening the
+PR with `helper_id=validate-pr-packet-read-only operation=validate-pr-packet-read-only mode=read_only`
+and `inputs.packet_path` set to the packet path. Continue only when
+`data.stdout_json.status` is `passed`, `data.stdout_json.pr_blocked` is false and
+`data.writes_state` is false. Commit its packet and body files before another clean-worktree-gated helper
+runs; an unrelated dirty file blocks apply. Correct validation failures through
+the packet helper instead of bypassing them with raw PR creation. The producer
+uses `inputs.body` verbatim; the single/split `build_packet_body` fallback is not
+used for drafts.
 
 #### Phase 7 Setup: Freshness Runs on Every Sweep Leg
 

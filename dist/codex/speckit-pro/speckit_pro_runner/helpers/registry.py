@@ -23,6 +23,7 @@ from .git_write_probe import run_git_write_probe_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .g0_setup import run_g0_setup_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
+from .plan_stage_terminal import run_plan_stage_terminal_helper
 from .quality_gates_proposal import run_quality_gates_proposal_helper
 from .readiness_record import run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
@@ -741,6 +742,12 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         ("readiness-record-apply",),
         rollback="Delete the local .specify/readiness/<host>.json file; scaffold rewrites it on the next run.",
     ),
+    "finish-plan-stage": MutationEntry(
+        "finish-plan-stage", "finish-plan-stage", ("dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("finish-plan-stage"),
+        ("plan-stage-terminal-apply",),
+        rollback="Re-run the helper: it reuses the committed pages and packet and refreshes the open draft pull request.",
+    ),
     "propose-quality-gates": MutationEntry(
         "propose-quality-gates", "propose-quality-gates", ("dry_run", "apply"), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("propose-quality-gates"),
@@ -920,6 +927,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "propose-quality-gates":
         return run_quality_gates_proposal_helper(entry, request)
+
+    if entry.helper_id == "finish-plan-stage":
+        return run_plan_stage_terminal_helper(entry, request, dispatch_helper)
 
     if entry.helper_id == "sweep-apply-result":
         return run_sweep_apply_result(entry, request)
