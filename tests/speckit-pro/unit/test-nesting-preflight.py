@@ -80,6 +80,7 @@ class DepthNeverStopsTheRunTests(unittest.TestCase):
                 data = resolve(**inputs)
                 self.assertEqual("flat", data["mode"])
                 self.assertIn(data["reason"], {"probe_not_run", "probe_invalid"})
+                self.assertIsNone(data["prerequisite"])
 
     def test_insufficient_depth_is_never_a_stop(self) -> None:
         data = resolve(host="claude-code", nested_spawn="refused", configured_depth=1)

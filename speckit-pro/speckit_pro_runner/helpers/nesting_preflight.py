@@ -54,7 +54,7 @@ def nesting_mode(inputs: dict[str, Any]) -> dict[str, Any]:
         "reason": reason,
         "host": known_host,
         "configured_depth": configured_depth(inputs.get("configured_depth")),
-        "prerequisite": PREREQUISITES[known_host] if known_host and mode == "flat" else None,
+        "prerequisite": PREREQUISITES[known_host] if known_host and reason == "nested_spawn_refused" else None,
     }
 
 
