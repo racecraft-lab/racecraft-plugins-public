@@ -26,12 +26,12 @@ from typing import Any, TypeGuard
 from .. import cli_probe, quality_gates
 from ..agent_materialization import digest
 from ..envelope import diagnostic, response
-from ..atomic_write import write_bytes_atomic
+from ..atomic_write import AtomicWriteInterrupted, entry_identity, file_identity, open_safe_parent_fd, write_bytes_atomic, write_target_matches_snapshot
 from ..canonical_json import canonical_bytes
 from ..private_state import ensure_private_directory
 from ..strict_input import SelectionError, require_fields, require_text, unique_object
 from ..sweep_isolation import secret_matches
-from ..trusted_io import find_repo_root, trusted_bytes
+from ..trusted_io import TreeEntryReadOptions, find_repo_root, read_tree_entry, trusted_bytes
 from ..verification_docker import DAEMON_ARCHITECTURES, PLATFORM, PLATFORM_OS
 from . import readiness_host_items as host_items
 from .readiness_values import LOCAL_PATH_RE, NOT_OBSERVED_ACTION, clean_text, make_item
@@ -56,7 +56,11 @@ OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "fi
 VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
 EXECUTION_MODES = ("interactive", "answers-file")
 RECORD_KEYS = frozenset({"schema_version", "binding", "host", "host_version", "execution_mode", "plugin_revision",
-                         "observed_at", "items"})
+                         "observed_at", "evaluation_id", "items", "feature_offers"})
+# ADR 0005: scaffold offers each feature once. The record holds the offer in the shape the canary receipt copies.
+OFFER_FEATURES = ("formal_methods", "verification_docker")
+OFFER_ANSWERS = ("accepted", "declined")
+OFFER_KEYS = frozenset({"evaluated", "offered", "answer"})
 ITEM_KEYS = frozenset({"status", "evidence_source", "observed_at", "fingerprints"})
 TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
 DOCKER_PROBE_SECONDS = 10
@@ -249,6 +253,22 @@ def observe_verification_docker(root: Path) -> dict[str, Any]:
     return unavailable(f"the Docker daemon does not report {PLATFORM}")
 
 
+def unoffered(items: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Fail closed: no offer was shown, so `answer` is the receipt's closed `declined` with `offered` false.
+
+    A feature counts as evaluated once its item holds a feasibility answer other than `unknown`.
+    """
+    return {feature: {"evaluated": items[feature]["status"] != "unknown", "offered": False, "answer": "declined"}
+            for feature in OFFER_FEATURES}
+
+
+def sound_offers(offers: Any) -> bool:
+    return isinstance(offers, dict) and offers.keys() == set(OFFER_FEATURES) and all(
+        isinstance(offer, dict) and offer.keys() == OFFER_KEYS and isinstance(offer["evaluated"], bool)
+        and isinstance(offer["offered"], bool) and offer["answer"] in OFFER_ANSWERS
+        and (offer["offered"] or offer["answer"] == "declined") for offer in offers.values())
+
+
 def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     if not isinstance(inputs, dict) or not {"host", "execution_mode", "plugin_revision", "observations"} <= inputs.keys() \
             or not inputs.keys() <= INPUT_KEYS:
@@ -288,11 +308,20 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         "execution_mode": inputs["execution_mode"],
         "plugin_revision": plugin_revision,
         "observed_at": observed_at,
+        "evaluation_id": digest(os.urandom(32)),
         "items": {name: items[name] for name in sorted(items)},
+        "feature_offers": unoffered(items),
     }
 
 
-def write_record(root: Path, record: dict[str, Any]) -> str:
+def record_bytes(record: dict[str, Any]) -> bytes:
+    """The one on-disk encoding used for readiness publications and their digests."""
+    return canonical_bytes(record) + b"\n"
+
+
+def write_record(root: Path, record: dict[str, Any], *, expected_snapshot: dict[str, Any] | None = None) -> tuple[str, str]:
+    if expected_snapshot is not None:
+        require_offer_fingerprints(record, root)
     specify = root / ".specify"
     # ensure_private_directory would create the directory through a symlinked parent, so check it first.
     if specify.is_symlink() or not specify.is_dir():
@@ -302,9 +331,17 @@ def write_record(root: Path, record: dict[str, Any]) -> str:
     # Both writes walk the path without following links, refuse a linked target, and replace atomically.
     # A self-ignoring directory keeps the record out of version control in every worktree.
     write_bytes_atomic(directory / ".gitignore", b"*\n", trust_root=root, mode=0o600)
-    write_bytes_atomic(directory / f"{record['host']}.json", canonical_bytes(record) + b"\n",
-                       trust_root=root, mode=0o600)
-    return f"{RECORD_DIRECTORY}/{record['host']}.json"
+    published = write_bytes_atomic(directory / f"{record['host']}.json", record_bytes(record),
+                                   trust_root=root, mode=0o600, expected_snapshot=expected_snapshot)
+    if expected_snapshot is not None:
+        try:
+            current = readiness_snapshot(root, record["host"])
+            if current["parent"] != expected_snapshot["parent"] or not write_target_matches_snapshot(current, {"exists": True, **published}):
+                raise OSError("the feature offer publication could not be confirmed at its canonical path")
+            require_offer_fingerprints(record, root)
+        except (OSError, MissingRecord) as error:
+            raise AtomicWriteInterrupted("feature offers reached disk but publication or file evidence is unconfirmed") from error
+    return f"{RECORD_DIRECTORY}/{record['host']}.json", f"sha256:{published['digest']}"
 
 
 def preview_surface(root: Path, host: str) -> str:
@@ -340,6 +377,8 @@ def current_record(record: Any, root: Path, host: str) -> TypeGuard[dict[str, An
     if record["schema_version"] != SCHEMA_VERSION or record["host"] != host \
             or record["binding"] != {"worktree": digest(str(root))} or not timestamp(record["observed_at"]) \
             or record["execution_mode"] not in EXECUTION_MODES:
+        return False
+    if not isinstance(record["evaluation_id"], str) or not DIGEST_RE.fullmatch(record["evaluation_id"]):
         return False
     items = record["items"]
     if not isinstance(items, dict) or items.keys() != set((*CALLER_ITEMS, *RUNNER_ITEMS, *host_items.HOST_ITEMS)):
@@ -453,8 +492,9 @@ def loaded_revision() -> str | None:
 
 def checked_items(record: Any, root: Path, host: str) -> dict[str, Any]:
     """The record's items, or SelectionError when it cannot be this host's record for this worktree."""
-    require_fields(record, {"schema_version", "host", "binding", "host_version", "execution_mode",
-                            "plugin_revision", "observed_at", "items"}, "record")
+    require_fields(record, set(RECORD_KEYS), "record")
+    if not isinstance(record["evaluation_id"], str) or not DIGEST_RE.fullmatch(record["evaluation_id"]):
+        raise SelectionError("record evaluation_id must identify a runner evaluation")
     for field in ("plugin_revision", "observed_at"):
         require_text(record[field], field)
     if not timestamp(record["observed_at"]):
@@ -472,6 +512,8 @@ def checked_items(record: Any, root: Path, host: str) -> dict[str, Any]:
         raise SelectionError("the record has missing or unknown readiness items")
     for name, item in items.items():
         check_saved_item(name, item)
+    if not sound_offers(record["feature_offers"]):
+        raise SelectionError("the record's feature offers are malformed")
     return items
 
 
@@ -546,6 +588,145 @@ def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
             for name in dict(stale)]
 
 
+class MissingRecord(SelectionError):
+    """No usable readiness record to read or extend."""
+
+
+def readiness_snapshot(root: Path, host: str) -> dict[str, Any]:
+    """Capture one bounded, single-link record and its publication identities without following links."""
+    path = root / RECORD_DIRECTORY / f"{host}.json"
+    try:
+        opened = open_safe_parent_fd(path, root, create=False)
+        if opened is None:
+            raise OSError("the readiness directory is missing")
+        parent_fd, name, _ = opened
+        try:
+            before = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+            if not stat.S_ISREG(before.st_mode):
+                raise OSError("the readiness record must be a regular file")
+            mode, content = read_tree_entry(parent_fd, name, before,
+                                           options=TreeEntryReadOptions(byte_limit=RECORD_LIMIT_BYTES))[Path()]
+            if content is None:
+                raise OSError("the readiness record has no content")
+            return {"exists": True, "content": content, "digest": digest(content).removeprefix("sha256:"),
+                    "mode": mode, "identity": entry_identity(before), "parent": file_identity(os.fstat(parent_fd))}
+        finally:
+            os.close(parent_fd)
+    except OSError as error:
+        raise MissingRecord("the readiness record is missing or unreadable") from error
+
+
+def saved_record(root: Path, host: str, *, snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
+    """This host's record for this worktree and plugin revision, or MissingRecord."""
+    content = (readiness_snapshot(root, host) if snapshot is None else snapshot)["content"]
+    try:
+        record = json.loads(content, object_pairs_hook=unique_object)
+        checked_items(record, root, host)
+        if record["plugin_revision"] != loaded_revision():
+            raise SelectionError("the record belongs to another plugin revision")
+    except (ValueError, RecursionError, SelectionError) as error:
+        raise MissingRecord(f"the readiness record is unusable: {safe_reason(str(error))}") from error
+    return record
+
+
+def feature_offers(root: Path, host: str) -> dict[str, dict[str, Any]]:
+    """What the record says about each feature offer; a missing, unreadable or foreign record reads as not offered."""
+    try:
+        record = saved_record(root, host)
+        require_offer_fingerprints(record, root)
+        return dict(record["feature_offers"])
+    except MissingRecord:
+        return {feature: {"evaluated": False, "offered": False, "answer": "declined"} for feature in OFFER_FEATURES}
+
+
+def require_offer_fingerprints(record: dict[str, Any], root: Path) -> None:
+    """Recheck file evidence with G0's shared bounds; runtime values belong to the bound Step 6.5 response."""
+    reads: dict[str, str] = {}
+    for item in record["items"].values():
+        files = {key: value for key, value in item["fingerprints"].items() if key.startswith("file:")}
+        if "unreadable" in files.values() or changed_inputs(files, root, reads):
+            raise MissingRecord("readiness file inputs changed or could not be checked; rerun Step 6.5")
+
+
+def retire_evaluation(root: Path, inputs: Any) -> bool:
+    """Retire the previous receipt before an apply attempt can fail, preserving its observations.
+
+    A null evaluation_id supplies no readiness evidence, even if someone reconstructs its digest.
+    The conditional publication preserves any newer evaluation that raced this retirement.
+    """
+    if not isinstance(inputs, dict) or inputs.get("host") not in HOSTS:
+        return False
+    host = inputs["host"]
+    try:
+        snapshot = readiness_snapshot(root, host)
+        record = saved_record(root, host, snapshot=snapshot)
+    except MissingRecord:
+        return False  # Missing, foreign or already retired records cannot supply a valid receipt.
+    retired = {**record, "evaluation_id": None,
+               "feature_offers": {feature: {"evaluated": False, "offered": False, "answer": "declined"}
+                                  for feature in OFFER_FEATURES}}
+    write_bytes_atomic(root / RECORD_DIRECTORY / f"{host}.json", record_bytes(retired),
+                       trust_root=root, mode=0o600, expected_snapshot=snapshot)
+    return True
+
+
+def record_offers(inputs: Any, root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The saved record with both offers marked shown and answered (Step 6.6)."""
+    answers = require_fields(inputs, {"host", "answers", "readiness_digest"}, "inputs")["answers"]
+    if inputs["host"] not in HOSTS:
+        raise SelectionError(f"host must be one of {list(HOSTS)}")
+    require_fields(answers, set(OFFER_FEATURES), "answers")
+    if any(answer not in OFFER_ANSWERS for answer in answers.values()):
+        raise SelectionError(f"each answer must be one of {list(OFFER_ANSWERS)}")
+    snapshot = readiness_snapshot(root, inputs["host"])
+    record = saved_record(root, inputs["host"], snapshot=snapshot)
+    if inputs["readiness_digest"] != f"sha256:{snapshot['digest']}":
+        raise MissingRecord("feature offers need the digest from the current successful Step 6.5 write")
+    require_offer_fingerprints(record, root)
+    offers = unoffered(record["items"])
+    return {**record, "feature_offers": {feature: {**offers[feature], "offered": True, "answer": answers[feature]}
+                                         for feature in OFFER_FEATURES}}, snapshot
+
+
+def record_response(entry: Any, request: Any, root: Path, record: dict[str, Any],
+                    expected_snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The `ok` envelope for a built record, writing it first in `apply` mode."""
+    data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
+                            "writes_state": False, "record": record}
+    if request.mode == "apply":
+        try:
+            data["record_path"], published_digest = write_record(root, record, expected_snapshot=expected_snapshot)
+        except (OSError, SelectionError) as error:
+            noun = "readiness record" if entry.helper_id == "write-readiness-record" else "feature offers"
+            data["writes_state"] = isinstance(error, AtomicWriteInterrupted)
+            return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
+                "write_failure", f"the {noun} could not be written: {getattr(error, 'strerror', None) or error}",
+                remediation_summary="Scaffold continues; report the gap and rerun Step 6.5 before retrying offers.",
+                remediation_actions=["Report the failure in the scaffold closing report.",
+                                     "Resolve the diagnostic and rerun Step 6.5."])])
+        data["writes_state"] = True
+        if entry.helper_id == "write-readiness-record":
+            data["readiness_digest"] = published_digest
+    return response("ok", request_id=request.request_id, data=data)
+
+
+def run_feature_offers_helper(entry: Any, request: Any) -> dict[str, Any]:
+    root = find_repo_root(Path.cwd())
+    try:
+        if root is None:
+            raise MissingRecord("the feature offers need a SpecKit project with a readiness record")
+        record, snapshot = record_offers(request.inputs, root)
+    except SelectionError as error:
+        gap = isinstance(error, MissingRecord)
+        return response("missing_prerequisite" if gap else "input_error", request_id=request.request_id, diagnostics=[
+            diagnostic("missing_prerequisite" if gap else "invalid_input", str(error),
+                       remediation_summary="Scaffold continues; both features read as not offered." if gap
+                       else "Send the host, the current Step 6.5 readiness_digest and one answer per feature.",
+                       remediation_actions=["Report the gap in the scaffold closing report."] if gap
+                       else ["Correct the named field.", "Retry the request."])])
+    return record_response(entry, request, root, record, snapshot)
+
+
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
     root = find_repo_root(Path.cwd())
     if root is None or not (root / ".specify").is_dir():
@@ -553,23 +734,22 @@ def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
             "missing_prerequisite", "the readiness record needs a SpecKit project with a .specify directory",
             remediation_summary="Initialize SpecKit in this project, then rerun scaffold.",
             remediation_actions=["Run the SpecKit install flow.", "Rerun scaffold."])])
+    retired = False
     try:
+        if request.mode == "apply":
+            retired = retire_evaluation(root, request.inputs)
         record = build_record(request.inputs, root)
     except SelectionError as error:
-        return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
+        return response("input_error", request_id=request.request_id, data={"writes_state": retired}, diagnostics=[diagnostic(
             "invalid_input", str(error), remediation_summary="Send observations the record can hold.",
             remediation_actions=["Correct the named field.", "Retry the request."])])
-    data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
-                            "writes_state": False, "record": record,
-                            "allow_rules": host_items.allow_rules(request.inputs)}
-    if request.mode == "apply":
-        try:
-            data["record_path"] = write_record(root, record)
-        except (OSError, SelectionError) as error:
-            return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
-                "write_failure", f"the readiness record could not be written: {getattr(error, 'strerror', None) or error}",
-                remediation_summary="Scaffold continues; autopilot treats a missing record as no evidence.",
-                remediation_actions=["Report the failure in the scaffold closing report.",
-                                     "Fix the .specify directory permissions and rerun scaffold."])])
-        data["writes_state"] = True
-    return response("ok", request_id=request.request_id, data=data)
+    except OSError as error:
+        return response("expected_failure", request_id=request.request_id,
+                        data={"writes_state": retired or isinstance(error, AtomicWriteInterrupted)}, diagnostics=[diagnostic(
+            "write_failure", f"the previous readiness evaluation could not be retired: {getattr(error, 'strerror', None) or error}",
+            remediation_summary="Scaffold continues with no successful evaluation receipt.",
+            remediation_actions=["Report the failure in the scaffold closing report.", "Resolve the diagnostic and rerun Step 6.5."])])
+    reply = record_response(entry, request, root, record)
+    reply["data"]["writes_state"] = retired or reply["data"]["writes_state"]
+    reply["data"]["allow_rules"] = host_items.allow_rules(request.inputs)
+    return reply
