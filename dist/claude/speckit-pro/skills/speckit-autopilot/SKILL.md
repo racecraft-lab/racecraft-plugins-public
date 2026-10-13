@@ -1132,8 +1132,9 @@ phase did. Plan's formal-model-author and formal-check sequence, and Tasks'
 `publish-tasks-output`, mandatory after_tasks hooks and G5, run in the driver
 before it returns, so the disk holds the final evidence. Then request
 `helper_id=verify-phase-envelope operation=verify-phase-envelope mode=read_only`
-with inputs `envelope` (the driver's object, unchanged), `workflow_file` and
-`feature_dir`. Advance only when `data.advance` is true. On any other answer,
+with inputs `envelope` (the driver's object, unchanged),
+`expected_phase` (the root's requested phase from `brief.phase`, never from the envelope),
+`workflow_file` and `feature_dir`. Advance only when `data.advance` is true. On any other answer,
 including an unparseable envelope, never advance: handle it as a failed gate
 under the existing repair and escalation policy, with a fresh driver if the
 phase is retried.

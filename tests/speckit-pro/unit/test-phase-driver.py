@@ -113,7 +113,8 @@ def nested_section(host: str) -> str:
 
 # What the root must say in nested mode, and what each host's section must leave out.
 ROOT_RULES = ("validate-gate` G4", "`feature_identity`", "mode=nested", "brief.agent", "reads only the envelope", "never reads a planning artifact",
-              "helper_id=verify-phase-envelope", "data.advance", "never advance")
+              "helper_id=verify-phase-envelope", "data.advance", "never advance",
+              "`expected_phase` (the root's requested phase from `brief.phase`, never from the envelope)")
 HOST_TOOLS = {"claude": ("`Agent`", "spawn_agent"), "codex": ("spawn_agent", "`Agent`")}
 
 

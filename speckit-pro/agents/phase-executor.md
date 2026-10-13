@@ -131,7 +131,7 @@ Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
    Run the phase's gate with `validate-gate`, repair within the shared reservation, and record
    the phase results in the workflow file.
    Finish with one `phase-envelope/v1` JSON object and nothing else, under 2,048 bytes:
-   `schema_version`, `phase`, `status` (`pass` only when every gate you ran passed; else `fail`
+   `schema_version`, `phase` (the parent's `Phase:`), `status` (`pass` only when every gate you ran passed; else `fail`
    or `blocked`), `next_action`, repo-relative `artifacts`, `gates` (the phase gate and any
    other you ran, each `pass` or `fail`), `counts` (`markers` and `task_count` as the gate
    reports them), a `blocker` of at most 240 characters, and your `usage` counters. The runner

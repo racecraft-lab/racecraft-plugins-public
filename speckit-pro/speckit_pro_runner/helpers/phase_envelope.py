@@ -171,11 +171,13 @@ def check_status_and_counts(envelope: dict[str, Any], verdicts: dict[str, dict[s
             raise Mismatch("count_mismatch", f"{name} claimed {envelope['counts'][name]} but the gate reports {phase_verdict.get(name)}")
 
 
-def reverify(envelope: Any, workflow: str, feature: str, root: Path) -> dict[str, Any]:
+def reverify(envelope: Any, expected_phase: str, workflow: str, feature: str, root: Path) -> dict[str, Any]:
     """Return the compact pass data, or raise the first mismatch."""
     failures = envelope_failures(envelope)
     if failures:
         raise Mismatch("envelope_invalid", f"{failures[0]['field']}: {failures[0]['message']}"[:240])
+    if envelope["phase"] != expected_phase:
+        raise Mismatch("phase_mismatch", f"Expected {expected_phase}, envelope claimed {envelope['phase']}")
     check_artifacts(envelope, root)
     verdicts = check_gates(envelope, workflow, feature, root)
     check_status_and_counts(envelope, verdicts)
@@ -185,19 +187,23 @@ def reverify(envelope: Any, workflow: str, feature: str, root: Path) -> dict[str
 def run_phase_envelope_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Re-verify a phase envelope from disk; the answer is a compact pass or the first mismatch.
 
-    Closed inputs: envelope (phase-envelope/v1, see ENVELOPE_SCHEMA), workflow_file and feature_dir
-    (repo-relative; no traversal). The runner re-runs every claimed gate and checks every artifact path.
+    Closed inputs: envelope (phase-envelope/v1, see ENVELOPE_SCHEMA), expected_phase (root's requested
+    planning phase), workflow_file and feature_dir (repo-relative; no traversal). The phase must match
+    before the runner re-runs every claimed gate and checks every artifact path.
 
     pass: status ok, data {verdict: "pass", advance: true, phase, next_action}.
     mismatch: status expected_failure, data {verdict: "fail", advance: false, mismatch: {code, detail}} with code one of
-        envelope_invalid, artifact_path_invalid, artifact_missing, phase_gate_missing, gate_evidence_missing, gate_evidence_unparseable,
+        envelope_invalid, phase_mismatch, artifact_path_invalid, artifact_missing, phase_gate_missing, gate_evidence_missing, gate_evidence_unparseable,
         gate_claim_mismatch, status_contradicts_gates, phase_not_passed, count_mismatch.
     Malformed request inputs are an input_error; an envelope that breaks the contract fails the phase instead.
     `advance` is the runner's one answer to whether the run may leave the phase: true only on a pass. An input_error
     or any other non-ok status carries no `advance` and never advances.
     """
     try:
-        inputs = require_fields(request.inputs, {"envelope", "workflow_file", "feature_dir"}, "verify-phase-envelope inputs")
+        inputs = require_fields(request.inputs, {"envelope", "expected_phase", "workflow_file", "feature_dir"}, "verify-phase-envelope inputs")
+        expected_phase = require_text(inputs["expected_phase"], "expected_phase")
+        if expected_phase not in PHASES:
+            raise ValueError("expected_phase must name a planning phase")
         workflow = brief_path(inputs["workflow_file"], "workflow_file")
         feature = brief_path(inputs["feature_dir"], "feature_dir").rstrip("/")
         require_text(feature, "feature_dir")
@@ -208,7 +214,7 @@ def run_phase_envelope_helper(entry: Any, request: Any) -> dict[str, Any]:
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
-        data = reverify(inputs["envelope"], workflow, feature, root)
+        data = reverify(inputs["envelope"], expected_phase, workflow, feature, root)
     except Mismatch as exc:
         return response("expected_failure", request_id=request.request_id,
                         data={"verdict": "fail", "advance": False, "mismatch": {"code": exc.code, "detail": exc.detail[:240]}},

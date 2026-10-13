@@ -9,8 +9,13 @@ action, changed artifact paths, gate ids with results, counts, one blocker line
 of at most 240 characters and a usage receipt. The serialized envelope may not
 exceed 2,048 UTF-8 bytes; an envelope over the cap fails before any other check.
 
+The helper requires `envelope`, `expected_phase`, `workflow_file` and `feature_dir`.
+The root supplies `expected_phase` from its requested `brief.phase`, independently
+of the driver's envelope. Missing or invalid expected phases are input errors.
+
 The helper never trusts a claim. It checks, in order, and returns the first
-mismatch: the contract, every artifact path (repository-relative, present,
+mismatch: the contract, equality of the claimed phase and `expected_phase`
+(`phase_mismatch` on disagreement, even if both phases' gates pass), every artifact path (repository-relative, present,
 non-empty, no links out; a directory must hold an entry), that the phase's own gate is claimed, that every file a claimed gate reads
 (its sources, the workflow, and every file G4 reports it judged) is present, non-empty and valid UTF-8
 whatever the driver listed, every claimed
@@ -20,11 +25,15 @@ that the `markers` and `task_count` counts equal what the gate reports. A gate
 whose evidence is missing, unreadable or not a boolean verdict fails the phase.
 A claimed failure that the disk contradicts is also a mismatch.
 
-A pass is `{verdict, phase, next_action}`. A mismatch is `expected_failure`
-with `{verdict: "fail", mismatch: {code, detail}}`.
+A pass is `{verdict: "pass", advance: true, phase, next_action}`. A mismatch is
+`expected_failure` with `{verdict: "fail", advance: false, mismatch: {code, detail}}`.
 
 ## Known limits
 
+- A failing-gate substitution between Specify and Clarify is unreachable with
+  valid disk evidence: G1 and G2 check the same spec presence and clarification
+  markers. Their mismatched envelopes are still rejected and tested when both
+  gates pass, alongside all other phase pairs.
 - Only nested mode (ADR 0026) returns and consumes an envelope: the
   `phase-executor` driver returns one and the autopilot calls the helper before
   it advances. Flat mode never calls it.
