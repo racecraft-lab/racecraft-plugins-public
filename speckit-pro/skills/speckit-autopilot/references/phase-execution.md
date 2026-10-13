@@ -1782,26 +1782,58 @@ headless run, writes `plan/completed` (`stage: plan`, `status: completed` in
 steps: compose no title, body, or branch, and run no `git` or `gh` command of
 your own here.
 
-<!-- host:codex: a Codex task binds execution to a registered worktree, so it rechecks that binding before any write -->
-Before the first helper call, re-run the read-only `resolve-workflow-binding`
-runner helper with the canonical `WORKFLOW_FILE` from the established
-`WORKFLOW_ROOT`. Require `binding_status=resolved`, `relation=same`, and a
-returned `task_root`, `workflow_root` and `workflow_file` equal to the
-established ones. Registration drift, path drift, ambiguity, external
-reclassification, and sandbox denial are broken write-capable handoffs, not page
-gaps: STOP before the helper, dispatch nothing, commit nothing, and push nothing.
+<!-- host:codex: a Codex task binds execution to a registered worktree, so it rechecks that binding before a write-capable handoff -->
+**Revalidate the established workflow binding immediately before dispatch.**
+Re-run the read-only `resolve-workflow-binding` runner helper with the canonical
+`WORKFLOW_FILE` established at pre-flight, invoking the helper from
+`WORKFLOW_ROOT`. Require `binding_status=resolved`; require the returned
+`task_root` and `workflow_root` both to equal the established `WORKFLOW_ROOT`;
+require the returned `workflow_file` to equal the established `WORKFLOW_FILE`;
+and require `relation=same`. Keep the original `TASK_ROOT` as immutable
+discovery context, but do not compare it with the helper's cwd-derived
+`task_root` during this revalidation.
+
+Registration drift, path drift, ambiguity, external reclassification, and
+sandbox denial are **not artifact-content gaps**. They are broken write-capable
+handoffs, so STOP before artifact generation or pull-request refresh, write no
+gap sink, and do not dispatch the author, commit, push, or mutate the pull
+request. This revalidation is in addition to the startup guard: a resumed
+session or operator-directed continuation must not turn a stale or bypassed
+binding into a normal fail-open page outcome. Do this before step 1.
 <!-- /host -->
 
 1. Send the request below with `inputs.until` set to `pages`. The helper selects
    and fills the pages and answers `outcome: pages_ready`.
 2. When `pages.generated` is not empty, dispatch the `artifact-author` once (next
    subsection). Skip the dispatch when it is empty.
-3. Send the same request without `inputs.until`.
-4. For `outcome: preview_pending`, deliver the previews named in
-   `preview.observer_dispatches` by the
-   [Artifact Review Handoff contract](./artifact-review.md), then commit and push
-   the workflow-only evidence. Skip this step for any other outcome.
-5. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. For `outcome: stopped`, the answer's `report` is the stop report for that shape and its `stop_label` is the one marker to print instead, as the precedence rule under the stop report requires.
+3. Send the same request without `inputs.until`. The helper takes the stage-boundary
+   commit, commits the packet, pushes, opens or refreshes the draft pull request, and
+   takes a separate bookkeeping commit for the `Draft PR` record. A step that fails
+   ends the sequence with `outcome: stopped`.
+4. The parent dispatches `artifact-preview-observer` for each page in `preview.observer_dispatches`; the isolated observer never inherits general repository tools. The list is empty, and this step is skipped, on a headless run and when the readiness record shows no preview surface.
+5. Validate and commit/push the workflow-only preview evidence. Skip this step when step 4 was skipped.
+6. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. For `outcome: stopped`, the answer's `report` is the stop report for that shape and its `stop_label` is the one marker to print instead, as the precedence rule under the stop report requires.
+
+<!-- host:codex: Codex runs the preview observer through attest_codex and observe_codex under its own permission profile -->
+Dispatch step 4 through the runner, never by running the observer yourself:
+`helper_id=preview-isolation-session operation=preview-isolation-session mode=read_only`
+with `named_surface=attest_codex` once, then `named_surface=observe_codex` plus
+`artifact_path` and `expected_sha256` per page. The runner mints the broker
+capability, runs the observer under its own Codex permission profile with one
+broker tool and no network, and returns only the closed brokered observation.
+Under that profile the isolated process has no preview capability, so
+`unavailable` is the expected verdict; record it rather than substituting a
+parent-side judgement. Follow the runner's `resume_action` and retain the
+unverified disposition and blocker in the handoff report.
+<!-- /host -->
+
+**Read the [Artifact Review Handoff contract](./artifact-review.md) before step 4.**
+It defines the durable record, preview evidence, current-task binding, and
+preview-only resume. Publication through step 3 remains fail-open for generation
+gaps. Steps 4–5 cannot treat publication or `queued` as verified delivery.
+A preview-only resume bypasses generation and current-run artifact cleanup when
+the shared resolver reports reusable artifacts, and skips completed publication
+steps after corroboration.
 
 ```json
 {
@@ -1830,6 +1862,9 @@ because it keeps committed pages and the author's prose, refreshes the open draf
 pull request, and repairs the `Draft PR` row.
 
 #### The `artifact-author` dispatch
+
+The helper selects the pages from the shipped gallery manifest, and the
+orchestrator names no page list of its own. A `planned` entry has no template yet, so it is never selected and never reported as a gap.
 
 <!-- host:claude: Claude dispatches the agent with the Agent tool and a namespaced subagent type -->
 **One dispatch writes the narrative.** One dispatch of the

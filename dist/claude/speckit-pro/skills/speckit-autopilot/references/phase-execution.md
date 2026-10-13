@@ -1063,12 +1063,22 @@ your own here.
    and fills the pages and answers `outcome: pages_ready`.
 2. When `pages.generated` is not empty, dispatch the `artifact-author` once (next
    subsection). Skip the dispatch when it is empty.
-3. Send the same request without `inputs.until`.
-4. For `outcome: preview_pending`, deliver the previews named in
-   `preview.observer_dispatches` by the
-   [Artifact Review Handoff contract](./artifact-review.md), then commit and push
-   the workflow-only evidence. Skip this step for any other outcome.
-5. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. For `outcome: stopped`, the answer's `report` is the stop report for that shape and its `stop_label` is the one marker to print instead, as the precedence rule under the stop report requires.
+3. Send the same request without `inputs.until`. The helper takes the stage-boundary
+   commit, commits the packet, pushes, opens or refreshes the draft pull request, and
+   takes a separate bookkeeping commit for the `Draft PR` record. A step that fails
+   ends the sequence with `outcome: stopped`.
+4. The parent dispatches `artifact-preview-observer` for each page in `preview.observer_dispatches`; the isolated observer never inherits general repository tools. The list is empty, and this step is skipped, on a headless run and when the readiness record shows no preview surface.
+5. Validate and commit/push the workflow-only preview evidence. Skip this step when step 4 was skipped.
+6. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. For `outcome: stopped`, the answer's `report` is the stop report for that shape and its `stop_label` is the one marker to print instead, as the precedence rule under the stop report requires.
+
+
+**Read the [Artifact Review Handoff contract](./artifact-review.md) before step 4.**
+It defines the durable record, preview evidence, current-task binding, and
+preview-only resume. Publication through step 3 remains fail-open for generation
+gaps. Steps 4–5 cannot treat publication or `queued` as verified delivery.
+A preview-only resume bypasses generation and current-run artifact cleanup when
+the shared resolver reports reusable artifacts, and skips completed publication
+steps after corroboration.
 
 ```json
 {
@@ -1097,6 +1107,9 @@ because it keeps committed pages and the author's prose, refreshes the open draf
 pull request, and repairs the `Draft PR` row.
 
 #### The `artifact-author` dispatch
+
+The helper selects the pages from the shipped gallery manifest, and the
+orchestrator names no page list of its own. A `planned` entry has no template yet, so it is never selected and never reported as a gap.
 
 **One dispatch writes the narrative.** One dispatch of the
 `speckit-pro:artifact-author` subagent replaces the lifted prose of the

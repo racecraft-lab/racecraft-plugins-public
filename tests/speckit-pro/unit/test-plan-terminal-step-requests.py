@@ -80,7 +80,7 @@ class TerminalStepRequestTests(unittest.TestCase):
     def test_the_terminal_step_names_the_helper_and_one_author_dispatch(self) -> None:
         for host in HOSTS:
             text = terminal_step(host)
-            self.assertEqual(named_helpers(text), {"finish-plan-stage"}, host)
+            self.assertEqual(named_helpers(text) - {"preview-isolation-session"}, {"finish-plan-stage"}, host)
             self.assertEqual(len(re.findall(r"subagent_type: \"speckit-pro:artifact-author\"|spawn_agent\(\"artifact-author\"", text)), 1, host)
 
     def test_documented_request_sends_only_inputs_the_helper_accepts(self) -> None:
