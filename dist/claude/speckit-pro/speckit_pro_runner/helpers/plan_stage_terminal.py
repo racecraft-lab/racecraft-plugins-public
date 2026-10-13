@@ -9,9 +9,11 @@ A step that cannot finish stops the sequence with the stop label the prose table
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -25,37 +27,46 @@ from .read_only import corroborate_draft_pr, observation_pull_requests, workflow
 from .readiness_record import preview_surface
 
 Dispatch = Callable[[Any], dict[str, Any]]
-TIMEOUT_SECONDS = 120
 PACKET_ID = "draft"
 BOUNDARY = "close the plan stage boundary"
 PLANNING = ("plan_file", "spec_file", "tasks_file")
 INPUTS = frozenset({"repo_root", "host", "workflow_file", "execution_mode", "until", "base_branch",
                     "unratified_defaults", *PLANNING})
 RESUME = {"claude": "/speckit-pro:speckit-autopilot", "codex": "$speckit-pro:speckit-autopilot"}
-OPEN = "open"
 CONTENT = re.compile(r"<(?:p|dd|li|h2)\b[^>]*>(.*?)</(?:p|dd|li|h2)>", re.DOTALL)
+TITLE = re.compile(r"<title>(.*?)</title>", re.DOTALL)
 TAG = re.compile(r"<[^>]+>")
 SECTION = re.compile(r"(?ms)^## Artifact Review Handoff\n.*?(?=^## |\Z)")
+# One git or gh command in the repository; tests replace this name with a fake.
+cli = functools.partial(cli_probe.probe, allowed=("git", "gh"), timeout=120)
 
 
+@dataclass(eq=False)
 class Stop(Exception):
     """The sequence ends here; `reason` is a stop-policy reason and `report` names the step and the state left."""
 
-    def __init__(self, reason: str, report: str) -> None:
-        super().__init__(report)
-        self.reason, self.report = reason, report
+    reason: str
+    report: str
 
 
-def cli(root: Path, argv: list[str]) -> dict[str, Any]:
-    """The one place this helper runs git or gh."""
-    return cli_probe.probe(root, argv, allowed=("git", "gh"), timeout=TIMEOUT_SECONDS)
+@dataclass
+class Run:
+    """The inputs and the facts one terminal sequence reads from the workflow file and the repository."""
 
-
-def run(root: Path, argv: list[str], failure: str, reason: str = "plan_stage_boundary") -> str:
-    result = cli(root, argv)
-    if result["exit_status"] != 0:
-        raise Stop(reason, f"{failure}: {result['stderr_tail'][-200:] or 'the command did not run'}")
-    return str(result["stdout_tail"])
+    root: Path
+    inputs: dict[str, Any]
+    dispatch: Dispatch
+    request: RunnerRequest
+    workflow: str = ""
+    state: str = ""
+    feature: str = ""
+    info: dict[str, str] = field(default_factory=dict)
+    concept: str = ""
+    planning: dict[str, str] = field(default_factory=dict)
+    gallery: dict[str, dict[str, Any]] = field(default_factory=dict)
+    manifest_sha: str = ""
+    branch: str = ""
+    commits: list[str] = field(default_factory=list)
 
 
 def text_of(root: Path, relative: str) -> str:
@@ -74,6 +85,21 @@ def sha256(root: Path, relative: str) -> str | None:
     return hashlib.sha256(content).hexdigest() if content is not None else None
 
 
+def command(run: Run, argv: list[str], failure: str, reason: str = "plan_stage_boundary") -> str:
+    result = cli(run.root, argv)
+    if result["exit_status"] != 0:
+        raise Stop(reason, f"{failure}: {result['stderr_tail'][-200:] or 'the command did not run'}")
+    return str(result["stdout_tail"])
+
+
+def call(run: Run, helper_id: str, mode: str, inputs: dict[str, Any]) -> dict[str, Any]:
+    return run.dispatch(RunnerRequest(run.request.request_id, helper_id, helper_id, mode, inputs))
+
+
+def workflow_text(run: Run) -> str:
+    return text_of(run.root, run.workflow)
+
+
 def basic_information(text: str) -> dict[str, str]:
     rows = workflow_table_rows(HTML_COMMENT_RE.sub("", text).splitlines(), AUTOPILOT_BASIC_INFO_HEADING)
     return {cells[0].strip("*` ").casefold(): cells[1].strip("*` ") for cells in rows if len(cells) >= 2}
@@ -86,37 +112,305 @@ def set_basic_row(text: str, key: str, value: str) -> str:
     start = lines.index(AUTOPILOT_BASIC_INFO_HEADING)
     last = start
     for index in range(start + 1, len(lines)):
-        if lines[index].startswith("|"):
-            last = index
-            cells = [cell.strip("*` ").casefold() for cell in lines[index].strip("| ").split("|")]
-            if cells and cells[0] == key.casefold():
-                lines[index] = row
-                return "\n".join(lines) + "\n"
-        elif index > start + 1 and lines[index].strip():
-            break
+        if not lines[index].startswith("|"):
+            if index > start + 1 and lines[index].strip():
+                break
+            continue
+        last = index
+        if lines[index].strip("| ").split("|")[0].strip("*` ").casefold() == key.casefold():
+            lines[index] = row
+            return "\n".join(lines) + "\n"
     lines.insert(last + 1, row)
     return "\n".join(lines) + "\n"
+
+
+def prepare(run: Run, inputs: dict[str, Any]) -> None:
+    """Read the facts the sequence needs, and refuse before any write when one is missing."""
+    run.workflow = inputs["workflow_file"]
+    run.state = str(Path(run.workflow).with_name("autopilot-state.json"))
+    run.feature = str(Path(inputs["plan_file"]).parent)
+    run.info = basic_information(workflow_text(run))
+    if not {"spec id", "name"} <= run.info.keys() or sha256(run.root, run.state) is None:
+        raise ValueError("the workflow file needs Spec ID and Name rows and sits beside autopilot-state.json")
+    run.concept = f"docs/ai/specs/.process/{run.info['spec id']}-design-concept.md"
+    optional = {"research_file": f"{run.feature}/research.md", "design_concept_file": run.concept}
+    run.planning = {**{name: inputs[name] for name in PLANNING},
+                    **{name: path for name, path in optional.items() if sha256(run.root, path)}}
+    manifest = trusted_bytes(artifact_review.GALLERY / "manifest.json", artifact_review.GALLERY)
+    if manifest is None:
+        raise ValueError("gallery manifest is unreadable")
+    run.manifest_sha = hashlib.sha256(manifest).hexdigest()
+    run.gallery = {entry["id"]: entry for entry in artifact_selection.draft_gallery_entries(manifest)}
+    signals = workflow_stage_signals(workflow_text(run))
+    if not signals["parsed"]:
+        raise ValueError("the workflow file has no parseable Workflow Overview table")
+    if "blocked" in str(signals["confidence_gate_status"]).casefold():
+        raise Stop("strict_confidence_opt_in", "the confidence gate blocked in strict mode; no pull request was opened")
+    run.branch = command(run, ["git", "branch", "--show-current"], "the branch could not be read")
+
+
+def commit(run: Run, paths: list[str], subject: str) -> None:
+    command(run, ["git", "add", "--", *paths], f"staging for '{subject}' failed")
+    if cli(run.root, ["git", "diff", "--cached", "--quiet"])["exit_status"] != 0:
+        command(run, ["git", "commit", "-q", "-m", subject], f"the commit '{subject}' failed")
+        run.commits.append(subject)
+
+
+def remote(run: Run) -> str:
+    remotes = command(run, ["git", "remote"], "no remote could be read").split()
+    if "origin" in remotes or len(remotes) == 1:
+        return "origin" if "origin" in remotes else remotes[0]
+    raise Stop("plan_stage_boundary", "the remote could not be chosen: name one remote origin")
+
+
+def push(run: Run) -> None:
+    result = cli(run.root, ["git", "push", "-q", "-u", remote(run), run.branch])
+    if result["exit_status"] != 0:
+        reason = "protected_push" if "protected" in result["stderr_tail"].lower() else "plan_stage_boundary"
+        raise Stop(reason, f"the branch push failed and no pull request was opened: {result['stderr_tail'][-200:]}")
+
+
+def discard(path: Path) -> None:
+    try:
+        path.unlink()
+    except OSError as error:
+        raise Stop("integrity_failure", f"an unowned artifact file could not be removed: {path.name}") from error
+
+
+def recorded_pages_current(run: Run) -> bool:
+    """True when the recorded pages still match the planning inputs, so the author's prose is kept."""
+    try:
+        return bool(artifact_review.review_handoff(workflow_text(run), run.root, trusted_bytes)["reuse_artifacts"])
+    except ValueError:
+        return False
+
+
+def is_sample(page_id: str, content: bytes) -> bool:
+    template = trusted_bytes(artifact_review.GALLERY / f"templates/{page_id}.html", artifact_review.GALLERY)
+    return content == template or any(banner.encode() in content for banner in artifact_publication.BANNERS)
+
+
+def fill_page(run: Run, page_id: str, directory: Path) -> str | None:
+    """Fill a page nothing has written yet, then reject it when it is still a sample; the gap reason, or None."""
+    path = directory / f"{page_id}.html"
+    if not path.exists():
+        filled = call(run, "fill-artifact-page", "apply", {**run.planning, "entry_id": page_id})
+        if filled["status"] != "ok":
+            return str(filled["diagnostics"][0]["message"])
+    if is_sample(page_id, path.read_bytes()):
+        discard(path)
+        return "the page is still the sample template"
+    return None
+
+
+def sweep_unowned(run: Run, directory: Path, owned: list[str]) -> None:
+    for stale in directory.iterdir() if directory.is_dir() else []:
+        author_temp = stale.name.startswith(".artifact-author-") and stale.suffix == ".tmp"
+        if author_temp or (stale.suffix == ".html" and stale.stem in run.gallery and stale.stem not in owned):
+            discard(stale)
+
+
+def fill_pages(run: Run, fresh: bool) -> dict[str, Any]:
+    """Fill the selected pages, keep the author's prose on pages already on disk, and delete every unowned page.
+
+    `fresh` starts a run: pages whose recorded inputs have since changed are deleted and refilled.
+    """
+    directory = run.root / run.feature / "artifacts"
+    if fresh and not recorded_pages_current(run):
+        for stale in directory.iterdir() if directory.is_dir() else []:
+            if stale.stem in run.gallery:
+                discard(stale)
+    selection = call(run, "select-artifact-pages", "read_only",
+                     {name: path for name, path in run.planning.items() if name in artifact_publication.SELECTION_INPUTS})
+    selected = selection["data"].get("selected_pages", [])
+    gaps = [] if selection["status"] == "ok" else [{"id": "all", "reason": selection["diagnostics"][0]["message"]}]
+    for page_id in selected:
+        reason = fill_page(run, page_id, directory)
+        if reason is not None:
+            gaps.append({"id": page_id, "reason": reason})
+    owned = [page_id for page_id in selected if page_id not in {gap["id"] for gap in gaps}]
+    sweep_unowned(run, directory, owned)
+    return {"generated": owned, "gaps": gaps, "selected": selected}
+
+
+def page_entry(run: Run, page_id: str) -> dict[str, Any]:
+    """The generated-page record: its digest, its title and one body passage distinct from the title."""
+    path = f"{run.feature}/artifacts/{page_id}.html"
+    html = text_of(run.root, path)
+    found = TITLE.search(html)
+    title = " ".join(TAG.sub("", found[1] if found else page_id).split())
+    passages = (" ".join(TAG.sub("", match).split()) for match in CONTENT.findall(html))
+    body = next((passage for passage in passages if len(passage) >= 12 and passage not in title), "")
+    if not body:
+        raise Stop("integrity_failure", f"the page {page_id} carries no feature content to observe")
+    return {"id": page_id, "generation": "generated", "path": path, "sha256": sha256(run.root, path),
+            "expected_title": title, "expected_content": body,
+            "preview": {"status": "pending", "blocker": "Not observed yet", "observation": None}}
+
+
+def write_record(run: Run, pages: dict[str, Any]) -> None:
+    """Write the Artifact Review Handoff record, the sole store for generation and preview evidence."""
+    inputs = {f"{run.feature}/{name}.md": sha256(run.root, f"{run.feature}/{name}.md") for name in ("spec", "plan", "tasks")}
+    inputs[run.concept] = sha256(run.root, run.concept)
+    entries = [page_entry(run, page_id) for page_id in pages["generated"]]
+    entries += [{"id": gap["id"], "generation": "gap", "reason": gap["reason"]} for gap in pages["gaps"] if gap["id"] != "all"]
+    record = {"schema_version": "1.0", "feature_dir": run.feature, "input_hashes": inputs, "manifest_sha256": run.manifest_sha,
+              "template_hashes": {e["id"]: sha256(artifact_review.GALLERY, f"templates/{e['id']}.html") for e in entries},
+              "generation_error": next((gap["reason"] for gap in pages["gaps"] if gap["id"] == "all"), None), "pages": entries}
+    section = "## Artifact Review Handoff\n\n```json\n" + json.dumps(record, indent=2) + "\n```\n"
+    text = workflow_text(run)
+    found = SECTION.search(text)
+    if found is None:
+        write(run.root, run.workflow, text.rstrip("\n") + "\n\n" + section)
+        return
+    blank_tail = found[0][len(found[0].rstrip("\n")) + 1:]
+    write(run.root, run.workflow, text[:found.start()] + section + blank_tail + text[found.end():])
 
 
 def sentence(text: str) -> str:
     return re.split(r"(?<=[.!?])\s", " ".join(text.split()), maxsplit=1)[0]
 
 
-def title_of(info: dict[str, str]) -> dict[str, str]:
-    return {"title_type": "feat", "title_scope": re.sub(r"[^a-z0-9]+", "-", info["spec id"].lower()).strip("-"),
-            "title_description": f"plan {info['name']}"}
-
-
-def draft_body(title: str, feature: str, gallery: dict[str, dict[str, Any]], pages: dict[str, Any], inputs: dict[str, Any]) -> str:
-    rows = [f"| {gallery[page_id]['title']} | {sentence(gallery[page_id]['when_to_use'])} | `open {feature}/artifacts/{page_id}.html` |"
-            for page_id in pages["generated"]]
-    rows += [f"| {gallery[gap['id']]['title'] if gap['id'] in gallery else 'All artifacts'} | Gap: {gap['reason']} | none |"
+def draft_body(run: Run, title: str, pages: dict[str, Any]) -> str:
+    """The two-section draft description: the artifacts index with gap rows, and the resume command."""
+    rows = [f"| {run.gallery[page_id]['title']} | {sentence(run.gallery[page_id]['when_to_use'])} | "
+            f"`open {run.feature}/artifacts/{page_id}.html` |" for page_id in pages["generated"]]
+    rows += [f"| {run.gallery[gap['id']]['title'] if gap['id'] in run.gallery else 'All artifacts'} | Gap: {gap['reason']} | none |"
              for gap in pages["gaps"]]
-    flag = inputs.get("unratified_defaults")
-    resume = f"{RESUME[inputs['host']]} {inputs['workflow_file']} --stage implement"
+    flag = run.inputs.get("unratified_defaults")
+    resume = f"{RESUME[run.inputs['host']]} {run.workflow} --stage implement"
     return "\n".join([f"# {title}", "", "## Artifacts", "", "| Artifact | Purpose | Open |", "| --- | --- | --- |", *rows, "",
                       *([flag, ""] if flag else []), "## Resume", "",
                       "Stage: plan. Stopped at the plan-stage boundary for review.", f"Resume with: `{resume}`", ""])
+
+
+def base_branch(run: Run) -> str:
+    if run.inputs.get("base_branch"):
+        return str(run.inputs["base_branch"])
+    head = cli(run.root, ["git", "symbolic-ref", "--short", f"refs/remotes/{remote(run)}/HEAD"])
+    return str(head["stdout_tail"]).split("/", 1)[-1] if head["exit_status"] == 0 else "main"
+
+
+def build_packet(run: Run, pages: dict[str, Any]) -> dict[str, str]:
+    """Generate, validate and commit the draft packet; the title comes from the workflow's Spec ID and Name."""
+    scope = re.sub(r"[^a-z0-9]+", "-", run.info["spec id"].lower()).strip("-")
+    title = {"title_type": "feat", "title_scope": scope, "title_description": f"plan {run.info['name']}"}
+    subject = f"feat({scope}): {title['title_description']}"
+    base = base_branch(run)
+    request = {"packet_path": f"{run.feature}/.process/pr-packets/{PACKET_ID}.json", "source_feature_dir": run.feature,
+               "target": {"base_branch": base, "head_branch": run.branch}, "mode": "draft", **title,
+               "changed_files": [], "verification_evidence": [], "body": draft_body(run, subject, pages),
+               **({"unratified_defaults": run.inputs["unratified_defaults"]} if run.inputs.get("unratified_defaults") else {})}
+    for mode in ("dry_run", "apply"):
+        made = call(run, "pr-packet-output", mode, request)
+        if made["status"] != "ok":
+            raise Stop("plan_stage_boundary", f"packet generation refused: {made['diagnostics'][0]['message']}")
+    checked = call(run, "validate-pr-packet-read-only", "read_only", {"packet_path": request["packet_path"]})
+    verdict = (checked.get("data") or {}).get("stdout_json") or {}
+    if verdict.get("status") != "passed" or verdict.get("pr_blocked"):
+        raise Stop("plan_stage_boundary", "packet validation did not pass; the packet is local and uncommitted")
+    body_file = made["data"]["body_file"]
+    commit(run, [body_file, request["packet_path"]], f"chore({run.info['spec id']}): add the draft pull request packet")
+    return {"title": subject, "body_file": body_file, "base_branch": base}
+
+
+def json_list(text: str) -> list[Any] | None:
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return None
+    return value if isinstance(value, list) else None
+
+
+def observe_branch(run: Run) -> dict[str, Any]:
+    """The one read-only query for every pull request on the head branch, in the corroboration's shape."""
+    listing = cli(run.root, ["gh", "pr", "list", "--head", run.branch, "--state", "all", "--json", "number,url,state,title"])
+    pulls = json_list(listing["stdout_tail"]) if listing["exit_status"] == 0 else None
+    return {"ok": pulls is not None, "pull_requests": pulls}
+
+
+def existing_pull_request(run: Run, observation: dict[str, Any]) -> dict[str, Any] | None:
+    """The pull request to refresh, or None to create; a discrepancy or an unanswered query stops the sequence."""
+    row = workflow_draft_pr_row(HTML_COMMENT_RE.sub("", workflow_text(run)).splitlines())
+    corroboration = corroborate_draft_pr(row, observation)
+    recorded = corroboration["recorded"]
+    if corroboration["status"] == "pr_closed":
+        raise Stop("reopen_closed_pr", f"the recorded pull request #{recorded['number']} is closed; the operator reopens it, then re-runs")
+    if corroboration["status"] == "pr_missing" or (corroboration["status"] == "identity_mismatch" and not corroboration["repair"]):
+        raise Stop("ambiguous_pr_record", "the recorded and live pull requests disagree; the row was left as found")
+    entries = observation_pull_requests(observation)
+    if entries is None and recorded is None:
+        raise Stop("tool_unavailable", "the pull request query could not answer, so nothing was created")
+    opened = [entry for entry in entries or [] if entry["state"].casefold() == "open"]
+    if len(opened) > 1 and recorded is None:
+        raise Stop("ambiguous_pr_record", "several open pull requests answer for the branch")
+    return corroboration["repair"] or recorded or ({"number": opened[0]["number"], "url": opened[0]["url"]} if opened else None)
+
+
+def create_or_refresh(run: Run, packet: dict[str, str]) -> dict[str, Any]:
+    """Create or refresh the one draft pull request by the two-way existence test: the recorded row and one live query."""
+    observation = observe_branch(run)
+    target = existing_pull_request(run, observation)
+    pushed = "the artifacts and boundary commit are already pushed"
+    if target is not None:
+        known = next((entry for entry in observation["pull_requests"] or [] if entry["number"] == target["number"]), {})
+        edit = ["gh", "pr", "edit", str(target["number"]), "--body-file", packet["body_file"]]
+        command(run, edit + (["--title", packet["title"]] if known.get("title") != packet["title"] else []),
+                f"the pull request refresh failed; {pushed}")
+        return target
+    created = command(run, ["gh", "pr", "create", "--draft", "--base", packet["base_branch"], "--head", run.branch,
+                            "--title", packet["title"], "--body-file", packet["body_file"]],
+                      f"the pull request could not be opened; {pushed}").splitlines()[-1]
+    number = re.search(r"/pull/(\d+)$", created)
+    if number is None:
+        raise Stop("plan_stage_boundary", "the pull request was created but its URL could not be read")
+    return {"number": int(number[1]), "url": created}
+
+
+def record_pull_request(run: Run, found: dict[str, Any], pages: dict[str, Any]) -> None:
+    """Write the `Draft PR` row whole and `plan/completed`, in the separate bookkeeping commit."""
+    total = len(pages["selected"]) or len(pages["gaps"])
+    note = f" — {len(pages['gaps'])} of {total} artifacts missing" if pages["gaps"] else ""
+    write(run.root, run.workflow, set_basic_row(workflow_text(run), "Draft PR", f"[#{found['number']}]({found['url']}){note}"))
+    state = json.loads(text_of(run.root, run.state))
+    write(run.root, run.state, json.dumps({**state, "stage": "plan", "status": "completed"}, indent=2) + "\n")
+    commit(run, [run.workflow, run.state], f"chore({run.info['spec id']}): record the draft pull request")
+    push(run)
+
+
+def stop_label(reason: str) -> str:
+    stop_policy.stop_class(reason)
+    return f"stop_reason:{reason}"
+
+
+def pages_ready(pages: dict[str, Any]) -> dict[str, Any]:
+    action = (f"Dispatch artifact-author once for pages {pages['generated']}, then call finish-plan-stage again without until."
+              if pages["generated"] else "Call finish-plan-stage again without until.")
+    return {"outcome": "pages_ready", "next_action": action}
+
+
+def terminal_sequence(run: Run, pages: dict[str, Any]) -> dict[str, Any]:
+    surface = "unavailable" if run.inputs.get("execution_mode") == "headless" else preview_surface(run.root, run.inputs["host"])
+    write_record(run, pages)
+    try:
+        artifact_review.review_handoff(workflow_text(run), run.root, trusted_bytes, surface)
+    except ValueError as error:
+        raise Stop("integrity_failure", f"a generated page failed its fill check: {error}") from error
+    commit(run, ["specs/", run.workflow, run.state], f"chore({run.info['spec id']}): {BOUNDARY}")
+    packet = build_packet(run, pages)
+    push(run)
+    found = create_or_refresh(run, packet)
+    record_pull_request(run, found, pages)
+    review = artifact_review.review_handoff(workflow_text(run), run.root, trusted_bytes, surface)
+    pending = review["observer_dispatches"]
+    done = {"pull_request": found, "commits": run.commits,
+            "preview": {"status": review["status"], "note": review.get("preview_note"), "observer_dispatches": pending}}
+    label = stop_label("plan_stage_boundary")
+    if pending:
+        return {**done, "outcome": "preview_pending", "stop_label": None,
+                "next_action": f"Observe pages {pending} through the runner, commit the preview evidence, then print {label}."}
+    return {**done, "outcome": "completed", "stop_label": label,
+            "next_action": f"Print the stop report, then {label} as the last line, and stop."}
 
 
 def check_inputs(inputs: dict[str, Any]) -> None:
@@ -126,243 +420,21 @@ def check_inputs(inputs: dict[str, Any]) -> None:
         raise ValueError("host must be claude or codex and execution_mode interactive or headless")
     if inputs.get("until", "pages") != "pages":
         raise ValueError("until accepts only pages")
-    for field in ("workflow_file", "plan_file", "spec_file", "tasks_file"):
-        if not isinstance(inputs.get(field), str):
-            raise ValueError(f"{field} is required")
+    for name in ("workflow_file", *PLANNING):
+        if not isinstance(inputs.get(name), str):
+            raise ValueError(f"{name} is required")
 
 
-class Sequence:
-    """One run of the terminal sequence over a repository; each method is one step of it."""
-
-    def __init__(self, root: Path, inputs: dict[str, Any], dispatch: Dispatch, request: RunnerRequest) -> None:
-        self.root, self.inputs, self.dispatch, self.request = root, inputs, dispatch, request
-        self.workflow = inputs["workflow_file"]
-        self.state = str(Path(self.workflow).with_name("autopilot-state.json"))
-        self.feature = str(Path(inputs["plan_file"]).parent)
-        self.info = basic_information(self.read_workflow())
-        if not {"spec id", "name"} <= self.info.keys():
-            raise ValueError("the workflow file's Basic Information needs Spec ID and Name rows")
-        self.concept = f"docs/ai/specs/.process/{self.info['spec id']}-design-concept.md"
-        optional = {"research_file": f"{self.feature}/research.md", "design_concept_file": self.concept}
-        self.planning = {**{field: inputs[field] for field in PLANNING},
-                         **{field: path for field, path in optional.items() if sha256(root, path)}}
-        self.branch = ""
-        self.commits: list[str] = []
-        manifest = trusted_bytes(artifact_review.GALLERY / "manifest.json", artifact_review.GALLERY)
-        if manifest is None:
-            raise ValueError("gallery manifest is unreadable")
-        self.manifest_sha = hashlib.sha256(manifest).hexdigest()
-        self.gallery = {entry["id"]: entry for entry in artifact_selection.draft_gallery_entries(manifest)}
-
-    def call(self, helper_id: str, mode: str, inputs: dict[str, Any]) -> dict[str, Any]:
-        return self.dispatch(RunnerRequest(self.request.request_id, helper_id, helper_id, mode, inputs))
-
-    def commit(self, paths: list[str], subject: str) -> None:
-        run(self.root, ["git", "add", "--", *paths], f"staging for '{subject}' failed")
-        if cli(self.root, ["git", "diff", "--cached", "--quiet"])["exit_status"] != 0:
-            run(self.root, ["git", "commit", "-q", "-m", subject], f"the commit '{subject}' failed")
-            self.commits.append(subject)
-
-    def read_workflow(self) -> str:
-        return text_of(self.root, self.workflow)
-
-    def reusable(self) -> bool:
-        """True when the recorded pages still match the planning inputs, so the author's prose is kept."""
-        try:
-            return bool(artifact_review.review_handoff(self.read_workflow(), self.root, trusted_bytes)["reuse_artifacts"])
-        except ValueError:
-            return False
-
-    def discard(self, path: Path) -> None:
-        try:
-            path.unlink()
-        except OSError as error:
-            raise Stop("integrity_failure", f"an unowned artifact file could not be removed: {path.name}") from error
-
-    def pages(self, fresh: bool) -> dict[str, Any]:
-        """Fill the selected pages nothing has written yet; delete any page that is no generated page of this run.
-
-        `fresh` starts a run: pages left by a run whose inputs have since changed are deleted and refilled.
-        Otherwise a page on disk is kept, because the author has written its prose.
-        """
-        directory = self.root / self.feature / "artifacts"
-        files = list(directory.iterdir()) if directory.is_dir() else []
-        if fresh and not self.reusable():
-            for stale in files:
-                if stale.stem in self.gallery:
-                    self.discard(stale)
-        selection = self.call("select-artifact-pages", "read_only",
-                              {field: self.planning[field] for field in artifact_publication.SELECTION_INPUTS if field in self.planning})
-        selected = selection["data"].get("selected_pages", [])
-        gaps = [] if selection["status"] == "ok" else [{"id": "all", "reason": selection["diagnostics"][0]["message"]}]
-        for page_id in selected:
-            path = directory / f"{page_id}.html"
-            if not path.exists():
-                filled = self.call("fill-artifact-page", "apply", {**self.planning, "entry_id": page_id})
-                if filled["status"] != "ok":
-                    gaps.append({"id": page_id, "reason": filled["diagnostics"][0]["message"]})
-                    continue
-            template = trusted_bytes(artifact_review.GALLERY / f"templates/{page_id}.html", artifact_review.GALLERY)
-            if path.read_bytes() == template or any(banner.encode() in path.read_bytes() for banner in artifact_publication.BANNERS):
-                self.discard(path)
-                gaps.append({"id": page_id, "reason": "the page is still the sample template"})
-        owned = [page_id for page_id in selected if page_id not in {gap["id"] for gap in gaps}]
-        for stale in directory.iterdir() if directory.is_dir() else []:
-            if (stale.name.startswith(".artifact-author-") and stale.suffix == ".tmp") or (
-                    stale.suffix == ".html" and stale.stem in self.gallery and stale.stem not in owned):
-                self.discard(stale)
-        return {"generated": owned, "gaps": gaps, "selected": selected}
-
-    def record(self, pages: dict[str, Any]) -> str:
-        """Write the Artifact Review Handoff record, the sole store for generation and preview evidence."""
-        inputs = {f"{self.feature}/{name}.md": sha256(self.root, f"{self.feature}/{name}.md") for name in ("spec", "plan", "tasks")}
-        inputs[self.concept] = sha256(self.root, self.concept)
-        entries = []
-        for page_id in pages["generated"]:
-            path = f"{self.feature}/artifacts/{page_id}.html"
-            html = text_of(self.root, path)
-            title = " ".join(TAG.sub("", (re.search(r"<title>(.*?)</title>", html, re.DOTALL) or [None, page_id])[1]).split())
-            body = next((" ".join(TAG.sub("", c).split()) for c in CONTENT.findall(html) if len(" ".join(TAG.sub("", c).split())) >= 12
-                         and " ".join(TAG.sub("", c).split()) not in title), "")
-            if not body:
-                raise Stop("integrity_failure", f"the page {page_id} carries no feature content to observe")
-            entries.append({"id": page_id, "generation": "generated", "path": path, "sha256": sha256(self.root, path),
-                            "expected_title": title, "expected_content": body,
-                            "preview": {"status": "pending", "blocker": "Not observed yet", "observation": None}})
-        entries += [{"id": gap["id"], "generation": "gap", "reason": gap["reason"]} for gap in pages["gaps"] if gap["id"] != "all"]
-        whole = next((gap["reason"] for gap in pages["gaps"] if gap["id"] == "all"), None)
-        record = {"schema_version": "1.0", "feature_dir": self.feature, "input_hashes": inputs, "manifest_sha256": self.manifest_sha,
-                  "template_hashes": {e["id"]: sha256(artifact_review.GALLERY, f"templates/{e['id']}.html") for e in entries},
-                  "generation_error": whole, "pages": entries}
-        section = "## Artifact Review Handoff\n\n```json\n" + json.dumps(record, indent=2) + "\n```\n"
-        text = self.read_workflow()
-        text = SECTION.sub(lambda found: section + found.group(0)[len(found.group(0).rstrip("\n")) + 1:], text, count=1) \
-            if SECTION.search(text) else text.rstrip("\n") + "\n\n" + section
-        write(self.root, self.workflow, text)
-        return text
-
-    def packet(self, pages: dict[str, Any]) -> tuple[str, dict[str, str]]:
-        info = self.info
-        title = title_of(info)
-        remote = cli(self.root, ["git", "symbolic-ref", "--short", f"refs/remotes/{self.remote()}/HEAD"])
-        base = self.inputs.get("base_branch") or (str(remote["stdout_tail"]).split("/", 1)[-1] if remote["exit_status"] == 0 else "main")
-        subject = f"{title['title_type']}({title['title_scope']}): {title['title_description']}"
-        request = {"packet_path": f"{self.feature}/.process/pr-packets/{PACKET_ID}.json", "source_feature_dir": self.feature,
-                   "target": {"base_branch": base, "head_branch": self.branch}, "mode": "draft", **title,
-                   "changed_files": [], "verification_evidence": [],
-                   "body": draft_body(subject, self.feature, self.gallery, pages, self.inputs),
-                   **({"unratified_defaults": self.inputs["unratified_defaults"]} if self.inputs.get("unratified_defaults") else {})}
-        for mode in ("dry_run", "apply"):
-            made = self.call("pr-packet-output", mode, request)
-            if made["status"] != "ok":
-                raise Stop("plan_stage_boundary", f"packet generation refused: {made['diagnostics'][0]['message']}")
-        checked = self.call("validate-pr-packet-read-only", "read_only", {"packet_path": request["packet_path"]})
-        verdict = (checked.get("data") or {}).get("stdout_json") or {}
-        if verdict.get("status") != "passed" or verdict.get("pr_blocked"):
-            raise Stop("plan_stage_boundary", "packet validation did not pass; the packet is local and uncommitted")
-        self.commit([made["data"]["body_file"], request["packet_path"]], f"chore({info['spec id']}): add the draft pull request packet")
-        return subject, {"body_file": made["data"]["body_file"], "base_branch": base}
-
-    def remote(self) -> str:
-        remotes = run(self.root, ["git", "remote"], "no remote could be read").split()
-        if "origin" in remotes or len(remotes) == 1:
-            return "origin" if "origin" in remotes else remotes[0]
-        raise Stop("plan_stage_boundary", "the remote could not be chosen: name one remote origin")
-
-    def push(self) -> None:
-        result = cli(self.root, ["git", "push", "-q", "-u", self.remote(), self.branch])
-        if result["exit_status"] != 0:
-            protected = "protected" in result["stderr_tail"].lower()
-            raise Stop("protected_push" if protected else "plan_stage_boundary",
-                       f"the branch push failed and no pull request was opened: {result['stderr_tail'][-200:]}")
-
-    def pull_request(self, title: str, packet: dict[str, str]) -> dict[str, Any]:
-        """Create or refresh the one draft pull request, by the two-way existence test."""
-        listing = cli(self.root, ["gh", "pr", "list", "--head", self.branch, "--state", "all", "--json", "number,url,state,title"])
-        observation: dict[str, Any] = {"ok": False}
-        if listing["exit_status"] == 0:
-            try:
-                observation = {"ok": True, "pull_requests": json.loads(listing["stdout_tail"])}
-            except ValueError:
-                pass
-        entries = observation_pull_requests(observation)
-        row = workflow_draft_pr_row(HTML_COMMENT_RE.sub("", self.read_workflow()).splitlines())
-        corroboration = corroborate_draft_pr(row, observation)
-        status = corroboration["status"]
-        recorded = corroboration["recorded"]
-        if status == "pr_closed":
-            raise Stop("reopen_closed_pr", f"the recorded pull request #{recorded['number']} is closed; the operator reopens it, then re-runs")
-        if status == "pr_missing" or (status == "identity_mismatch" and not corroboration["repair"]):
-            raise Stop("ambiguous_pr_record", "the recorded and live pull requests disagree; the row was left as found")
-        if entries is None and recorded is None:
-            raise Stop("tool_unavailable", "the pull request query could not answer, so nothing was created")
-        target = corroboration["repair"] or recorded
-        opened = [entry for entry in entries or [] if entry["state"].casefold() == OPEN]
-        if target is None and len(opened) > 1:
-            raise Stop("ambiguous_pr_record", "several open pull requests answer for the branch")
-        if target is None and opened:
-            target = {"number": opened[0]["number"], "url": opened[0]["url"]}
-        if target is not None:
-            known = next((entry for entry in entries or [] if entry["number"] == target["number"]), {})
-            edit = ["gh", "pr", "edit", str(target["number"]), "--body-file", packet["body_file"]]
-            run(self.root, edit + (["--title", title] if known.get("title") != title else []),
-                "the pull request refresh failed; the artifacts and boundary commit are already pushed")
-            return target
-        url = run(self.root, ["gh", "pr", "create", "--draft", "--base", packet["base_branch"], "--head", self.branch,
-                              "--title", title, "--body-file", packet["body_file"]],
-                  "the pull request could not be opened; the artifacts and boundary commit are already pushed").splitlines()[-1]
-        number = re.search(r"/pull/(\d+)$", url)
-        if number is None:
-            raise Stop("plan_stage_boundary", "the pull request was created but its URL could not be read")
-        return {"number": int(number[1]), "url": url}
-
-
-def finish(root: Path, inputs: dict[str, Any], sequence: Sequence, apply: bool) -> dict[str, Any]:
-    signals = workflow_stage_signals(sequence.read_workflow())
-    if not signals["parsed"]:
-        raise ValueError("the workflow file has no parseable Workflow Overview table")
-    if "blocked" in str(signals["confidence_gate_status"]).casefold():
-        raise Stop("strict_confidence_opt_in", "the confidence gate blocked in strict mode; no pull request was opened")
-    sequence.branch = run(root, ["git", "branch", "--show-current"], "the branch could not be read")
+def finish(run: Run, apply: bool) -> dict[str, Any]:
+    prepare(run, run.inputs)
     if not apply:
-        return {"outcome": "dry_run", "next_action": "Apply the finish-plan-stage request to run the terminal sequence.", "writes_state": False}
-    pages = sequence.pages(fresh=inputs.get("until") == "pages")
-    base = {"pages": {"generated": pages["generated"], "gaps": pages["gaps"]}, "writes_state": True}
-    if inputs.get("until") == "pages":
-        action = (f"Dispatch artifact-author once for pages {pages['generated']}, then call finish-plan-stage again without until."
-                  if pages["generated"] else "Call finish-plan-stage again without until.")
-        return {**base, "outcome": "pages_ready", "next_action": action}
-    spec = sequence.info["spec id"]
-    sequence.record(pages)
-    surface = "unavailable" if inputs.get("execution_mode") == "headless" else preview_surface(root, inputs["host"])
-    try:
-        artifact_review.review_handoff(sequence.read_workflow(), root, trusted_bytes, surface)
-    except ValueError as error:
-        raise Stop("integrity_failure", f"a generated page failed its fill check: {error}") from error
-    sequence.commit(["specs/", sequence.workflow, sequence.state], f"chore({spec}): {BOUNDARY}")
-    title, packet = sequence.packet(pages)
-    sequence.push()
-    found = sequence.pull_request(title, packet)
-    gap = f" — {len(pages['gaps'])} of {len(pages['selected']) or len(pages['gaps'])} artifacts missing" if pages["gaps"] else ""
-    write(root, sequence.workflow, set_basic_row(sequence.read_workflow(), "Draft PR", f"[#{found['number']}]({found['url']}){gap}"))
-    state = json.loads(text_of(root, sequence.state))
-    write(root, sequence.state, json.dumps({**state, "stage": "plan", "status": "completed"}, indent=2) + "\n")
-    sequence.commit([sequence.workflow, sequence.state], f"chore({spec}): record the draft pull request")
-    sequence.push()
-    review = artifact_review.review_handoff(sequence.read_workflow(), root, trusted_bytes, surface)
-    pending = review["observer_dispatches"]
-    done = {**base, "pull_request": found, "commits": sequence.commits, "writes_state": True,
-            "preview": {"status": review["status"], "note": review.get("preview_note"), "observer_dispatches": pending}}
-    if pending:
-        return {**done, "outcome": "preview_pending", "stop_label": None,
-                "next_action": f"Observe pages {pending} through the runner, commit the preview evidence, then print {stop_label('plan_stage_boundary')}."}
-    return {**done, "outcome": "completed", "stop_label": stop_label("plan_stage_boundary"),
-            "next_action": f"Print the stop report, then {stop_label('plan_stage_boundary')} as the last line, and stop."}
-
-
-def stop_label(reason: str) -> str:
-    stop_policy.stop_class(reason)
-    return f"stop_reason:{reason}"
+        return {"outcome": "dry_run", "next_action": "Apply the finish-plan-stage request to run the terminal sequence.",
+                "writes_state": False}
+    pages = fill_pages(run, fresh=run.inputs.get("until") == "pages")
+    summary = {"pages": {"generated": pages["generated"], "gaps": pages["gaps"]}, "writes_state": True}
+    if run.inputs.get("until") == "pages":
+        return {**summary, **pages_ready(pages)}
+    return {**summary, **terminal_sequence(run, pages)}
 
 
 def run_plan_stage_terminal_helper(entry: Any, request: Any, dispatch: Dispatch) -> dict[str, Any]:
@@ -371,12 +443,12 @@ def run_plan_stage_terminal_helper(entry: Any, request: Any, dispatch: Dispatch)
         return response("input_error", request_id=request.request_id, diagnostics=[root])
     try:
         check_inputs(request.inputs)
-        sequence = Sequence(root, request.inputs, dispatch, request)
-        data = finish(root, request.inputs, sequence, request.mode == "apply")
+        data = finish(Run(root, request.inputs, dispatch, request), request.mode == "apply")
     except Stop as stop:
+        label = stop_label(stop.reason)
         return response("expected_failure", request_id=request.request_id, data={
-            "helper_id": entry.helper_id, "outcome": "stopped", "stop_label": stop_label(stop.reason), "report": stop.report,
-            "next_action": f"Print the stop report, then {stop_label(stop.reason)} as the last line, and stop."},
+            "helper_id": entry.helper_id, "outcome": "stopped", "stop_label": label, "report": stop.report,
+            "next_action": f"Print the stop report, then {label} as the last line, and stop."},
             diagnostics=[diagnostic("plan_stage_stopped", stop.report, remediation_summary="Follow the stop report's resume path.")])
     except (ValueError, KeyError, OSError) as error:
         return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(

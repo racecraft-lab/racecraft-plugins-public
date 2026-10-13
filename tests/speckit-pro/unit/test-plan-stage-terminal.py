@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 sys.path.insert(0, str(ROOT / "speckit-pro"))
+from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner import envelope, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
@@ -39,7 +40,7 @@ class FakeCli:
 
     def __call__(self, root: Path, argv: list[str]) -> dict:
         if argv[0] == "git":
-            done = subprocess.run(argv, cwd=root, capture_output=True, text=True, check=False)
+            done = git(root, *argv[1:], check=False)
             return {"argv": argv, "exit_status": done.returncode, "stdout_tail": done.stdout.strip(),
                     "stderr_tail": done.stderr.strip()}
         self.gh.append(argv)
@@ -69,11 +70,11 @@ class TerminalFixture(unittest.TestCase):
         shutil.copy(SOURCE / "design-concept.md", self.root / CONCEPT)
         shutil.copy(SOURCE / "workflow.md", self.root / WORKFLOW)
         (self.root / STATE).write_text(json.dumps({"stage": "plan", "status": "in_progress", "plan": []}), encoding="utf-8")
-        for argv in (["init", "-q", "-b", "art-007-draft-pr-emission"], ["config", "user.email", "t@example.test"],
-                     ["config", "user.name", "T"], ["add", "-A"], ["commit", "-q", "-m", "seed"], ["tag", "seed"]):
-            self.git(*argv)
-        subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
-        self.git("remote", "add", "origin", str(remote))
+        git(self.root, "init", "-q", "-b", "art-007-draft-pr-emission")
+        commit_baseline(self.root, "seed")
+        git(self.root, "tag", "seed")
+        git(base, "init", "-q", "--bare", str(remote))
+        git(self.root, "remote", "add", "origin", str(remote))
         self.remote = remote
         previous = Path.cwd()
         os.chdir(self.root)
@@ -81,7 +82,7 @@ class TerminalFixture(unittest.TestCase):
         self.cli = FakeCli()
 
     def git(self, *args: str) -> str:
-        return subprocess.run(["git", *args], cwd=self.root, capture_output=True, text=True, check=True).stdout.strip()
+        return git_stdout(self.root, *args)
 
     def subjects(self) -> list[str]:
         return self.git("log", "--format=%s", "seed..HEAD").splitlines()
@@ -106,8 +107,7 @@ class OneCallSequenceTests(TerminalFixture):
         self.assertEqual(self.subjects(), ["chore(ART-007): record the draft pull request",
                                            "chore(ART-007): add the draft pull request packet",
                                            "chore(ART-007): close the plan stage boundary"])
-        self.assertEqual(self.git("rev-parse", "HEAD"), subprocess.run(
-            ["git", "-C", str(self.remote), "rev-parse", "art-007-draft-pr-emission"], capture_output=True, text=True).stdout.strip())
+        self.assertEqual(self.git("rev-parse", "HEAD"), git_stdout(self.remote, "rev-parse", "art-007-draft-pr-emission"))
         self.assertIn(f"| **Draft PR** | [#7]({URL}) |", (self.root / WORKFLOW).read_text(encoding="utf-8"))
         self.assertEqual(json.loads((self.root / STATE).read_text(encoding="utf-8"))["status"], "completed")
         self.assertEqual(self.git("status", "--porcelain"), "")

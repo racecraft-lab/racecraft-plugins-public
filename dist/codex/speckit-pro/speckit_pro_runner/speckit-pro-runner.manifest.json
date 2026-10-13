@@ -687,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "a4bdc175d745d60e57d4beae86277fc87aa5058a93cb46259894448f2bcb46eb"
+      "sha256": "a52e9d475f649f66c2ad88999a11c314274659900aaf74293c72379e081746df"
     },
     {
       "path": {
@@ -775,7 +775,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "0b6514de69c83f7cb552db5dfa1927e7c3b49b0ceb448e8774f95bf477abf1c5"
+      "sha256": "b62538816f9984625a424ff2381d974631779d3c0b2b9620ae7732ab4792baf8"
     },
     {
       "path": {

@@ -928,9 +928,6 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "propose-quality-gates":
         return run_quality_gates_proposal_helper(entry, request)
 
-    if entry.helper_id == "finish-plan-stage":
-        return run_plan_stage_terminal_helper(entry, request, dispatch_helper)
-
     if entry.helper_id == "sweep-apply-result":
         return run_sweep_apply_result(entry, request)
 
@@ -943,8 +940,13 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     return run_mutation_helper(entry, request)
 
 
+def finish_plan_stage(entry: MutationEntry, request: Any) -> dict[str, Any]:
+    return run_plan_stage_terminal_helper(entry, request, dispatch_helper)
+
+
 # The one table that routes a PR-emission helper id to its handler.
 PR_EMISSION_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "finish-plan-stage": finish_plan_stage,
     "generate-pr-body": generate_pr_body,
     "generate-uat-skeleton": generate_uat_skeleton,
     "pr-packet-output": generate_pr_packet,
