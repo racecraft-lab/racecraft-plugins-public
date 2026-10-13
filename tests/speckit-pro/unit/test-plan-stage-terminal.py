@@ -223,6 +223,86 @@ class PullRequestTests(TerminalFixture):
         self.assertEqual(self.cli.gh, [])
 
 
+class CleanupBoundaryTests(TerminalFixture):
+    def test_external_artifacts_are_never_traversed_or_removed(self) -> None:
+        external = self.root.parent / "external"
+        external.mkdir()
+        shutil.copy(self.root / FEATURE / "plan.md", external / "plan.md")
+        artifacts = external / "artifacts"
+        artifacts.mkdir()
+        for name in ("implementation-plan.html", ".artifact-author-retained.tmp"):
+            (artifacts / name).write_text("external sentinel", encoding="utf-8")
+        feature = self.root / FEATURE
+        for variant in ("traversal", "absolute", "feature-link", "artifact-link"):
+            with self.subTest(variant=variant):
+                inputs = {}
+                if variant in {"traversal", "absolute"}:
+                    inputs["plan_file"] = "../external/plan.md" if variant == "traversal" else str(external / "plan.md")
+                elif variant == "feature-link":
+                    feature.rename(feature.with_name("saved-feature"))
+                    feature.symlink_to(external, target_is_directory=True)
+                else:
+                    (feature / "artifacts").symlink_to(artifacts, target_is_directory=True)
+                try:
+                    result = self.finish(until="pages", **inputs)
+                    self.assertNotEqual(result["status"], "ok", result)
+                    self.assertEqual({p.name: p.read_text() for p in artifacts.iterdir()},
+                                     {"implementation-plan.html": "external sentinel", ".artifact-author-retained.tmp": "external sentinel"})
+                    self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+                finally:
+                    if variant == "feature-link":
+                        feature.unlink()
+                        feature.with_name("saved-feature").rename(feature)
+                    elif variant == "artifact-link":
+                        (feature / "artifacts").unlink()
+
+    def test_directory_substitution_before_cleanup_preserves_external_files(self) -> None:
+        self.finish(until="pages")
+        artifacts = self.root / FEATURE / "artifacts"
+        external = self.root.parent / "external"
+        external.mkdir()
+        sentinel = external / "implementation-plan.html"
+        sentinel.write_text("external sentinel", encoding="utf-8")
+        (external / ".artifact-author-retained.tmp").write_text("retained", encoding="utf-8")
+        original = registry.dispatch_helper
+        swapped = False
+
+        def swap(request: envelope.RunnerRequest) -> dict:
+            nonlocal swapped
+            result = original(request)
+            if request.helper_id == "confidence-gate" and not swapped:
+                artifacts.rename(artifacts.with_name("saved-artifacts"))
+                artifacts.symlink_to(external, target_is_directory=True)
+                swapped = True
+            return result
+
+        with unittest.mock.patch.object(registry, "dispatch_helper", side_effect=swap):
+            self.assertNotEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(sentinel.read_text(), "external sentinel")
+        self.assertEqual((external / ".artifact-author-retained.tmp").read_text(), "retained")
+
+    def test_cleanup_retains_unowned_temporary_and_linked_entries(self) -> None:
+        self.finish(until="pages")
+        artifacts = self.root / FEATURE / "artifacts"
+        temporary = artifacts / ".artifact-author-retained.tmp"
+        temporary.write_text("retained", encoding="utf-8")
+        self.finish(until="pages")
+        self.assertEqual(temporary.read_text(), "retained")
+        external = self.root.parent / "external.html"
+        external.write_text("external sentinel", encoding="utf-8")
+        page = artifacts / "implementation-plan.html"
+        for link in ("symlink", "hardlink"):
+            with self.subTest(link=link):
+                page.unlink(missing_ok=True)
+                if link == "symlink":
+                    page.symlink_to(external)
+                else:
+                    os.link(external, page)
+                self.assertNotEqual(self.finish(until="pages")["status"], "ok")
+                self.assertEqual(external.read_text(), "external sentinel")
+                self.assertTrue(page.exists())
+
+
 class GuardTests(TerminalFixture):
     def test_a_blocked_gate_stops_before_generation_and_writes_nothing(self) -> None:
         path = self.root / WORKFLOW

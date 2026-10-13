@@ -178,11 +178,11 @@ def push(run: Run) -> None:
         raise Stop(reason, f"the branch push failed and no pull request was opened: {result['stderr_tail'][-200:]}")
 
 
-def discard(path: Path) -> None:
+def discard(run: Run, names: list[str]) -> None:
     try:
-        path.unlink()
+        artifact_publication.remove_pages(run.root, Path(run.feature), names)
     except OSError as error:
-        raise Stop("integrity_failure", f"an unowned artifact file could not be removed: {path.name}") from error
+        raise Stop("integrity_failure", "artifact cleanup refused an unsafe directory or page") from error
 
 
 def recorded_pages_current(run: Run) -> bool:
@@ -205,39 +205,33 @@ def fill_page(run: Run, page_id: str, directory: Path) -> str | None:
         filled = call(run, "fill-artifact-page", "apply", {**run.planning, "entry_id": page_id})
         if filled["status"] != "ok":
             return str(filled["diagnostics"][0]["message"])
-    if is_sample(page_id, path.read_bytes()):
-        discard(path)
+    content = trusted_bytes(path, run.root)
+    if content is None or path.stat().st_nlink != 1:
+        raise Stop("integrity_failure", f"the page {page_id} is not a confined regular file")
+    if is_sample(page_id, content):
+        discard(run, [path.name])
         return "the page is still the sample template"
     return None
 
 
-def sweep_unowned(run: Run, directory: Path, owned: list[str]) -> None:
-    for stale in directory.iterdir() if directory.is_dir() else []:
-        author_temp = stale.name.startswith(".artifact-author-") and stale.suffix == ".tmp"
-        if author_temp or (stale.suffix == ".html" and stale.stem in run.gallery and stale.stem not in owned):
-            discard(stale)
-
-
 def fill_pages(run: Run, fresh: bool) -> dict[str, Any]:
-    """Fill the selected pages, keep the author's prose on pages already on disk, and delete every unowned page.
-
-    `fresh` starts a run: pages whose recorded inputs have since changed are deleted and refilled.
-    """
-    directory = run.root / run.feature / "artifacts"
-    if fresh and not recorded_pages_current(run):
-        for stale in directory.iterdir() if directory.is_dir() else []:
-            if stale.stem in run.gallery:
-                discard(stale)
+    """Select before touching pages; every removal belongs to the confined publication owner."""
     selection = call(run, "select-artifact-pages", "read_only",
                      {name: path for name, path in run.planning.items() if name in artifact_publication.SELECTION_INPUTS})
-    selected = selection["data"].get("selected_pages", [])
-    gaps = [] if selection["status"] == "ok" else [{"id": "all", "reason": selection["diagnostics"][0]["message"]}]
+    if selection["status"] != "ok":
+        raise Stop("integrity_failure", str(selection["diagnostics"][0]["message"]))
+    selected = selection["data"]["selected_pages"]
+    directory = run.root / run.feature / "artifacts"
+    if fresh and not recorded_pages_current(run) and directory.exists():
+        discard(run, [f"{page_id}.html" for page_id in run.gallery])
+    gaps = []
     for page_id in selected:
         reason = fill_page(run, page_id, directory)
         if reason is not None:
             gaps.append({"id": page_id, "reason": reason})
     owned = [page_id for page_id in selected if page_id not in {gap["id"] for gap in gaps}]
-    sweep_unowned(run, directory, owned)
+    if directory.exists():
+        discard(run, [f"{page_id}.html" for page_id in run.gallery if page_id not in owned])
     return {"generated": owned, "gaps": gaps, "selected": selected}
 
 
