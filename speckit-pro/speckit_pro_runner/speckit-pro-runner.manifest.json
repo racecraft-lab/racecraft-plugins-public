@@ -543,7 +543,7 @@
         "value": "speckit_pro_runner/helpers/artifact_publication.py",
         "display": "speckit_pro_runner/helpers/artifact_publication.py"
       },
-      "sha256": "cff2eb63be6d2e0b31e8e408cae5ef601e6a0eae268c043a877c8a6e21456d8b"
+      "sha256": "13ebc69a2846f11636c07ec926a236b8e53b9ff6ccf5bfb7cdec0fe70fdfd6ef"
     },
     {
       "path": {
@@ -703,7 +703,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "5ba2df45d445f9939e6b87af8d9befd2101f419c047396d72707465d498cd953"
+      "sha256": "c27289f5942e6a81349b4803f056b62327ab4f5c37b3daf45258430fbac72e30"
     },
     {
       "path": {
