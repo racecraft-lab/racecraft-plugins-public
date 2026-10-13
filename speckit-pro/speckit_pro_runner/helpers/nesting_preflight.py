@@ -32,7 +32,7 @@ PREREQUISITES = {
 
 def configured_depth(raw: Any) -> int | None:
     """Record a sane depth for the receipt; a bad value is dropped, never an error."""
-    return raw if isinstance(raw, int) and not isinstance(raw, bool) and raw >= 0 else None
+    return raw if type(raw) is int and raw >= 0 else None  # an exact int, so bool is out
 
 
 def nesting_mode(inputs: dict[str, Any]) -> dict[str, Any]:

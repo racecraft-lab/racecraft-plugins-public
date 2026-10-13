@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import itertools
 import json
 import sys
 import unittest
@@ -35,19 +36,12 @@ def resolve(**inputs: object) -> dict:
 
 
 class ModeDecisionTests(unittest.TestCase):
-    def test_a_backend_that_allows_the_nested_spawn_yields_nested(self) -> None:
-        for host in ("claude-code", "codex"):
-            with self.subTest(host=host):
-                data = resolve(host=host, nested_spawn="allowed")
-                self.assertEqual(("nested", "nested_spawn_allowed"), (data["mode"], data["reason"]))
-                self.assertIsNone(data["prerequisite"])
-
-    def test_a_backend_that_refuses_the_nested_spawn_yields_flat(self) -> None:
-        for host in ("claude-code", "codex"):
-            with self.subTest(host=host):
-                data = resolve(host=host, nested_spawn="refused")
-                self.assertEqual(("flat", "nested_spawn_refused"), (data["mode"], data["reason"]))
-                self.assertTrue(data["prerequisite"])
+    def test_the_observed_spawn_picks_the_mode_on_each_host(self) -> None:
+        expected = {"allowed": ("nested", "nested_spawn_allowed", False), "refused": ("flat", "nested_spawn_refused", True)}
+        for host, (outcome, (mode, reason, has_prerequisite)) in itertools.product(("claude-code", "codex"), expected.items()):
+            with self.subTest(host=host, outcome=outcome):
+                data = resolve(host=host, nested_spawn=outcome)
+                self.assertEqual((mode, reason, has_prerequisite), (data["mode"], data["reason"], bool(data["prerequisite"])))
 
     def test_a_configured_depth_alone_decides_neither_mode(self) -> None:
         for host, depth in (("claude-code", 3), ("claude-code", 1), ("codex", 2), ("codex", 0)):
@@ -125,14 +119,10 @@ class SkillContractTests(unittest.TestCase):
             text = (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")
             with self.subTest(host=host):
                 self.assertIn("helper_id=resolve-nesting-mode", text)
+                prerequisites = (host_skill_root(host) / "speckit-autopilot" / "references" / "prerequisites.md").read_text(encoding="utf-8")
+                self.assertIn("resolve-nesting-mode", prerequisites)
                 self.assertLess(text.index("## Step 1.5: Nesting Preflight"), text.index("## Step 2: Main Execution Loop"))
                 self.assertIn("`data.prerequisite` once", text)
-
-    def test_prerequisites_point_at_the_helper_for_the_setting_to_change(self) -> None:
-        for host in ("claude", "codex"):
-            text = (host_skill_root(host) / "speckit-autopilot" / "references" / "prerequisites.md").read_text(encoding="utf-8")
-            with self.subTest(host=host):
-                self.assertIn("resolve-nesting-mode", text)
 
 
 if __name__ == "__main__":
