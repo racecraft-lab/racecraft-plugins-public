@@ -1255,7 +1255,8 @@ for Clarify, Checklist and Analyze, and is null for Specify, Plan and Tasks.
 Never dispatch an inner executor or a consensus agent from the root in this mode.
 
 Spawn `brief.agent` once per phase with `spawn_agent` and `brief.model`, and wait
-with `wait_agent` using `brief.wait.codex.timeout_ms`.
+with `wait_agent` using `brief.wait.codex.timeout_ms`. For Specify, Plan and
+Tasks, begin the message with `$` plus `brief.inputs.skill`, as Step 2 does.
 The prompt holds `Mode: nested`, `Phase: <phase>`, the brief, the
 per-dispatch context lines of Step 2, the host's wave limit, and for Tasks
 `brief.inputs` unchanged. The driver runs the phase's skill or executors, the
@@ -1274,6 +1275,10 @@ with inputs `envelope` (the driver's object, unchanged), `workflow_file` and
 including an unparseable envelope, never advance: handle it as a failed gate
 under the existing repair and escalation policy, with a fresh driver if the
 phase is retried.
+
+After Checklist passes, run `validate-gate` G4 (read_only) and retain its
+complete `judged` map and `feature_identity`: the Tasks brief needs them as
+Step 2 states, and the driver's envelope carries neither.
 
 After a pass, handle optional `after_<phase>` hooks as Step 2 states. The
 root holds no Tasks binding and never publishes again, since a second

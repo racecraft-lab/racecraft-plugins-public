@@ -112,7 +112,7 @@ def nested_section(host: str) -> str:
 
 
 # What the root must say in nested mode, and what each host's section must leave out.
-ROOT_RULES = ("mode=nested", "brief.agent", "reads only the envelope", "never reads a planning artifact",
+ROOT_RULES = ("validate-gate` G4", "`feature_identity`", "mode=nested", "brief.agent", "reads only the envelope", "never reads a planning artifact",
               "helper_id=verify-phase-envelope", "data.advance", "never advance")
 HOST_TOOLS = {"claude": ("`Agent`", "spawn_agent"), "codex": ("spawn_agent", "`Agent`")}
 
@@ -122,7 +122,7 @@ class SkillContractTests(unittest.TestCase):
         for host, (own_tool, other_tool) in HOST_TOOLS.items():
             section = nested_section(host)
             with self.subTest(host=host):
-                for needle in (*ROOT_RULES, own_tool):
+                for needle in (*ROOT_RULES, own_tool, *(("`$` plus `brief.inputs.skill`",) if host == "codex" else ())):
                     self.assertIn(needle, section)
                 self.assertNotIn(other_tool, section)
 

@@ -1138,6 +1138,10 @@ including an unparseable envelope, never advance: handle it as a failed gate
 under the existing repair and escalation policy, with a fresh driver if the
 phase is retried.
 
+After Checklist passes, run `validate-gate` G4 (read_only) and retain its
+complete `judged` map and `feature_identity`: the Tasks brief needs them as
+Step 2 states, and the driver's envelope carries neither.
+
 After a pass, handle optional `after_<phase>` hooks as Step 2 states. The
 root holds no Tasks binding and never publishes again, since a second
 publication would overwrite tasks.md with the snapshot bytes. So it skips
