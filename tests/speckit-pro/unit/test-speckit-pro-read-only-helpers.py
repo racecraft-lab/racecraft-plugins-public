@@ -5475,7 +5475,7 @@ class CanaryReceiptTests(unittest.TestCase):
             with self.subTest(number=str(number)), tempfile.TemporaryDirectory() as directory:
                 source = Path(directory) / "receipt.json"
                 source.write_text(json.dumps(value), encoding="utf-8")
-                completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+                completed = run_canary_cli([self.validator.__file__, str(source)],
                                            capture_output=True, text=True, check=False)
                 self.assertEqual(1, completed.returncode, completed.stdout)
                 report = self.validator.receipt_report(value)
@@ -5544,7 +5544,7 @@ class CanaryRootLoadCase(CanaryVariantCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "receipt.json"
             source.write_text(json.dumps(value), encoding="utf-8")
-            completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+            completed = run_canary_cli([self.validator.__file__, str(source)],
                                        capture_output=True, text=True, check=False)
             self.assertEqual(1, completed.returncode, completed.stdout)
             self.assertFalse(json.loads(completed.stdout)["valid"])
@@ -5656,7 +5656,7 @@ class CanaryRootLoadConsistencyCase(CanaryRootLoadCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "receipt.json"
             source.write_text(json.dumps(value), encoding="utf-8")
-            completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+            completed = run_canary_cli([self.validator.__file__, str(source)],
                                        capture_output=True, text=True, check=False)
             self.assertEqual(int(failure is not None), completed.returncode, completed.stdout + completed.stderr)
             cli_report = json.loads(completed.stdout)
@@ -5842,7 +5842,7 @@ class CanaryGateVerdictTests(CanaryVariantCase):
                 self.assertEqual([], self.validator.validate_receipt(value))
                 source = Path(directory) / "receipt.json"
                 source.write_text(json.dumps(value), encoding="utf-8")
-                completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+                completed = run_canary_cli([self.validator.__file__, str(source)],
                                            capture_output=True, text=True, check=False)
                 report = json.loads(completed.stdout)
                 self.assertEqual((0, True, []), (completed.returncode, report["valid"], report["failed_assertions"]))
@@ -5947,7 +5947,7 @@ class CanaryVariantContractTests(CanaryVariantCase):
                 self.assertEqual(["missing_question_guard.question_guard"], self.validator.validate_receipt(value))
                 source = Path(directory) / "receipt.json"
                 source.write_text(json.dumps(value), encoding="utf-8")
-                completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+                completed = run_canary_cli([self.validator.__file__, str(source)],
                                            capture_output=True, text=True, check=False)
                 report = json.loads(completed.stdout)
                 self.assertEqual((1, False, ["missing_question_guard.question_guard"]),
@@ -6001,7 +6001,7 @@ class CanaryPlanTargetTests(CanaryVariantCase):
             with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
                 source = Path(directory) / "receipt.json"
                 source.write_text(json.dumps(value), encoding="utf-8")
-                completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+                completed = run_canary_cli([self.validator.__file__, str(source)],
                                            capture_output=True, text=True, check=False)
                 report = json.loads(completed.stdout)
                 self.assertEqual(0, completed.returncode, report)
@@ -6037,7 +6037,7 @@ class CanaryPlanTargetContractTests(CanaryVariantCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "receipt.json"
             source.write_text(json.dumps(value), encoding="utf-8")
-            completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+            completed = run_canary_cli([self.validator.__file__, str(source)],
                                        capture_output=True, text=True, check=False)
         self.assertEqual(1, completed.returncode, completed.stdout)
         for seam, report in (("api", self.validator.receipt_report(value)),
@@ -6157,7 +6157,7 @@ class CanaryTargetValidityCase(CanaryVariantCase):
         limits = self.validator.load_budget() if limits is None else limits
         source, companion = self.root / "receipt.json", self.root / "hooks.json"
         source.write_text(json.dumps(value), encoding="utf-8")
-        argv = [sys.executable, str(self.cli), str(source)]
+        argv = [str(self.cli), str(source)]
         if counters is not self.validator.MISSING_HOOK_COUNTERS:
             companion.write_text(json.dumps(counters), encoding="utf-8")
             argv.extend(["--hook-counters", str(companion)])
@@ -6299,7 +6299,7 @@ class CanaryReceiptTargetValidityTests(CanaryTargetValidityCase):
                     source.unlink()
                 else:
                     source.write_bytes(body)
-                completed = run_canary_cli([sys.executable, str(self.cli), str(source)],
+                completed = run_canary_cli([str(self.cli), str(source)],
                                            env={**os.environ, "PYTHONPATH": str(PLUGIN_ROOT)},
                                            capture_output=True, text=True, check=False)
                 report = json.loads(completed.stdout)
@@ -6421,7 +6421,7 @@ class CanaryVariantIdentityTests(CanaryTargetValidityCase):
                     continue  # claude-code stages carry no codex token keys
                 with self.subTest(host=host, key=key):
                     source.write_text(text.replace(marker, f"{marker}{json.dumps(other)}, {marker}", 1), encoding="utf-8")
-                    completed = run_canary_cli([sys.executable, str(self.cli), str(source)],
+                    completed = run_canary_cli([str(self.cli), str(source)],
                                                env={**os.environ, "PYTHONPATH": str(PLUGIN_ROOT)},
                                                capture_output=True, text=True, check=False)
                     report = json.loads(completed.stdout)
@@ -6474,7 +6474,7 @@ class CanaryBudgetTests(CanaryBudgetCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "receipt.json"
             source.write_text(json.dumps(receipt()), encoding="utf-8")
-            completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+            completed = run_canary_cli([self.validator.__file__, str(source)],
                                        capture_output=True, text=True, check=False)
         output = json.loads(completed.stdout)
         self.assertEqual((0, True), (completed.returncode, output["valid"]), completed.stdout)
@@ -6670,7 +6670,7 @@ class CanaryHookCounterTests(CanaryVariantCase):
                 source, companion = Path(directory) / "receipt.json", Path(directory) / "hook-counters-receipt.json"
                 source.write_text(json.dumps(value), encoding="utf-8")
                 companion.write_text(json.dumps(counters), encoding="utf-8")
-                completed = run_canary_cli([sys.executable, self.validator.__file__, str(source),
+                completed = run_canary_cli([self.validator.__file__, str(source),
                                             "--hook-counters", str(companion)],
                                            capture_output=True, text=True, check=False)
                 self.assertEqual(expected, completed.returncode, completed.stdout)
@@ -6748,7 +6748,7 @@ class CanaryCatchInputTests(CanaryVariantCase):
                 self.assertLess(len(json.dumps(report)), 256)
                 source = Path(directory) / "receipt.json"
                 source.write_text(json.dumps(value), encoding="utf-8")
-                completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+                completed = run_canary_cli([self.validator.__file__, str(source)],
                                            capture_output=True, text=True, check=False)
                 self.assertLess(source.stat().st_size, 1024 * 1024)
                 self.assertEqual(1, completed.returncode)
@@ -6769,7 +6769,7 @@ class CanaryCatchInputTests(CanaryVariantCase):
                     self.assertLess(len(json.dumps(report)), 256)
                     source = Path(directory) / "receipt.json"
                     source.write_text(json.dumps(value), encoding="utf-8")
-                    completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+                    completed = run_canary_cli([self.validator.__file__, str(source)],
                                                capture_output=True, text=True, check=False)
                     self.assertEqual(1, completed.returncode)
                     self.assertEqual(report, json.loads(completed.stdout))
@@ -6808,7 +6808,7 @@ class CanaryReceiptOutputTests(CanaryVariantCase):
                     json.dumps(report, allow_nan=False)
                     source = Path(directory) / "receipt.json"
                     source.write_text(body, encoding="utf-8")
-                    completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+                    completed = run_canary_cli([self.validator.__file__, str(source)],
                                                capture_output=True, text=True, check=False)
                     self.assertEqual(1, completed.returncode, completed.stdout)
                     output = json.loads(completed.stdout, parse_constant=self.validator.reject_nonfinite)
@@ -6861,7 +6861,7 @@ class CanaryReceiptInputTests(CanaryVariantCase):
             for payload, valid, failures in cases:
                 source.write_bytes(payload)
                 with self.subTest(size=len(payload), valid=valid):
-                    completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+                    completed = run_canary_cli([self.validator.__file__, str(source)],
                                                capture_output=True, text=True, check=False)
                     self.assertEqual("", completed.stderr)
                     report = json.loads(completed.stdout)
@@ -6878,7 +6878,7 @@ class CanaryReceiptInputTests(CanaryVariantCase):
             counters = Path(directory) / "counters.json"
             source.write_text(json.dumps(self.receipts["codex"]), encoding="utf-8")
             counters.write_bytes(b"!" * (1024 * 1024 + 1))
-            completed = run_canary_cli([sys.executable, self.validator.__file__, str(source), "--hook-counters", str(counters)],
+            completed = run_canary_cli([self.validator.__file__, str(source), "--hook-counters", str(counters)],
                                        capture_output=True, text=True, check=False)
             self.assertEqual(1, completed.returncode)
             self.assertEqual(["input.byte_limit: 1048576"], json.loads(completed.stdout)["failed_assertions"])
@@ -6895,7 +6895,7 @@ class CanaryReceiptInputTests(CanaryVariantCase):
                 if payload is not None:
                     source.write_bytes(payload)
                 with self.subTest(payload=payload is not None):
-                    completed = run_canary_cli([sys.executable, self.validator.__file__, str(source)],
+                    completed = run_canary_cli([self.validator.__file__, str(source)],
                                                capture_output=True, text=True, check=False)
                     self.assertEqual(1, completed.returncode)
                     self.assertEqual("", completed.stderr)
@@ -6912,7 +6912,7 @@ class CanaryCliTerminationTests(unittest.TestCase):
         previous = os.dup(0)
         try:
             os.dup2(read_fd, 0)
-            result = run_canary_cli([sys.executable, "-c", "import sys; print(sys.stdin.read())"],
+            result = run_canary_cli(["-c", "import sys; print(sys.stdin.read())"],
                                     capture_output=True, text=True, check=False)
             self.assertEqual((result.returncode, result.stdout), (0, "\n"))
         finally:
@@ -6922,13 +6922,13 @@ class CanaryCliTerminationTests(unittest.TestCase):
 
     def test_a_nonreturning_cli_has_a_bounded_wait(self):
         with self.assertRaises(subprocess.TimeoutExpired):
-            run_canary_cli([sys.executable, "-c", "import time; time.sleep(30)"],
+            run_canary_cli(["-c", "import time; time.sleep(30)"],
                            capture_output=True, text=True, check=False)
 
 
-def run_canary_cli(argv, **kwargs):
+def run_canary_cli(arguments, **kwargs):
     """Run the receipt CLI used by both hosts and every canary variant."""
-    return subprocess.run(argv, stdin=subprocess.DEVNULL, timeout=5, **kwargs)
+    return subprocess.run([sys.executable, *arguments], stdin=subprocess.DEVNULL, timeout=5, **kwargs)
 
 
 def main() -> int:
