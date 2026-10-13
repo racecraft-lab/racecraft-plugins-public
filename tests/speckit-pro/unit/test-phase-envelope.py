@@ -140,6 +140,9 @@ class EnvelopeAssertions(unittest.TestCase):
         result = verify_empty_path(name, [f"{FEATURE}/{name}"], directory=directory)
         self.assertEqual(mismatch(result), "artifact_missing")
 
+    def assert_project_mismatch(self, envelope, code, **project_inputs):
+        self.assert_mismatch(verify_project(envelope, **project_inputs), code)
+
 
 class SourceEvidenceTests(EnvelopeAssertions):
     def test_an_analyze_pass_over_absent_planning_files_fails(self):
@@ -253,8 +256,7 @@ class GateVerificationTests(EnvelopeAssertions):
         self.assertIn("G1", result["data"]["mismatch"]["detail"])
 
     def test_a_claimed_failure_over_passing_disk_evidence_is_also_a_mismatch(self):
-        envelope = failed_gate_envelope(status="fail", blocker="G1 failed")
-        self.assert_mismatch(verify_project(envelope), "gate_claim_mismatch")
+        self.assert_project_mismatch(failed_gate_envelope(status="fail", blocker="G1 failed"), "gate_claim_mismatch")
 
     def test_unparseable_gate_evidence_fails_and_never_passes(self):
         garbage = {"stdout": "not json", "stderr": "", "exit_code": 0}
@@ -273,13 +275,11 @@ class GateVerificationTests(EnvelopeAssertions):
         self.assert_mismatch(result, "gate_evidence_unparseable")
 
     def test_the_phase_gate_must_be_claimed(self):
-        result = verify_project(good_envelope(phase="Plan", artifacts=[f"{FEATURE}/spec.md"]))
-        self.assertEqual(mismatch(result), "phase_gate_missing")
+        self.assert_project_mismatch(good_envelope(phase="Plan", artifacts=[f"{FEATURE}/spec.md"]), "phase_gate_missing")
 
     def test_a_pass_status_cannot_carry_a_failed_gate(self):
-        envelope = failed_gate_envelope(counts={})
-        result = verify_project(envelope, spec_text="[NEEDS CLARIFICATION: x]\n")
-        self.assertEqual(mismatch(result), "status_contradicts_gates")
+        self.assert_project_mismatch(failed_gate_envelope(counts={}), "status_contradicts_gates",
+                                     spec_text="[NEEDS CLARIFICATION: x]\n")
 
 
 class ResultVerificationTests(EnvelopeAssertions):
