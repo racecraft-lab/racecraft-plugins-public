@@ -528,7 +528,7 @@ class CleanupBoundaryTests(TerminalFixture):
                 self.assertTrue(page.exists())
 
 
-class GuardTests(TerminalFixture):
+class ConfidenceRecoveryTests(TerminalFixture):
     def test_real_mode_spellings_and_configured_threshold_reach_the_gate(self) -> None:
         path = self.root / WORKFLOW
         original = path.read_text()
@@ -560,6 +560,8 @@ class GuardTests(TerminalFixture):
         self.assertIn("rerun Analyze", no_data)
         self.assertNotIn("Advance to Phase 7", no_data)
 
+
+class GuardTests(TerminalFixture):
     def test_a_blocked_gate_stops_before_generation_and_writes_nothing(self) -> None:
         path = self.root / WORKFLOW
         path.write_text(path.read_text(encoding="utf-8").replace("| Confidence Gate | G6.5 | ✅ Complete", "| Confidence Gate | G6.5 | ⚠️ Blocked"),
