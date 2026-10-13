@@ -230,6 +230,26 @@ def publish(root: Path, feature: Path, name: str, content: bytes) -> None:
         os.close(directory)
 
 
+def remove_pages(root: Path, feature: Path, names: list[str]) -> None:
+    """Delete only named regular pages through a held, confined artifact directory."""
+    directory = open_artifacts(root, feature, create=False)
+    if directory is None:
+        raise PublicationRefused("the artifact directory cannot be opened without following links")
+    try:
+        for name in names:
+            if not re.fullmatch(r"[a-z0-9-]+\.html", name):
+                raise PublicationRefused("cleanup requires a direct gallery page name")
+            try:
+                owned = os.stat(name, dir_fd=directory, follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            if not still_bound(directory, root, feature) or not owned_entry(directory, name, owned):
+                raise PublicationRefused("cleanup refused an unbound or linked artifact")
+            withdraw(directory, name, owned)
+    finally:
+        os.close(directory)
+
+
 def publication_failure(error: OSError | NotImplementedError, request_id: str | None,
                         data: dict[str, Any]) -> dict[str, Any]:
     """Decide the page outcome from verified recovery evidence, before guidance relays it."""

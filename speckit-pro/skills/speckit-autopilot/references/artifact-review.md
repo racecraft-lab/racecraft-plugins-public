@@ -7,10 +7,11 @@ rendered delivery, human approval, and UAT are separate facts.
 
 ## Durable record
 
-After validating generation and before the boundary commit, write one top-level
-`## Artifact Review Handoff` section with one `json` fence in the workflow file.
-It is the sole store: no state-file mirror and no second copy of the `Draft PR`
-identity. The scaffold does not write an empty placeholder. Use this exact shape:
+The `finish-plan-stage` helper validates generation and, before the boundary
+commit, writes one top-level `## Artifact Review Handoff` section with one `json`
+fence in the workflow file. It is the sole store: no state-file mirror and no
+second copy of the `Draft PR` identity. The scaffold does not write an empty
+placeholder. The helper writes this exact shape, and the resolver reads it:
 
 ```json
 {
@@ -37,25 +38,24 @@ identity. The scaffold does not write an empty placeholder. Use this exact shape
 }
 ```
 
-Expand `pages` to the complete selected outcome list, including always-selected
-entries. A gap has only `id`, `generation: "gap"`, and `reason`; it has no
-preview. Every selected ID has a `template_hashes` entry; `null` means that
-template was absent, never that its hash was not checked. A whole-set
+The helper expands `pages` to the complete selected outcome list, including
+always-selected entries. A gap has only `id`, `generation: "gap"`, and `reason`;
+it has no preview. Every selected ID has a `template_hashes` entry; `null` means
+that template was absent, never that its hash was not checked. A whole-set
 generation failure has empty `pages` and `template_hashes` and a nonempty
-`generation_error`.
-Keep planned/missing-template gaps separate from preview failures.
+`generation_error`. Planned or missing-template gaps stay separate from preview
+failures.
 
-Compute hashes from bytes; never invent receipts. Include the design-concept
-path supplied to the author even when absent (`null`), so its later creation
-invalidates reuse. Omit that entry only when no design-concept input was supplied.
-Do not fingerprint workflow bookkeeping or output evidence as generation inputs.
-Record project paths relative to canonical `WORKFLOW_ROOT`; gallery hashes refer
-to the active runner's shipped gallery, which must be the one the author used.
-Derive expected content from the actual validated page and check it against the
-feature's planning record. A title repeated as body content is insufficient.
+The helper computes every hash from bytes and takes the expected title and feature
+body content from the validated page, never from the title alone. It includes the
+design-concept path supplied as an input even when the file is absent (`null`), so
+its later creation invalidates reuse, and it fingerprints no workflow bookkeeping
+or output evidence. Project paths are relative to canonical `WORKFLOW_ROOT`;
+gallery hashes refer to the active runner's shipped gallery.
 
-Run `resolve-autopilot-stage` to validate the record, with the same `inputs.host` as Step 0.6c,
-so the runner reads that host's readiness record for the preview surface. Its optional
+`resolve-autopilot-stage` validates the record on a later run, with the same `inputs.host` as Step 0.6c,
+so the runner reads that host's readiness record for the preview surface. The helper's answer carries the
+same facts for the run that wrote it: `preview.status`, `preview.note` and `preview.observer_dispatches`. Its optional
 `artifact_review` result reports `status`, `resume_action`, `reuse_artifacts`,
 counts, per-page dispositions, generation gaps, `observer_dispatches` (the pages
 that each need one observer) and, when the readiness record shows no preview

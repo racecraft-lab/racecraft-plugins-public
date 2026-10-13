@@ -9,9 +9,10 @@ escapes and wraps in markup. Publication stays with artifact_publication.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import re
 from collections.abc import Callable, Iterable
-from html import escape
+from html import escape, unescape
 from pathlib import Path
 from typing import Any
 
@@ -115,7 +116,7 @@ class Page:
         """One prose slot: the narrative text when written, else the lifted fallback."""
         self.slots[slot] = fallback or NOT_RECORDED
         attribute = f' class="{css}"' if css else ""
-        return f"<p{attribute}>{escaped(self.narrative.get(slot, self.slots[slot]))}</p>"
+        return f'<p{attribute} data-prose-slot="{slot}">{escaped(self.narrative.get(slot, self.slots[slot]))}</p>'
 
     def anchor(self, prefix: str, label: str) -> str:
         base = f"{prefix}-{re.sub(r'[^a-z0-9]+', '-', label.lower()).strip('-') or 'item'}"
@@ -294,6 +295,39 @@ def render(page: Page, entry_id: str) -> str:
     return filled
 
 
+def html_text(markup: str) -> str:
+    """Visible text, including escaped planning characters, normalized for evidence."""
+    visible = unescape(re.sub(r"<[^>]+>", "", markup))
+    return re.sub(r"\s+", " ", visible).strip()
+
+
+def planning_markup(content: str, prose_slots: Iterable[str]) -> dict[str, str]:
+    """Bind every fill to planning bytes except its marked narrative text.
+
+    Narrative is plain escaped text, not arbitrary HTML. Keeping every tag and
+    attribute prevents authored prose from concealing other planning regions.
+    The trusted template's static skeleton is checked by artifact_review.
+    """
+    prose = set(prose_slots)
+    return {slot: hashlib.sha256((re.sub(
+                rf'(<p\b[^>]* data-prose-slot="{re.escape(slot)}"[^>]*>)[^<>]*(</p>)', r"\1\2", fill, count=1)
+                if slot in prose else fill).encode()).hexdigest()
+            for slot, fill in artifact_publication.REGION.findall(content)}
+
+
+def generation_evidence(content: str, prose_slots: dict[str, str]) -> dict[str, Any]:
+    """Lift evidence from the deterministic planning render, excluding editable prose and breadcrumbs."""
+    title = re.search(r"<title>(.*?)</title>", content, re.DOTALL)
+    expected_title = html_text(title[1]) if title else ""
+    passages = (html_text(passage)
+                for slot, fill in artifact_publication.REGION.findall(content)
+                if slot not in {*prose_slots, "document-title", "feature-header", "plan-stats"}
+                for passage in re.findall(r"<(?:p|dd|li|h[1-6])\b[^>]*>(.*?)</(?:p|dd|li|h[1-6])>", fill, re.DOTALL))
+    body = next((text for text in passages if len(text) >= 12 and text not in expected_title and text != NOT_RECORDED), "")
+    return {"expected_title": expected_title, "expected_content": body,
+            "planning_markup": planning_markup(content, prose_slots)}
+
+
 def run_artifact_fill_helper(entry: Any, request: Any) -> dict[str, Any]:
     root = resolve_repo_root(request.inputs)
     if isinstance(root, dict):
@@ -321,6 +355,7 @@ def run_artifact_fill_helper(entry: Any, request: Any) -> dict[str, Any]:
     published = artifact_publication.run_artifact_publication_helper(entry, dataclasses.replace(
         request, inputs={**selection, "entry_id": entry_id, "content": content}))
     if published["data"]:
+        published["data"].update(generation_evidence(content, page.slots))
         published["data"]["narrative_slots"] = [{"slot": slot, "guidance": page.guidance.get(slot, ""),
                                                  "fallback": fallback} for slot, fallback in page.slots.items()]
     return published

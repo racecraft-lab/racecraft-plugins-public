@@ -524,10 +524,12 @@ disagreement is named in `reason`.
    Do not treat advisory FAIL or NO_DATA as invalid input.
    Then route the domain verdict:
    - exit 0 (PASS, composite ≥ threshold) → proceed to G7 / Phase 7
-   - exit 1 (NO_DATA, no synthesizer emit found) → soft-skip:
-        log a warning and proceed. NO_DATA usually indicates a
-        synthesizer-prompt regression worth reporting to the
-        plugin author.
+   - exit 1 (NO_DATA, no synthesizer emit found) → stop at G6.5:
+        log a warning, keep the plan stage in progress, rerun Analyze
+        to obtain the confidence emit, then retry G6.5. NO_DATA is
+        not a pass or warning, so `finish-plan-stage` refuses it.
+        NO_DATA usually indicates a synthesizer-prompt regression
+        worth reporting to the plugin author.
    - exit 2 (FAIL, composite < threshold):
         - advisory mode (default): log the breakdown, surface
           the lowest-scoring criterion, proceed to Phase 7

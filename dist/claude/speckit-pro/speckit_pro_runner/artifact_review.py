@@ -296,7 +296,7 @@ def _inputs(inputs: Any, feature: str) -> None:
         raise ValueError("artifact review must fingerprint spec, plan, and tasks")
     for path, digest in inputs.items():
         _relative(path)
-        if path not in required and not re.fullmatch(r"docs/ai/specs/\.process/[^/]+-design-concept\.md", path):
+        if path not in required | {f"{feature}/research.md"} and not re.fullmatch(r"docs/ai/specs/\.process/[^/]+-design-concept\.md", path):
             raise ValueError("artifact review input is not a planning input")
         _hash(digest, f"input {path}", optional=path not in required)
 
@@ -341,6 +341,12 @@ def _inputs_current(record: dict[str, Any], root: Path, read_file: FileReader) -
     for identifier, digest in record["template_hashes"].items():
         inputs.append(_current_hash(GALLERY, f"templates/{identifier}.html", read_file) == digest)
     return all(inputs)
+
+
+def generation_inputs_current(text: str, root: Path, read_file: FileReader) -> bool:
+    """Check generation inputs independently of a narrative edit to the page bytes."""
+    value = record_from_workflow(text)
+    return value is not None and _inputs_current(_record(value), root, read_file)
 
 
 def _selection(record: dict[str, Any], read_file: FileReader) -> None:

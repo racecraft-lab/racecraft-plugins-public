@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-finish-plan-stage",
+  "helper_id": "finish-plan-stage",
+  "operation": "finish-plan-stage",
+  "mode": "dry_run",
+  "inputs": {
+    "host": "claude",
+    "workflow_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/workflow.md",
+    "plan_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/plan.md",
+    "spec_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/spec.md",
+    "tasks_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/tasks.md"
+  }
+}
