@@ -67,7 +67,10 @@ class TerminalFixture(unittest.TestCase):
             shutil.copy(SOURCE / name, self.root / FEATURE / name)
         (self.root / CONCEPT).parent.mkdir(parents=True)
         shutil.copy(SOURCE / "design-concept.md", self.root / CONCEPT)
-        shutil.copy(SOURCE / "workflow.md", self.root / WORKFLOW)
+        workflow = (SOURCE / "workflow.md").read_text(encoding="utf-8")
+        workflow = re.sub(r"(\| (?:Specify|Clarify|Plan|Checklist|Tasks|Analyze|Confidence Gate) \|[^\n]*?\| )⏳ Pending", r"\1✅ Complete", workflow)
+        workflow = workflow.replace("| Mode | <!-- advisory (default) or strict --> |", "| Mode | advisory |")
+        (self.root / WORKFLOW).write_text(workflow + "\n📊 Confidence: 0.94\n", encoding="utf-8")
         (self.root / STATE).write_text(json.dumps({"stage": "plan", "status": "in_progress", "plan": []}), encoding="utf-8")
         git(self.root, "init", "-q", "-b", "art-007-draft-pr-emission")
         commit_baseline(self.root, "seed")
@@ -223,13 +226,48 @@ class PullRequestTests(TerminalFixture):
 class GuardTests(TerminalFixture):
     def test_a_blocked_gate_stops_before_generation_and_writes_nothing(self) -> None:
         path = self.root / WORKFLOW
-        path.write_text(path.read_text(encoding="utf-8").replace("| Confidence Gate | G6.5 | ⏳ Pending", "| Confidence Gate | G6.5 | ⚠️ Blocked"),
+        path.write_text(path.read_text(encoding="utf-8").replace("| Confidence Gate | G6.5 | ✅ Complete", "| Confidence Gate | G6.5 | ⚠️ Blocked"),
                         encoding="utf-8")
         self.git("commit", "-q", "-am", "blocked")
         result = self.finish(execution_mode="headless")
         self.assertEqual(result["data"]["stop_label"], "stop_reason:strict_confidence_opt_in")
         self.assertFalse((self.root / FEATURE / "artifacts").exists())
         self.assertEqual((self.subjects(), self.cli.gh), (["blocked"], []))
+
+    def test_unfinished_or_unresolved_planning_never_mutates(self) -> None:
+        path = self.root / WORKFLOW
+        original = path.read_text(encoding="utf-8")
+        variants = [("Confidence Gate", value) for value in ("⏳ Pending", "", "Failed", "Unknown", None)]
+        variants += [(phase, "⏳ Pending") for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze")]
+        for phase, status in variants:
+            with self.subTest(phase=phase, status=status):
+                pattern = rf"(?m)^\| {phase} \|[^\n]*$"
+                row = re.search(pattern, original)[0]
+                changed = row.replace("✅ Complete", status) if status is not None else ""
+                path.write_text(re.sub(pattern, lambda _: changed, original), encoding="utf-8")
+                before = self.git("status", "--porcelain")
+                result = self.finish(execution_mode="headless")
+                self.assertNotEqual(result["status"], "ok", result)
+                self.assertFalse((self.root / FEATURE / "artifacts").exists())
+                self.assertEqual(self.git("status", "--porcelain"), before)
+                self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+    def test_complete_rows_require_an_explicit_confidence_verdict(self) -> None:
+        path = self.root / WORKFLOW
+        original = path.read_text(encoding="utf-8")
+        for emit in ("", "📊 Confidence: failed", "📊 Confidence: unknown"):
+            with self.subTest(emit=emit):
+                path.write_text(original.replace("📊 Confidence: 0.94", emit), encoding="utf-8")
+                self.assertNotEqual(self.finish(until="pages")["status"], "ok")
+                self.assertFalse((self.root / FEATURE / "artifacts").exists())
+        path.write_text(original.replace("| Mode | advisory |", "| Mode | strict |").replace("0.94", "0.50"), encoding="utf-8")
+        self.assertNotEqual(self.finish(until="pages")["status"], "ok")
+        self.assertFalse((self.root / FEATURE / "artifacts").exists())
+
+    def test_a_completed_advisory_warning_allows_pages(self) -> None:
+        path = self.root / WORKFLOW
+        path.write_text(path.read_text(encoding="utf-8").replace("📊 Confidence: 0.94", "📊 Confidence: 0.50"), encoding="utf-8")
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
 
     def test_a_page_that_is_still_its_template_is_deleted_and_reported_as_a_gap(self) -> None:
         artifacts = self.root / FEATURE / "artifacts"

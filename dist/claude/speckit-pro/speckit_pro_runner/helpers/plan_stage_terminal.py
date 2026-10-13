@@ -146,6 +146,14 @@ def prepare(run: Run, inputs: dict[str, Any]) -> None:
         raise ValueError("the workflow file has no parseable Workflow Overview table")
     if "blocked" in str(signals["confidence_gate_status"]).casefold():
         raise Stop("strict_confidence_opt_in", "the confidence gate blocked in strict mode; no pull request was opened")
+    if not signals["planning_complete"] or signals["confidence_gate_status"] is None:
+        raise Stop("plan_stage_boundary", "planning phases and the confidence gate must finish before publication")
+    rows = workflow_table_rows(HTML_COMMENT_RE.sub("", workflow_text(run)).splitlines(), "## Phase 6.5: Confidence Gate")
+    gate = {cells[0].strip("*` ").casefold(): cells[1].strip("*` ") for cells in rows if len(cells) >= 2}
+    verdict = call(run, "confidence-gate", "read_only", {"workflow_file": run.workflow, "mode_name": gate.get("mode", "")})
+    action = verdict.get("data", {}).get("stdout_json", {}).get("recommended_action")
+    if verdict["status"] != "ok" or action not in {"proceed", "continue_with_warning"}:
+        raise Stop("plan_stage_boundary", "the confidence gate must explicitly pass or warn before publication")
     run.branch = command(run, ["git", "branch", "--show-current"], "the branch could not be read")
 
 
