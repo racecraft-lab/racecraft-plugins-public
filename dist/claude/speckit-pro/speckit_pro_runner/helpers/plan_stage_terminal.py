@@ -22,7 +22,7 @@ from ..atomic_write import write_bytes_atomic
 from ..envelope import RunnerRequest, diagnostic, response
 from ..trusted_io import resolve_repo_root, trusted_bytes
 from ..workflow_stage import AUTOPILOT_BASIC_INFO_HEADING, HTML_COMMENT_RE, workflow_stage_signals, workflow_table_rows
-from . import artifact_publication, artifact_selection
+from . import artifact_fill, artifact_publication, artifact_selection
 from .read_only import corroborate_draft_pr, observation_pull_requests, workflow_draft_pr_row
 from .readiness_record import preview_surface
 
@@ -33,9 +33,7 @@ PLANNING = ("plan_file", "spec_file", "tasks_file")
 INPUTS = frozenset({"repo_root", "host", "workflow_file", "execution_mode", "until", "base_branch",
                     "unratified_defaults", *PLANNING})
 RESUME = {"claude": "/speckit-pro:speckit-autopilot", "codex": "$speckit-pro:speckit-autopilot"}
-CONTENT = re.compile(r"<(?:p|dd|li|h2)\b[^>]*>(.*?)</(?:p|dd|li|h2)>", re.DOTALL)
 TITLE = re.compile(r"<title>(.*?)</title>", re.DOTALL)
-TAG = re.compile(r"<[^>]+>")
 SECTION = re.compile(r"(?ms)^## Artifact Review Handoff\n.*?(?=^## |\Z)")
 # One git or gh command in the repository; tests replace this name with a fake.
 cli = functools.partial(cli_probe.probe, allowed=("git", "gh"), timeout=120)
@@ -241,12 +239,13 @@ def page_entry(run: Run, page_id: str) -> dict[str, Any]:
     """The generated-page record: its digest, its title and one body passage distinct from the title."""
     path = f"{run.feature}/artifacts/{page_id}.html"
     html = text_of(run.root, path)
+    filled = call(run, "fill-artifact-page", "dry_run", {**run.planning, "entry_id": page_id})
+    if filled["status"] != "ok":
+        raise Stop("integrity_failure", f"the planning evidence for {page_id} could not be rendered")
+    title, body = (filled["data"][key] for key in ("expected_title", "expected_content"))
     found = TITLE.search(html)
-    title = " ".join(TAG.sub("", found[1] if found else page_id).split())
-    passages = (" ".join(TAG.sub("", match).split()) for match in CONTENT.findall(html))
-    body = next((passage for passage in passages if len(passage) >= 12 and passage not in title), "")
-    if not body:
-        raise Stop("integrity_failure", f"the page {page_id} carries no feature content to observe")
+    if not body or found is None or artifact_fill.html_text(found[1]) != title or body not in artifact_fill.html_text(html):
+        raise Stop("integrity_failure", f"the page {page_id} does not match its planning title and feature content")
     return {"id": page_id, "generation": "generated", "path": path, "sha256": sha256(run.root, path),
             "expected_title": title, "expected_content": body,
             "preview": {"status": "pending", "blocker": "Not observed yet", "observation": None}}

@@ -535,7 +535,7 @@
         "value": "speckit_pro_runner/helpers/artifact_fill.py",
         "display": "speckit_pro_runner/helpers/artifact_fill.py"
       },
-      "sha256": "9752ad8a6860b73bc407dc962900b0d4c1b1970a3b9995626d5987a30ce18fa2"
+      "sha256": "ee8c85b509d526b3d2d3a49a0ebf9c94f05f5e4d502b79359daf14a55785814e"
     },
     {
       "path": {
@@ -687,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "5ec70b36b5234152777ff0c098406ab2a65acafd0fc2b4703a43f5a8a0d74f10"
+      "sha256": "60fb88260e54aa8815eefdf9b76f65d08a0ede01ba34223cd6b1fdfc21ba00d5"
     },
     {
       "path": {

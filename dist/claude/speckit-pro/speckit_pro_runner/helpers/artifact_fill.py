@@ -11,7 +11,7 @@ from __future__ import annotations
 import dataclasses
 import re
 from collections.abc import Callable, Iterable
-from html import escape
+from html import escape, unescape
 from pathlib import Path
 from typing import Any
 
@@ -294,6 +294,23 @@ def render(page: Page, entry_id: str) -> str:
     return filled
 
 
+def html_text(markup: str) -> str:
+    """Visible text, including escaped planning characters, normalized for evidence."""
+    return " ".join(unescape(re.sub(r"<[^>]+>", "", markup)).split())
+
+
+def generation_evidence(content: str, prose_slots: dict[str, str]) -> dict[str, str]:
+    """Lift evidence from the deterministic planning render, excluding editable prose and breadcrumbs."""
+    title = re.search(r"<title>(.*?)</title>", content, re.DOTALL)
+    expected_title = html_text(title[1]) if title else ""
+    passages = (html_text(passage)
+                for slot, fill in artifact_publication.REGION.findall(content)
+                if slot not in {*prose_slots, "document-title", "feature-header", "plan-stats"}
+                for passage in re.findall(r"<(?:p|dd|li|h[1-6])\b[^>]*>(.*?)</(?:p|dd|li|h[1-6])>", fill, re.DOTALL))
+    body = next((text for text in passages if len(text) >= 12 and text not in expected_title and text != NOT_RECORDED), "")
+    return {"expected_title": expected_title, "expected_content": body}
+
+
 def run_artifact_fill_helper(entry: Any, request: Any) -> dict[str, Any]:
     root = resolve_repo_root(request.inputs)
     if isinstance(root, dict):
@@ -321,6 +338,7 @@ def run_artifact_fill_helper(entry: Any, request: Any) -> dict[str, Any]:
     published = artifact_publication.run_artifact_publication_helper(entry, dataclasses.replace(
         request, inputs={**selection, "entry_id": entry_id, "content": content}))
     if published["data"]:
+        published["data"].update(generation_evidence(content, page.slots))
         published["data"]["narrative_slots"] = [{"slot": slot, "guidance": page.guidance.get(slot, ""),
                                                  "fallback": fallback} for slot, fallback in page.slots.items()]
     return published

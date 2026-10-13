@@ -212,6 +212,38 @@ class RerunTests(TerminalFixture):
         self.assertEqual((self.subjects(), self.cli.gh), ([], []))
 
 
+class ContentEvidenceTests(TerminalFixture):
+    def test_expected_content_comes_from_planning_not_the_first_page_passage(self) -> None:
+        self.finish(until="pages")
+        identifier = "implementation-plan"
+        request = envelope.RunnerRequest("author", "fill-artifact-page", "fill-artifact-page", "apply",
+                                         {**PLANNING, "entry_id": identifier,
+                                          "narrative": {"feature-header": "An unrelated explanation about a different feature."}})
+        self.assertEqual(registry.dispatch_helper(request)["status"], "ok")
+        page = self.root / FEATURE / "artifacts" / f"{identifier}.html"
+        written = page.read_text()
+        for tag in ("p", "dd", "li", "h2"):
+            with self.subTest(tag=tag):
+                altered = written.replace('<p class="lede">', f"<{tag}>").replace("different feature.</p>", f"different feature.</{tag}>")
+                page.write_text(altered, encoding="utf-8")
+                self.assertEqual(self.finish(until="pages")["status"], "ok")
+                record = artifact_review.record_from_workflow((self.root / WORKFLOW).read_text())
+                entry = next(p for p in record["pages"] if p["id"] == identifier)
+                self.assertEqual(entry["expected_title"], "Implementation Plan — art-007-draft-pr-emission Draft-PR Emission")
+                self.assertEqual(entry["expected_content"], "Phase 1: Setup (Worktree Preflight)")
+
+    def test_wrong_title_and_wrong_planning_anchor_cannot_certify_generation(self) -> None:
+        self.finish(until="pages")
+        page = self.root / FEATURE / "artifacts/implementation-plan.html"
+        written = page.read_text()
+        for variant in ("title", "body"):
+            with self.subTest(variant=variant):
+                altered = re.sub(r"<title>.*?</title>", "<title>Unrelated feature title</title>", written) if variant == "title" else written.replace("Phase 1: Setup (Worktree Preflight)", "Unrelated fabricated phase")
+                page.write_text(altered, encoding="utf-8")
+                self.assertNotEqual(self.finish(execution_mode="headless")["status"], "ok")
+                self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+
 class FreshnessTests(TerminalFixture):
     def test_research_changes_deletion_and_creation_invalidate_generation(self) -> None:
         research = self.root / FEATURE / "research.md"
