@@ -26,6 +26,7 @@ from .roadmap_freshness import run_roadmap_freshness_helper
 from .quality_gates_proposal import run_quality_gates_proposal_helper
 from .readiness_record import run_feature_offers_helper, run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
+from .nesting_preflight import run_nesting_preflight_helper
 from .phase_brief import run_phase_brief_helper
 from .phase_envelope import run_phase_envelope_helper
 from .tasks_output import run_read_tasks_output_helper
@@ -343,6 +344,10 @@ HELPERS: dict[str, HelperEntry] = {
         "python_authoritative",
         "python_only",
         authoritative_request("resolve-claude-subagent-runtime"),
+    ),
+    "resolve-nesting-mode": HelperEntry(
+        "resolve-nesting-mode", "resolve-nesting-mode", None, "python_authoritative", "python_contract",
+        authoritative_request("resolve-nesting-mode"),
     ),
     "validate-agent-install": HelperEntry(
         "validate-agent-install",
@@ -798,6 +803,7 @@ SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "probe-git-write": run_git_write_probe_helper,
     "phase-brief": run_phase_brief_helper,
     "verify-phase-envelope": run_phase_envelope_helper,
+    "resolve-nesting-mode": run_nesting_preflight_helper,
     "read-tasks-output": run_read_tasks_output_helper,
     "read-tasks-inputs": run_read_tasks_inputs_helper,
 }

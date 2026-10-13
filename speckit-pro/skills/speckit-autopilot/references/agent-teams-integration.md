@@ -93,7 +93,7 @@ change. Prompts name the `Agent` fields (`name` and `team_name`) directly.
 The same record resolves:
 
 - the concurrent limit and reserved-slot wave size;
-- nesting depth (recorded, while workflow dispatch remains flat);
+- nesting depth (recorded; the Step 1.5 nesting probe, not this value, picks flat or nested mode);
 - same-agent partial-result resume support;
 - operator-controlled native model fallback availability;
 - client cache-TTL availability without plugin adoption; and
@@ -103,8 +103,8 @@ The same record resolves:
 
 The autopilot main session owns every workflow-level dispatch, result merge,
 phase transition, retry, and team lifecycle. Current Claude Code supports
-nested subagents (default depth 3 on current clients), but Speckit Pro keeps
-phase orchestration flat so there is one auditable owner.
+nested subagents (default depth 3 on current clients), but the main session
+stays the sole owner of workflow dispatch, merges and gates in either mode.
 
 Open workhorse executors retain the operator's available surface for their own
 task work. Hyper-focused workers deny `Agent` and `SendMessage` so they cannot

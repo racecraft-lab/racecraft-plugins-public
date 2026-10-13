@@ -381,8 +381,9 @@ The helper applies the current compatibility policy:
   so each deterministic wave uses `max(1, limit - 1)`.
 - Invalid concurrency or nesting overrides fail safe to one-at-a-time/depth-one
   operation with a warning.
-- Claude Code 2.1.219+ uses the documented default nesting depth of 3. Workflow
-  phase dispatch remains flat by design even when the runtime supports nesting.
+- Claude Code 2.1.219+ uses the documented default nesting depth of 3. This
+  depth is a record only: the run decides flat or nested mode from the Step 1.5
+  nesting probe (`resolve-nesting-mode`), never from this setting.
 - Claude Code 2.1.246+ may resume one partial subagent by agent ID; older clients
   get one fresh retry. A second partial result stops the run.
 - Claude Code 2.1.247+ native model fallback is recorded as an operator control,
@@ -401,6 +402,13 @@ Dispatch details for both code paths live in
 The full **use-site map** (post-impl, consensus, Phase 7 `[P]` tasks,
 parallel checklist/analyze) and lifecycle policy live in
 [`agent-teams-integration.md`](./agent-teams-integration.md).
+
+### Nesting prerequisite
+
+Two-level subagent nesting is optional. Autopilot tests it once per run in
+SKILL.md Step 1.5 and helper `resolve-nesting-mode`; when the host refuses a
+nested spawn, `data.prerequisite` tells the user the setting to change for the
+next run, and this run continues in flat mode. Missing depth never blocks a run.
 
 ## Step 0.8: Capability Coverage & Plugin Limitation Check
 
