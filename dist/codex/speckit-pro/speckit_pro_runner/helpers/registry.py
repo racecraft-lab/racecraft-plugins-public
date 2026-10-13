@@ -24,7 +24,7 @@ from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .g0_setup import run_g0_setup_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
 from .quality_gates_proposal import run_quality_gates_proposal_helper
-from .readiness_record import run_readiness_record_helper
+from .readiness_record import run_feature_offers_helper, run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
 from .phase_brief import run_phase_brief_helper
 from .tasks_output import run_read_tasks_output_helper
@@ -741,6 +741,12 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         ("readiness-record-apply",),
         rollback="Delete the local .specify/readiness/<host>.json file; scaffold rewrites it on the next run.",
     ),
+    "record-feature-offers": MutationEntry(
+        "record-feature-offers", "record-feature-offers", ("dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("record-feature-offers"),
+        ("feature-offers-apply",),
+        rollback="Delete the local .specify/readiness/<host>.json file; scaffold rewrites it, with the offers unanswered, on the next run.",
+    ),
     "propose-quality-gates": MutationEntry(
         "propose-quality-gates", "propose-quality-gates", ("dry_run", "apply"), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("propose-quality-gates"),
@@ -912,8 +918,8 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "generate-spec-index-write":
         return run_spec_index_write(entry, request)
 
-    if entry.helper_id == "write-readiness-record":
-        return run_readiness_record_helper(entry, request)
+    if entry.helper_id in READINESS_HANDLERS:
+        return READINESS_HANDLERS[entry.helper_id](entry, request)
 
     if entry.helper_id in ARTIFACT_PAGE_HANDLERS:
         return ARTIFACT_PAGE_HANDLERS[entry.helper_id](entry, request)
@@ -933,6 +939,11 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     return run_mutation_helper(entry, request)
 
 
+# The one table that routes a scaffold readiness helper id to its handler.
+READINESS_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "write-readiness-record": run_readiness_record_helper,
+    "record-feature-offers": run_feature_offers_helper,
+}
 # The one table that routes a PR-emission helper id to its handler.
 PR_EMISSION_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "generate-pr-body": generate_pr_body,

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-record-feature-offers",
+  "helper_id": "record-feature-offers",
+  "operation": "record-feature-offers",
+  "mode": "dry_run",
+  "inputs": {
+    "host": "claude",
+    "readiness_digest": null,
+    "answers": {"formal_methods": "declined", "verification_docker": "declined"}
+  }
+}
