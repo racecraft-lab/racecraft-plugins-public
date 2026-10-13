@@ -127,6 +127,9 @@ def prepare(run: Run, inputs: dict[str, Any]) -> None:
     run.workflow = inputs["workflow_file"]
     run.state = str(Path(run.workflow).with_name("autopilot-state.json"))
     run.feature = str(Path(inputs["plan_file"]).parent)
+    for field_name in PLANNING:
+        if inputs[field_name] != f"{run.feature}/{field_name.removesuffix('_file')}.md":
+            raise ValueError("planning paths must name spec.md, plan.md, and tasks.md in the selected feature")
     run.info = basic_information(workflow_text(run))
     if not {"spec id", "name"} <= run.info.keys() or sha256(run.root, run.state) is None:
         raise ValueError("the workflow file needs Spec ID and Name rows and sits beside autopilot-state.json")

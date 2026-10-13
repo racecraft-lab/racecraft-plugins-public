@@ -271,6 +271,16 @@ class FreshnessTests(TerminalFixture):
                 # A fresh pages request explicitly rebuilds against the changed inputs.
                 self.assertEqual(self.finish(until="pages")["status"], "ok")
 
+    def test_alternate_planning_paths_cannot_escape_the_fingerprinted_inputs(self) -> None:
+        for field, original in PLANNING.items():
+            with self.subTest(field=field):
+                alternate = f"{FEATURE}/alternate-{Path(original).name}"
+                shutil.copy(self.root / original, self.root / alternate)
+                result = self.finish(until="pages", **{field: alternate})
+                self.assertNotEqual(result["status"], "ok")
+                self.assertFalse((self.root / FEATURE / "artifacts").exists())
+                self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
     def test_other_consumed_planning_inputs_are_fingerprinted(self) -> None:
         for path in (CONCEPT, *PLANNING.values()):
             with self.subTest(path=path):
