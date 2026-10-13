@@ -555,10 +555,13 @@ class ConfidenceRecoveryTests(TerminalFixture):
         self.assertIn("rerun Analyze", result["data"]["report"])
         self.assertEqual(json.loads((self.root / STATE).read_text())["status"], "in_progress")
         self.assertFalse((self.root / FEATURE / "artifacts").exists())
-        guidance = (ROOT / "speckit-pro/skills/speckit-autopilot/references/phase-execution.md").read_text()
-        no_data = guidance.split("- exit 1 (NO_DATA):", 1)[1].split("- exit 2 (FAIL):", 1)[0]
-        self.assertIn("rerun Analyze", no_data)
-        self.assertNotIn("Advance to Phase 7", no_data)
+        for reference in ("phase-execution.md", "gate-validation.md"):
+            with self.subTest(reference=reference):
+                guidance = (ROOT / "speckit-pro/skills/speckit-autopilot/references" / reference).read_text()
+                no_data = guidance.split("- exit 1 (NO_DATA", 1)[1].split("- exit 2 (FAIL", 1)[0]
+                self.assertIn("rerun Analyze", no_data)
+                self.assertNotIn("Advance to Phase 7", no_data)
+                self.assertNotIn("proceed", no_data)
 
 
 class GuardTests(TerminalFixture):

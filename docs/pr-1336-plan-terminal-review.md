@@ -41,7 +41,9 @@ external trigger was identified.
   warning target. R1336-a155648d also records the warn tier on the other
   two axes: six production source files and eighteen authored files at the
   reviewed head, with about 528 added production lines. Subsequent focused
-  repairs retain that accepted size warning. This is a reviewability warning,
+  repairs retain that accepted size warning. The confidence-gate repair adds
+  `read_only.py`, so the production set is seven files with about 560 added
+  lines against the merged main. This is a reviewability warning,
   not a reachable behavior
   defect or a blocking size tier. This repair keeps each defect in a separate
   commit and adds no unrelated refactor or quality cleanup.
