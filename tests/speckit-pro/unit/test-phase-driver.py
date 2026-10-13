@@ -148,6 +148,10 @@ class DriverAgentTests(unittest.TestCase):
                    *INNER_EXECUTORS.values())
         for host, text in (("claude", source), ("codex", generated["developer_instructions"])):
             with self.subTest(host=host):
+                self.assertIn("phase-execution.md#nested-mode-phase-driver", text)
+                reference = (host_skill_root(host) / "speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
+                start = reference.index("## Nested-mode phase driver")
+                text += reference[start:reference.index("\n## ", start + 1)]
                 for needle in needles:
                     self.assertIn(needle, text)
 

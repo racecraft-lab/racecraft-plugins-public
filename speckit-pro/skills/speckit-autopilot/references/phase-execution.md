@@ -14,6 +14,57 @@ fallback. Dispatch means calling `spawn_agent` with the installed
 result.
 <!-- /host -->
 
+## Nested-mode phase driver
+
+7. **Drive a phase in nested mode.** When the parent's prompt carries `Mode: nested`, a
+   `Phase:` line and the phase brief, you are the Phase driver. The phase runs in your fresh
+   context and the parent keeps only your envelope. This overrides the opening paragraph's
+   limits on delegation, for the executors named below only; never dispatch `phase-executor`.
+   - **Specify, Plan, Tasks** (`inner_agent` null): run the skill under rules 1 and 2 yourself.
+     Plan then runs the formal-model-author and formal-check sequence of `formal-methods.md`
+     before G3. Tasks then calls `publish-tasks-output` with `brief.inputs.tasks_output`, runs
+     the mandatory after_tasks hooks through `read-tasks-output`, and runs G5 with the returned
+     `tasks_binding`. Leave optional hooks to the parent.
+   - **Clarify, Checklist, Analyze**: request `phase-brief` again with `mode=flat` and the
+     wave inputs your phase needs. Dispatch `inner_agent` (`clarify-executor`, `checklist-executor`
+     or `analyze-executor`), then the consensus agents, as its
+     `agent`, `slices` and `waves` say, and follow `skills/speckit-autopilot/references/phase-execution.md` and
+     `skills/speckit-autopilot/references/consensus-protocol.md` for answers, edits and repair.
+<!-- host:claude: Claude dispatches children with the Agent tool -->
+   Dispatch with the `Agent` tool, foreground, as that reference's template shows.
+<!-- /host -->
+<!-- host:codex: Codex dispatches children with spawn_agent and wait_agent -->
+   Dispatch with `spawn_agent`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
+<!-- /host -->
+   Run the phase's gate with `validate-gate`, repair within the shared reservation, and record
+   the phase results in the workflow file.
+   Finish with one `phase-envelope/v1` JSON object and nothing else, under 2,048 bytes:
+   `schema_version`, `phase`, `status` (`pass` only when every gate you ran passed; else `fail`
+   or `blocked`), `next_action`, repo-relative `artifacts`, `gates` (the phase gate and any
+   other you ran, each `pass` or `fail`), `counts` (`markers` and `task_count` as the gate
+   reports them), a `blocker` of at most 240 characters, and your `usage` counters. The runner
+   re-verifies the envelope from disk and a claim never passes a gate. If your turn budget is
+   nearly spent, return `status` `blocked` and name what remains in `blocker`.
+
+## Phase executor summary
+
+```text
+## Phase Result
+
+**Files created/modified:**
+- path/to/file.md (created/modified)
+
+**Metrics:**
+- Relevant phase metrics and counts
+
+**Markers found:**
+- [NEEDS CLARIFICATION]: N; [Gap]: N; [CRITICAL]: N (or "None" if clean)
+
+**Errors:** None (or describe any errors)
+```
+
+Adjust metrics to the phase: Specify reports FR/story and acceptance scenario counts, Plan reports artifact status and any rescope of plan.md, Tasks reports task counts.
+
 ## Contents
 
 <!-- host:claude: Claude's outline follows its per-phase sections -->
