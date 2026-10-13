@@ -1109,6 +1109,34 @@ Before Phase 1 starts, validate all of the following or repair it through the ow
   mandatory Consensus item
 - The checklist summary was printed so progress is visible to the user
 
+## Step 1.5: Nesting Preflight
+
+Once per run, before the first planning phase, test whether this host can nest
+subagents two levels deep. A depth setting does not answer that: Codex's V2
+backend ignores `agents.max_depth`. Dispatch `phase-executor` once with a
+nesting probe: no command and no artifacts, only the line `Nesting probe: spawn
+one child agent that replies ok, then reply NESTED_SPAWN=allowed if it
+answered, or NESTED_SPAWN=refused if the spawn was refused or no spawn tool
+was available.` Set `nested_spawn` from that reply (`allowed`, `refused`, or
+`not_run` when the probe never returned), then request
+`helper_id=resolve-nesting-mode operation=resolve-nesting-mode mode=read_only`
+with inputs `host`, `nested_spawn` and `configured_depth`:
+<!-- host:claude: Claude reports its host id and the depth limit its runtime record resolved -->
+`host=claude-code`, `configured_depth=claude_subagent_runtime.spawn_depth.limit`.
+<!-- /host -->
+<!-- host:codex: Codex reports its host id and the agents.max_depth setting when one is set -->
+`host=codex`; omit `configured_depth` unless `agents.max_depth` is set.
+<!-- /host -->
+Persist the complete response as
+`nesting_mode` in `autopilot-state.json` and the workflow Notes; the canary
+receipt's `mode` is `data.mode`. When `data.mode` is `flat`, log
+`data.prerequisite` once as a note and continue: the root dispatches each
+phase's executors directly under the compact-answer contract. Depth never
+stops, defers or fails the run, and this step has no stop label. Nested mode
+adds phase drivers (ADR 0026); until they ship, a `nested` result still
+dispatches from the root as Step 2 states, so `mode` records the host's
+capability and not yet a different dispatch.
+
 ## Step 2: Main Execution Loop
 
 For each planning phase, request

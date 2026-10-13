@@ -60,6 +60,8 @@ import runner_invocation  # noqa: E402
 from runner_invocation import assert_runner_response, command_stdin_fixture  # noqa: E402
 
 from speckit_pro_runner.helpers import readiness_record, registry  # noqa: E402
+from speckit_pro_runner.envelope import escaped_text_capture_limit_bytes  # noqa: E402
+from speckit_pro_runner.helpers.read_only import PLAN_REPAIR_MESSAGE_LIMIT_BYTES  # noqa: E402
 from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
@@ -70,6 +72,7 @@ EXPECTED_HELPERS = [
     "scaffold-answers",
     "phase-brief",
     "verify-phase-envelope",
+    "resolve-nesting-mode",
     "read-tasks-output",
     "read-tasks-inputs",
     "helper-registry-dispatch",
@@ -118,6 +121,7 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 HELPER_CASES: dict[str, dict[str, object]] = {
     "g0-setup": {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE},
     "probe-git-write": {},
+    "resolve-nesting-mode": {"host": "codex", "nested_spawn": "refused"},
     "scaffold-answers": {"answers_file": "missing-answers.json", "spec_id": "SPEC-009"},
     "formal-doctor": {"repo_root": ".", "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"},
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
@@ -4743,7 +4747,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write", "phase-brief", "verify-phase-envelope", "read-tasks-inputs", "read-tasks-output"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write", "phase-brief", "verify-phase-envelope", "resolve-nesting-mode", "read-tasks-inputs", "read-tasks-output"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
@@ -4853,11 +4857,10 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
                 self.assertEqual(data["python_operation"], helper_id)
                 self.assertTrue(data["authoritative_command"].endswith("| python -m speckit_pro_runner"))
-                expected_stdout_limit = (
-                    PLAN_LAYERS_CAPTURE_LIMIT_BYTES
-                    if helper_id in {"plan-layers-feature-dir", "render-plan-repair-context"}
-                    else GENERIC_CAPTURE_LIMIT_BYTES
-                )
+                expected_stdout_limit = {
+                    "plan-layers-feature-dir": PLAN_LAYERS_CAPTURE_LIMIT_BYTES,
+                    "render-plan-repair-context": escaped_text_capture_limit_bytes(PLAN_REPAIR_MESSAGE_LIMIT_BYTES),
+                }.get(helper_id, GENERIC_CAPTURE_LIMIT_BYTES)
                 self.assertEqual(data["stdout"]["limit_bytes"], expected_stdout_limit)
                 self.assertEqual(data["stderr"]["limit_bytes"], GENERIC_CAPTURE_LIMIT_BYTES)
                 self.assertEqual(completed.returncode, response["exit_code"])

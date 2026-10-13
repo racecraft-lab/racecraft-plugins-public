@@ -35,17 +35,6 @@ The original long VM hang was not reproduced by the isolated matrices, so
 this repair establishes bounded child waits without claiming its precise
 external trigger was identified.
 
-## Isolated runner ownership blocker
-
-The final Linux suite executes its changed seams successfully, but the
-carry-forward filesystem tests stop on the isolated runner image ownership:
-the test user is UID 1000 while the absolute root and temporary parent have
-UID 65534. The absolute-ancestor guard permits root or the current
-user, so it refuses before those fixtures reach their attack hooks. This is
-a remaining infrastructure failure, not a green full-suite result. The
-guard and its ownership/mode requirements are unchanged; the orchestrator
-must correct the runner mapping and rerun the suite before merge.
-
 ## Known limits
 
 - R1336-0f1bd68e: the original production diff exceeded the ticket's 400-line

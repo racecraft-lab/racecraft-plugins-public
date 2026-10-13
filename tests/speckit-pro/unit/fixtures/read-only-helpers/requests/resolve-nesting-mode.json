@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0", "request_id": "fixture-resolve-nesting-mode",
+  "helper_id": "resolve-nesting-mode", "operation": "resolve-nesting-mode", "mode": "read_only",
+  "inputs": {"host": "codex", "nested_spawn": "refused", "configured_depth": 2}
+}

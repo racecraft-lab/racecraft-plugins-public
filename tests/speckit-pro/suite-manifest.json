@@ -165,6 +165,7 @@
         { "path": "tests/speckit-pro/unit/test-native-trigger-catalog.py", "label": "test-native-trigger-catalog" },
         { "path": "tests/speckit-pro/unit/test-native-workflow-binding-fixtures.py", "label": "test-native-workflow-binding-fixtures" },
         { "path": "tests/speckit-pro/unit/test-native-worktree-migration.py", "label": "test-native-worktree-migration" },
+        { "path": "tests/speckit-pro/unit/test-nesting-preflight.py", "label": "test-nesting-preflight" },
         { "path": "tests/speckit-pro/unit/test-parity-extractors.py", "label": "test-parity-extractors" },
         { "path": "tests/speckit-pro/unit/test-parity-judge.py", "label": "test-parity-judge" },
         { "path": "tests/speckit-pro/unit/test-parity-runner.py", "label": "test-parity-runner" },

@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.43.0",
+  "plugin_version": "2.44.0",
   "runner_version": "0.1.0",
   "python_minimum_version": "3.11",
   "specify_required": true,
@@ -231,7 +231,7 @@
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },
-      "sha256": "c8f127a3740ec741ee9966e0252e171c41be59989d54601b46efc5059433bf6a"
+      "sha256": "7d6b8cc27cf33e91068e54f48af6166df50e6edf139622325767705845efad4f"
     },
     {
       "path": {
@@ -676,6 +676,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/nesting_preflight.py",
+        "display": "speckit_pro_runner/helpers/nesting_preflight.py"
+      },
+      "sha256": "9e800c68fc0c69155a1993157ca98783391a4013dd8447b09604ef7b169f17bf"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
@@ -743,7 +751,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "2bc42bc9b50c934d2df484145cf5b34c43a23cd3dbf539cba4f1871b073e9063"
+      "sha256": "ebfbeed2adcf669c0d728eec4890d441073eff35c2d5ff6f56f71a58ac607739"
     },
     {
       "path": {
@@ -783,7 +791,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "4845ffdde3cd6da1a22620b8e2ac25290ded69f8d59d8b23321121611345e5dd"
+      "sha256": "4bc9b726aaa86e277abbe4a8c530e0251bc6e32f6e94d77e469f4f59b81b4cf5"
     },
     {
       "path": {
