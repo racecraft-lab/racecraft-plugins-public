@@ -94,6 +94,10 @@ _Avoid_: planning pause, implement preflight, artifact delivery
 The part of an autopilot run that takes a SPEC from specify through analyze and ends when the review artifacts and the draft PR are ready. The other stages are implement and full.
 _Avoid_: planning run, planning phase
 
+**Plan stage terminal sequence**:
+The steps that end the plan stage: fill the review artifacts, take the stage-boundary commit, commit the draft packet, push, open or refresh the draft PR, record it, and write `plan/completed`. One runner helper, `finish-plan-stage`, performs them, and a model writes only the artifact prose. `plan/completed` means the autopilot state reads `stage: plan` and `status: completed`; it does not say previews were observed or the PR was approved.
+_Avoid_: PR emission step, terminal step prose
+
 **Legacy reviewability preset**:
 An earlier shipped reviewability preset whose complete content is recognized by the plugin. A preset with project modifications or unknown content is not a legacy reviewability preset.
 _Avoid_: stale preset, old registration

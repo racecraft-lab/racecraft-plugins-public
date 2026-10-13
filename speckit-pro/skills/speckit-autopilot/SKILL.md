@@ -1579,7 +1579,10 @@ not reconstruct those contracts from this entrypoint.
 ### Artifact page selection
 
 At every artifact generation, including regeneration, the runner builds the
-pages. Invoke the loaded runner's `select-artifact-pages` helper in `read_only`
+pages. The plan stage's terminal step runs all of it through the
+`finish-plan-stage` helper and one artifact-author dispatch (see
+[Phase Execution §Draft-PR emission](./references/phase-execution.md#draft-pr-emission-the-terminal-step-sequence-plan-stage-only)).
+Elsewhere, invoke the loaded runner's `select-artifact-pages` helper in `read_only`
 mode with the current plan and the optional research and design-concept paths
 inside the established workflow root, then its `fill-artifact-page` helper in
 `apply` mode once per entry in `selected_pages`, in returned order. The runner

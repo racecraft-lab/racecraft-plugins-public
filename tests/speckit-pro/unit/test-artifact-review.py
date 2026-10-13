@@ -631,7 +631,7 @@ class ArtifactReviewTests(_ReviewFixture):
         for host in ("claude", "codex"):
             text = host_source("skills/speckit-autopilot/references/phase-execution.md", host)
             self.assertIn("artifact-review.md", text)
-            self.assertLess(text.index("Take a separate bookkeeping commit"), text.index("The parent dispatches `artifact-preview-observer`"))
+            self.assertLess(text.index("separate bookkeeping commit"), text.index("The parent dispatches `artifact-preview-observer`"))
             self.assertIn("preview-only resume", text)
             self.assertIn("direct local file links", text)
 

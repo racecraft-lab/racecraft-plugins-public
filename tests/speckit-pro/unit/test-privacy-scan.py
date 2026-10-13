@@ -63,6 +63,7 @@ GENERIC_LOCAL_TERMS = {
     "claude",
     "clones",
     "codex",
+    "debian",
     "documents",
     "downloads",
     "github",
@@ -71,7 +72,9 @@ GENERIC_LOCAL_TERMS = {
     "integration",
     "layer4",
     "layer7",
+    "linux",
     "local",
+    "macos",
     "main",
     "openai",
     "outputs",
@@ -89,7 +92,9 @@ GENERIC_LOCAL_TERMS = {
     "staff",
     "support",
     "tests",
+    "ubuntu",
     "users",
+    "windows",
     "work",
     "worktrees",
 }
@@ -292,6 +297,21 @@ def assert_no_hits(test: unittest.TestCase, hits: list[str], label: str) -> None
 
 
 class PublicIdentityTests(unittest.TestCase):
+    def test_generic_platform_accounts_keep_public_labels_and_home_path_protection(self) -> None:
+        for account in ("ubuntu", "debian", "linux", "macos", "windows", "runner"):
+            with self.subTest(account=account), \
+                    patch.dict(os.environ, {"USER": account}, clear=True), \
+                    patch(f"{__name__}.git_config", return_value=""), \
+                    patch(f"{__name__}.checkout_identity_value", return_value=""):
+                pattern = dynamic_local_pattern()
+                self.assertTrue(pattern is None or pattern.search(f"runs-on: {account}-latest") is None)
+                home = "/" + "home/" + account + "/private-file"
+                self.assertIsNotNone(HOME_PATH_PATTERN.search(home))
+        with patch.dict(os.environ, {"USER": "quokkaoperator"}, clear=True), \
+                patch(f"{__name__}.git_config", return_value=""), \
+                patch(f"{__name__}.checkout_identity_value", return_value=""):
+            self.assertIsNotNone(dynamic_local_pattern().search("owned by quokkaoperator"))
+
     def test_declared_public_identity_is_not_treated_as_dynamic_private_identity(self) -> None:
         def configured(key: str) -> str:
             return {
