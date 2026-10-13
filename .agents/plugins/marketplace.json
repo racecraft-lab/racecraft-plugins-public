@@ -15,7 +15,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Coding",
-      "version": "2.42.4"
+      "version": "2.43.0"
     },
     {
       "name": "typesafe-jev",

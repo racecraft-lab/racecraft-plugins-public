@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.43.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.4...speckit-pro-v2.43.0) (2026-10-12)
+
+
+### Features
+
+* **speckit-pro:** return compact runner answers to the root thread ([#1330](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1330)) ([bdf21ef](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bdf21ef4c57f6c69b7cf46abeff7779012dd60b7))
+
 ## [2.42.4](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.3...speckit-pro-v2.42.4) (2026-10-11)
 
 
