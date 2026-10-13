@@ -59,7 +59,7 @@ class TerminalFixture(unittest.TestCase):
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        base = Path(temporary.name)
+        base = Path(temporary.name).resolve()
         self.root, remote = base / "work", base / "remote.git"
         (self.root / FEATURE).mkdir(parents=True)
         (self.root / ".specify").mkdir()
@@ -529,6 +529,37 @@ class CleanupBoundaryTests(TerminalFixture):
 
 
 class GuardTests(TerminalFixture):
+    def test_real_mode_spellings_and_configured_threshold_reach_the_gate(self) -> None:
+        path = self.root / WORKFLOW
+        original = path.read_text()
+        for mode in ("Advisory", "advisory (resolved at Step 0.6b: no flag, no local config)",
+                     "`advisory`, resolved at Step 0.6b", "**advisory** — resolved at Step 0.6b"):
+            with self.subTest(mode=mode):
+                path.write_text(original.replace("| Mode | advisory |", f"| Mode | {mode} |"), encoding="utf-8")
+                self.assertEqual(self.finish(until="pages")["status"], "ok")
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                config = self.root / f".{host}/speckit-pro.local.md"
+                config.parent.mkdir(exist_ok=True)
+                config.write_text("confidence_threshold: 0.80\n", encoding="utf-8")
+                path.write_text(original.replace("| Mode | advisory |", "| Mode | **Strict** — resolved at Step 0.6b |")
+                               .replace("0.94", "0.85"), encoding="utf-8")
+                self.assertEqual(self.finish(host=host, until="pages")["status"], "ok")
+                config.write_text("confidence_threshold: 0.95\n", encoding="utf-8")
+                self.assertNotEqual(self.finish(host=host, until="pages")["status"], "ok")
+
+    def test_no_data_stops_with_a_documented_confidence_recovery_path(self) -> None:
+        path = self.root / WORKFLOW
+        path.write_text(path.read_text().replace("📊 Confidence: 0.94", ""), encoding="utf-8")
+        result = self.finish(until="pages")
+        self.assertIn("rerun Analyze", result["data"]["report"])
+        self.assertEqual(json.loads((self.root / STATE).read_text())["status"], "in_progress")
+        self.assertFalse((self.root / FEATURE / "artifacts").exists())
+        guidance = (ROOT / "speckit-pro/skills/speckit-autopilot/references/phase-execution.md").read_text()
+        no_data = guidance.split("- exit 1 (NO_DATA):", 1)[1].split("- exit 2 (FAIL):", 1)[0]
+        self.assertIn("rerun Analyze", no_data)
+        self.assertNotIn("Advance to Phase 7", no_data)
+
     def test_a_blocked_gate_stops_before_generation_and_writes_nothing(self) -> None:
         path = self.root / WORKFLOW
         path.write_text(path.read_text(encoding="utf-8").replace("| Confidence Gate | G6.5 | ✅ Complete", "| Confidence Gate | G6.5 | ⚠️ Blocked"),
@@ -583,6 +614,26 @@ class GuardTests(TerminalFixture):
         self.assertEqual([gap["id"] for gap in data["pages"]["gaps"]], ["implementation-plan"])
         self.assertNotIn("implementation-plan", self.pages())
         self.assertEqual(data["outcome"], "completed")
+
+
+class FixtureRootTests(unittest.TestCase):
+    def test_terminal_fixture_resolves_a_symlinked_temporary_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            actual, alias = base / "actual", base / "alias"
+            actual.mkdir()
+            alias.symlink_to(actual, target_is_directory=True)
+            fixture = TerminalFixture()
+            try:
+                with unittest.mock.patch.object(tempfile, "gettempdir", return_value=str(alias)):
+                    fixture.setUp()
+                self.assertEqual(fixture.root, fixture.root.resolve())
+                fixture.finish(execution_mode="headless")
+                review = artifact_review.review_handoff((fixture.root / WORKFLOW).read_text(), fixture.root,
+                                                       plan_stage_terminal.trusted_bytes, "unavailable")
+                self.assertTrue(review["reuse_artifacts"])
+            finally:
+                fixture.doCleanups()
 
 
 if __name__ == "__main__":

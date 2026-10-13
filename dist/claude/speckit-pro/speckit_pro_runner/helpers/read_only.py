@@ -3541,6 +3541,19 @@ def resolve_confidence_mode(inputs: dict[str, Any], repo_root: Path) -> dict[str
     return make_result("advisory\n")
 
 
+def confidence_gate_inputs(workflow_file: str, mode_text: str, config_path: Path, repo_root: Path) -> dict[str, str]:
+    """Recover the resolved workflow mode and the host-local threshold for a gate recheck."""
+    mode = re.match(r"^(advisory|strict)\b", mode_text.strip("*` \t"), re.IGNORECASE | re.ASCII)
+    config = trusted_text(config_path, repo_root)
+    if config is None and (config_path.exists() or config_path.is_symlink()):
+        raise ValueError("confidence configuration is unreadable")
+    thresholds = re.findall(r"^\s*confidence_threshold:\s*([^\n]*?)\s*$", config or "", re.MULTILINE)
+    if thresholds and (len(thresholds) != 1 or not thresholds[0]):
+        raise ValueError("confidence configuration needs one nonempty threshold")
+    return {"workflow_file": workflow_file, "mode_name": mode[1].lower() if mode else mode_text,
+            "threshold": thresholds[0] if thresholds else "0.90"}
+
+
 def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     workflow_raw = request_path_display(inputs.get("workflow_file") or "", repo_root)
     workflow = resolve_input_path(workflow_raw, repo_root)

@@ -23,7 +23,7 @@ from ..envelope import RunnerRequest, diagnostic, response
 from ..trusted_io import resolve_repo_root, trusted_bytes
 from ..workflow_stage import AUTOPILOT_BASIC_INFO_HEADING, HTML_COMMENT_RE, workflow_stage_signals, workflow_table_rows
 from . import artifact_fill, artifact_publication, artifact_selection
-from .read_only import corroborate_draft_pr, observation_pull_requests, workflow_draft_pr_row
+from .read_only import confidence_gate_inputs, corroborate_draft_pr, observation_pull_requests, workflow_draft_pr_row
 from .readiness_record import preview_surface
 
 Dispatch = Callable[[Any], dict[str, Any]]
@@ -151,10 +151,12 @@ def prepare(run: Run, inputs: dict[str, Any]) -> None:
         raise Stop("plan_stage_boundary", "planning phases and the confidence gate must finish before publication")
     rows = workflow_table_rows(HTML_COMMENT_RE.sub("", workflow_text(run)).splitlines(), "## Phase 6.5: Confidence Gate")
     gate = {cells[0].strip("*` ").casefold(): cells[1].strip("*` ") for cells in rows if len(cells) >= 2}
-    verdict = call(run, "confidence-gate", "read_only", {"workflow_file": run.workflow, "mode_name": gate.get("mode", "")})
+    verdict = call(run, "confidence-gate", "read_only", confidence_gate_inputs(
+        run.workflow, gate.get("mode", ""), run.root / f".{inputs['host']}/speckit-pro.local.md", run.root))
     action = verdict.get("data", {}).get("stdout_json", {}).get("recommended_action")
     if verdict["status"] != "ok" or action not in {"proceed", "continue_with_warning"}:
-        raise Stop("plan_stage_boundary", "the confidence gate must explicitly pass or warn before publication")
+        raise Stop("plan_stage_boundary", "the confidence gate must explicitly pass or warn before publication; "
+                   "rerun Analyze to record confidence, then retry finish-plan-stage")
     run.branch = command(run, ["git", "branch", "--show-current"], "the branch could not be read")
 
 

@@ -1114,8 +1114,10 @@ and keeps executing independent work.
    - exit 1 (NO_DATA): log a warning, surface to operator that the
      synthesizer skipped its confidence emit (treat as a plugin
      regression report).
-     autopilot-state.json G6.5 → completed with a
-     `no_data: true` note. Advance to Phase 7.
+     Keep the plan stage in progress and record `no_data: true`.
+     To obtain the missing confidence emit, rerun Analyze,
+     then retry G6.5. Only an explicit pass or advisory warning permits
+     `finish-plan-stage` and advancement to Phase 7.
    - exit 2 (FAIL):
        a. Read JSON `deductions_applied` first. When it is true,
           the shortfall is open CRITICAL and HIGH rows rather than

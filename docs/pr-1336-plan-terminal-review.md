@@ -27,7 +27,11 @@ check. Successful plain-text narrative edits remain covered.
 ## Known limits
 
 - R1336-0f1bd68e: the original production diff exceeded the ticket's 400-line
-  warning target. This is a reviewability warning, not a reachable behavior
+  warning target. R1336-a155648d also records the warn tier on the other
+  two axes: six production source files and eighteen authored files at the
+  reviewed head, with about 528 added production lines. Subsequent focused
+  repairs retain that accepted size warning. This is a reviewability warning,
+  not a reachable behavior
   defect or a blocking size tier. This repair keeps each defect in a separate
   commit and adds no unrelated refactor or quality cleanup.
 - R1336-d4941850: the existing CLI trust policy rejects user-owned executable
