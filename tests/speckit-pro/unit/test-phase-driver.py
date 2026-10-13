@@ -122,7 +122,7 @@ class SkillContractTests(unittest.TestCase):
         for host, (own_tool, other_tool) in HOST_TOOLS.items():
             section = nested_section(host)
             with self.subTest(host=host):
-                for needle in (*ROOT_RULES, own_tool, *(("`$` plus `brief.inputs.skill`",) if host == "codex" else ())):
+                for needle in (*ROOT_RULES, own_tool, *(("`$` plus `brief.inputs.skill`", 'fork_turns="none"') if host == "codex" else ())):
                     self.assertIn(needle, section)
                 self.assertNotIn(other_tool, section)
 
