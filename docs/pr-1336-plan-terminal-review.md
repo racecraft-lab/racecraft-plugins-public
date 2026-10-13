@@ -8,8 +8,8 @@ planning-derived page expectations. The shared runner ships to both hosts.
 ## Hidden-content evidence repair
 
 F1336-8430c586: hidden artifact content counted as feature evidence. The
-terminal helper now binds every structured fill to the independently rendered
-planning bytes, and every narrative fill to its generated tags and attributes.
+terminal helper now binds every fill to the independently rendered planning
+bytes, masking only the text of paragraphs emitted by the narrative owner.
 Only escaped narrative text may change. This keeps the existing plain-text
 authoring contract and prevents a hidden copy, an attribute, a class, or an
 unbalanced wrapper from certifying a different visible feature. Static template
@@ -23,6 +23,15 @@ text, hidden structured anchors, and wrappers across fill boundaries. Scripts
 and comments already stopped on the reviewed head; their new red assertions
 require rejection at the planning-markup boundary before the later provenance
 check. Successful plain-text narrative edits remain covered.
+
+R1336-7dcb2dec closes the mixed-region exception: `feature-header` also holds
+the feature id, name, and eyebrow; `module-graph` holds directory/file-count
+rows beside its narrative caption. `Page.prose` marks only its own paragraph,
+so every neighboring byte remains bound to the planning render. Dispatcher
+tests rewrite each field, repeat the shared header attacks on every page,
+and exercise both shipped runners with both host inputs. Plain escaped edits
+to the lede and module caption still publish. Existing concealment, active
+content, nested wrapper, and cross-region wrapper cases remain mandatory.
 
 ## Canary CLI termination
 
@@ -53,6 +62,10 @@ external trigger was identified.
   `cli_probe`. The helper stops at `tool_unavailable` if that installation is
   unavailable. The observed compatibility limit does not authorize bypassing
   the existing executable trust boundary.
+- R1336-624c09eb: quoted, commented, or repeated `confidence_threshold`
+  values are rejected by the strict configuration grammar. No tracked config
+  or documentation uses these forms; they yield an input error or stop,
+  never a confidence-gate pass. This accepted compatibility limit remains.
 - Real GitHub draft creation and interactive preview/question UI are not
   exercised by these deterministic tests. Git uses a disposable bare remote;
   GitHub responses are scripted. UI requests are checked against their

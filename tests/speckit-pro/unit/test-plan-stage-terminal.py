@@ -146,6 +146,24 @@ class OneCallSequenceTests(TerminalFixture):
 
 
 class NarrativeTests(TerminalFixture):
+    def test_plain_text_edits_in_mixed_regions_remain_publishable(self) -> None:
+        prose = "The author compares A &amp; B &lt;carefully&gt;."
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                self.finish(host=host, until="pages")
+                for page_id, opening in (("implementation-plan", r'<p class="lede"[^>]*>'),
+                                         ("module-map", r'<figcaption><p[^>]*>')):
+                    page = self.root / FEATURE / "artifacts" / f"{page_id}.html"
+                    altered, count = re.subn(f"({opening})[^<]*(</p>)", rf"\g<1>{prose}\g<2>",
+                                            page.read_text(), count=1)
+                    self.assertEqual(count, 1)
+                    page.write_text(altered, encoding="utf-8")
+                result = self.finish(host=host, execution_mode="headless")
+                self.assertEqual(result["data"]["outcome"], "completed", result)
+                for page_id in ("implementation-plan", "module-map"):
+                    self.assertIn(prose, (self.root / FEATURE / "artifacts" / f"{page_id}.html").read_text())
+
     def test_the_finishing_call_keeps_the_prose_the_author_wrote(self) -> None:
         data = self.finish(until="pages")["data"]
         self.assertEqual(data["outcome"], "pages_ready")
@@ -225,7 +243,7 @@ class ContentEvidenceTests(TerminalFixture):
         written = page.read_text()
         for tag in ("p", "dd", "li", "h2"):
             with self.subTest(tag=tag):
-                altered = written if tag == "p" else written.replace('<p class="lede">', f"<{tag}>").replace("different feature.</p>", f"different feature.</{tag}>")
+                altered = written if tag == "p" else re.sub(r'<p class="lede"[^>]*>', f"<{tag}>", written).replace("different feature.</p>", f"different feature.</{tag}>")
                 page.write_text(altered, encoding="utf-8")
                 result = self.finish(until="pages")
                 if tag != "p":
@@ -334,6 +352,51 @@ class HiddenContentEvidenceTests(TerminalFixture):
         self.assertEqual((self.subjects(), self.cli.gh), ([], []))
 
 
+class StructuredContentEvidenceTests(TerminalFixture):
+    def assert_structured_text_refused(self, page_id: str, pattern: str, replacement: str) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                self.finish(host=host, until="pages")
+                page = self.root / FEATURE / "artifacts" / f"{page_id}.html"
+                altered, count = re.subn(pattern, replacement, page.read_text(), count=1)
+                self.assertEqual(count, 1, "the attack must rewrite a generated field")
+                page.write_text(altered, encoding="utf-8")
+                result = self.finish(host=host, execution_mode="headless")
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                self.assertIn("planning markup", result["diagnostics"][0]["message"], result)
+                self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+                self.assertEqual(json.loads((self.root / STATE).read_text())["status"], "in_progress")
+
+    def test_feature_id_text_cannot_be_rewritten(self) -> None:
+        self.assert_structured_text_refused("implementation-plan", r'(<span id="feature-id">)[^<]+',
+                                           r"\g<1>fabricated-feature-id")
+
+    def test_feature_name_heading_cannot_be_rewritten(self) -> None:
+        self.assert_structured_text_refused("implementation-plan", r'(<h1 id="feature-name">)[^<]+',
+                                           r"\g<1>Delete the production billing tables")
+
+    def test_module_graph_row_cannot_be_rewritten(self) -> None:
+        self.assert_structured_text_refused("module-map", r'(?s)(<!-- FILL:module-graph:START -->.*?<li>)[^<]+',
+                                           r"\g<1>payments/ledger: 40 files")
+
+    def test_feature_header_eyebrow_cannot_be_rewritten(self) -> None:
+        self.assert_structured_text_refused("implementation-plan", r'(</span> · )draft pull request',
+                                           r"\g<1>approved production release")
+
+    def test_other_pages_bind_their_feature_header_fields(self) -> None:
+        for page_id in ("spec-explainer", "code-approaches", "module-map"):
+            for pattern, replacement in ((r'(<span id="feature-id">)[^<]+', r"\g<1>fabricated-feature-id"),
+                                         (r'(<h1 id="feature-name">)[^<]+', r"\g<1>Fabricated feature name"),
+                                         (r'(</span> · )draft pull request', r"\g<1>approved production release")):
+                with self.subTest(page_id=page_id, field=pattern):
+                    self.assert_structured_text_refused(page_id, pattern, replacement)
+
+    def test_module_graph_file_count_cannot_be_rewritten(self) -> None:
+        self.assert_structured_text_refused("module-map", r'(?s)(<!-- FILL:module-graph:START -->.*?<li>[^<]*: )\d+ file',
+                                           r"\g<1>40 file")
+
+
 class PayloadEvidenceTests(unittest.TestCase):
     def test_both_shipped_runners_reject_every_hidden_content_variant(self) -> None:
         for plugin in ("dist/claude/speckit-pro", "dist/codex/speckit-pro"):
@@ -343,7 +406,8 @@ class PayloadEvidenceTests(unittest.TestCase):
                     "sys.path.insert(0, sys.argv[1])\n"
                     "from speckit_pro_runner.helpers import registry\n"
                     "scope = runpy.run_path(sys.argv[2])\n"
-                    "suite = unittest.defaultTestLoader.loadTestsFromTestCase(scope['HiddenContentEvidenceTests'])\n"
+                    "suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(scope[name])\n"
+                    "    for name in ('HiddenContentEvidenceTests', 'StructuredContentEvidenceTests', 'NarrativeTests'))\n"
                     "result = unittest.TextTestRunner().run(suite)\n"
                     "sys.exit(not result.wasSuccessful())\n"
                 )

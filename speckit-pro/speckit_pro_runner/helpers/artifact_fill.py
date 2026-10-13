@@ -116,7 +116,7 @@ class Page:
         """One prose slot: the narrative text when written, else the lifted fallback."""
         self.slots[slot] = fallback or NOT_RECORDED
         attribute = f' class="{css}"' if css else ""
-        return f"<p{attribute}>{escaped(self.narrative.get(slot, self.slots[slot]))}</p>"
+        return f'<p{attribute} data-prose-slot="{slot}">{escaped(self.narrative.get(slot, self.slots[slot]))}</p>'
 
     def anchor(self, prefix: str, label: str) -> str:
         base = f"{prefix}-{re.sub(r'[^a-z0-9]+', '-', label.lower()).strip('-') or 'item'}"
@@ -302,14 +302,16 @@ def html_text(markup: str) -> str:
 
 
 def planning_markup(content: str, prose_slots: Iterable[str]) -> dict[str, str]:
-    """Bind structured fills to planning bytes and prose to its generated tags.
+    """Bind every fill to planning bytes except its marked narrative text.
 
     Narrative is plain escaped text, not arbitrary HTML. Keeping every tag and
     attribute prevents authored prose from concealing other planning regions.
     The trusted template's static skeleton is checked by artifact_review.
     """
     prose = set(prose_slots)
-    return {slot: hashlib.sha256(("".join(re.findall(r"<[^>]*>", fill)) if slot in prose else fill).encode()).hexdigest()
+    return {slot: hashlib.sha256((re.sub(
+                rf'(<p\b[^>]* data-prose-slot="{re.escape(slot)}"[^>]*>)[^<>]*(</p>)', r"\1\2", fill, count=1)
+                if slot in prose else fill).encode()).hexdigest()
             for slot, fill in artifact_publication.REGION.findall(content)}
 
 
