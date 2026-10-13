@@ -104,68 +104,52 @@ class AdvanceTests(unittest.TestCase):
         self.assertIs(False, result["data"]["advance"])
 
 
+def nested_section(host: str) -> str:
+    """The nested-mode part of the autopilot skill as this host loads it, whitespace folded."""
+    text = (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")
+    start = text.index("### Nested mode: phase drivers")
+    return " ".join(text[start:text.index("\n## ", start)].split())
+
+
+# What the root must say in nested mode, and what each host's section must leave out.
+ROOT_RULES = ("mode=nested", "brief.agent", "reads only the envelope", "never reads a planning artifact",
+              "helper_id=verify-phase-envelope", "data.advance", "never advance")
+HOST_TOOLS = {"claude": ("`Agent`", "spawn_agent"), "codex": ("spawn_agent", "`Agent`")}
+
+
 class SkillContractTests(unittest.TestCase):
-    def skill(self, host: str) -> str:
-        return (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")
-
-    def nested_section(self, host: str) -> str:
-        text = self.skill(host)
-        start = text.index("### Nested mode: phase drivers")
-        return " ".join(text[start:text.index("\n## ", start)].split())
-
-    def test_both_hosts_dispatch_a_driver_and_advance_only_on_the_runner_verdict(self) -> None:
-        for host in ("claude", "codex"):
-            section = self.nested_section(host)
+    def test_each_host_roots_dispatch_a_driver_and_advance_only_on_the_runner_verdict(self) -> None:
+        for host, (own_tool, other_tool) in HOST_TOOLS.items():
+            section = nested_section(host)
             with self.subTest(host=host):
-                self.assertIn("mode=nested", section)
-                self.assertIn("brief.agent", section)
-                self.assertIn("helper_id=verify-phase-envelope", section)
-                self.assertIn("data.advance", section)
-                self.assertIn("never advance", section)
-                self.assertIn("envelope", section)
+                for needle in (*ROOT_RULES, own_tool):
+                    self.assertIn(needle, section)
+                self.assertNotIn(other_tool, section)
 
-    def test_the_root_reads_only_the_envelope_and_compact_answers(self) -> None:
-        for host in ("claude", "codex"):
-            section = self.nested_section(host)
+    def test_publication_and_formal_checks_finish_before_verification(self) -> None:
+        for host in HOST_TOOLS:
+            section = nested_section(host)
+            verify = section.index("Then request `helper_id=verify-phase-envelope")
             with self.subTest(host=host):
-                self.assertIn("reads only", section)
-                self.assertIn("never reads a planning artifact", section)
-
-    def test_the_nesting_preflight_no_longer_says_drivers_are_pending(self) -> None:
-        for host in ("claude", "codex"):
-            self.assertNotIn("until they ship", self.skill(host), host)
-
-    def test_each_host_names_its_own_spawn_tool(self) -> None:
-        self.assertIn("`Agent`", self.nested_section("claude"))
-        self.assertIn("spawn_agent", self.nested_section("codex"))
-        self.assertNotIn("spawn_agent", self.nested_section("claude"))
-        self.assertNotIn("`Agent`", self.nested_section("codex"))
-
-    def test_the_tasks_and_plan_order_runs_before_verification(self) -> None:
-        for host in ("claude", "codex"):
-            section = self.nested_section(host)
-            with self.subTest(host=host):
-                verify = section.index("Then request `helper_id=verify-phase-envelope")
                 self.assertLess(section.index("publish-tasks-output"), verify)
                 self.assertLess(section.index("formal-check"), verify)
 
+    def test_the_nesting_preflight_no_longer_says_drivers_are_pending(self) -> None:
+        for host in HOST_TOOLS:
+            text = (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")
+            self.assertNotIn("until they ship", text, host)
+
 
 class DriverAgentTests(unittest.TestCase):
-    def test_the_agent_source_and_generated_codex_agent_define_the_driver(self) -> None:
+    def test_both_host_agents_define_the_driver_and_dispatch_only_inner_executors(self) -> None:
         source = (REPO_ROOT / "speckit-pro/agents/phase-executor.md").read_text(encoding="utf-8")
         generated = tomllib.loads((REPO_ROOT / "speckit-pro/codex-agents/phase-executor.toml").read_text(encoding="utf-8"))
-        for label, text in (("claude", source), ("codex", generated["developer_instructions"])):
-            with self.subTest(host=label):
-                self.assertIn("Phase driver", text)
-                self.assertIn("phase-envelope/v1", text)
-                self.assertIn("mode=flat", text)
-                self.assertIn("2,048", text)
-
-    def test_the_driver_dispatches_only_inner_executors_never_another_driver(self) -> None:
-        source = (REPO_ROOT / "speckit-pro/agents/phase-executor.md").read_text(encoding="utf-8")
-        self.assertIn("never dispatch `phase-executor`", source)
-        for name in ("clarify-executor", "checklist-executor", "analyze-executor"):
-            self.assertIn(name, source)
+        needles = ("Phase driver", "phase-envelope/v1", "mode=flat", "2,048", "never dispatch `phase-executor`",
+                   *INNER_EXECUTORS.values())
+        for host, text in (("claude", source), ("codex", generated["developer_instructions"])):
+            with self.subTest(host=host):
+                for needle in needles:
+                    self.assertIn(needle, text)
 
 
 if __name__ == "__main__":
