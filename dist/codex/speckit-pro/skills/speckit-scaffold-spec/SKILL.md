@@ -38,6 +38,7 @@ These examples name the runner's contract; the steps below determine when a chec
 | `propose-quality-gates` | `dry_run` | `{"measured": true}` (`false` when nothing was measured) |
 | `propose-quality-gates` | `apply` | `{"measured": true, "confirmed": true, "proposal_digest": "<dry-run digest>"}` (`confirmed` is `false` after a decline) |
 | `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>", "values": {"probe": "<observed-result>"}}]}` (add `action` and `files` per observation; add `host_version` when reported) |
+| `record-feature-offers` | `apply` | `{"host": "<host>", "readiness_digest": "<data.readiness_digest from the current successful Step 6.5 apply response, or null>", "answers": {"formal_methods": "<accepted or declined>", "verification_docker": "<accepted or declined>"}}` |
 
 ## Capability discovery & grounding
 
@@ -1156,6 +1157,12 @@ Hook definitions on Claude Code (Codex uses the exact-hash observation above):
 - The helper observes `local_capability`, `quality_gates` and
   `verification_docker` (whether a Linux/arm64 Docker daemon answers) itself.
   Omit `host_version` when the host does not report it.
+- Each `apply` attempt naming a supported host retires the previous readiness evidence before checking
+  the new observations. A failed attempt preserves the observations for diagnosis
+  but invalidates its old receipt and offers; retry Step 6.5 to obtain new evidence.
+  If retirement itself cannot be published safely, the helper refuses the attempt
+  before checking new observations and issues no fresh receipt. Report the gap
+  and resolve the diagnostic before retrying.
 - When the response is `input_error`, correct the field its diagnostic names
   and send the request once more. Keep evidence and action text subject to
   the helper's privacy validation; never write the readiness record directly
@@ -1170,25 +1177,38 @@ The record is git-ignored; leave it unstaged.
 
 Every SPEC gets both offers, whatever its feasibility result, so the user
 learns each capability exists even when declining (ADR 0005). Read the two
-results from the Step 6.5 response: `data.record.items.formal_methods` and
-`data.record.items.verification_docker`. When the response holds no record,
+results from the current successful Step 6.5 `apply` response: `data.record.items.formal_methods` and
+`data.record.items.verification_docker`. When the write failed or no successful applied response is available,
 show both as `unknown`. The step is done when each offer was shown with its
-result and its answer is printed.
+result, its answer is printed, and the runner has recorded both answers.
 
 For each feature, print one line: the feature, its `status`, its
 `evidence_source`, and the `action` when present. Then collect one answer per
 feature:
 
 - Answers-file mode: use the file's `formal_methods` and `verification_docker`
-  booleans; ask nothing.
+  booleans (`true` is `accepted`, `false` is `declined`); ask nothing.
 - Interactive mode: ask both with one `request_user_input` call, or in free text
   in an active foreground chat; recommend the decline for a feature whose
   status is not `verified`.
 
-Print `accepted` or `declined` beside each feature. An accepted offer
-changes nothing in this run: the opt-in setup
-flow ships in a later release, so scaffold installs nothing and leaves the
-workflow's Formal Methods selection as the Design Concept decided.
+Print `accepted` or `declined` beside each feature. Then run helper
+`record-feature-offers` in `apply` mode with both answers and `readiness_digest`
+from the current successful Step 6.5 `apply` response's `data.readiness_digest`, so the runner
+records in the Step 6.5 record that each feature was evaluated, offered and
+answered. A decline is recorded as offered, with answer `declined`.
+When Step 6.5 failed or only ran in `dry_run` mode, send `readiness_digest: null`;
+show both feasibility results as `unknown`. Use only the current response's
+digest, never an earlier response or one reconstructed from a saved record.
+The runner refuses a missing or mismatched digest, changed file inputs, or
+a record replaced during the offer write. Report any refusal or write failure
+as a coverage gap and finish normally; rerun Step 6.5 before retrying the offer.
+
+Set `host` to `codex`.
+
+An accepted offer changes nothing in this run: the opt-in setup flow ships in a
+later release, so scaffold installs nothing and leaves the workflow's Formal
+Methods selection as the Design Concept decided.
 
 ### 7. Commit and Verify (IN the Worktree)
 

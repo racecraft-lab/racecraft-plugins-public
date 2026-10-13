@@ -759,7 +759,7 @@
         "value": "speckit_pro_runner/helpers/readiness_record.py",
         "display": "speckit_pro_runner/helpers/readiness_record.py"
       },
-      "sha256": "ee52c77718cacbf9639fc0dac843648239018d28ae24a5c3e8a4172a5b0992f4"
+      "sha256": "b01951ad3b0dc956a37c798a00ddc736ade2cde7b9b1f77c96bc2b5ddde71de4"
     },
     {
       "path": {
@@ -775,7 +775,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "2f07009f64ef5199274692981a1adcb9c38468c6ebccfc65f6a595775e4b964a"
+      "sha256": "560e3e27a9afab20b76b459aacab76db52e175e15169a872ea4af28133558827"
     },
     {
       "path": {
