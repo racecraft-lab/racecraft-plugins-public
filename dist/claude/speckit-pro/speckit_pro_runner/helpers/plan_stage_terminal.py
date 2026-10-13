@@ -188,7 +188,7 @@ def discard(run: Run, names: list[str]) -> None:
 def recorded_pages_current(run: Run) -> bool:
     """True when the recorded pages still match the planning inputs, so the author's prose is kept."""
     try:
-        return bool(artifact_review.review_handoff(workflow_text(run), run.root, trusted_bytes)["reuse_artifacts"])
+        return artifact_review.generation_inputs_current(workflow_text(run), run.root, trusted_bytes)
     except ValueError:
         return False
 
@@ -222,7 +222,7 @@ def fill_pages(run: Run, fresh: bool) -> dict[str, Any]:
         raise Stop("integrity_failure", str(selection["diagnostics"][0]["message"]))
     selected = selection["data"]["selected_pages"]
     directory = run.root / run.feature / "artifacts"
-    if fresh and not recorded_pages_current(run) and directory.exists():
+    if fresh and artifact_review.record_from_workflow(workflow_text(run)) is not None and not recorded_pages_current(run) and directory.exists():
         discard(run, [f"{page_id}.html" for page_id in run.gallery])
     gaps = []
     for page_id in selected:
@@ -254,7 +254,16 @@ def write_record(run: Run, pages: dict[str, Any]) -> None:
     """Write the Artifact Review Handoff record, the sole store for generation and preview evidence."""
     inputs = {f"{run.feature}/{name}.md": sha256(run.root, f"{run.feature}/{name}.md") for name in ("spec", "plan", "tasks")}
     inputs[run.concept] = sha256(run.root, run.concept)
+    text = workflow_text(run)
+    previous = artifact_review.record_from_workflow(text)
+    reusable = artifact_review.review_handoff(text, run.root, trusted_bytes)["reuse_artifacts"]
+    old_pages = {page["id"]: page for page in previous["pages"]} if previous is not None else {}
     entries = [page_entry(run, page_id) for page_id in pages["generated"]]
+    for entry in entries:
+        old = old_pages.get(entry["id"], {})
+        preview = old.get("preview", {})
+        if preview.get("status") == "denied" or (reusable and old.get("sha256") == entry["sha256"]):
+            entry["preview"] = preview
     entries += [{"id": gap["id"], "generation": "gap", "reason": gap["reason"]} for gap in pages["gaps"] if gap["id"] != "all"]
     record = {"schema_version": "1.0", "feature_dir": run.feature, "input_hashes": inputs, "manifest_sha256": run.manifest_sha,
               "template_hashes": {e["id"]: sha256(artifact_review.GALLERY, f"templates/{e['id']}.html") for e in entries},
@@ -403,7 +412,7 @@ def terminal_sequence(run: Run, pages: dict[str, Any]) -> dict[str, Any]:
     done = {"pull_request": found, "commits": run.commits,
             "preview": {"status": review["status"], "note": review.get("preview_note"), "observer_dispatches": pending}}
     label = stop_label("plan_stage_boundary")
-    if pending:
+    if review["status"] == "pending":
         return {**done, "outcome": "preview_pending", "stop_label": None,
                 "next_action": f"Observe pages {pending} through the runner, commit the preview evidence, then print {label}."}
     return {**done, "outcome": "completed", "stop_label": label,
@@ -430,6 +439,7 @@ def finish(run: Run, apply: bool) -> dict[str, Any]:
     pages = fill_pages(run, fresh=run.inputs.get("until") == "pages")
     summary = {"pages": {"generated": pages["generated"], "gaps": pages["gaps"]}, "writes_state": True}
     if run.inputs.get("until") == "pages":
+        write_record(run, pages)
         return {**summary, **pages_ready(pages)}
     return {**summary, **terminal_sequence(run, pages)}
 

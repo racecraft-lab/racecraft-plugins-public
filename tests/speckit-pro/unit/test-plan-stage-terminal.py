@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 sys.path.insert(0, str(ROOT / "speckit-pro"))
 from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
 from test_result import run_counted  # noqa: E402
-from speckit_pro_runner import envelope, stop_policy  # noqa: E402
+from speckit_pro_runner import artifact_review, envelope, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
 
 SOURCE = ROOT / "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source"
@@ -156,6 +156,20 @@ class NarrativeTests(TerminalFixture):
         self.finish(execution_mode="headless")
         self.assertEqual(page.read_bytes(), written)
 
+    def test_repeated_pages_call_keeps_authored_prose_before_publication(self) -> None:
+        data = self.finish(until="pages")["data"]
+        identifier = data["pages"]["generated"][0]
+        request = envelope.RunnerRequest("author", "fill-artifact-page", "fill-artifact-page", "apply",
+                                         {**PLANNING, "entry_id": identifier,
+                                          "narrative": {"feature-header": "The author explains the reviewed planning boundary."}})
+        self.assertEqual(registry.dispatch_helper(request)["status"], "ok")
+        page = self.root / FEATURE / "artifacts" / f"{identifier}.html"
+        written = page.read_bytes()
+        self.assertIn(b"The author explains", written)
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(page.read_bytes(), written)
+        self.assertEqual(self.subjects(), [])
+
 
 class RerunTests(TerminalFixture):
     def test_a_rerun_after_success_refreshes_the_recorded_pull_request_and_adds_no_commit(self) -> None:
@@ -165,6 +179,28 @@ class RerunTests(TerminalFixture):
         data = self.finish(execution_mode="headless")["data"]
         self.assertEqual((data["pull_request"]["number"], len(self.cli.calls("create")), self.subjects()), (7, 1, commits))
         self.assertNotIn("--title", self.cli.calls("edit")[0])
+
+    def test_retry_retains_brokered_observations_and_denials(self) -> None:
+        self.finish(execution_mode="headless")
+        self.cli.listing = [{"number": 7, "url": URL, "state": "OPEN", "title": "feat(art-007): plan Draft-PR Emission"}]
+        path = self.root / WORKFLOW
+        text = path.read_text(encoding="utf-8")
+        record = artifact_review.record_from_workflow(text)
+        statuses = ("denied", "verified", "unavailable", "denied")
+        for page, status in zip(record["pages"], statuses, strict=True):
+            page["preview"] = {"status": status, "blocker": None if status == "verified" else "Brokered disposition",
+                               "observation": {"kind": "brokered", "verdict": status, "artifact_sha256": page["sha256"],
+                                               "observed_at": "2026-01-01T00:00:00+00:00"}}
+        section = "## Artifact Review Handoff\n\n```json\n" + json.dumps(record, indent=2) + "\n```\n"
+        path.write_text(plan_stage_terminal.SECTION.sub(lambda _: section, text), encoding="utf-8")
+        self.git("commit", "-q", "-am", "record brokered observations")
+        before = artifact_review.review_handoff(path.read_text(), self.root, plan_stage_terminal.trusted_bytes, "unavailable")
+        self.assertEqual(before["status"], "pending")
+        result = self.finish(execution_mode="headless")
+        self.assertEqual(result["data"]["preview"]["status"], "pending")
+        self.assertNotEqual(result["data"]["outcome"], "completed")
+        after = artifact_review.record_from_workflow(path.read_text())
+        self.assertEqual([p["preview"] for p in after["pages"]], [p["preview"] for p in record["pages"]])
 
     def test_a_page_with_active_content_stops_before_any_commit(self) -> None:
         data = self.finish(until="pages")["data"]

@@ -343,6 +343,12 @@ def _inputs_current(record: dict[str, Any], root: Path, read_file: FileReader) -
     return all(inputs)
 
 
+def generation_inputs_current(text: str, root: Path, read_file: FileReader) -> bool:
+    """Check generation inputs independently of a narrative edit to the page bytes."""
+    value = record_from_workflow(text)
+    return value is not None and _inputs_current(_record(value), root, read_file)
+
+
 def _selection(record: dict[str, Any], read_file: FileReader) -> None:
     """The parent records the author's selection; it cannot omit always-selected pages."""
     content = read_file(GALLERY / "manifest.json", GALLERY)
