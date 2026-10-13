@@ -314,19 +314,14 @@ def build_packet(run: Run, pages: dict[str, Any]) -> dict[str, str]:
     return {"title": subject, "body_file": body_file, "base_branch": base}
 
 
-def json_list(text: str) -> list[Any] | None:
-    try:
-        value = json.loads(text)
-    except ValueError:
-        return None
-    return value if isinstance(value, list) else None
-
-
 def observe_branch(run: Run) -> dict[str, Any]:
     """The one read-only query for every pull request on the head branch, in the corroboration's shape."""
     listing = cli(run.root, ["gh", "pr", "list", "--head", run.branch, "--state", "all", "--json", "number,url,state,title"])
-    pulls = json_list(listing["stdout_tail"]) if listing["exit_status"] == 0 else None
-    return {"ok": pulls is not None, "pull_requests": pulls}
+    try:
+        pulls = json.loads(listing["stdout_tail"]) if listing["exit_status"] == 0 else None
+    except ValueError:
+        pulls = None
+    return {"ok": isinstance(pulls, list), "pull_requests": pulls}
 
 
 def existing_pull_request(run: Run, observation: dict[str, Any]) -> dict[str, Any] | None:
@@ -353,7 +348,7 @@ def create_or_refresh(run: Run, packet: dict[str, str]) -> dict[str, Any]:
     target = existing_pull_request(run, observation)
     pushed = "the artifacts and boundary commit are already pushed"
     if target is not None:
-        known = next((entry for entry in observation["pull_requests"] or [] if entry["number"] == target["number"]), {})
+        known: dict[str, Any] = next((e for e in observation["pull_requests"] or [] if e["number"] == target["number"]), {})
         edit = ["gh", "pr", "edit", str(target["number"]), "--body-file", packet["body_file"]]
         command(run, edit + (["--title", packet["title"]] if known.get("title") != packet["title"] else []),
                 f"the pull request refresh failed; {pushed}")
