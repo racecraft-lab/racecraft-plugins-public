@@ -16,20 +16,41 @@ from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
+INVALID_INPUTS = (
+    {}, {"spec_id": "SPEC-001"},
+    {"spec_id": "SPEC-001", "spec_name": None},
+    {"spec_id": "SPEC-001", "spec_name": "!!!"},
+    {"spec_id": "SPEC-001", "spec_name": "Save\x00Items"},
+    {"spec_id": "SPEC-001", "spec_name": "Save Items", "branch_name": "override"},
+    {"spec_id": "SPEC-01", "spec_name": "Save Items"},
+    {"spec_id": "HRNS-15", "spec_name": "Save Items"},
+    {"spec_id": "SPEC-006aa", "spec_name": "Save Items"},
+    {"spec_id": "HRNS-015-old-branch", "spec_name": "Save Items"},
+    {"spec_id": "006a", "spec_name": "Save Items"},
+    {"spec_id": "HRNS1-015", "spec_name": "Save Items"},
+)
+IDENTITY_CASES = (
+    ("SPEC-001", "Word Frequency JSON Output", "001-word-frequency-json-output"),
+    ("SPEC-009", "Search & Database", "009-search-database"),
+    ("SPEC-007", "  Café / JSON... Output!!  ", "007-cafe-json-output"),
+    ("spec-042", "Save---Items_v2", "042-save-items-v2"),
+    ("HRNS-015", "Autopilot Gate PR Emission Repair", "hrns-015-autopilot-gate-pr-emission-repair"),
+    ("XPLAT-010", "Cross Host Scaffold", "xplat-010-cross-host-scaffold"),
+    ("SPEC-006a", "UAT Skeleton", "006a-uat-skeleton"),
+    ("hrns-015", "Harness Repair", "hrns-015-harness-repair"),
+    ("EDA-001", "Attribution Foundation", "eda-001-attribution-foundation"),
+    ("BRAND-001", "Racecraft Identity System", "brand-001-racecraft-identity-system"),
+    ("FORMAL-002", "State Model", "formal-002-state-model"),
+    ("PRSG-001", "Save Items", "prsg-001-save-items"),
+    ("XPLAT-010A", "Cross Host Suffix", "xplat-010a-cross-host-suffix"),
+)
+
+
 class ScaffoldIdentityTests(unittest.TestCase):
     def test_invalid_identity_fails_before_placement_or_writes(self) -> None:
-        cases = (
-            {}, {"spec_id": "SPEC-001"},
-            {"spec_id": "SPEC-001", "spec_name": None},
-            {"spec_id": "SPEC-001", "spec_name": "!!!"},
-            {"spec_id": "SPEC-001", "spec_name": "Save\x00Items"},
-            {"spec_id": "SPEC-001", "spec_name": "Save Items", "branch_name": "override"},
-            {"spec_id": "SPEC-01", "spec_name": "Save Items"},
-            {"spec_id": "PRSG-001", "spec_name": "Save Items"},
-        )
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for inputs in cases:
+            for inputs in INVALID_INPUTS:
                 with self.subTest(inputs=inputs):
                     completed, result, _ = run_runner({
                         "schema_version": "1.0", "request_id": "invalid-scaffold-identity",
@@ -50,13 +71,16 @@ class ScaffoldIdentityTests(unittest.TestCase):
                 self.assertIsNotNone(row, f"{host}: registered helper request is required")
                 inputs = json.loads(row.group(1))
                 self.assertEqual(inputs, {"spec_id": "<SPEC-ID>", "spec_name": "<exact roadmap spec name>"})
-                inputs.update(spec_id="SPEC-001", spec_name="Word Frequency JSON Output")
-                _, result, _ = run_runner({
-                    "schema_version": "1.0", "request_id": "scaffold-host-parity",
-                    "helper_id": "derive-scaffold-branch", "operation": "derive-scaffold-branch",
-                    "mode": "read_only", "inputs": inputs,
-                })
-                self.assertEqual(result["data"]["branch_name"], "001-word-frequency-json-output")
+                for spec_id, title, expected in IDENTITY_CASES:
+                    with self.subTest(spec_id=spec_id):
+                        inputs.update(spec_id=spec_id, spec_name=title)
+                        completed, result, _ = run_runner({
+                            "schema_version": "1.0", "request_id": "scaffold-host-parity",
+                            "helper_id": "derive-scaffold-branch", "operation": "derive-scaffold-branch",
+                            "mode": "read_only", "inputs": inputs,
+                        }, extra_env={"PYTHONPATH": str(Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro")})
+                        self.assertEqual(completed.returncode, 0, result)
+                        self.assertEqual(result["data"]["branch_name"], expected)
                 step = text.split("### 2. Find the Spec in the Technical Roadmap", 1)[1].split("### 3.", 1)[0]
                 self.assertIn("Run runner helper `derive-scaffold-branch`", step)
                 self.assertIn("Use `data.branch_name` unchanged", step)
@@ -76,12 +100,7 @@ class ScaffoldIdentityTests(unittest.TestCase):
         self.assertEqual(result["data"]["branch_name"], "001-word-frequency-json-output")
 
     def test_title_normalization_keeps_all_words_and_a_safe_single_segment(self) -> None:
-        cases = (
-            ("SPEC-009", "Search & Database", "009-search-database"),
-            ("SPEC-007", "  Café / JSON... Output!!  ", "007-cafe-json-output"),
-            ("spec-042", "Save---Items_v2", "042-save-items-v2"),
-        )
-        for spec_id, title, expected in cases:
+        for spec_id, title, expected in IDENTITY_CASES:
             with self.subTest(spec_id=spec_id, title=title):
                 completed, result, _ = run_runner({
                     "schema_version": "1.0", "request_id": "scaffold-normalization",
@@ -90,7 +109,7 @@ class ScaffoldIdentityTests(unittest.TestCase):
                 })
                 self.assertEqual(completed.returncode, 0, result)
                 self.assertEqual(result["data"]["branch_name"], expected)
-                self.assertRegex(expected, r"^[0-9]{3}-[a-z0-9]+(?:-[a-z0-9]+)*$")
+                self.assertRegex(result["data"]["branch_name"], r"^(?:[a-z]+-)?[0-9]{3}[a-z]?-[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 if __name__ == "__main__":

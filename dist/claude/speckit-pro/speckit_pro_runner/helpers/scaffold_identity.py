@@ -7,16 +7,18 @@ import unicodedata
 from typing import Any
 
 from ..envelope import response
+from ..spec_identity import normalize_spec_identity
 from ..strict_input import SelectionError, has_hidden_characters, require_fields, require_text
 
 
 def derive_scaffold_branch(inputs: dict[str, Any]) -> str:
     require_fields(inputs, {"spec_id", "spec_name"}, "derive-scaffold-branch inputs")
     spec_id = require_text(inputs["spec_id"], "spec_id")
-    # Numeric directories are the SPEC namespace under the MOC identity contract.
-    identity = re.fullmatch(r"(?i:SPEC)-([0-9]{3})", spec_id)
-    if identity is None:
-        raise SelectionError("spec_id must be SPEC- followed by three ASCII digits; other namespaces require their own directory identity")
+    identity = normalize_spec_identity(spec_id)
+    if re.fullmatch(r"[a-z]+ [0-9]{3}[a-z]?", identity) is None or identity.replace(" ", "-") != spec_id.lower():
+        raise SelectionError("spec_id must be an ASCII letter namespace followed by three ASCII digits and an optional letter suffix")
+    namespace, number = identity.split(" ", 1)
+    prefix = number if namespace == "spec" else f"{namespace}-{number}"
     spec_name = require_text(inputs["spec_name"], "spec_name")
     if has_hidden_characters(spec_name):
         raise SelectionError("spec_name must not contain hidden characters")
@@ -24,7 +26,7 @@ def derive_scaffold_branch(inputs: dict[str, Any]) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", ascii_name.lower()).strip("-")
     if not slug:
         raise SelectionError("spec_name must contain an ASCII letter or digit after normalization")
-    return f"{identity.group(1)}-{slug}"
+    return f"{prefix}-{slug}"
 
 
 def run_scaffold_branch_helper(entry: Any, request: Any) -> dict[str, Any]:

@@ -4,15 +4,15 @@ The runner derives one scaffold branch from the exact roadmap ID and title.
 Both rendered hosts call that same read-only seam before worktree placement.
 Naming policy lives in
 [`scaffold_identity.py`](../../speckit-pro/speckit_pro_runner/helpers/scaffold_identity.py);
-the existing placement helper still validates the branch and task-local path.
+identity normalization lives in the public
+[`spec_identity.py`](../../speckit-pro/speckit_pro_runner/spec_identity.py) owner
+shared with the spec index. That existing contract already recognizes namespaced
+directories and letter-suffixed numbers. Scaffold derives `<number>-<slug>` for
+SPEC and `<lowercase-namespace>-<number>-<slug>` otherwise, including `006a`.
+The existing placement helper still validates the branch and task-local path.
 
 ## Known limits
 
-- **Other namespaces and number forms fail closed.** Numeric spec directories
-  belong to the SPEC namespace under the existing MOC contract. This helper
-  accepts `SPEC-NNN` only, including lowercase spelling. Other inputs, such as
-  `PRSG-001` or `SPEC-006a`, stop before placement or writes. Supporting them
-  would require a separate directory-identity change; this PR does not make it.
 - **ASCII normalization can lose non-ASCII words.** NFKD normalization followed
   by ASCII conversion gives `cafe` for `Café`, but drops characters that do not
   decompose to ASCII. Mixed-language titles can therefore lose text; wholly
@@ -37,10 +37,29 @@ the existing placement helper still validates the branch and task-local path.
   results provide execution evidence. Small additive registry, fixture and
   manifest table-size rows are non-gating. No quality acknowledgments were added.
 
+## Retained cross-host review notes
+
+- **R1342-e849f2b3 (Low): interrupted legacy setup.** A half-scaffolded Pending
+  entry under an old model-chosen branch can bypass the In Progress check and
+  create a second worktree under the canonical name. The roadmap switches to
+  In Progress only at Step 8. This transition case requires operator
+  reconciliation; this fix does not migrate legacy setups.
+- **R1342-3c272119 (Info): operator boundaries.** The exception that an
+  operator-chosen boundary ends the run instead of deferring is stated only in
+  stop-policy guidance. This pre-existing pattern remains a note.
+- **R1342-a4332e5e (Info): finalization vocabulary.** `finalize-run` accepts
+  `scaffold_complete` inside autopilot, although no real autopilot path names
+  it. This remains a note; scaffold does not call `finalize-run`.
+- **R1342-73a18938 (Info): review size.** The reviewed head contained about
+  275 reviewable LOC, six production files and 16 handwritten files, one over
+  the 15-file warning tier. These are the original review's counts; the shared
+  owner and regression coverage add to that diff.
+
 ## Host coverage
 
 The provider-free tests execute each rendered host's documented helper request
-and check the identical numeric branch. They also verify the registered
+against each packaged runner and check identical SPEC, namespaced and
+letter-suffixed branches. They also verify the registered
 completion marker on both hosts, generated payload parity and the shared
 zero-bash guard. Interactive question steps were checked from their documented
 shape, not exercised in a live Claude Code or Codex interview. Native macOS CI
