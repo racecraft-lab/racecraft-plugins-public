@@ -148,6 +148,11 @@ def _printed(reason: str) -> re.Pattern[str]:
     return re.compile(rf"\b[Pp]rint\b[^\n]*`stop_reason:{reason}`")
 
 
+def _scaffold_report(host: str) -> str:
+    skill = host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md"
+    return skill.read_text(encoding="utf-8").partition("### 10. Closing Report")[2].partition("## Failure Handling")[0]
+
+
 # The plan-stage stop report maps each shape that can end a plan-stage run to its marker.
 PLAN_STAGE_SHAPES = {
     "Emission ran": "plan_stage_boundary",
@@ -182,8 +187,7 @@ class StopReasonPrintTests(unittest.TestCase):
 
         self.assertEqual(stop_class("scaffold_complete"), "authority")
         for host in HOST_SKILLS:
-            text = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
-            closing = text.split("### 10. Closing Report", 1)[1].split("## Failure Handling", 1)[0]
+            closing = _scaffold_report(host)
             self.assertRegex(closing, _printed("scaffold_complete"))
             self.assertIn("as the last line of the final message", closing)
             self.assertIn("Do not print this marker on an incomplete or failed scaffold", closing)

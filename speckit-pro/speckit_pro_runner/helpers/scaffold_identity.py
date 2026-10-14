@@ -28,10 +28,10 @@ def derive_scaffold_branch(inputs: dict[str, Any]) -> str:
 
 
 def run_scaffold_branch_helper(entry: Any, request: Any) -> dict[str, Any]:
+    status = "ok"
     try:
-        branch_name = derive_scaffold_branch(request.inputs)
+        data: dict[str, Any] = {"branch_name": derive_scaffold_branch(request.inputs)}
     except SelectionError as exc:
-        return response("input_error", request_id=request.request_id, data={
-            "verdict": "stop", "problems": [str(exc)],
-        })
-    return response("ok", request_id=request.request_id, data={"branch_name": branch_name})
+        status = "input_error"
+        data = {"verdict": "stop", "problems": [str(exc)]}
+    return response(status, request_id=request.request_id, data=data)
