@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.45.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.45.0...speckit-pro-v2.45.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **speckit-pro:** scope scaffold roadmap freshness to the selected SPEC ([#1346](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1346)) ([be96d9a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/be96d9a2dbd1526d98c3437acb5e569c74d58227)), closes [#1345](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1345)
+
 ## [2.45.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.44.0...speckit-pro-v2.45.0) (2026-10-14)
 
 
