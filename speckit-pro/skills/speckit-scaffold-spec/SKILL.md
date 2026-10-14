@@ -340,9 +340,14 @@ or replacement and use the new `spec_kit` object for subsequent steps.
 A declined version repair permits continuation only with a nonempty `cli_argv`.
 
 If `status` is `missing` and `uv` exists, run `install_argv`. If `status` is
-`older`, `newer` or `unreadable`, keep the `spec_kit` object for the
-`project_integration` observation in Step 6.5 and offer the operator
-`install_argv`; continue on the installed CLI when they decline.
+`older` and the invocation has `--answers-file`, STOP without asking: the file
+has no key for the repair and answers-file mode asks no question. Make no
+mutation, print one message naming `spec_kit.installed_version`,
+`spec_kit.pinned_version` and `install_argv`, then print exactly one
+`stop_reason:speckit_cli_older` as the last line of the final message, on its own
+line. Otherwise, if `status` is `older`, `newer` or `unreadable`, keep the
+`spec_kit` object for the `project_integration` observation in Step 6.5 and offer
+the operator `install_argv`; continue on the installed CLI when they decline.
 
 If `uv` is unavailable or the install fails, STOP and give the operator
 `install_argv` to run. Do not continue with setup without the `specify`
