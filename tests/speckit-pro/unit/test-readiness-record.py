@@ -15,6 +15,7 @@ import sys
 import tempfile
 import unittest
 import unittest.mock
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -2112,6 +2113,176 @@ class FeatureOfferCase(unittest.TestCase):
         return readiness_record.feature_offers(self.root, host)
 
 
+@dataclass(frozen=True)
+class RoadmapEditCase:
+    before: str
+    after: str
+    stays_current: bool = False
+    extra_file: bool = False
+    extra_observations: tuple[dict[str, object], ...] = ()
+
+
+class RoadmapOfferFreshnessCase(FeatureOfferCase):
+    NAME_TABLE = ("## Progress Tracking\n\n| Spec | Name | Status | Workflow File |\n"
+                  "|------|------|--------|---------------|\n"
+                  "| TEST-001 | One | ⏳ Pending | flow |\n"
+                  "| TEST-002 | Two | ⏳ Pending | other |\n")
+    TABLE = ("## Progress Tracking\n\n| Spec | Name | Extra | Status | Workflow File |\n"
+             "|------|------|-------|--------|---------------|\n"
+             "| TEST-001 | One | Notes | ⏳ Pending | flow |\n"
+             "| TEST-002 | Two | Notes | ⏳ Pending | other |\n")
+
+    def assert_roadmap_edit(self, case: RoadmapEditCase) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host, before=case.before, after=case.after):
+                roadmap = self.root / ".specify/roadmap.md"
+                roadmap.unlink(missing_ok=True)
+                roadmap.write_text(case.before, encoding="utf-8")
+                changed = self.root / "evidence.md" if case.extra_file else roadmap
+                changed.write_text(case.before, encoding="utf-8")
+                observations = [observation("reviewability_report"), observation("formal_methods", "unavailable")]
+                observations.extend(case.extra_observations)
+                if case.extra_file:
+                    observations.append(observation("project_integration", files=["evidence.md"]))
+                record = self.write_record(host, observations)["data"]["record"]
+                assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted"), host), "ok", 0)
+                self.assertTrue(self.read_offers(host)["formal_methods"]["offered"])
+                changed.write_text(case.after, encoding="utf-8")
+                self.assertEqual(case.stays_current, self.read_offers(host)["formal_methods"]["offered"])
+                self.assertEqual(case.stays_current, readiness_record.current_record(record, self.root, host))
+                if not case.stays_current:
+                    self.assertTrue(any("input changed" in reason for _, reason in readiness_record.stale_items(self.root, host)))
+
+
+class RoadmapOfferStatusFreshnessTest(RoadmapOfferFreshnessCase):
+    def test_only_target_spec_status_flip_is_allowed(self) -> None:
+        case = RoadmapEditCase(
+            before=self.TABLE,
+            after=self.TABLE.replace("One | Notes | ⏳ Pending", "One | Notes | 🔄 In Progress"),
+            stays_current=True,
+        )
+        self.assert_roadmap_edit(case)
+
+    def test_edits_outside_target_status_allowance_remain_fingerprinted(self) -> None:
+        other_heading = self.TABLE.replace("Progress Tracking", "Other")
+        other_heading_edit = self.TABLE + "\n" + other_heading.replace(
+            "One | Notes | ⏳ Pending", "One | Notes | 🔄 In Progress")
+        cases = (
+            ("different column", RoadmapEditCase(self.TABLE, self.TABLE.replace("| flow |", "| new-flow |"))),
+            ("other spec status", RoadmapEditCase(
+                self.TABLE, self.TABLE.replace("Two | Notes | ⏳ Pending", "Two | Notes | 🔄 In Progress"))),
+            ("other file status", RoadmapEditCase(
+                self.TABLE, self.TABLE.replace("⏳ Pending", "🔄 In Progress"), extra_file=True)),
+            ("linked first status", RoadmapEditCase(
+                self.TABLE, self.TABLE.replace("One | Notes | ⏳ Pending", "One | Notes | [⏳ Pending](target.md)"))),
+            ("linked second status", RoadmapEditCase(
+                self.TABLE, self.TABLE.replace("Two | Notes | ⏳ Pending", "Two | Notes | [⏳ Pending](target.md)"))),
+            ("table under another heading", RoadmapEditCase(self.TABLE + "\n" + other_heading, other_heading_edit)),
+        )
+        for label, case in cases:
+            with self.subTest(edit=label):
+                self.assert_roadmap_edit(case)
+
+
+class RoadmapOfferEscapedPipeFreshnessTest(RoadmapOfferFreshnessCase):
+    def test_escaped_pipe_name_suffix_is_fingerprinted_and_status_flip_is_masked(self) -> None:
+        name_before = self.NAME_TABLE.replace("One |", "One \\| clean |")
+        status_before = self.TABLE.replace("One |", "One \\| clean |")
+        cases = (
+            ("suffix edit", RoadmapEditCase(name_before, name_before.replace("clean", "injected"))),
+            ("status flip", RoadmapEditCase(
+                status_before,
+                status_before.replace(
+                    "One \\| clean | Notes | ⏳ Pending", "One \\| clean | Notes | 🔄 In Progress"),
+                stays_current=True)),
+        )
+        for label, case in cases:
+            with self.subTest(edit=label):
+                self.assert_roadmap_edit(case)
+
+    def test_escaped_pipe_in_every_pre_status_column_remains_fingerprinted(self) -> None:
+        for cell in ("TEST-001", "One", "Notes"):
+            before = self.TABLE.replace(f"| {cell} |", f"| {cell} \\| clean |", 1)
+            after = before.replace("Notes", "injected", 1) if cell != "Notes" else before.replace("clean", "injected")
+            self.assert_roadmap_edit(RoadmapEditCase(before, after))
+
+    def test_pipe_in_code_and_link_remains_fingerprinted(self) -> None:
+        for cell in ("`One \\| clean`", "[One \\| clean](target.md)", "[One](target\\|clean.md)",
+                     "`One | clean`", "[One | clean](target.md)"):
+            before = self.NAME_TABLE.replace("| One |", f"| {cell} |")
+            self.assert_roadmap_edit(RoadmapEditCase(before, before.replace("clean", "injected")))
+            if "\\|" in cell:
+                self.assert_roadmap_edit(RoadmapEditCase(
+                    before, before.replace("⏳ Pending", "🔄 In Progress", 1), stays_current=True))
+
+
+class RoadmapOfferFingerprintScopeFreshnessTest(RoadmapOfferFreshnessCase):
+    def test_raw_and_scoped_fingerprints_do_not_share_a_cache_entry(self) -> None:
+        before = self.TABLE.replace("⏳ Pending", "Pending")
+        self.assert_roadmap_edit(RoadmapEditCase(
+            before,
+            before.replace("One | Notes | Pending", "One | Notes | In Progress"),
+            extra_observations=(observation("project_integration", files=[".specify/roadmap.md"]),),
+        ))
+        roadmap = self.root / ".specify/roadmap.md"
+        roadmap.write_text(before, encoding="utf-8")
+        values = readiness_record.fingerprint_values({"spec_id": "TEST-001"}, "reviewability_report")
+        scoped = {**readiness_record.fingerprint_files([".specify/roadmap.md"], self.root, "reviewability_report", values=values), **values}
+        raw = readiness_record.fingerprint_files([".specify/roadmap.md"], self.root, "project_integration")
+        roadmap.write_text(before.replace("One | Notes | Pending", "One | Notes | In Progress"), encoding="utf-8")
+        cache = {}
+        self.assertTrue(readiness_record.current_fingerprints(scoped, self.root, cache, item_name="reviewability_report"))
+        self.assertFalse(readiness_record.current_fingerprints(raw, self.root, cache))
+
+
+class RoadmapOfferMarkdownTableFreshnessTest(RoadmapOfferFreshnessCase):
+    def test_fenced_or_html_example_table_is_fingerprinted(self) -> None:
+        for prefix, suffix in (("```markdown\n", "```\n"), ("~~~~\n", "~~~~\n"),
+                               ("<!--\n", "-->\n"), ("<div>\n", "</div>\n"),
+                               ("````markdown\ntext\u2028````\n", "````\n"),
+                               ("~~~~\ntext\u2029~~~~\n", "~~~~\n"),
+                               ("````markdown\n````\u00a0\n", "````\n"),
+                               ("~~~~\n~~~~\u2028\n", "~~~~\n"),
+                               ("x\r```\n", "```\n")):
+            before = prefix + self.TABLE + suffix
+            after = before.replace("One | Notes | ⏳ Pending", "One | Notes | 🔄 In Progress")
+            self.assert_roadmap_edit(RoadmapEditCase(before, after))
+
+    def test_ambiguous_or_non_status_edits_fail_closed(self) -> None:
+        for before in (self.TABLE + self.TABLE, self.TABLE.replace("Status", "Status | Status"),
+                       self.TABLE.replace("One |", "One \\\\| clean |"),
+                       self.TABLE.replace("| TEST-001 |", "| \u00a0TEST-001 |"),
+                       self.TABLE.replace("| Spec |", "| \u00a0Spec |"),
+                       self.TABLE.replace("| Spec |", "Note | Spec |"),
+                       self.TABLE.replace("| TEST-001 |", "| TEST-002 | x\u2028| TEST-001 |"),
+                       self.TABLE.replace("---------------|\n", "---------------|x\n"),
+                       self.TABLE.replace("| Workflow File |\n", "| Workflow File |x\n"),
+                       self.TABLE.replace("|------|", "|x-----|", 1)):
+            self.assert_roadmap_edit(RoadmapEditCase(before, before.replace("⏳ Pending", "🔄 In Progress", 1)))
+        self.assert_roadmap_edit(RoadmapEditCase(self.TABLE, self.TABLE.replace("⏳ Pending", "✅ Complete", 1)))
+        self.assert_roadmap_edit(RoadmapEditCase(
+            self.TABLE, self.TABLE.replace(" Notes | ⏳ Pending", " Notes |  ⏳ Pending", 1)))
+
+
+class RoadmapOfferFilesystemFreshnessTest(RoadmapOfferFreshnessCase):
+    def test_renamed_or_linked_roadmap_evidence_is_not_fresh(self) -> None:
+        for host, variant in itertools.product(("claude", "codex"), ("rename", "symlink")):
+            with self.subTest(host=host, variant=variant):
+                roadmap = self.root / ".specify/roadmap.md"
+                roadmap.unlink(missing_ok=True)
+                roadmap.write_text(self.TABLE, encoding="utf-8")
+                self.write_record(host, [observation("reviewability_report")])
+                assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted"), host), "ok", 0)
+                renamed = self.root / "renamed.md"
+                roadmap.rename(renamed)
+                if variant == "symlink":
+                    roadmap.symlink_to(renamed)
+                self.assertFalse(self.read_offers(host)["formal_methods"]["offered"])
+        # A re-created regular roadmap still invalidates a non-target status flip after the swap.
+        self.assert_roadmap_edit(RoadmapEditCase(
+            self.TABLE, self.TABLE.replace("Two | Notes | ⏳ Pending", "Two | Notes | 🔄 In Progress")))
+
+
 class FeatureOfferPublicationCase(FeatureOfferCase):
     """Interleave a competing publication at the writer or final swap seam."""
 
@@ -2178,6 +2349,22 @@ class FeatureOffersTest(FeatureOfferCase):
         after = json.loads(self.record_path().read_text(encoding="utf-8"))
         self.assertEqual({key: before[key] for key in before if key != "feature_offers"},
                          {key: after[key] for key in after if key != "feature_offers"})
+
+    def test_a_status_flip_in_the_fingerprinted_roadmap_keeps_the_offers_readable(self) -> None:
+        """Step 8 marks the SPEC row In Progress after Step 6.5 fingerprinted the roadmap (issue 1345)."""
+        roadmap = self.root / ".specify" / "roadmap.md"
+        table = ("## Progress Tracking\n\n| Spec | Name | Status | Workflow File | Next Phase |\n"
+                 "|------|------|--------|---------------|------------|\n"
+                 "| TEST-001 | One | {status} | [w](.process/TEST-001-workflow.md) | Specify |\n"
+                 "| TEST-002 | Two | ⏳ Pending | [w](.process/TEST-002-workflow.md) | Specify |\n")
+        roadmap.write_text(table.format(status="⏳ Pending"), encoding="utf-8")
+        self.write_record(observations=[observation("reviewability_report"),
+                                        observation("formal_methods", "unavailable")])
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted")), "ok", 0)
+        roadmap.write_text(table.format(status="🔄 In Progress"), encoding="utf-8")
+        self.assertEqual({"evaluated": True, "offered": True, "answer": "accepted"}, self.read_offers()["formal_methods"])
+        roadmap.write_text(table.format(status="🔄 In Progress").replace("Specify", "Plan"), encoding="utf-8")
+        self.assertEqual({"evaluated": False, **NOT_OFFERED}, self.read_offers()["formal_methods"])
 
     def test_dry_run_reports_the_offers_without_writing_them(self) -> None:
         self.write_record()
@@ -2590,7 +2777,9 @@ class FeatureOfferUnusableEvidenceTest(FeatureOfferCase):
 
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    cases = (ReadinessRecordTest, FeatureOffersTest, FeatureOfferRecordValidationTest, FeatureOfferHostContractTest,
+    cases = (ReadinessRecordTest, RoadmapOfferStatusFreshnessTest, RoadmapOfferEscapedPipeFreshnessTest,
+             RoadmapOfferFingerprintScopeFreshnessTest, RoadmapOfferMarkdownTableFreshnessTest,
+             RoadmapOfferFilesystemFreshnessTest, FeatureOffersTest, FeatureOfferRecordValidationTest, FeatureOfferHostContractTest,
              FeatureOfferEvidenceTest, FeatureOfferFingerprintTest, FeatureOfferFilePublicationTest, FeatureOfferRetirementTest,
              FeatureOfferConcurrentPublicationTest, FeatureOfferEntrySubstitutionTest, FeatureOfferUnusableEvidenceTest,
              TerminalPreviewEvidenceTest, PreviewEvidenceBoundaryTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,

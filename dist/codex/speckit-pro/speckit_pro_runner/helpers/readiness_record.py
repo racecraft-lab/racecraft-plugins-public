@@ -29,7 +29,7 @@ from ..envelope import diagnostic, response
 from ..atomic_write import AtomicWriteInterrupted, entry_identity, file_identity, open_safe_parent_fd, write_bytes_atomic, write_target_matches_snapshot
 from ..canonical_json import canonical_bytes
 from ..private_state import ensure_private_directory
-from ..strict_input import SelectionError, require_fields, require_text, unique_object
+from ..strict_input import SelectionError, next_fence, require_fields, require_text, unique_object
 from ..sweep_isolation import secret_matches
 from ..trusted_io import TreeEntryReadOptions, find_repo_root, read_tree_entry, trusted_bytes
 from ..verification_docker import DAEMON_ARCHITECTURES, PLATFORM, PLATFORM_OS
@@ -68,6 +68,8 @@ RECORD_LIMIT_BYTES = 1024 * 1024
 FINGERPRINT_LIMIT_BYTES = 1024 * 1024
 MAX_FINGERPRINT_FILES = 64
 DIGEST_RE = re.compile(r"sha256:[0-9a-f]{64}")
+PROGRESS_TABLE_RE = re.compile(r"(?m)^## Progress Tracking\r?\n(?:[ \t]*\r?\n)*(?P<table>\|[^\n]*\n(?:\|[^\n]*(?:\n|$))*)")
+SCAFFOLD_STATUS_RE = re.compile(r"([ \t]*)(?:⏳ Pending|🔄 In Progress|Pending|In Progress)([ \t]*)")
 HOST_VERSION_RE = re.compile(r"(?:codex-cli )?([0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?)(?: \(Claude Code\))?")
 
 
@@ -75,17 +77,18 @@ def now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def fingerprint_files(paths: Any, root: Path, label: str) -> dict[str, str]:
+def fingerprint_files(paths: Any, root: Path, label: str, *, values: dict[str, str] | None = None) -> dict[str, str]:
     if not isinstance(paths, list):
         raise SelectionError(f"{label}.files must be a list of repository-relative paths")
-    prints: dict[str, str] = {}
+    relatives: dict[str, PurePosixPath] = {}
     for raw in paths:
         text = clean_text(raw, f"{label}.files entry")
         if not inside_repository(text):
             raise SelectionError(f"{label}.files entry {text!r} must stay inside the repository")
         relative = PurePosixPath(text)
-        prints[f"file:{relative.as_posix()}"] = fingerprint_file(root, relative)
-    return prints
+        relatives[f"file:{relative.as_posix()}"] = relative
+    spec_digest = roadmap_spec_digest(label, {**dict.fromkeys(relatives, ""), **(values or {})})
+    return {key: fingerprint_file(root, relative, spec_digest=spec_digest) for key, relative in relatives.items()}
 
 
 def inside_repository(text: str) -> bool:
@@ -93,12 +96,81 @@ def inside_repository(text: str) -> bool:
     return bool(text) and not relative.is_absolute() and ".." not in relative.parts and "\\" not in text
 
 
-def fingerprint_file(root: Path, relative: PurePosixPath, *, limit: int | None = None) -> str:
+def fingerprint_file(root: Path, relative: PurePosixPath, *, limit: int | None = None, spec_digest: str | None = None) -> str:
     """A digest, `missing` for an absent file, or `unreadable` for one the runner cannot read safely."""
     content = trusted_bytes(root / relative, root, limit=limit)
     if content is not None:
-        return digest(content)
+        return digest(without_roadmap_status(content, spec_digest))
     return "unreadable" if os.path.lexists(root / relative) else "missing"
+
+
+def without_roadmap_status(content: bytes, spec_digest: str | None = None) -> bytes:
+    """Mask only the selected SPEC's plain scaffold status in its bound Progress Tracking table.
+
+    This deliberately recognizes a narrow table shape, rather than guessing at ambiguous Markdown.
+    Unrecognized files, sections, rows and status content retain every byte in the fingerprint.
+    """
+    if spec_digest is None:
+        return content
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        return content
+    # Markdown's line/space grammar differs from Unicode-aware split/strip helpers.
+    if re.search(r"\r(?!\n)|[^\S \t\r\n]", text):
+        return content
+    tables = list(PROGRESS_TABLE_RE.finditer(text))
+    if len(tables) != 1:
+        return content
+    table = tables[0]
+    prefix = text[:table.start()]
+    fence = None
+    for line in prefix.split("\n"):
+        fence = next_fence(fence, line)
+    if fence is not None or re.search(r"(?m)^ {0,3}<", prefix):
+        return content
+    lines = table["table"].split("\n")
+    replacement = normalized_status_row(lines, spec_digest)
+    if replacement is None:
+        return content
+    index, row = replacement
+    lines[index] = row
+    return (text[:table.start("table")] + "\n".join(lines) + text[table.end("table"):]).encode("utf-8")
+
+
+def normalized_status_row(lines: list[str], spec_digest: str) -> tuple[int, str] | None:
+    """Keep escaped pipes in their cells and preserve all bytes outside the one status token."""
+    rows = [re.split(r"(?<!\\)\|", line) for line in lines]
+    header = [cell.strip(" \t\r") for cell in rows[0]]
+    if len(rows) < 3 or header[1] != "Spec" or header.count("Status") != 1 or len(set(header[1:-1])) != len(header[1:-1]):
+        return None
+    if any(cells[0] or cells[-1].strip(" \t\r") for cells in rows[:2]):
+        return None
+    column = header.index("Status")
+    if len(rows[1]) != len(header) or not all(re.fullmatch(r"[ \t]*:?-+:?[ \t]*", cell) for cell in rows[1][1:-1]):
+        return None
+    selected = [(index, cells) for index, cells in enumerate(rows[2:], 2)
+                if len(cells) == len(header) and digest(cells[1].strip(" \t")) == spec_digest]
+    if len(selected) != 1:
+        return None
+    index, cells = selected[0]
+    status = SCAFFOLD_STATUS_RE.fullmatch(cells[column])
+    # Multiple backslashes and missing edge pipes are outside the supported table shape.
+    if status is None or "\\\\" in lines[index] or cells[0] or cells[-1].strip(" \t\r"):
+        return None
+    cells[column] = status[1] + "Pending" + status[2]
+    return index, "|".join(cells)
+
+
+def roadmap_spec_digest(item_name: str | None, fingerprints: dict[str, str]) -> str | None:
+    """The existing reviewability observation binds one report/roadmap path and the selected SPEC.
+
+    Multiple file inputs cannot identify a unique roadmap, so all of them keep raw fingerprints.
+    Other observations never inherit this exception, even when they name the same file.
+    """
+    if item_name == "reviewability_report" and sum(key.startswith("file:") for key in fingerprints) == 1:
+        return fingerprints.get("value:spec_id")
+    return None
 
 
 def fingerprint_values(values: Any, label: str) -> dict[str, str]:
@@ -127,8 +199,9 @@ def caller_item(raw: Any, root: Path, observed_at: str) -> tuple[str, dict[str, 
         if "action" not in raw:
             raise SelectionError(f"{name}: a {status} item must name the action the user takes")
         action = clean_text(raw["action"], f"{name}.action")
-    fingerprints = {**fingerprint_files(raw.get("files", []), root, name),
-                    **fingerprint_values(raw.get("values", {}), name)}
+    values = fingerprint_values(raw.get("values", {}), name)
+    files = raw.get("files", [])
+    fingerprints = {**fingerprint_files(files, root, name, values=values), **values}
     require_surface_fingerprint(name, status, fingerprints)
     require_verified_fingerprints(name, status, fingerprints)
     return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
@@ -385,7 +458,7 @@ def current_record(record: Any, root: Path, host: str) -> TypeGuard[dict[str, An
         return False
     cache: dict[str, str] = {}
     return all(sound_item(item, needs_digest=name in CALLER_ITEMS)
-               and current_fingerprints(item["fingerprints"], root, cache)
+               and current_fingerprints(item["fingerprints"], root, cache, item_name=name)
                for name, item in items.items()) and current_versions(record, root, host)
 
 
@@ -451,7 +524,7 @@ def sound_fingerprint(key: Any, value: Any) -> bool:
         and name != "." and (DIGEST_RE.fullmatch(value) is not None or value in ("missing", "unreadable"))
 
 
-def current_fingerprints(prints: dict[str, str], root: Path, cache: dict[str, str] | None = None) -> bool:
+def current_fingerprints(prints: dict[str, str], root: Path, cache: dict[str, str] | None = None, *, item_name: str | None = None) -> bool:
     """Every key is a value name or a repository file whose fingerprint has not changed since it was observed."""
     cache = {} if cache is None else cache
     for key, value in prints.items():
@@ -460,19 +533,22 @@ def current_fingerprints(prints: dict[str, str], root: Path, cache: dict[str, st
         kind, _, name = key.partition(":")
         if kind == "value":
             continue
-        if saved_file_fingerprint(name, root, cache) != value:
+        if saved_file_fingerprint(name, root, cache, spec_digest=roadmap_spec_digest(item_name, prints)) != value:
             return False
     return True
 
 
-def saved_file_fingerprint(name: str, root: Path, cache: dict[str, str]) -> str | None:
-    """The one reader for files a saved record names: each read once per check, and at most
-    MAX_FINGERPRINT_FILES distinct files in all. None once the bound leaves the file unread."""
-    if name not in cache:
+def saved_file_fingerprint(name: str, root: Path, cache: dict[str, str], *, spec_digest: str | None = None) -> str | None:
+    """Read each path/SPEC comparison once per check, with at most MAX_FINGERPRINT_FILES reads.
+
+    Raw and scoped comparisons consume separate slots. None once the bound leaves a comparison unread.
+    """
+    cache_key = name if spec_digest is None else f"{name}\0{spec_digest}"
+    if cache_key not in cache:
         if len(cache) >= MAX_FINGERPRINT_FILES:
             return None
-        cache[name] = fingerprint_file(root, PurePosixPath(name), limit=FINGERPRINT_LIMIT_BYTES)
-    return cache[name]
+        cache[cache_key] = fingerprint_file(root, PurePosixPath(name), limit=FINGERPRINT_LIMIT_BYTES, spec_digest=spec_digest)
+    return cache[cache_key]
 
 
 def safe_reason(text: str) -> str:
@@ -534,7 +610,7 @@ def check_saved_item(name: str, item: Any) -> None:
     require_surface_fingerprint(name, item["status"], item["fingerprints"])
 
 
-def changed_inputs(fingerprints: dict[str, str], root: Path, cache: dict[str, str]) -> list[str]:
+def changed_inputs(fingerprints: dict[str, str], root: Path, cache: dict[str, str], *, spec_digest: str | None = None) -> list[str]:
     """Each file input whose current fingerprint differs from the recorded one.
 
     `check_saved_item` has proven every key sound, so each file is read by its saved name; no lookup can miss.
@@ -546,7 +622,7 @@ def changed_inputs(fingerprints: dict[str, str], root: Path, cache: dict[str, st
         if kind != "file":
             changed.append("unknown: value fingerprint comparison unavailable")
             continue
-        current = saved_file_fingerprint(name, root, cache)
+        current = saved_file_fingerprint(name, root, cache, spec_digest=spec_digest)
         if current is None:
             changed.append(f"unknown: file fingerprint comparison skipped past the {MAX_FINGERPRINT_FILES}-file read bound")
         elif current != recorded:
@@ -583,7 +659,7 @@ def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
             stale.append((name, f"{item['status']}: {safe_reason(item['evidence_source'])}; "
                                 f"action: {safe_reason(str(item.get('action')))}"))
         stale.extend((name, safe_reason(changed) if changed.startswith("unknown:") else f"input changed: {safe_reason(changed)}")
-                     for changed in changed_inputs(item["fingerprints"], root, reads))
+                     for changed in changed_inputs(item["fingerprints"], root, reads, spec_digest=roadmap_spec_digest(name, item["fingerprints"])))
     return [(name, safe_reason("; ".join(dict.fromkeys(reason for item, reason in stale if item == name))))
             for name in dict(stale)]
 
@@ -642,9 +718,9 @@ def feature_offers(root: Path, host: str) -> dict[str, dict[str, Any]]:
 def require_offer_fingerprints(record: dict[str, Any], root: Path) -> None:
     """Recheck file evidence with G0's shared bounds; runtime values belong to the bound Step 6.5 response."""
     reads: dict[str, str] = {}
-    for item in record["items"].values():
+    for name, item in record["items"].items():
         files = {key: value for key, value in item["fingerprints"].items() if key.startswith("file:")}
-        if "unreadable" in files.values() or changed_inputs(files, root, reads):
+        if "unreadable" in files.values() or changed_inputs(files, root, reads, spec_digest=roadmap_spec_digest(name, item["fingerprints"])):
             raise MissingRecord("readiness file inputs changed or could not be checked; rerun Step 6.5")
 
 
