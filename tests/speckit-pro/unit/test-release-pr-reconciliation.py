@@ -1313,7 +1313,7 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
                     "-c",
                     "user.name=test",
                     "-c",
-                    "user.email=test@example.invalid",
+                    "user.email=git@github.com",
                     "commit",
                     "--quiet",
                     "--no-gpg-sign",
