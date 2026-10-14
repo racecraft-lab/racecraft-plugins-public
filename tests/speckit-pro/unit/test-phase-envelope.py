@@ -337,7 +337,7 @@ class ResultVerificationTests(EnvelopeAssertions):
         self.assertEqual(envelope, before)
 
 
-class PhaseBindingTests(EnvelopeAssertions):
+class PhaseBindingFixture(EnvelopeAssertions):
     PHASE_GATES = {"Specify": "G1", "Clarify": "G2", "Plan": "G3", "Checklist": "G4", "Tasks": "G5", "Analyze": "G6"}
 
     def prepare_passing_evidence(self, root):
@@ -361,6 +361,8 @@ class PhaseBindingTests(EnvelopeAssertions):
         self.assert_mismatch(result, "phase_mismatch")
         self.assertIs(False, result["data"]["advance"])
 
+
+class PhaseBindingTests(PhaseBindingFixture):
     def test_passing_phases_cannot_advance_specify_or_clarify_with_failing_requested_gates(self):
         for requested in ("Specify", "Clarify"):
             with self.subTest(requested=requested), project(spec_text="[NEEDS CLARIFICATION: scope]\n") as root:

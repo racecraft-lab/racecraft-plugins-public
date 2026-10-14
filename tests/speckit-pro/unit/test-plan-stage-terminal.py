@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import functools
+import itertools
 import json
 import os
 import re
@@ -54,6 +56,30 @@ class FakeCli:
 
     def calls(self, verb: str) -> list[list[str]]:
         return [argv for argv in self.gh if argv[2] == verb]
+
+
+def after_cli_call(original, prefix: tuple[str, ...], occurrence: int, action):
+    """Inject one filesystem action after the chosen real Git command has returned."""
+    calls = 0
+
+    def invoke(root: Path, argv: list[str]) -> dict:
+        nonlocal calls
+        result = original(root, argv)
+        if tuple(argv[:len(prefix)]) == prefix:
+            calls += 1
+            if calls == occurrence:
+                action(root)
+        return result
+
+    return invoke
+
+
+def stage_unowned_entry(root: Path, *, entry: Path, content: str, commit_subject: str | None = None) -> None:
+    entry.write_text(content)
+    git(root, "add", "--", str(entry))
+    if commit_subject is not None:
+        git(root, "commit", "-q", "-m", commit_subject)
+    entry.unlink()
 
 
 class TerminalFixture(unittest.TestCase):
@@ -380,7 +406,9 @@ class PayloadEvidenceTests(unittest.TestCase):
                     "suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(scope[name])\n"
                     "    for name in ('HiddenContentEvidenceTests', 'ConcealedPassageTests',\n"
                     "                 'StructuredContentEvidenceTests', 'NarrativeTests',\n"
-                    "                 'PublicationOwnershipTests'))\n"
+                    "                 'PublicationOwnershipTests', 'UnexpectedArtifactEntryTests',\n"
+                    "                 'SiblingArtifactPublicationTests', 'StagedArtifactPublicationTests',\n"
+                    "                 'ArtifactSubstitutionTests'))\n"
                     "result = unittest.TextTestRunner().run(suite)\n"
                     "sys.exit(not result.wasSuccessful())\n"
                 )
@@ -604,6 +632,8 @@ class PublicationOwnershipTests(TerminalFixture):
     def test_unowned_symlink_blocks_publication_without_publishing_target_string(self) -> None:
         self.assert_unowned_entry_refused("symlink")
 
+
+class UnexpectedArtifactEntryTests(TerminalFixture):
     def test_every_unexpected_entry_type_blocks_publication(self) -> None:
         for name, kind in (("notes.txt", "file"), ("nested", "directory"), ("pipe", "fifo"),
                            ("broken.html", "broken-link"), ("white space\npage.html", "file")):
@@ -623,6 +653,31 @@ class PublicationOwnershipTests(TerminalFixture):
                 self.assertEqual(self.finish(execution_mode="headless")["data"]["stop_label"], "stop_reason:integrity_failure")
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
 
+
+class PublicationTransactionFixture(TerminalFixture):
+    TRANSACTION_CASES = {
+        "sibling": ("specs/other-feature/artifacts/unowned.html", ("git", "add", "--"), 1,
+                    "private unrelated staged content", None),
+        "committed": (f"{FEATURE}/artifacts/unowned.html", ("git", "commit"), 2,
+                      "private committed content", "concurrent artifact commit"),
+    }
+
+    def assert_unowned_transaction_refused(self, scenario: str) -> None:
+        path, prefix, occurrence, content, subject = self.TRANSACTION_CASES[scenario]
+        with self.subTest(scenario=scenario):
+            self.finish(until="pages")
+            entry = self.root / path
+            entry.parent.mkdir(parents=True, exist_ok=True)
+            action = functools.partial(stage_unowned_entry, entry=entry, content=content, commit_subject=subject)
+            self.cli = after_cli_call(self.cli, prefix, occurrence, action)
+            result = self.finish(execution_mode="headless")
+            self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+            if subject is None:
+                self.assertEqual(self.subjects(), [])
+            self.assertEqual(git(self.remote, "show-ref", check=False).returncode, 1)
+
+
+class SiblingArtifactPublicationTests(PublicationTransactionFixture):
     def test_unrelated_feature_artifacts_are_not_swept_into_the_commit(self) -> None:
         self.finish(until="pages")
         sibling = self.root / "specs/other-feature/artifacts"
@@ -634,57 +689,30 @@ class PublicationOwnershipTests(TerminalFixture):
         self.assertNotIn("other-feature", remote.stdout)
 
     def test_unowned_staged_artifacts_from_another_feature_block_publication(self) -> None:
-        self.finish(until="pages")
-        entry = self.root / "specs/other-feature/artifacts/unowned.html"
-        entry.parent.mkdir(parents=True)
-        original = self.cli
-        staged = False
+        self.assert_unowned_transaction_refused("sibling")
 
-        def stage_extra(root: Path, argv: list[str]) -> dict:
-            nonlocal staged
-            result = original(root, argv)
-            if argv[1:3] == ["add", "--"] and not staged:
-                staged = True
-                entry.write_text("private unrelated staged content")
-                git(root, "add", "--", str(entry))
-                entry.unlink()
-            return result
 
-        self.cli = stage_extra
-        result = self.finish(execution_mode="headless")
-        self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
-        self.assertEqual(self.subjects(), [])
-        self.assertEqual(git(self.remote, "show-ref", check=False).returncode, 1)
-
+class StagedArtifactPublicationTests(PublicationTransactionFixture):
     def test_staged_then_removed_unowned_entries_block_every_commit_window(self) -> None:
-        for host in ("claude", "codex"):
-            for window in (1, 2, 3):
-                with self.subTest(host=host, window=window):
-                    self.setUp()
-                    self.finish(host=host, until="pages")
-                    entry = self.root / FEATURE / "artifacts" / "unowned.html"
-                    original = self.cli
-                    additions = 0
+        for host, window in itertools.product(("claude", "codex"), (1, 2, 3)):
+            with self.subTest(host=host, window=window):
+                self.setUp()
+                self.finish(host=host, until="pages")
+                entry = self.root / FEATURE / "artifacts" / "unowned.html"
+                action = functools.partial(stage_unowned_entry, entry=entry, content="private staged content")
+                self.cli = after_cli_call(self.cli, ("git", "add", "--"), window, action)
+                result = self.finish(host=host, execution_mode="headless")
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                local = self.git("ls-tree", "-r", "HEAD", "--", f"{FEATURE}/artifacts")
+                self.assertNotIn("unowned.html", local)
+                remote = git(self.remote, "ls-tree", "-r", "art-007-draft-pr-emission", check=False)
+                self.assertNotIn("unowned.html", remote.stdout)
 
-                    def stage(root: Path, argv: list[str]) -> dict:
-                        nonlocal additions
-                        result = original(root, argv)
-                        if argv[1:3] == ["add", "--"]:
-                            additions += 1
-                            if additions == window:
-                                entry.write_text("private staged content")
-                                git(root, "add", "--", str(entry))
-                                entry.unlink()
-                        return result
+    def test_committed_unowned_entry_blocks_push(self) -> None:
+        self.assert_unowned_transaction_refused("committed")
 
-                    self.cli = stage
-                    result = self.finish(host=host, execution_mode="headless")
-                    self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
-                    local = self.git("ls-tree", "-r", "HEAD", "--", f"{FEATURE}/artifacts")
-                    self.assertNotIn("unowned.html", local)
-                    remote = git(self.remote, "ls-tree", "-r", "art-007-draft-pr-emission", check=False)
-                    self.assertNotIn("unowned.html", remote.stdout)
 
+class ArtifactSubstitutionTests(TerminalFixture):
     def test_staging_substitution_cannot_publish_unvalidated_page_bytes_or_links(self) -> None:
         for host in ("claude", "codex"):
             for variant in ("rename", "hardlink", "symlink"):
@@ -722,29 +750,6 @@ class PublicationOwnershipTests(TerminalFixture):
                     self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
                     self.assertEqual(self.subjects(), [])
                     self.assertEqual(external.read_text(), "private external sentinel")
-
-    def test_committed_unowned_entry_blocks_push(self) -> None:
-        self.finish(until="pages")
-        original = self.cli
-        commits = 0
-
-        def commit_extra(root: Path, argv: list[str]) -> dict:
-            nonlocal commits
-            result = original(root, argv)
-            if argv[1] == "commit":
-                commits += 1
-                if commits == 2:
-                    entry = root / FEATURE / "artifacts/unowned.html"
-                    entry.write_text("private committed content")
-                    git(root, "add", "--", str(entry))
-                    git(root, "commit", "-q", "-m", "concurrent artifact commit")
-                    entry.unlink()
-            return result
-
-        self.cli = commit_extra
-        result = self.finish(execution_mode="headless")
-        self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
-        self.assertEqual(git(self.remote, "show-ref", check=False).returncode, 1)
 
 
 class ConfidenceRecoveryTests(TerminalFixture):

@@ -81,11 +81,14 @@ class NestedBriefTests(unittest.TestCase):
 class AdvanceTests(unittest.TestCase):
     """The runner, not skill prose, says whether a phase may advance."""
 
+    def assert_reverified_advance(self, expected: bool, *, expected_status=None, **project_inputs):
+        result = ENVELOPE.verify_project(ENVELOPE.good_envelope(), **project_inputs)
+        if expected_status is not None:
+            self.assertEqual(expected_status, result["status"])
+        self.assertIs(expected, result["data"]["advance"])
+
     def test_a_passing_re_verify_advances(self) -> None:
-        with ENVELOPE.project():
-            result = ENVELOPE.verify(ENVELOPE.good_envelope())
-        self.assertEqual("ok", result["status"])
-        self.assertIs(True, result["data"]["advance"])
+        self.assert_reverified_advance(True, expected_status="ok")
 
     def test_a_failing_re_verify_does_not_advance(self) -> None:
         cases = {"claimed gate fails on disk": ENVELOPE.good_envelope(gates=[{"id": "G1", "result": "fail"}]),
@@ -99,12 +102,10 @@ class AdvanceTests(unittest.TestCase):
                 self.assertIs(False, result["data"]["advance"])
 
     def test_a_failure_on_disk_evidence_does_not_advance(self) -> None:
-        with ENVELOPE.project(spec_text="# Spec\n\n[NEEDS CLARIFICATION] open\n"):
-            result = ENVELOPE.verify(ENVELOPE.good_envelope())
-        self.assertIs(False, result["data"]["advance"])
+        self.assert_reverified_advance(False, spec_text="# Spec\n\n[NEEDS CLARIFICATION] open\n")
 
 
-class OptionalTasksHookTests(unittest.TestCase):
+class OptionalTasksHookFixture(unittest.TestCase):
     AUDIT = {"extension": "audit", "command": "speckit.audit.run", "event": "after_tasks"}
 
     def tasks_hooks(self, *, payloads=False, audit_enabled="true", **inputs):
@@ -115,6 +116,8 @@ class OptionalTasksHookTests(unittest.TestCase):
             request = {"phase": "Tasks", "mode": "nested", "workflow_file": "docs/workflow.md", "feature_dir": FEATURE, **inputs}
             return BRIEF.payload_briefs(request, include_status=True) if payloads else BRIEF.dispatch_brief(request)
 
+
+class OptionalTasksHookTests(OptionalTasksHookFixture):
     def test_confirmed_optional_after_tasks_hook_is_selected_for_the_driver(self):
         result = self.tasks_hooks(confirmed_after_tasks_hooks=[self.AUDIT])
         self.assertEqual(result["status"], "ok", result)
@@ -152,6 +155,8 @@ class OptionalTasksHookTests(unittest.TestCase):
                    self.tasks_hooks(phase="Plan", confirmed_after_tasks_hooks=[self.AUDIT])]
         self.assertEqual([result["status"] for result in results], ["input_error", "input_error"])
 
+
+class TasksHookHandoffTests(OptionalTasksHookFixture):
     def test_shipped_hosts_select_the_same_confirmed_run_and_unconfirmed_skip(self):
         reports = self.tasks_hooks(payloads=True, confirmed_after_tasks_hooks=[self.AUDIT])
         self.assertEqual([report["status"] for report in reports], ["ok", "ok"])
