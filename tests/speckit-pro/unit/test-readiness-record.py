@@ -2185,14 +2185,14 @@ class RoadmapOfferStatusFreshnessTest(RoadmapOfferFreshnessCase):
 
 
 class RoadmapOfferEscapedPipeFreshnessTest(RoadmapOfferFreshnessCase):
-    def test_escaped_pipe_name_suffix_remains_fingerprinted(self) -> None:
-        before = self.NAME_TABLE.replace("One |", "One \\| clean |")
-        escaped_status_before = self.TABLE.replace("One |", "One \\| clean |")
+    def test_escaped_pipe_name_suffix_is_fingerprinted_and_status_flip_is_masked(self) -> None:
+        name_before = self.NAME_TABLE.replace("One |", "One \\| clean |")
+        status_before = self.TABLE.replace("One |", "One \\| clean |")
         cases = (
-            ("suffix edit", RoadmapEditCase(before, before.replace("clean", "injected"))),
+            ("suffix edit", RoadmapEditCase(name_before, name_before.replace("clean", "injected"))),
             ("status flip", RoadmapEditCase(
-                escaped_status_before,
-                escaped_status_before.replace(
+                status_before,
+                status_before.replace(
                     "One \\| clean | Notes | ⏳ Pending", "One \\| clean | Notes | 🔄 In Progress"),
                 stays_current=True)),
         )
@@ -2278,6 +2278,9 @@ class RoadmapOfferFilesystemFreshnessTest(RoadmapOfferFreshnessCase):
                 if variant == "symlink":
                     roadmap.symlink_to(renamed)
                 self.assertFalse(self.read_offers(host)["formal_methods"]["offered"])
+        # A re-created regular roadmap still invalidates a non-target status flip after the swap.
+        self.assert_roadmap_edit(RoadmapEditCase(
+            self.TABLE, self.TABLE.replace("Two | Notes | ⏳ Pending", "Two | Notes | 🔄 In Progress")))
 
 
 class FeatureOfferPublicationCase(FeatureOfferCase):

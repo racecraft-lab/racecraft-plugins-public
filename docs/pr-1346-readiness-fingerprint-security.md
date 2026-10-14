@@ -20,11 +20,13 @@ which requires escaping a content pipe inside inline spans too. Raw extra pipes
 are never guessed into the selected row: mismatched cell counts retain raw
 bytes. Every byte outside the selected status token remains evidence.
 
-`RoadmapOfferFreshnessTest` in `tests/speckit-pro/unit/test-readiness-record.py`
-exercises each reported variant on both hosts through publication/readback,
-`current_record` and G0's stale-input reader. Its control tests include a
-forbidden edit alongside the allowed flip so reverting the fix makes them red.
-It is explicitly included in the file's `build_suite()`.
+The `RoadmapOffer*FreshnessTest` classes in
+`tests/speckit-pro/unit/test-readiness-record.py` share the
+`RoadmapOfferFreshnessCase` base and its `RoadmapEditCase` table rows. They
+exercise each reported variant on both hosts through publication/readback,
+`current_record` and G0's stale-input reader. Each allowed flip has a forbidden
+edit in the same class, so reverting the fix makes them red. Every class is
+explicitly included in the file's `build_suite()`.
 
 ## Known limits
 
