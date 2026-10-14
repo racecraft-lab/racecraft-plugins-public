@@ -30,6 +30,7 @@ from .. import quality_gates
 from ..json_schema import json_schema_failures
 from ..runtime import detect_plugin_root
 from .. import reviewability_preset, spec_kit_pin
+from ..spec_identity import normalize_spec_identity
 from ..strict_input import unique_object
 from .tasks_output import checked_tasks_text
 from .formal_policy import apply_resume_guard, gate_checkpoint
@@ -3962,20 +3963,8 @@ def _spec_index_is_gated(text: str) -> bool:
     return bool(re.fullmatch(r"[0-9]+", token)) and int(token) >= 1
 
 
-def _spec_index_normalize(value: str) -> str:
-    parts = value.lower().split("-")
-    first = parts[0] if parts else ""
-    if re.fullmatch(r"[a-z]+", first):
-        namespace = first
-        number_suffix = parts[1] if len(parts) > 1 else ""
-    else:
-        namespace = "spec"
-        number_suffix = first
-    return f"{namespace} {number_suffix}"
-
-
 def _spec_index_id_match(left: str, right: str) -> bool:
-    return _spec_index_normalize(left) == _spec_index_normalize(right)
+    return normalize_spec_identity(left) == normalize_spec_identity(right)
 
 
 def _spec_index_target_basename(value: str) -> str:
@@ -4168,7 +4157,7 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
         row = f"{slice_id} {SPEC_INDEX_SEPARATOR} PR#{pr} {SPEC_INDEX_SEPARATOR} {merged_sha}"
         sortable.append(
             (
-                _spec_index_normalize(slice_id).encode("utf-8"),
+                normalize_spec_identity(slice_id).encode("utf-8"),
                 f"{pr:012d}",
                 slice_id.encode("utf-8"),
                 merged_sha.encode("utf-8"),
@@ -4349,7 +4338,7 @@ def _spec_index_render_home_index(
             row = f"{row} {SPEC_INDEX_SEPARATOR} {status_value}"
         sortable.append(
             (
-                _spec_index_normalize(spec_id).encode("utf-8"),
+                normalize_spec_identity(spec_id).encode("utf-8"),
                 row.encode("utf-8"),
                 row,
             )
@@ -4387,7 +4376,7 @@ def _spec_index_render_home_index(
             row = f"- [{label}](../../../specs/{branch}/spec.md)"
             sortable.append(
                 (
-                    _spec_index_normalize(branch).encode("utf-8"),
+                    normalize_spec_identity(branch).encode("utf-8"),
                     row.encode("utf-8"),
                     row,
                 )

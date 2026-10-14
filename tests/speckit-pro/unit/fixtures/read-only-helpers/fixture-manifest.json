@@ -110,6 +110,16 @@
       "rollback": "Remove the answers-file flag and helper together."
     },
     {
+      "helper_id": "derive-scaffold-branch", "operation": "derive-scaffold-branch",
+      "promotion_status": "python_authoritative", "failure_classes": ["invalid_input"],
+      "rejected_stdout_schema": {"status": "input_error", "data": "object"},
+      "deterministic_remediation": {"summary": "Use the roadmap spec identity and exact title.", "actions": ["Correct the named input and retry before mutation."]},
+      "subprocess_policy": {"shell": false, "spawns": false},
+      "path_boundary_policy": {"boundary": "request_inputs_only", "rejects": ["file_reads", "file_writes", "unknown_inputs"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/derive-scaffold-branch.json",
+      "rollback": "Restore scaffold identity guidance and remove the helper together."
+    },
+    {
       "helper_id": "phase-brief", "operation": "phase-brief",
       "promotion_status": "python_authoritative", "failure_classes": ["invalid_input"],
       "rejected_stdout_schema": {"status": "input_error", "data": "object"},

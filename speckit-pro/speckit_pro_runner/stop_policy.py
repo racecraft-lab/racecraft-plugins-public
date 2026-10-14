@@ -1,4 +1,4 @@
-"""The closed set of reasons a speckit-pro autopilot run may involve a human.
+"""The closed set of reasons a speckit-pro run may involve a human.
 
 Every human item in `finalize-run` and the execution-control ledger names one
 of these reasons. The shared stop-policy reference and the parity test cite
@@ -36,6 +36,7 @@ STOP_REASONS = {"merge": AUTHORITY,
                 "tool_unavailable": AUTHORITY,
                 "ambiguous_pr_record": AUTHORITY,
                 "plan_stage_boundary": AUTHORITY,
+                "scaffold_complete": AUTHORITY,
                 "strict_confidence_opt_in": AUTHORITY,
                 "speckit_cli_older": AUTHORITY,
                 ALL_TIERS_FAILED: EXHAUSTED,

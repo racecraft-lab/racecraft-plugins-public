@@ -31,6 +31,7 @@ CLASSES = {"authority", "exhausted", "harm_halt"}
 
 def _guidance_files() -> list[Path]:
     files = [path for skill in HOST_SKILLS.values() for path in sorted(skill.rglob("*.md"))]
+    files += [host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md" for host in HOST_SKILLS]
     return [path for path in files if path.is_file()]
 
 
@@ -166,6 +167,23 @@ PLAN_STAGE_SHAPES = {
 PRINT_RULE = re.compile(r"[Pp]rint exactly one marker for that reason,\s+copied verbatim from the Reason column, as the last line")
 
 
+class ScaffoldStopReasonPrintTests(unittest.TestCase):
+    def test_scaffold_completion_prints_one_registered_authority_reason_on_both_hosts(self) -> None:
+        from speckit_pro_runner.stop_policy import stop_class
+
+        self.assertEqual(stop_class("scaffold_complete"), "authority")
+        scaffold_files = [path for path in _guidance_files() if path.parent.name == "speckit-scaffold-spec"]
+        self.assertEqual(len(scaffold_files), 2, "scan both rendered scaffold hosts")
+        for path in scaffold_files:
+            section = re.search(r"(?ms)^### 10\. Closing Report\n(.*?)(?=^## Failure Handling)",
+                                path.read_text(encoding="utf-8"))
+            self.assertIsNotNone(section, path)
+            closing = section.group(1)
+            self.assertRegex(closing, _printed("scaffold_complete"))
+            self.assertIn("as the last line of the final message", closing)
+            self.assertIn("Do not print this marker on an incomplete or failed scaffold", closing)
+
+
 class StopReasonPrintTests(unittest.TestCase):
     """The canary judges a run by the marker its final message prints.
 
@@ -258,6 +276,7 @@ class ScaffoldOlderCliStopTests(unittest.TestCase):
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite([loader.loadTestsFromTestCase(StopReasonParityTests),
+                               loader.loadTestsFromTestCase(ScaffoldStopReasonPrintTests),
                                loader.loadTestsFromTestCase(StopReasonPrintTests),
                                loader.loadTestsFromTestCase(ScaffoldOlderCliStopTests)])
 

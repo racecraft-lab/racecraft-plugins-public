@@ -98,6 +98,7 @@ item does not end the run and prints no marker.
 | `stop_reason:tool_unavailable` | authority | `gh` is absent or not authenticated. Installing or signing in is a run-start grant. |
 | `stop_reason:ambiguous_pr_record` | authority | The recorded PR is missing, or several open PRs match the branch. Choosing the right PR is a human call. |
 | `stop_reason:plan_stage_boundary` | authority | A `--stage plan` run stops after the plan. |
+| `stop_reason:scaffold_complete` | authority | Scaffold is committed and pushed; the operator starts planning in a separate invocation. |
 | `stop_reason:strict_confidence_opt_in` | authority | An opt-in `--strict` run stops before Phase 7 below the confidence threshold. |
 | `stop_reason:speckit_cli_older` | authority | An answers-file scaffold found a SpecKit CLI older than the plugin pin. Upgrading the CLI is an operator action, and the answers file has no key for it. |
 | `stop_reason:all_tiers_failed` | exhausted | All three escalation tiers failed. |
@@ -106,7 +107,7 @@ item does not end the run and prints no marker.
 | `stop_reason:secret_exposure` | harm_halt | A secret was exposed. |
 | `stop_reason:integrity_failure` | harm_halt | An integrity failure. |
 
-Authority and exhausted reasons defer, except the two operator opt-in
-boundaries, `plan_stage_boundary` and `strict_confidence_opt_in`, which end the
-run at the boundary the operator chose. `speckit_cli_older` is outside a run: it ends
+Authority and exhausted reasons defer, except the operator-chosen boundaries,
+`scaffold_complete`, `plan_stage_boundary` and `strict_confidence_opt_in`, which
+end the run at the boundary the operator chose. `speckit_cli_older` is outside a run: it ends
 an answers-file scaffold before any mutation. Harm halt reasons halt the run.
