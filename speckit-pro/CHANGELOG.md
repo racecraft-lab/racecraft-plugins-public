@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.45.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.44.0...speckit-pro-v2.45.0) (2026-10-14)
+
+
+### Features
+
+* **speckit-pro:** run each planning phase in a phase driver in nested mode ([#1341](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1341)) ([578f599](https://github.com/racecraft-lab/racecraft-plugins-public/commit/578f599925a1ff3a1b6f7bfa693bd3d32405de95))
+* **speckit-pro:** test nesting before the plan stage and fall back to flat mode ([#1338](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1338)) ([2d379d2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2d379d2fbf46966c3247fc593047f30e12d66787))
+* **speckit-pro:** the runner owns the plan stage terminal sequence ([#1336](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1336)) ([c91473a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c91473a943e25ecc975c57c3ff943eb3abfbc085))
+
+
+### Bug Fixes
+
+* **speckit-pro:** derive scaffold branch names in the runner ([#1342](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1342)) ([9518974](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9518974640a04612b72b0e7a74dd6f97252de366))
+* **speckit-pro:** preserve escaped Plan repair answers ([#1335](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1335)) ([7a7c1f3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7a7c1f3f848df224f6b94fc03c2ff2bbb2a127a7))
+* **speckit-pro:** stop answers-file scaffold when the SpecKit CLI is older than the pin ([#1344](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1344)) ([d0c116e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d0c116ec204c803a01b4cda30e5f6d1d1460b0c2))
+
 ## [2.44.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.43.0...speckit-pro-v2.44.0) (2026-10-13)
 
 
