@@ -21,10 +21,9 @@ and fails safe.
 ## Merging Main
 
 Generated artifacts are a pure function of the source tree, so a merge never
-produces a correct one. Regenerate; do not hand-resolve. One sanctioned hand
-edit: if `main` brought in a release and your branch also changed the runner
-manifest, set its `plugin_version` to `speckit-pro/.codex-plugin/plugin.json`'s
-`version` before the refresh. Run these, then the CI suite:
+produces a correct one. Regenerate; do not hand-resolve. The refresh also sets
+the runner manifest `plugin_version` from `speckit-pro/.codex-plugin/plugin.json`,
+so a release merged from `main` needs no hand edit. Run these, then the CI suite:
 
 ```bash
 git merge origin/main            # generated paths resolve without conflict
