@@ -7,6 +7,7 @@ import io
 import hashlib
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -1285,6 +1286,49 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertEqual("Generated release artifacts match the source tree.\n", stdout.getvalue())
         self.assertEqual("", stderr.getvalue())
+
+    def test_check_mode_flags_a_stale_runner_manifest_plugin_version(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z"], cwd=REPO_ROOT, capture_output=True, check=True, shell=False
+        ).stdout.decode("utf-8").split("\0")
+        manifest_rel = refresh.RUNNER_MANIFEST_FILE
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for rel in filter(None, tracked):
+                source = REPO_ROOT / rel
+                if source.is_file() or source.is_symlink():
+                    (root / rel).parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(source, root / rel, follow_symlinks=False)
+            manifest_path = root / manifest_rel
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["plugin_version"] = "0.0.1"
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+            def run(argv, **kwargs):
+                if argv[:2] == ["git", "status"]:
+                    return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+                return subprocess.run(argv, **kwargs)
+
+            stderr = io.StringIO()
+            returncode = refresh.check_release_artifacts(root, run=run, stdout=io.StringIO(), stderr=stderr)
+
+        self.assertEqual(1, returncode, stderr.getvalue())
+        self.assertIn(f"M {manifest_rel}", stderr.getvalue())
+
+    def test_refresh_stops_with_an_error_line_when_the_plugin_version_is_unusable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            stderr = io.StringIO()
+            with (
+                mock.patch("speckit_pro_runner.host_skills.codex_skill_overlay_errors", return_value=[]),
+                mock.patch("speckit_pro_runner.codex_agent_generator.refresh_codex_agents", return_value=[]),
+                mock.patch.object(refresh, "refresh_runner_trust_metadata", side_effect=ValueError("bad version")),
+                redirect_stderr(stderr),
+            ):
+                returncode = refresh.refresh_release_artifacts(root)
+
+        self.assertEqual(1, returncode)
+        self.assertIn("::error::bad version", stderr.getvalue())
 
     @unittest.skipIf(os.name == "nt", "POSIX mode and symlink records are not portable to Windows")
     def test_snapshot_tree_records_file_modes_content_and_symlinks(self) -> None:
