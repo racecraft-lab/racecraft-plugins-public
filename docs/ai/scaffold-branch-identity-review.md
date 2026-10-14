@@ -11,6 +11,29 @@ directories and letter-suffixed numbers. Scaffold derives `<number>-<slug>` for
 SPEC and `<lowercase-namespace>-<number>-<slug>` otherwise, including `006a`.
 The existing placement helper still validates the branch and task-local path.
 
+## Identity canonicalization boundary
+
+Scaffold validates the original roadmap ID against its ASCII grammar before
+normalizing case. Unicode characters cannot enter the namespace, number or
+suffix, including characters such as the Kelvin sign that lowercase to ASCII.
+This closes the namespace and suffix collision paths in F1342-401a0ebd.
+`test_unicode_namespace_cannot_alias_an_ascii_identity` and
+`test_unicode_number_suffix_cannot_alias_an_ascii_identity` exercise the public
+runner request against source and both packaged hosts, including repeated and
+mixed-position Kelvin signs and a combined namespace/suffix input. Each rejects
+the request without a branch result or filesystem writes.
+
+`test_non_ascii_controls_stop_before_placement` preserves rejection of dotted I,
+non-ASCII decimal digits, long s and fullwidth letters/digits. These controls
+already failed closed at the reviewed head; they are regression checks, not new
+collision reproductions. The title-normalization and both-host request tests
+preserve the accepted title transliteration and long-title behavior below.
+The focused adversarial pass checked both identity fields and their combination,
+ASCII counterparts, and both packaged runners. This read-only helper does not
+read paths or perform link, rename, or placement operations; those add no
+canonicalization window in the changed code. Title normalization remains the
+separate accepted limit below.
+
 ## Known limits
 
 - **ASCII normalization can lose non-ASCII words.** NFKD normalization followed

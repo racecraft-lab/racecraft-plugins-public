@@ -43,25 +43,56 @@ IDENTITY_CASES = (
     ("FORMAL-002", "State Model", "formal-002-state-model"),
     ("PRSG-001", "Save Items", "prsg-001-save-items"),
     ("XPLAT-010A", "Cross Host Suffix", "xplat-010a-cross-host-suffix"),
+    ("K-001", "Same Title", "k-001-same-title"),
+    ("SPEC-001K", "Same Title", "001k-same-title"),
+    ("SPEC-001", "Café 東京", "001-cafe"),
+    ("SPEC-001", "A" * 300, "001-" + "a" * 300),
 )
+
+
+def assert_invalid_inputs(test: unittest.TestCase, inputs_grid: tuple[dict, ...], runner: str = "speckit-pro") -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        for inputs in inputs_grid:
+            with test.subTest(runner=runner, inputs=inputs):
+                completed, result, _ = run_runner({
+                    "schema_version": "1.0", "request_id": "invalid-scaffold-identity",
+                    "helper_id": "derive-scaffold-branch", "operation": "derive-scaffold-branch",
+                    "mode": "read_only", "inputs": inputs,
+                }, cwd=root, extra_env={"PYTHONPATH": str(Path(__file__).resolve().parents[3] / runner)})
+                test.assertEqual(result["status"], "input_error", result)
+                test.assertNotEqual(completed.returncode, 0)
+                test.assertEqual(result["data"]["verdict"], "stop")
+                test.assertNotIn("branch_name", result["data"])
+                test.assertEqual(list(root.iterdir()), [])
 
 
 class ScaffoldIdentityTests(unittest.TestCase):
     def test_invalid_identity_fails_before_placement_or_writes(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            for inputs in INVALID_INPUTS:
-                with self.subTest(inputs=inputs):
-                    completed, result, _ = run_runner({
-                        "schema_version": "1.0", "request_id": "invalid-scaffold-identity",
-                        "helper_id": "derive-scaffold-branch", "operation": "derive-scaffold-branch",
-                        "mode": "read_only", "inputs": inputs,
-                    }, cwd=root)
-                    self.assertEqual(result["status"], "input_error", result)
-                    self.assertNotEqual(completed.returncode, 0)
-                    self.assertEqual(result["data"]["verdict"], "stop")
-                    self.assertNotIn("branch_name", result["data"])
-                    self.assertEqual(list(root.iterdir()), [])
+        assert_invalid_inputs(self, INVALID_INPUTS)
+
+
+class ScaffoldUnicodeIdentityTests(unittest.TestCase):
+    def test_unicode_namespace_cannot_alias_an_ascii_identity(self) -> None:
+        inputs = tuple({"spec_id": spec_id, "spec_name": "Same Title"} for spec_id in (
+            "K-001", "KK-001", "KK-001", "KK-001", "SPEK-001", "K-001K",
+        ))
+        for runner in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            assert_invalid_inputs(self, inputs, runner)
+
+    def test_unicode_number_suffix_cannot_alias_an_ascii_identity(self) -> None:
+        inputs = tuple({"spec_id": spec_id, "spec_name": "Same Title"} for spec_id in (
+            "SPEC-001K", "K-001K", "spec-001K",
+        ))
+        for runner in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            assert_invalid_inputs(self, inputs, runner)
+
+    def test_non_ascii_controls_stop_before_placement(self) -> None:
+        inputs = tuple({"spec_id": spec_id, "spec_name": "Same Title"} for spec_id in (
+            "İ-001", "K-00١", "ſPEC-001", "ＳPEC-001", "SPEC-００１", "SPEC-001İ",
+        ))
+        for runner in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            assert_invalid_inputs(self, inputs, runner)
 
 
 class ScaffoldHostContractTests(unittest.TestCase):

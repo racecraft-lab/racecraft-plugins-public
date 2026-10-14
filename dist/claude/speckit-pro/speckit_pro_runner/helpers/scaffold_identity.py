@@ -14,9 +14,10 @@ from ..strict_input import SelectionError, has_hidden_characters, require_fields
 def derive_scaffold_branch(inputs: dict[str, Any]) -> str:
     require_fields(inputs, {"spec_id", "spec_name"}, "derive-scaffold-branch inputs")
     spec_id = require_text(inputs["spec_id"], "spec_id")
-    identity = normalize_spec_identity(spec_id)
-    if re.fullmatch(r"[a-z]+ [0-9]{3}[a-z]?", identity) is None or identity.replace(" ", "-") != spec_id.lower():
+    # Validate before case normalization can turn a Unicode identity into ASCII.
+    if re.fullmatch(r"[A-Za-z]+-[0-9]{3}[A-Za-z]?", spec_id) is None:
         raise SelectionError("spec_id must be an ASCII letter namespace followed by three ASCII digits and an optional letter suffix")
+    identity = normalize_spec_identity(spec_id)
     namespace, number = identity.split(" ", 1)
     prefix = number if namespace == "spec" else f"{namespace}-{number}"
     spec_name = require_text(inputs["spec_name"], "spec_name")
