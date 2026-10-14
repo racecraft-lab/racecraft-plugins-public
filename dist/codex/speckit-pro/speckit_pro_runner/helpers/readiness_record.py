@@ -68,6 +68,7 @@ RECORD_LIMIT_BYTES = 1024 * 1024
 FINGERPRINT_LIMIT_BYTES = 1024 * 1024
 MAX_FINGERPRINT_FILES = 64
 DIGEST_RE = re.compile(r"sha256:[0-9a-f]{64}")
+PROGRESS_HEADER_RE = re.compile(r"\|\s*Spec\s*\|(?:[^|]*\|)*?\s*Status\s*\|")
 HOST_VERSION_RE = re.compile(r"(?:codex-cli )?([0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?)(?: \(Claude Code\))?")
 
 
@@ -97,8 +98,31 @@ def fingerprint_file(root: Path, relative: PurePosixPath, *, limit: int | None =
     """A digest, `missing` for an absent file, or `unreadable` for one the runner cannot read safely."""
     content = trusted_bytes(root / relative, root, limit=limit)
     if content is not None:
-        return digest(content)
+        return digest(without_roadmap_status(content))
     return "unreadable" if os.path.lexists(root / relative) else "missing"
+
+
+def without_roadmap_status(content: bytes) -> bytes:
+    """The file with each roadmap Progress Tracking Status cell emptied; any other file comes back unchanged.
+
+    Scaffold Step 8 flips the SPEC row to In Progress after Step 6.5 fingerprinted the roadmap, so a status
+    value is not evidence. Every other edit still changes the digest. A file that is not UTF-8 is left as is.
+    """
+    try:
+        lines = content.decode("utf-8").split("\n")
+    except UnicodeDecodeError:
+        return content
+    column = None
+    for index, line in enumerate(lines):
+        cells = line.split("|")
+        if column is not None and not line.startswith("|"):
+            column = None
+        elif column is not None and len(cells) > column + 1 and not set(cells[column].strip()) <= set("-: "):
+            cells[column] = ""
+            lines[index] = "|".join(cells)
+        elif column is None and PROGRESS_HEADER_RE.match(line):
+            column = [cell.strip() for cell in cells].index("Status")
+    return "\n".join(lines).encode("utf-8")
 
 
 def fingerprint_values(values: Any, label: str) -> dict[str, str]:

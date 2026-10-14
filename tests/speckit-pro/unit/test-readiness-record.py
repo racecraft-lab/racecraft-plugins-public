@@ -2179,6 +2179,22 @@ class FeatureOffersTest(FeatureOfferCase):
         self.assertEqual({key: before[key] for key in before if key != "feature_offers"},
                          {key: after[key] for key in after if key != "feature_offers"})
 
+    def test_a_status_flip_in_the_fingerprinted_roadmap_keeps_the_offers_readable(self) -> None:
+        """Step 8 marks the SPEC row In Progress after Step 6.5 fingerprinted the roadmap (issue 1345)."""
+        roadmap = self.root / ".specify" / "roadmap.md"
+        table = ("## Progress Tracking\n\n| Spec | Name | Status | Workflow File | Next Phase |\n"
+                 "|------|------|--------|---------------|------------|\n"
+                 "| TEST-001 | One | {status} | [w](.process/TEST-001-workflow.md) | Specify |\n"
+                 "| TEST-002 | Two | ⏳ Pending | [w](.process/TEST-002-workflow.md) | Specify |\n")
+        roadmap.write_text(table.format(status="⏳ Pending"), encoding="utf-8")
+        self.write_record(observations=[observation("reviewability_report"),
+                                        observation("formal_methods", "unavailable")])
+        assert_runner_response(self, self.offer(dict.fromkeys(FEATURES, "accepted")), "ok", 0)
+        roadmap.write_text(table.format(status="🔄 In Progress"), encoding="utf-8")
+        self.assertEqual({"evaluated": True, "offered": True, "answer": "accepted"}, self.read_offers()["formal_methods"])
+        roadmap.write_text(table.format(status="🔄 In Progress").replace("Specify", "Plan"), encoding="utf-8")
+        self.assertEqual({"evaluated": False, **NOT_OFFERED}, self.read_offers()["formal_methods"])
+
     def test_dry_run_reports_the_offers_without_writing_them(self) -> None:
         self.write_record()
         response = self.offer(dict.fromkeys(FEATURES, "declined"), mode="dry_run")

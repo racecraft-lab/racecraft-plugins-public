@@ -12,6 +12,11 @@ The checked reader also rechecks file inputs. A publication that reached disk
 but cannot be confirmed returns `expected_failure` with `writes_state: true`;
 it supplies no successful coverage result.
 
+Scaffold Step 8 flips the SPEC row in the roadmap's Progress Tracking table to In
+Progress after Step 6.5 fingerprinted that roadmap. File fingerprints therefore
+ignore the Status column of that table, and every other roadmap edit still
+changes the digest and fails the checked reader closed.
+
 ## Known limits
 
 - Offer fingerprint rechecks use G0's 1 MiB file-read bound, while the initial
