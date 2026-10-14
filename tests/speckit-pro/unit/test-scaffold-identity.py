@@ -48,6 +48,17 @@ IDENTITY_CASES = (
     ("SPEC-001", "Café 東京", "001-cafe"),
     ("SPEC-001", "A" * 300, "001-" + "a" * 300),
 )
+INVALID_UNICODE_IDS = {
+    "namespace": (
+        "K-001", "KK-001", "KK-001", "KK-001", "SPEK-001", "K-001K",
+    ),
+    "number_suffix": (
+        "SPEC-001K", "K-001K", "spec-001K",
+    ),
+    "non_ascii_controls": (
+        "İ-001", "K-00١", "ſPEC-001", "ＳPEC-001", "SPEC-００１", "SPEC-001İ",
+    ),
+}
 
 
 def assert_invalid_inputs(test: unittest.TestCase, inputs_grid: tuple[dict, ...], runner: str = "speckit-pro") -> None:
@@ -80,19 +91,13 @@ class ScaffoldIdentityTests(unittest.TestCase):
 
 class ScaffoldUnicodeIdentityTests(unittest.TestCase):
     def test_unicode_namespace_cannot_alias_an_ascii_identity(self) -> None:
-        assert_invalid_id_variants(self, (
-            "K-001", "KK-001", "KK-001", "KK-001", "SPEK-001", "K-001K",
-        ))
+        assert_invalid_id_variants(self, INVALID_UNICODE_IDS["namespace"])
 
     def test_unicode_number_suffix_cannot_alias_an_ascii_identity(self) -> None:
-        assert_invalid_id_variants(self, (
-            "SPEC-001K", "K-001K", "spec-001K",
-        ))
+        assert_invalid_id_variants(self, INVALID_UNICODE_IDS["number_suffix"])
 
     def test_non_ascii_controls_stop_before_placement(self) -> None:
-        assert_invalid_id_variants(self, (
-            "İ-001", "K-00١", "ſPEC-001", "ＳPEC-001", "SPEC-００１", "SPEC-001İ",
-        ))
+        assert_invalid_id_variants(self, INVALID_UNICODE_IDS["non_ascii_controls"])
 
 
 class ScaffoldHostContractTests(unittest.TestCase):
