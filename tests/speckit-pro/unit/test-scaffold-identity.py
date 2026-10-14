@@ -63,6 +63,8 @@ class ScaffoldIdentityTests(unittest.TestCase):
                     self.assertNotIn("branch_name", result["data"])
                     self.assertEqual(list(root.iterdir()), [])
 
+
+class ScaffoldHostContractTests(unittest.TestCase):
     def test_both_hosts_call_the_identity_helper_with_the_exact_roadmap_fields(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
@@ -87,6 +89,8 @@ class ScaffoldIdentityTests(unittest.TestCase):
                 self.assertNotIn("**Short name** for the branch", step)
                 self.assertIn("verify its existing branch matches", step)
 
+
+class ScaffoldBranchTests(unittest.TestCase):
     def test_roadmap_title_produces_the_canonical_numeric_branch(self) -> None:
         completed, result, diagnostics = run_runner({
             "schema_version": "1.0", "request_id": "scaffold-identity",
@@ -113,5 +117,5 @@ class ScaffoldIdentityTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ScaffoldIdentityTests),
+    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]),
                                  label="test-scaffold-identity"))
