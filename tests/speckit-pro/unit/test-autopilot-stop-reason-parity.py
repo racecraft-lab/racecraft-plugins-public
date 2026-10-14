@@ -167,16 +167,7 @@ PLAN_STAGE_SHAPES = {
 PRINT_RULE = re.compile(r"[Pp]rint exactly one marker for that reason,\s+copied verbatim from the Reason column, as the last line")
 
 
-class StopReasonPrintTests(unittest.TestCase):
-    """The canary judges a run by the marker its final message prints.
-
-    Naming a reason is not enough: each host's guidance must tell the agent
-    to print it.
-    """
-
-    def _phase_execution(self, host: str) -> str:
-        return (HOST_SKILLS[host] / "references" / "phase-execution.md").read_text(encoding="utf-8")
-
+class ScaffoldStopReasonPrintTests(unittest.TestCase):
     def test_scaffold_completion_prints_one_registered_authority_reason_on_both_hosts(self) -> None:
         from speckit_pro_runner.stop_policy import stop_class
 
@@ -191,6 +182,17 @@ class StopReasonPrintTests(unittest.TestCase):
             self.assertRegex(closing, _printed("scaffold_complete"))
             self.assertIn("as the last line of the final message", closing)
             self.assertIn("Do not print this marker on an incomplete or failed scaffold", closing)
+
+
+class StopReasonPrintTests(unittest.TestCase):
+    """The canary judges a run by the marker its final message prints.
+
+    Naming a reason is not enough: each host's guidance must tell the agent
+    to print it.
+    """
+
+    def _phase_execution(self, host: str) -> str:
+        return (HOST_SKILLS[host] / "references" / "phase-execution.md").read_text(encoding="utf-8")
 
     def test_plan_stage_terminal_step_prints_the_boundary_reason(self) -> None:
         for host in HOST_SKILLS:
@@ -245,6 +247,7 @@ class StopReasonPrintTests(unittest.TestCase):
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite([loader.loadTestsFromTestCase(StopReasonParityTests),
+                               loader.loadTestsFromTestCase(ScaffoldStopReasonPrintTests),
                                loader.loadTestsFromTestCase(StopReasonPrintTests)])
 
 
