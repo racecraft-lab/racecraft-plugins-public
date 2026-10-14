@@ -234,8 +234,9 @@ class ScaffoldOlderCliStopTests(unittest.TestCase):
 
     def _step_zero(self, host: str) -> str:
         text = (SCAFFOLD_SKILLS[host] / "SKILL.md").read_text(encoding="utf-8")
-        step = text.split("### 0. Ensure SpecKit CLI", 1)[1].split("### 1. ", 1)[0]
-        return " ".join(step.split())
+        match = re.search(r"### 0\. Ensure SpecKit CLI(.*?)### 1\. ", text, re.S)
+        self.assertIsNotNone(match, f"{host}: scaffold Step 0 section")
+        return " ".join(match.group(1).split()) if match else ""
 
     def test_older_cli_is_a_registered_authority_stop(self) -> None:
         self.assertEqual(_runner_set().get("speckit_cli_older"), "authority")
