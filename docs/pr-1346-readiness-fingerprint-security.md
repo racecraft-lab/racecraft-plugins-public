@@ -36,7 +36,11 @@ It is explicitly included in the file's `build_suite()`.
 - Tables inside fenced examples or following an HTML block retain raw bytes.
   HTML block parsing is deliberately conservative: an earlier HTML block can
   disable the exception even if closed. A status flip then requires a fresh
-  evaluation, rather than permitting an unverified normalization.
+  evaluation, rather than permitting an unverified normalization. The shipped
+  `technical-roadmap-template.md` has guidance comments at column zero above
+  `## Progress Tracking`. A roadmap that keeps them gets no exception, so its
+  Step 8 flip still reads the offers as stale. The repository's roadmaps and the
+  scaffold-reviewability fixtures carry no such comment.
 - Rows with consecutive backslashes keep raw fingerprints. Their escape
   interpretation is outside this narrow exception; changing them cannot hide
   non-status content.
