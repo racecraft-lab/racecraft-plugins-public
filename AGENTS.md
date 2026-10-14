@@ -200,14 +200,13 @@ done. Define the merge driver once per clone (`docs/agent-runbook.md`).
 
 | Output | Regenerate with | Caught by |
 | --- | --- | --- |
-| `dist/` payloads, marketplace versions, runner hashes (any runner `.py` edit) | `python3 scripts/refresh-release-artifacts.py` | `artifact-consistency` |
+| `dist/` payloads, marketplace versions, runner hashes and the runner manifest `plugin_version` (any runner `.py` edit or release merge) | `python3 scripts/refresh-release-artifacts.py` | `artifact-consistency` |
 | `docs-site/src/content/docs/reference/**`, from plugin sources, READMEs, manifests, `scripts/`, `tests/speckit-pro/` | `pnpm --dir docs-site reference:generate` | `validate-docs` only, not required |
 | Spec index blocks in `SPEC-MOC.md` and roadmap MOC files | the `generate-spec-index` runner request (`docs/agent-runbook.md`) | freshness: no PR check |
 
 After `git merge origin/main`, run both regenerate commands above, then the CI
-suite. One sanctioned hand edit: if `main` brought in a release and your branch
-also changed the runner manifest, set its `plugin_version` to
-`speckit-pro/.codex-plugin/plugin.json`'s `version` before the refresh.
+suite. The refresh derives the runner manifest `plugin_version` from
+`speckit-pro/.codex-plugin/plugin.json`; no hand edit is needed after a release.
 
 Paired files: the `.gitattributes` generated list mirrors
 `CHECK_WORKTREE_PATHS` in `scripts/refresh-release-artifacts.py`; `REVIEW.md`
