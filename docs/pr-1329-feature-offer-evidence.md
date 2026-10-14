@@ -13,9 +13,11 @@ but cannot be confirmed returns `expected_failure` with `writes_state: true`;
 it supplies no successful coverage result.
 
 Scaffold Step 8 flips the SPEC row in the roadmap's Progress Tracking table to In
-Progress after Step 6.5 fingerprinted that roadmap. File fingerprints therefore
-ignore the Status column of that table, and every other roadmap edit still
-changes the digest and fails the checked reader closed.
+Progress after Step 6.5 fingerprinted that roadmap. Only the single file bound
+by `reviewability_report`, and only its selected SPEC's plain Pending/In Progress
+status token in the Progress Tracking table, receives the exception. Cell
+spacing, links, other rows, columns, tables and file inputs remain fingerprinted.
+See [PR #1346's security contract](pr-1346-readiness-fingerprint-security.md).
 
 ## Known limits
 
