@@ -645,6 +645,14 @@ class RunnerTrustRosterTests(unittest.TestCase):
             self.assertIn(f"speckit_pro_runner/{name}", recorded)
         self.assertNotIn(f"speckit_pro_runner/{runtime.MANIFEST_NAME}", recorded)
 
+    def test_payload_gate_flags_stale_runtime_json(self) -> None:
+        self.assertEqual(
+            {"speckit_pro_runner/speckit-pro-runner.manifest.json", "speckit_pro_runner/speckit-pro-runner.sha256"},
+            payload_mismatches_after_editing("gate_discovery_table.json"),
+        )
+
+
+class RunnerManifestPluginVersionTests(unittest.TestCase):
     def write_plugin_manifest_version(self, root: Path, version: object) -> None:
         manifest = root / "speckit-pro" / ".codex-plugin" / "plugin.json"
         document = {"name": "speckit-pro"} if version is None else {"name": "speckit-pro", "version": version}
@@ -687,12 +695,6 @@ class RunnerTrustRosterTests(unittest.TestCase):
                     refresh.refresh_runner_trust_metadata(root)
 
                 self.assertEqual(stale, manifest_path.read_text(encoding="utf-8"))
-
-    def test_payload_gate_flags_stale_runtime_json(self) -> None:
-        self.assertEqual(
-            {"speckit_pro_runner/speckit-pro-runner.manifest.json", "speckit_pro_runner/speckit-pro-runner.sha256"},
-            payload_mismatches_after_editing("gate_discovery_table.json"),
-        )
 
 
 class PayloadRequiredSourceTests(unittest.TestCase):
@@ -771,6 +773,7 @@ if __name__ == "__main__":
             RunnerTransportTests,
             RunnerFoundationTests,
             RunnerTrustRosterTests,
+            RunnerManifestPluginVersionTests,
             PayloadRequiredSourceTests,
             RunnerInvocationVocabularyTests,
             RunnerLayeringTests,

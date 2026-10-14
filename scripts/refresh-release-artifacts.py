@@ -355,15 +355,11 @@ def refresh_runner_trust_metadata(repo_root: Path) -> list[str]:
 def read_plugin_version(repo_root: Path) -> str:
     """Return the plugin manifest version, or raise ValueError when it is not MAJOR.MINOR.PATCH."""
     try:
-        document = json.loads((repo_root / PLUGIN_VERSION_SOURCE).read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        raise ValueError(f"{PLUGIN_VERSION_SOURCE} is unreadable: {exc}") from exc
-    version = document.get("version") if isinstance(document, dict) else None
-    if not isinstance(version, str) or not SEMVER_PATTERN.fullmatch(version):
-        raise ValueError(
-            f"{PLUGIN_VERSION_SOURCE} version must be MAJOR.MINOR.PATCH to derive the runner manifest "
-            f"plugin_version, got {version!r}."
-        )
+        version = json.loads((repo_root / PLUGIN_VERSION_SOURCE).read_text(encoding="utf-8"))["version"]
+    except (OSError, ValueError, LookupError, TypeError) as exc:
+        raise ValueError(f"{PLUGIN_VERSION_SOURCE} has no readable version: {exc!r}") from exc
+    if not (isinstance(version, str) and SEMVER_PATTERN.fullmatch(version)):
+        raise ValueError(f"{PLUGIN_VERSION_SOURCE} version {version!r} is not MAJOR.MINOR.PATCH")
     return version
 
 

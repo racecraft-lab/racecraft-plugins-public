@@ -1304,13 +1304,16 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
             manifest["plugin_version"] = "0.0.1"
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-            def run(argv, **kwargs):
-                if argv[:2] == ["git", "status"]:
-                    return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
-                return subprocess.run(argv, **kwargs)
+            identity = ["-c", "user.name=test", "-c", "user.email=test@example.invalid"]
+            for argv in (
+                ["git", "init", "--quiet"],
+                ["git", "add", "--all"],
+                ["git", *identity, "commit", "--quiet", "--no-gpg-sign", "-m", "fixture"],
+            ):
+                subprocess.run(argv, cwd=root, check=True, shell=False, capture_output=True)
 
             stderr = io.StringIO()
-            returncode = refresh.check_release_artifacts(root, run=run, stdout=io.StringIO(), stderr=stderr)
+            returncode = refresh.check_release_artifacts(root, stdout=io.StringIO(), stderr=stderr)
 
         self.assertEqual(1, returncode, stderr.getvalue())
         self.assertIn(f"M {manifest_rel}", stderr.getvalue())
