@@ -67,6 +67,12 @@ def assert_invalid_inputs(test: unittest.TestCase, inputs_grid: tuple[dict, ...]
                 test.assertEqual(list(root.iterdir()), [])
 
 
+def assert_invalid_id_variants(test: unittest.TestCase, spec_ids: tuple[str, ...]) -> None:
+    inputs = tuple({"spec_id": spec_id, "spec_name": "Same Title"} for spec_id in spec_ids)
+    for runner in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+        assert_invalid_inputs(test, inputs, runner)
+
+
 class ScaffoldIdentityTests(unittest.TestCase):
     def test_invalid_identity_fails_before_placement_or_writes(self) -> None:
         assert_invalid_inputs(self, INVALID_INPUTS)
@@ -74,25 +80,19 @@ class ScaffoldIdentityTests(unittest.TestCase):
 
 class ScaffoldUnicodeIdentityTests(unittest.TestCase):
     def test_unicode_namespace_cannot_alias_an_ascii_identity(self) -> None:
-        inputs = tuple({"spec_id": spec_id, "spec_name": "Same Title"} for spec_id in (
+        assert_invalid_id_variants(self, (
             "K-001", "KK-001", "KK-001", "KK-001", "SPEK-001", "K-001K",
         ))
-        for runner in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
-            assert_invalid_inputs(self, inputs, runner)
 
     def test_unicode_number_suffix_cannot_alias_an_ascii_identity(self) -> None:
-        inputs = tuple({"spec_id": spec_id, "spec_name": "Same Title"} for spec_id in (
+        assert_invalid_id_variants(self, (
             "SPEC-001K", "K-001K", "spec-001K",
         ))
-        for runner in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
-            assert_invalid_inputs(self, inputs, runner)
 
     def test_non_ascii_controls_stop_before_placement(self) -> None:
-        inputs = tuple({"spec_id": spec_id, "spec_name": "Same Title"} for spec_id in (
+        assert_invalid_id_variants(self, (
             "İ-001", "K-00١", "ſPEC-001", "ＳPEC-001", "SPEC-００１", "SPEC-001İ",
         ))
-        for runner in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
-            assert_invalid_inputs(self, inputs, runner)
 
 
 class ScaffoldHostContractTests(unittest.TestCase):
