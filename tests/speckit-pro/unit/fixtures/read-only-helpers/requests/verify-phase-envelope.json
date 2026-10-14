@@ -2,6 +2,7 @@
   "schema_version": "1.0",
   "helper_id": "verify-phase-envelope", "operation": "verify-phase-envelope", "mode": "read_only",
   "inputs": {
+    "expected_phase": "Specify",
     "envelope": {"schema_version": "phase-envelope/v1", "phase": "Specify", "status": "pass",
                  "next_action": "Run the Clarify phase.", "artifacts": [], "gates": [{"id": "G1", "result": "pass"}],
                  "counts": {}, "blocker": "", "usage": {"input_tokens": 0, "output_tokens": 0, "tool_calls": 0}},

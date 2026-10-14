@@ -101,10 +101,12 @@ The same record resolves:
 
 ## Single orchestrator invariant
 
-The autopilot main session owns every workflow-level dispatch, result merge,
-phase transition, retry, and team lifecycle. Current Claude Code supports
-nested subagents (default depth 3 on current clients), but the main session
-stays the sole owner of workflow dispatch, merges and gates in either mode.
+The autopilot main session owns every phase transition, retry, and team
+lifecycle, and in flat mode every workflow-level dispatch and result merge.
+Current Claude Code supports nested subagents (default depth 3 on current
+clients). In nested mode a phase driver dispatches inside its own phase only;
+the main session still advances a phase only when the runner re-verifies the
+driver's envelope from disk.
 
 Open workhorse executors retain the operator's available surface for their own
 task work. Hyper-focused workers deny `Agent` and `SendMessage` so they cannot

@@ -9,8 +9,13 @@ action, changed artifact paths, gate ids with results, counts, one blocker line
 of at most 240 characters and a usage receipt. The serialized envelope may not
 exceed 2,048 UTF-8 bytes; an envelope over the cap fails before any other check.
 
+The helper requires `envelope`, `expected_phase`, `workflow_file` and `feature_dir`.
+The root supplies `expected_phase` from its requested `brief.phase`, independently
+of the driver's envelope. Missing or invalid expected phases are input errors.
+
 The helper never trusts a claim. It checks, in order, and returns the first
-mismatch: the contract, every artifact path (repository-relative, present,
+mismatch: the contract, equality of the claimed phase and `expected_phase`
+(`phase_mismatch` on disagreement, even if both phases' gates pass), every artifact path (repository-relative, present,
 non-empty, no links out; a directory must hold an entry), that the phase's own gate is claimed, that every file a claimed gate reads
 (its sources, the workflow, and every file G4 reports it judged) is present, non-empty and valid UTF-8
 whatever the driver listed, every claimed
@@ -20,15 +25,41 @@ that the `markers` and `task_count` counts equal what the gate reports. A gate
 whose evidence is missing, unreadable or not a boolean verdict fails the phase.
 A claimed failure that the disk contradicts is also a mismatch.
 
-A pass is `{verdict, phase, next_action}`. A mismatch is `expected_failure`
-with `{verdict: "fail", mismatch: {code, detail}}`.
+A pass is `{verdict: "pass", advance: true, phase, next_action}`. A mismatch is
+`expected_failure` with `{verdict: "fail", advance: false, mismatch: {code, detail}}`.
+
+Nested Tasks keeps publication and after_tasks consumers in the driver. The
+root collects each optional hook's explicit operator confirmation, then requests
+the same nested Tasks brief with `confirmed_after_tasks_hooks`: a list of exact
+`{extension, command, event}` identities, defaulting to `[]`. The hook owner
+matches only enabled, runner-listed optional after_tasks hooks and returns
+`after_tasks_hooks.run` and `.skip` in listed order, with duplicates executed
+once. Missing confirmation skips; malformed or stale confirmation fails the
+request. Flat mode and other phases reject this input.
+
+The driver consumes the publisher's unchanged binding through `read-tasks-output`
+before every mandatory or selected optional hook, records runs and skips in the
+decisions list, and completes G5 before returning its envelope. It reports
+`counts.optional_hooks_run` and `counts.optional_hooks_skipped`; the root neither
+re-publishes Tasks nor repeats those hooks.
 
 ## Known limits
 
-- This change adds the contract and the helper only. No agent or skill returns
-  or consumes an envelope yet, so no run path calls the helper.
+- A failing-gate substitution between Specify and Clarify is unreachable with
+  valid disk evidence: G1 and G2 check the same spec presence and clarification
+  markers. Their mismatched envelopes are still rejected and tested when both
+  gates pass, alongside all other phase pairs.
+- Only nested mode (ADR 0026) returns and consumes an envelope: the
+  `phase-executor` driver returns one and the autopilot calls the helper before
+  it advances. Flat mode never calls it.
+- The runner answers `advance` (true only on a pass) on every verified
+  answer. The autopilot's `autopilot-state.json` write is still the model's, so
+  the rule that a failed phase does not advance is a runner answer plus skill
+  text, and no runner code blocks a model that ignores it.
 - Re-verification covers the gates `validate-gate` decides from files. It does
-  not re-derive a driver's usage receipt, which the runner cannot observe.
+  not re-derive a driver's usage receipt or optional-hook execution counts,
+  which the runner cannot observe. Hook execution remains an agent action;
+  its selection and bound input are runner-owned.
 - Directory artifacts are checked through an opened descriptor, not against a
   historical inode identity. A populated, confined replacement before opening
   satisfies the present/non-empty contract; replacement after opening cannot

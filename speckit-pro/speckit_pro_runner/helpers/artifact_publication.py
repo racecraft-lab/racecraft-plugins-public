@@ -230,6 +230,29 @@ def publish(root: Path, feature: Path, name: str, content: bytes) -> None:
         os.close(directory)
 
 
+def publication_files(root: Path, feature: Path, names: list[str]) -> dict[str, bytes]:
+    """Snapshot only the owned pages; preserve unexpected entries and refuse publication."""
+    directory = open_artifacts(root, feature, create=False)
+    if directory is None:
+        if not names and not (root / feature / "artifacts").exists() and not (root / feature / "artifacts").is_symlink():
+            return {}
+        raise PublicationRefused("the artifact directory cannot be opened without following links")
+    try:
+        if set(os.listdir(directory)) != set(names):
+            raise PublicationRefused("unowned or missing artifact entries; recover them before retrying publication")
+        contents = {}
+        for name in names:
+            snapshot = snapshot_write_target_fd(directory, name)
+            if not snapshot["exists"] or snapshot["identity"][2] != 1:
+                raise PublicationRefused("publication requires a single-link regular artifact")
+            contents[name] = snapshot["content"]
+        if not still_bound(directory, root, feature):
+            raise PublicationRefused("the artifact directory moved during validation")
+        return contents
+    finally:
+        os.close(directory)
+
+
 def remove_pages(root: Path, feature: Path, names: list[str]) -> None:
     """Delete only named regular pages through a held, confined artifact directory."""
     directory = open_artifacts(root, feature, create=False)

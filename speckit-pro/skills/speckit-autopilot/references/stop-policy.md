@@ -100,6 +100,7 @@ item does not end the run and prints no marker.
 | `stop_reason:plan_stage_boundary` | authority | A `--stage plan` run stops after the plan. |
 | `stop_reason:scaffold_complete` | authority | Scaffold is committed and pushed; the operator starts planning in a separate invocation. |
 | `stop_reason:strict_confidence_opt_in` | authority | An opt-in `--strict` run stops before Phase 7 below the confidence threshold. |
+| `stop_reason:speckit_cli_older` | authority | An answers-file scaffold found a SpecKit CLI older than the plugin pin. Upgrading the CLI is an operator action, and the answers file has no key for it. |
 | `stop_reason:all_tiers_failed` | exhausted | All three escalation tiers failed. |
 | `stop_reason:tier3_cap_reached` | exhausted | The per-run tier 3 cap is spent. |
 | `stop_reason:tampering_or_forged_evidence` | harm_halt | Tampering or forged evidence. |
@@ -108,4 +109,5 @@ item does not end the run and prints no marker.
 
 Authority and exhausted reasons defer, except the operator-chosen boundaries,
 `scaffold_complete`, `plan_stage_boundary` and `strict_confidence_opt_in`, which
-end the run at the boundary the operator chose. Harm halt reasons halt the run.
+end the run at the boundary the operator chose. `speckit_cli_older` is outside a run: it ends
+an answers-file scaffold before any mutation. Harm halt reasons halt the run.

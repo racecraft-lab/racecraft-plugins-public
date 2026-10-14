@@ -64,7 +64,9 @@ class Run:
     gallery: dict[str, dict[str, Any]] = field(default_factory=dict)
     manifest_sha: str = ""
     branch: str = ""
+    initial_head: str = ""
     commits: list[str] = field(default_factory=list)
+    artifacts: dict[str, str] = field(default_factory=dict)
 
 
 def text_of(root: Path, relative: str) -> str:
@@ -158,12 +160,15 @@ def prepare(run: Run, inputs: dict[str, Any]) -> None:
         raise Stop("plan_stage_boundary", "the confidence gate must explicitly pass or warn before publication; "
                    "rerun Analyze to record confidence, then retry finish-plan-stage")
     run.branch = command(run, ["git", "branch", "--show-current"], "the branch could not be read")
+    run.initial_head = command(run, ["git", "rev-parse", "HEAD"], "the initial commit could not be read")
 
 
 def commit(run: Run, paths: list[str], subject: str) -> None:
     command(run, ["git", "add", "--", *paths], f"staging for '{subject}' failed")
+    check_git_artifacts(run, committed=False)
     if cli(run.root, ["git", "diff", "--cached", "--quiet"])["exit_status"] != 0:
         command(run, ["git", "commit", "-q", "-m", subject], f"the commit '{subject}' failed")
+        check_git_artifacts(run, committed=True)
         run.commits.append(subject)
 
 
@@ -175,7 +180,9 @@ def remote(run: Run) -> str:
 
 
 def push(run: Run) -> None:
-    result = cli(run.root, ["git", "push", "-q", "-u", remote(run), run.branch])
+    target = remote(run)
+    check_git_artifacts(run, committed=True)
+    result = cli(run.root, ["git", "push", "-q", "-u", target, run.branch])
     if result["exit_status"] != 0:
         reason = "protected_push" if "protected" in result["stderr_tail"].lower() else "plan_stage_boundary"
         raise Stop(reason, f"the branch push failed and no pull request was opened: {result['stderr_tail'][-200:]}")
@@ -237,6 +244,10 @@ def fill_pages(run: Run, fresh: bool) -> dict[str, Any]:
     owned = [page_id for page_id in selected if page_id not in {gap["id"] for gap in gaps}]
     if directory.exists():
         discard(run, [f"{page_id}.html" for page_id in run.gallery if page_id not in owned])
+    try:
+        artifact_publication.publication_files(run.root, Path(run.feature), [f"{page_id}.html" for page_id in owned])
+    except OSError as error:
+        raise Stop("integrity_failure", str(error)) from error
     return {"generated": owned, "gaps": gaps, "selected": selected}
 
 
@@ -405,6 +416,43 @@ def pages_ready(pages: dict[str, Any]) -> dict[str, Any]:
     return {"outcome": "pages_ready", "next_action": action}
 
 
+def bind_artifacts(run: Run, pages: dict[str, Any]) -> None:
+    """Bind publication to the bytes certified by the handoff, independently of later path changes."""
+    try:
+        contents = artifact_publication.publication_files(run.root, Path(run.feature),
+                                                        [f"{page_id}.html" for page_id in pages["generated"]])
+    except OSError as error:
+        raise Stop("integrity_failure", str(error)) from error
+    record = artifact_review.record_from_workflow(workflow_text(run))
+    recorded = {entry["path"]: entry["sha256"] for entry in record["pages"] if entry["generation"] == "generated"} if record else {}
+    algorithm = command(run, ["git", "rev-parse", "--show-object-format"], "the Git object format could not be read")
+    if algorithm not in {"sha1", "sha256"}:
+        raise Stop("integrity_failure", "unsupported Git object format")
+    for name, content in contents.items():
+        path = f"{run.feature}/artifacts/{name}"
+        if recorded.get(path) != hashlib.sha256(content).hexdigest():
+            raise Stop("integrity_failure", "an artifact changed after its handoff validation")
+        run.artifacts[path] = hashlib.new(algorithm, f"blob {len(content)}\0".encode() + content).hexdigest()
+
+
+def check_git_artifacts(run: Run, *, committed: bool) -> None:
+    """Check the actual index or commit, so staged leftovers and substituted links cannot be published."""
+    prefix = f"{run.feature}/artifacts"
+    revisions = [run.initial_head, "HEAD"] if committed else ["--cached"]
+    changed = command(run, ["git", "diff", *revisions, "--name-only", "-z", "--", "specs/"],
+                      "the changed artifact paths could not be read")
+    if any("/artifacts/" in path and not path.startswith(prefix + "/") for path in changed.split("\0")):
+        raise Stop("integrity_failure", "changed artifacts from another feature are not owned by this run")
+    argv = (["git", "ls-tree", "-r", "-z", "HEAD", "--", prefix] if committed else
+            ["git", "ls-files", "--stage", "-z", "--", prefix])
+    result = command(run, argv, "the Git artifact entries could not be read")
+    expected = [f"100644 blob {oid}\t{path}" if committed else f"100644 {oid} 0\t{path}"
+                for path, oid in run.artifacts.items()]
+    actual = result.removesuffix("\0").split("\0") if result else []
+    if sorted(actual) != sorted(expected):
+        raise Stop("integrity_failure", "Git contains unowned or changed artifacts; nothing further will be committed or pushed")
+
+
 def terminal_sequence(run: Run, pages: dict[str, Any]) -> dict[str, Any]:
     surface = "unavailable" if run.inputs.get("execution_mode") == "headless" else preview_surface(run.root, run.inputs["host"])
     write_record(run, pages)
@@ -412,7 +460,8 @@ def terminal_sequence(run: Run, pages: dict[str, Any]) -> dict[str, Any]:
         artifact_review.review_handoff(workflow_text(run), run.root, trusted_bytes, surface)
     except ValueError as error:
         raise Stop("integrity_failure", f"a generated page failed its fill check: {error}") from error
-    commit(run, ["specs/", run.workflow, run.state], f"chore({run.info['spec id']}): {BOUNDARY}")
+    bind_artifacts(run, pages)
+    commit(run, [run.feature, run.workflow, run.state], f"chore({run.info['spec id']}): {BOUNDARY}")
     packet = build_packet(run, pages)
     push(run)
     found = create_or_refresh(run, packet)
