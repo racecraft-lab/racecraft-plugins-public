@@ -77,6 +77,21 @@ separate accepted limit below.
   275 reviewable LOC, six production files and 16 handwritten files, one over
   the 15-file warning tier. These are the original review's counts; the shared
   owner and regression coverage add to that diff.
+- **R1342-89a61007 and R1342-9cbcd175 (Info): later review size.** After the
+  shared owner and regression coverage, the PR has about 415 changed
+  hand-written lines (326 without this doc) across 18 hand-written files, 8 of
+  them production files. That is over the 15-file and 6-production-file warning
+  tiers and near the 400-line tier. The shared owner was the requested fix
+  direction. The note records size only; it has no runtime effect.
+- **R1342-6fc0f1c9 (Info): grammar stated twice.** Scaffold Step 2 restates the
+  ID grammar in prose, and no test ties that sentence to the regex in
+  `scaffold_identity.py`. It matches today. Agents act on the helper's result,
+  not the prose, so a later drift would mislead readers without changing
+  behavior.
+- **R1342-3bd44f5b (Info): strict grammar lives in the scaffold helper.**
+  `normalize_spec_identity` stays lenient because the spec index must accept
+  existing directory names. Only scaffold needs the strict ASCII check, and the
+  regex guarantees the normalizer returns the two-part shape the helper splits.
 
 ## Host coverage
 
