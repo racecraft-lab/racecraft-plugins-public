@@ -412,8 +412,10 @@ worktree or artifact mutation. Use `data.branch_name` unchanged for every
 placement-helper call, worktree, branch, spec directory, and workflow `Branch`
 field. The runner owns the slug; preserve every word of the roadmap title in
 `spec_name` rather than summarizing it or deriving a short name.
-The helper fails closed on identities outside the numeric SPEC-directory
-contract; report the named input problem instead of inventing a branch.
+The helper accepts ASCII letter namespaces, three ASCII digits, and an optional
+ASCII letter suffix. It derives `<number>-<slug>` for SPEC and
+`<lowercase-namespace>-<number>-<slug>` otherwise; report any named input problem
+instead of inventing a branch.
 For an in-progress roadmap entry, verify its existing branch matches the
 returned identity before Step 3. If it differs, STOP and report the existing
 branch and canonical identity for operator reconciliation; preserve the
