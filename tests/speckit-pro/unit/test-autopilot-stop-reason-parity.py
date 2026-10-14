@@ -226,10 +226,39 @@ class StopReasonPrintTests(unittest.TestCase):
         self.assertEqual(missing, [], "hosts whose stop-policy lacks the print rule")
 
 
+SCAFFOLD_SKILLS = {host: host_skill_root(host) / "speckit-scaffold-spec" for host in ("claude", "codex")}
+
+
+class ScaffoldOlderCliStopTests(unittest.TestCase):
+    """Answers-file scaffold stops on an older SpecKit CLI instead of asking to repair it."""
+
+    def _step_zero(self, host: str) -> str:
+        text = (SCAFFOLD_SKILLS[host] / "SKILL.md").read_text(encoding="utf-8")
+        step = text.split("### 0. Ensure SpecKit CLI", 1)[1].split("### 1. ", 1)[0]
+        return " ".join(step.split())
+
+    def test_older_cli_is_a_registered_authority_stop(self) -> None:
+        self.assertEqual(_runner_set().get("speckit_cli_older"), "authority")
+
+    def test_both_hosts_stop_without_a_question_and_print_the_marker(self) -> None:
+        for host in SCAFFOLD_SKILLS:
+            step = self._step_zero(host)
+            self.assertRegex(step, r"`older` and the invocation has `--answers-file`", host)
+            self.assertRegex(step, _printed("speckit_cli_older"), host)
+            for field in ("spec_kit.installed_version", "spec_kit.pinned_version"):
+                self.assertIn(field, step, f"{host}: the stop message names {field}")
+            self.assertRegex(step, r"without (?:asking|a question)", host)
+
+    def test_interactive_older_cli_still_offers_the_repair(self) -> None:
+        for host in SCAFFOLD_SKILLS:
+            self.assertIn("offer the operator `install_argv`", self._step_zero(host), host)
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite([loader.loadTestsFromTestCase(StopReasonParityTests),
-                               loader.loadTestsFromTestCase(StopReasonPrintTests)])
+                               loader.loadTestsFromTestCase(StopReasonPrintTests),
+                               loader.loadTestsFromTestCase(ScaffoldOlderCliStopTests)])
 
 
 def main() -> int:
