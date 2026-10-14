@@ -27,6 +27,7 @@ from .plan_stage_terminal import run_plan_stage_terminal_helper
 from .quality_gates_proposal import run_quality_gates_proposal_helper
 from .readiness_record import run_feature_offers_helper, run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
+from .scaffold_identity import run_scaffold_branch_helper
 from .nesting_preflight import run_nesting_preflight_helper
 from .phase_brief import run_phase_brief_helper
 from .phase_envelope import run_phase_envelope_helper
@@ -157,6 +158,10 @@ HELPERS: dict[str, HelperEntry] = {
     "scaffold-answers": HelperEntry(
         "scaffold-answers", "scaffold-answers", None, "python_authoritative", "python_contract",
         authoritative_request("scaffold-answers"),
+    ),
+    "derive-scaffold-branch": HelperEntry(
+        "derive-scaffold-branch", "derive-scaffold-branch", None, "python_authoritative", "python_contract",
+        authoritative_request("derive-scaffold-branch"),
     ),
     "formal-doctor": HelperEntry(
         "formal-doctor", "formal-doctor", None, "python_authoritative", "python_contract",
@@ -806,6 +811,7 @@ SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "list-archive-candidates": run_archive_sweep_helper,
     "check-roadmap-freshness": run_roadmap_freshness_helper,
     "scaffold-answers": run_scaffold_answers_helper,
+    "derive-scaffold-branch": run_scaffold_branch_helper,
     "g0-setup": run_g0_setup_helper,
     "probe-git-write": run_git_write_probe_helper,
     "phase-brief": run_phase_brief_helper,

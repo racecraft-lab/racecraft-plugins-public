@@ -166,6 +166,10 @@ _Avoid_: corrective budget, corrective cycle, replan epoch, escalation tier
 An advisory assessment of how much work a SPEC or one of its declared slices asks a human to review. It includes the size evidence and any unresolved uncertainty.
 _Avoid_: reviewability block, size gate
 
+**Scaffold branch**:
+The dedicated branch scaffold derives from the roadmap's spec identity and exact title, and uses unchanged for its worktree, spec directory and workflow. The same roadmap entry gives the same branch on both hosts.
+_Avoid_: model-chosen short name, host-specific branch
+
 **Security block**:
 A blocked-for-UAT condition when no safe authorized alternative can satisfy work requiring a security action that cannot proceed. It defers affected work without pausing implement for consent.
 _Avoid_: security interrupt during implement, consent retry, permission bypass

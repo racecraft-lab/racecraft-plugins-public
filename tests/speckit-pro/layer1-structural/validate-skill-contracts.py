@@ -1248,6 +1248,7 @@ class ValidateScaffoldHelperInputs(unittest.TestCase):
             'research-broker-preflight': {},
             'o5-topology': {'target': 'specs/<parent-branch>'},
             'resolve-workflow-binding': {'workflow_file': '<absolute-workflow-path>'},
+            'derive-scaffold-branch': {'spec_id': '<SPEC-ID>', 'spec_name': '<exact roadmap spec name>'},
             'resolve-scaffold-worktree-placement': {'branch_name': '<branch-name>'},
             'scaffold-answers': {'answers_file': '<answers-file>', 'spec_id': '<SPEC-ID>'},
         }

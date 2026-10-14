@@ -31,6 +31,7 @@ CLASSES = {"authority", "exhausted", "harm_halt"}
 
 def _guidance_files() -> list[Path]:
     files = [path for skill in HOST_SKILLS.values() for path in sorted(skill.rglob("*.md"))]
+    files += [host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md" for host in HOST_SKILLS]
     return [path for path in files if path.is_file()]
 
 
@@ -175,6 +176,17 @@ class StopReasonPrintTests(unittest.TestCase):
 
     def _phase_execution(self, host: str) -> str:
         return (HOST_SKILLS[host] / "references" / "phase-execution.md").read_text(encoding="utf-8")
+
+    def test_scaffold_completion_prints_one_registered_authority_reason_on_both_hosts(self) -> None:
+        from speckit_pro_runner.stop_policy import stop_class
+
+        self.assertEqual(stop_class("scaffold_complete"), "authority")
+        for host in HOST_SKILLS:
+            text = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+            closing = text.split("### 10. Closing Report", 1)[1].split("## Failure Handling", 1)[0]
+            self.assertRegex(closing, _printed("scaffold_complete"))
+            self.assertIn("as the last line of the final message", closing)
+            self.assertIn("Do not print this marker on an incomplete or failed scaffold", closing)
 
     def test_plan_stage_terminal_step_prints_the_boundary_reason(self) -> None:
         for host in HOST_SKILLS:

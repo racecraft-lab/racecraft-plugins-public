@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Scaffold identity through the public runner seam."""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from runner_invocation import run_runner  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
+from test_result import run_counted  # noqa: E402
+
+
+class ScaffoldIdentityTests(unittest.TestCase):
+    def test_invalid_identity_fails_before_placement_or_writes(self) -> None:
+        cases = (
+            {}, {"spec_id": "SPEC-001"},
+            {"spec_id": "SPEC-001", "spec_name": None},
+            {"spec_id": "SPEC-001", "spec_name": "!!!"},
+            {"spec_id": "SPEC-001", "spec_name": "Save\x00Items"},
+            {"spec_id": "SPEC-001", "spec_name": "Save Items", "branch_name": "override"},
+            {"spec_id": "SPEC-01", "spec_name": "Save Items"},
+            {"spec_id": "PRSG-001", "spec_name": "Save Items"},
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for inputs in cases:
+                with self.subTest(inputs=inputs):
+                    completed, result, _ = run_runner({
+                        "schema_version": "1.0", "request_id": "invalid-scaffold-identity",
+                        "helper_id": "derive-scaffold-branch", "operation": "derive-scaffold-branch",
+                        "mode": "read_only", "inputs": inputs,
+                    }, cwd=root)
+                    self.assertEqual(result["status"], "input_error", result)
+                    self.assertNotEqual(completed.returncode, 0)
+                    self.assertEqual(result["data"]["verdict"], "stop")
+                    self.assertNotIn("branch_name", result["data"])
+                    self.assertEqual(list(root.iterdir()), [])
+
+    def test_both_hosts_call_the_identity_helper_with_the_exact_roadmap_fields(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                text = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                row = re.search(r"\| `derive-scaffold-branch` \| `read_only` \| `([^`]+)` \|", text)
+                self.assertIsNotNone(row, f"{host}: registered helper request is required")
+                inputs = json.loads(row.group(1))
+                self.assertEqual(inputs, {"spec_id": "<SPEC-ID>", "spec_name": "<exact roadmap spec name>"})
+                inputs.update(spec_id="SPEC-001", spec_name="Word Frequency JSON Output")
+                _, result, _ = run_runner({
+                    "schema_version": "1.0", "request_id": "scaffold-host-parity",
+                    "helper_id": "derive-scaffold-branch", "operation": "derive-scaffold-branch",
+                    "mode": "read_only", "inputs": inputs,
+                })
+                self.assertEqual(result["data"]["branch_name"], "001-word-frequency-json-output")
+                step = text.split("### 2. Find the Spec in the Technical Roadmap", 1)[1].split("### 3.", 1)[0]
+                self.assertIn("Run runner helper `derive-scaffold-branch`", step)
+                self.assertIn("Use `data.branch_name` unchanged", step)
+                self.assertNotIn("**Short name** for the branch", step)
+                self.assertIn("verify its existing branch matches", step)
+
+    def test_roadmap_title_produces_the_canonical_numeric_branch(self) -> None:
+        completed, result, diagnostics = run_runner({
+            "schema_version": "1.0", "request_id": "scaffold-identity",
+            "helper_id": "derive-scaffold-branch", "operation": "derive-scaffold-branch",
+            "mode": "read_only",
+            "inputs": {"spec_id": "SPEC-001", "spec_name": "Word Frequency JSON Output"},
+        })
+        self.assertEqual(result["status"], "ok", result)
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(diagnostics, [])
+        self.assertEqual(result["data"]["branch_name"], "001-word-frequency-json-output")
+
+    def test_title_normalization_keeps_all_words_and_a_safe_single_segment(self) -> None:
+        cases = (
+            ("SPEC-009", "Search & Database", "009-search-database"),
+            ("SPEC-007", "  Café / JSON... Output!!  ", "007-cafe-json-output"),
+            ("spec-042", "Save---Items_v2", "042-save-items-v2"),
+        )
+        for spec_id, title, expected in cases:
+            with self.subTest(spec_id=spec_id, title=title):
+                completed, result, _ = run_runner({
+                    "schema_version": "1.0", "request_id": "scaffold-normalization",
+                    "helper_id": "derive-scaffold-branch", "operation": "derive-scaffold-branch",
+                    "mode": "read_only", "inputs": {"spec_id": spec_id, "spec_name": title},
+                })
+                self.assertEqual(completed.returncode, 0, result)
+                self.assertEqual(result["data"]["branch_name"], expected)
+                self.assertRegex(expected, r"^[0-9]{3}-[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+if __name__ == "__main__":
+    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ScaffoldIdentityTests),
+                                 label="test-scaffold-identity"))

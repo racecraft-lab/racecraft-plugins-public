@@ -36,6 +36,7 @@ These examples name the runner's contract; the steps below determine when a chec
 | `research-broker-preflight` | `read_only` | `{}` |
 | `o5-topology` | `read_only` | `{"target": "specs/<parent-branch>"}` |
 | `resolve-workflow-binding` | `read_only` | `{"workflow_file": "<absolute-workflow-path>"}` |
+| `derive-scaffold-branch` | `read_only` | `{"spec_id": "<SPEC-ID>", "spec_name": "<exact roadmap spec name>"}` |
 | `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
 | `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
 | `propose-quality-gates` | `dry_run` | `{"measured": true}` (`false` when nothing was measured) |
@@ -179,8 +180,8 @@ else should be derived from the repository.
 
 ## Canonical Scaffold Identity
 
-Derive one deterministic `<branch-name>` from the roadmap's spec number and
-short slug, then use that exact verified value everywhere. The authored paths,
+Use the `derive-scaffold-branch` runner helper's `data.branch_name` as
+`<branch-name>`, then use that exact verified value everywhere. The authored paths,
 relative to the resolved worktree root, are:
 
 - `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`
@@ -299,7 +300,6 @@ SPEC-ID (e.g., `### SPEC-009: Search & Database`).
 Extract:
 
 - **Spec name** (e.g., "Search & Database")
-- **Short name** for the branch (e.g., "search-database")
 - **Spec number** (e.g., 009)
 - **Tool count** and tool names, only when the roadmap entry records them
 - **Priority** (P1/P2/P3)
@@ -315,6 +315,20 @@ If the SPEC-ID is not found, STOP: "SPEC-ID not found in
 technical roadmap. Available specs: <list pending specs>."
 Offer to help the user add or correct the roadmap entry with
 `/speckit-pro:speckit-coach`; do not invent the entry or continue scaffolding.
+
+Run runner helper `derive-scaffold-branch` in `read_only` mode with the
+requested `spec_id` and the exact **Spec name** read from the roadmap.
+Require `status=ok`; on failure, report `data.problems[]` and STOP before
+worktree or artifact mutation. Use `data.branch_name` unchanged for every
+placement-helper call, worktree, branch, spec directory, and workflow `Branch`
+field. The runner owns the slug; preserve every word of the roadmap title in
+`spec_name` rather than summarizing it or deriving a short name.
+The helper fails closed on identities outside the numeric SPEC-directory
+contract; report the named input problem instead of inventing a branch.
+For an in-progress roadmap entry, verify its existing branch matches the
+returned identity before Step 3. If it differs, STOP and report the existing
+branch and canonical identity for operator reconciliation; preserve the
+existing worktree rather than creating a second setup.
 
 Run the reviewability setup gate before creating the worktree:
 
@@ -341,7 +355,7 @@ mutation.
 
 Before `git worktree add` or any artifact or roadmap write, invoke the
 read-only runner helper `resolve-scaffold-worktree-placement` with the
-deterministic single-segment `branch_name` and, only when the user supplied
+`branch_name` returned by `derive-scaffold-branch` and, only when the user supplied
 one, `worktree_root_override`. Require `placement_status=resolved` and
 `relation=same` or `relation=descendant`. On `conflict`, `invalid`, or
 `relation=external`, report the returned `problems[]` and canonical path, then
@@ -1370,6 +1384,11 @@ applies to it.
 check selected. Scaffold names
 the planning hand-off as the operator's next action, never as its own action,
 and never asks a second confirmation to offer it.
+
+After the closing report, print exactly one `stop_reason:scaffold_complete`
+as the last line of the final message, on its own line. This registered
+authority reason marks the completed scaffold's operator-controlled hand-off
+to planning on all three endings. Do not print this marker on an incomplete or failed scaffold.
 
 ## Failure Handling
 

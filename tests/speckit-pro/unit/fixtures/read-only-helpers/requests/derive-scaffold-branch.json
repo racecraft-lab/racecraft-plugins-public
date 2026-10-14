@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-derive-scaffold-branch",
+  "helper_id": "derive-scaffold-branch",
+  "operation": "derive-scaffold-branch",
+  "mode": "read_only",
+  "inputs": {"spec_id": "SPEC-009", "spec_name": "Search & Database"}
+}

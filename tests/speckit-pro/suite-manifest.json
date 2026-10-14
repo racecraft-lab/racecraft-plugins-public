@@ -202,6 +202,7 @@
         { "path": "tests/speckit-pro/unit/test-research-broker.py", "label": "test-research-broker" },
         { "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py", "label": "test-reviewability-marker-guidance" },
         { "path": "tests/speckit-pro/unit/test-roadmap-freshness.py", "label": "test-roadmap-freshness" },
+        { "path": "tests/speckit-pro/unit/test-scaffold-identity.py", "label": "test-scaffold-identity" },
         { "path": "tests/speckit-pro/unit/test-scratch-clone-guard.py", "label": "test-scratch-clone-guard" },
         { "path": "tests/speckit-pro/unit/test-semantic-contract-identifiers.py", "label": "test-semantic-contract-identifiers" },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-gates.py", "label": "test-speckit-pro-gates" },
