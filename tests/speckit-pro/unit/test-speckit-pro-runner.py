@@ -42,6 +42,9 @@ RUNTIME_LOADED_JSON = (
 def copy_runner(root: Path) -> Path:
     package_dir = root / "speckit-pro" / "speckit_pro_runner"
     shutil.copytree(RUNNER_DIR, package_dir, ignore=shutil.ignore_patterns("__pycache__"))
+    plugin_manifest = root / "speckit-pro" / ".codex-plugin" / "plugin.json"
+    plugin_manifest.parent.mkdir(parents=True)
+    shutil.copy2(PLUGIN_ROOT / ".codex-plugin" / "plugin.json", plugin_manifest)
     return package_dir
 
 
@@ -649,6 +652,51 @@ class RunnerTrustRosterTests(unittest.TestCase):
         )
 
 
+class RunnerManifestPluginVersionTests(unittest.TestCase):
+    def write_plugin_manifest_version(self, root: Path, version: object) -> None:
+        manifest = root / "speckit-pro" / ".codex-plugin" / "plugin.json"
+        document = {"name": "speckit-pro"} if version is None else {"name": "speckit-pro", "version": version}
+        manifest.write_text(json.dumps(document), encoding="utf-8")
+
+    def test_refresh_derives_plugin_version_from_the_plugin_manifest(self) -> None:
+        refresh = importlib.import_module("refresh-release-artifacts")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package_dir = copy_runner(root)
+            self.write_plugin_manifest_version(root, "9.9.9")
+            manifest_path = package_dir / runtime.MANIFEST_NAME
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["plugin_version"] = "1.0.0"
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+            refresh.refresh_runner_trust_metadata(root)
+
+            refreshed = json.loads(manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual("9.9.9", refreshed["plugin_version"])
+
+    def test_refresh_rejects_an_unusable_plugin_version_and_keeps_the_manifest(self) -> None:
+        refresh = importlib.import_module("refresh-release-artifacts")
+        for version in (None, "", "2.44", "v2.44.0", "2.44.0-rc.1", 2, "missing-file"):
+            with self.subTest(version=version), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                package_dir = copy_runner(root)
+                if version == "missing-file":
+                    (root / "speckit-pro" / ".codex-plugin" / "plugin.json").unlink()
+                else:
+                    self.write_plugin_manifest_version(root, version)
+                manifest_path = package_dir / runtime.MANIFEST_NAME
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest["plugin_version"] = "1.0.0"
+                manifest["runner_files"] = []
+                stale = json.dumps(manifest, indent=2) + "\n"
+                manifest_path.write_text(stale, encoding="utf-8")
+
+                with self.assertRaisesRegex(ValueError, "plugin.json"):
+                    refresh.refresh_runner_trust_metadata(root)
+
+                self.assertEqual(stale, manifest_path.read_text(encoding="utf-8"))
+
+
 class PayloadRequiredSourceTests(unittest.TestCase):
     def test_build_fails_when_a_required_source_directory_is_missing(self) -> None:
         required = sorted(
@@ -725,6 +773,7 @@ if __name__ == "__main__":
             RunnerTransportTests,
             RunnerFoundationTests,
             RunnerTrustRosterTests,
+            RunnerManifestPluginVersionTests,
             PayloadRequiredSourceTests,
             RunnerInvocationVocabularyTests,
             RunnerLayeringTests,

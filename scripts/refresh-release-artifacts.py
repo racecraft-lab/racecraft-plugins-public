@@ -23,6 +23,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -36,6 +37,9 @@ sys.dont_write_bytecode = True
 
 RUNNER_MANIFEST_FILE = "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
 RUNNER_CHECKSUM_FILE = "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
+# The plugin manifest that owns the version the runner manifest copies.
+PLUGIN_VERSION_SOURCE = "speckit-pro/.codex-plugin/plugin.json"
+SEMVER_PATTERN = re.compile(r"\d+\.\d+\.\d+")
 
 # marketplace registry -> within-plugin manifest read from each entry's source dir
 MARKETPLACES = (
@@ -118,7 +122,11 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     changed += refresh_codex_agents(runner_root, load_agent_inventory())
 
     # 2. Runner trust metadata (manifest sha256 entries + .sha256 companion).
-    changed += refresh_runner_trust_metadata(repo_root)
+    try:
+        changed += refresh_runner_trust_metadata(repo_root)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
 
     # 3. Rebuild Claude and Codex payloads.
     payloads.build_installed_plugin_payloads(repo_root, repo_root / "dist")
@@ -322,10 +330,13 @@ def refresh_runner_trust_metadata(repo_root: Path) -> list[str]:
     source_files = runner_source_files(package_dir)
     digests = {path.relative_to(plugin_root).as_posix(): sha256_file(path) for path in source_files}
 
+    plugin_version = read_plugin_version(repo_root)
+
     changed: list[str] = []
 
     manifest_path = repo_root / RUNNER_MANIFEST_FILE
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["plugin_version"] = plugin_version
     manifest["runner_files"] = [
         {
             "path": {"kind": "plugin_relative", "value": rel, "display": rel},
@@ -339,6 +350,17 @@ def refresh_runner_trust_metadata(repo_root: Path) -> list[str]:
     changed += write_text_if_changed(repo_root / RUNNER_CHECKSUM_FILE, checksum_text, repo_root)
 
     return changed
+
+
+def read_plugin_version(repo_root: Path) -> str:
+    """Return the plugin manifest version, or raise ValueError when it is not MAJOR.MINOR.PATCH."""
+    try:
+        version = json.loads((repo_root / PLUGIN_VERSION_SOURCE).read_text(encoding="utf-8"))["version"]
+    except (OSError, ValueError, LookupError, TypeError) as exc:
+        raise ValueError(f"{PLUGIN_VERSION_SOURCE} has no readable version: {exc!r}") from exc
+    if not (isinstance(version, str) and SEMVER_PATTERN.fullmatch(version)):
+        raise ValueError(f"{PLUGIN_VERSION_SOURCE} version {version!r} is not MAJOR.MINOR.PATCH")
+    return version
 
 
 # --------------------------------------------------------------------------- #
