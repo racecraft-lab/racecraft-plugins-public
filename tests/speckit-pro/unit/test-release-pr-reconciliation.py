@@ -1304,13 +1304,24 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
             manifest["plugin_version"] = "0.0.1"
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-            identity = ["-c", "user.name=test", "-c", "user.email=test@example.invalid"]
-            for argv in (
-                ["git", "init", "--quiet"],
-                ["git", "add", "--all"],
-                ["git", *identity, "commit", "--quiet", "--no-gpg-sign", "-m", "fixture"],
-            ):
-                subprocess.run(argv, cwd=root, check=True, shell=False, capture_output=True)
+            git_options = {"cwd": root, "check": True, "shell": False, "capture_output": True}
+            subprocess.run(["git", "init", "--quiet"], **git_options)
+            subprocess.run(["git", "add", "--all"], **git_options)
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=test",
+                    "-c",
+                    "user.email=test@example.invalid",
+                    "commit",
+                    "--quiet",
+                    "--no-gpg-sign",
+                    "-m",
+                    "fixture",
+                ],
+                **git_options,
+            )
 
             stderr = io.StringIO()
             returncode = refresh.check_release_artifacts(root, stdout=io.StringIO(), stderr=stderr)
