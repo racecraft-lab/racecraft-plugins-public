@@ -855,12 +855,16 @@ Persist the complete response as
 receipt's `mode` is `data.mode`. When `data.mode` is `flat`, log
 `data.prerequisite` once as a note and continue: the root dispatches each
 phase's executors directly under the compact-answer contract. Depth never
-stops, defers or fails the run, and this step has no stop label. Nested mode
-adds phase drivers (ADR 0026); until they ship, a `nested` result still
-dispatches from the root as Step 2 states, so `mode` records the host's
-capability and not yet a different dispatch.
+stops, defers or fails the run, and this step has no stop label. A `nested`
+result runs each planning phase in a phase driver (ADR 0026; see
+[Nested mode: phase drivers](#nested-mode-phase-drivers)); a `flat` result keeps
+the root dispatch Step 2 states.
 
 ## Step 2: Main Execution Loop
+
+This section is the flat dispatch. When `nesting_mode.data.mode` is `nested`,
+follow [Nested mode: phase drivers](#nested-mode-phase-drivers) for the planning
+phases instead.
 
 For each planning phase, request
 `helper_id=phase-brief operation=phase-brief mode=read_only` with inputs
@@ -1240,6 +1244,58 @@ the operator to choose and vet an archive before using the same `--from` form.
 
 **Dynamic task updates:** If consensus reveals new questions or
 remediation adds loops, add the items to `autopilot-state.json`.
+
+### Nested mode: phase drivers
+
+When `nesting_mode.data.mode` is `nested`, each planning phase runs in a phase
+driver (ADR 0026), so the root keeps only briefs and envelopes. Request each
+phase's brief with `mode=nested` and no wave inputs. `brief.agent` is always
+`phase-executor`; `brief.inner_agent` names the executor the driver dispatches
+for Clarify, Checklist and Analyze, and is null for Specify, Plan and Tasks.
+Never dispatch an inner executor or a consensus agent from the root in this mode.
+
+For Tasks, collect optional `after_tasks` confirmations before dispatch using
+Step 2's runner-owned consent prompt and exact extension, command and event.
+Without explicit confirmation, including unattended runs, grant none. Request
+the Tasks brief again with the same request plus `confirmed_after_tasks_hooks`
+(only the confirmed identity objects, or `[]`). Pass the resulting
+`brief.after_tasks_hooks` unchanged to the driver; its run/skip lists own that window.
+
+Spawn `brief.agent` once per phase with `spawn_agent`, `fork_turns="none"`,
+`model=brief.model.codex.model` and `reasoning_effort=brief.model.codex.effort`,
+so its fresh context contains only the supplied message. Wait
+with `wait_agent` using `brief.wait.codex.timeout_ms`. For Specify, Plan and
+Tasks, begin the message with `$` plus `brief.inputs.skill`, as Step 2 does.
+The prompt holds `Mode: nested`, `Phase: <phase>`, the brief, the
+per-dispatch context lines of Step 2, the host's wave limit, and for Tasks
+`brief.inputs` unchanged. The driver runs the phase's skill or executors, the
+phase's gate, repair and workflow-file results; its last message is a
+`phase-envelope/v1` object (the runner's `ENVELOPE_SCHEMA` is the contract). Before dispatch, the root still handles optional
+`before_<phase>` hooks as Step 2 states.
+
+The root reads only the envelope and compact helper answers. It never reads a
+planning artifact, runner source or the driver's transcript to learn what the
+phase did. Plan's formal-model-author and formal-check sequence, and Tasks'
+`publish-tasks-output`, mandatory and confirmed optional after_tasks hooks and G5, run in the driver
+before it returns, so the disk holds the final evidence. Then request
+`helper_id=verify-phase-envelope operation=verify-phase-envelope mode=read_only`
+with inputs `envelope` (the driver's object, unchanged),
+`expected_phase` (the root's requested phase from `brief.phase`, never from the envelope),
+`workflow_file` and `feature_dir`. Advance only when `data.advance` is true. On any other answer,
+including an unparseable envelope, never advance: handle it as a failed gate
+under the existing repair and escalation policy, with a fresh driver if the
+phase is retried.
+
+After Checklist passes, run `validate-gate` G4 (read_only) and retain its
+complete `judged` map and `feature_identity`: the Tasks brief needs them as
+Step 2 states, and the driver's envelope carries neither.
+
+After a pass, handle other phases' optional `after_<phase>` hooks as Step 2 states.
+The Tasks driver already handled its runner-selected after_tasks run/skip lists
+inside the binding and recorded those decisions. The root holds no Tasks binding
+and never publishes again or repeats those hooks. Then record the phase from the
+envelope in `autopilot-state.json`, commit per the auto-commit setting, and
+request the next brief. Implement and the later stages keep their flat dispatch.
 
 ### Phase Dispatch
 

@@ -57,9 +57,10 @@ def project(spec_text="# Spec\n\nNo open questions.\n"):
 
 
 def verify(envelope, **inputs):
+    expected_phase = inputs.pop("expected_phase", envelope.get("phase", "Specify") if isinstance(envelope, dict) else "Specify")
     request = SimpleNamespace(helper_id="verify-phase-envelope", operation="verify-phase-envelope", mode="read_only",
                               request_id=None, inputs={"envelope": envelope, "workflow_file": WORKFLOW,
-                                                       "feature_dir": FEATURE, **inputs})
+                                                       "feature_dir": FEATURE, "expected_phase": expected_phase, **inputs})
     return dispatch_helper(request)
 
 
@@ -311,7 +312,7 @@ class ResultVerificationTests(EnvelopeAssertions):
     def test_matching_evidence_passes_with_a_compact_answer(self):
         result = verify_project(good_envelope())
         self.assertEqual(result["status"], "ok")
-        self.assertEqual(result["data"], {"verdict": "pass", "phase": "Specify", "next_action": "Run the Clarify phase."})
+        self.assertEqual(result["data"], {"verdict": "pass", "advance": True, "phase": "Specify", "next_action": "Run the Clarify phase."})
 
     def test_a_driver_reported_failure_is_not_a_pass(self):
         envelope = failed_gate_envelope(status="blocked", counts={}, blocker="Spec still has open questions.")
@@ -336,7 +337,123 @@ class ResultVerificationTests(EnvelopeAssertions):
         self.assertEqual(envelope, before)
 
 
+class PhaseBindingFixture(EnvelopeAssertions):
+    PHASE_GATES = {"Specify": "G1", "Clarify": "G2", "Plan": "G3", "Checklist": "G4", "Tasks": "G5", "Analyze": "G6"}
+
+    def prepare_passing_evidence(self, root):
+        (root / FEATURE / "plan.md").write_text("# Plan\n\nResolved.\n", encoding="utf-8")
+        (root / FEATURE / "tasks.md").write_text("- [ ] T001 Implement the feature\n", encoding="utf-8")
+        (root / FEATURE / "checklists").mkdir()
+        (root / FEATURE / "checklists/domain.md").write_text("# Checklist\n\nComplete.\n", encoding="utf-8")
+        (root / WORKFLOW).write_text("## Analysis Results\n\n| ID | Severity | Finding | Resolution |\n"
+                                    "| --- | --- | --- | --- |\n", encoding="utf-8")
+
+    def gate_passes(self, root, phase):
+        result = phase_envelope.validate_gate({"gate": self.PHASE_GATES[phase], "workflow_file": WORKFLOW,
+                                               "feature_dir": FEATURE}, root)
+        return json.loads(result["stdout"])["pass"]
+
+    def phase_envelope(self, phase, **fields):
+        return good_envelope(phase=phase, gates=[{"id": self.PHASE_GATES[phase], "result": "pass"}], counts={}, **fields)
+
+    def assert_phase_mismatch(self, claimed, requested):
+        result = verify(self.phase_envelope(claimed), expected_phase=requested)
+        self.assert_mismatch(result, "phase_mismatch")
+        self.assertIs(False, result["data"]["advance"])
+
+
+class PhaseBindingTests(PhaseBindingFixture):
+    def test_passing_phases_cannot_advance_specify_or_clarify_with_failing_requested_gates(self):
+        for requested in ("Specify", "Clarify"):
+            with self.subTest(requested=requested), project(spec_text="[NEEDS CLARIFICATION: scope]\n") as root:
+                self.prepare_passing_evidence(root)
+                self.assertIs(False, self.gate_passes(root, requested))
+                for claimed in ("Plan", "Checklist", "Tasks", "Analyze"):
+                    with self.subTest(claimed=claimed):
+                        self.assertIs(True, self.gate_passes(root, claimed))
+                        self.assert_phase_mismatch(claimed, requested)
+
+    def test_passing_phases_cannot_advance_later_phases_with_failing_requested_gates(self):
+        failures = {"Plan": ("plan.md", "TODO resolve the design\n"),
+                    "Checklist": ("checklists/domain.md", "[Gap] requirement missing\n"),
+                    "Tasks": ("tasks.md", "# Tasks\n\nNo task entries.\n"),
+                    "Analyze": ("plan.md", "[HIGH] unresolved finding\n")}
+        for requested, (name, content) in failures.items():
+            with self.subTest(requested=requested), project() as root:
+                self.prepare_passing_evidence(root)
+                (root / FEATURE / name).write_text(content, encoding="utf-8")
+                self.assertIs(False, self.gate_passes(root, requested))
+                for claimed in (phase for phase in self.PHASE_GATES if phase != requested):
+                    with self.subTest(claimed=claimed):
+                        self.assertIs(True, self.gate_passes(root, claimed))
+                        self.assert_phase_mismatch(claimed, requested)
+
+    def test_every_mismatched_phase_pair_fails_even_when_both_gates_pass(self):
+        with project() as root:
+            self.prepare_passing_evidence(root)
+            for phase in self.PHASE_GATES:
+                self.assertIs(True, self.gate_passes(root, phase), phase)
+            for requested in self.PHASE_GATES:
+                for claimed in self.PHASE_GATES:
+                    if claimed != requested:
+                        with self.subTest(requested=requested, claimed=claimed):
+                            self.assert_phase_mismatch(claimed, requested)
+
+    def test_matching_requested_phases_still_advance(self):
+        with project() as root:
+            self.prepare_passing_evidence(root)
+            for phase in self.PHASE_GATES:
+                with self.subTest(phase=phase):
+                    result = verify(self.phase_envelope(phase), expected_phase=phase)
+                    self.assertEqual(result["status"], "ok")
+                    self.assertIs(True, result["data"]["advance"])
+                    self.assertEqual(result["data"]["phase"], phase)
+
+    def test_extra_requested_gate_cannot_authorize_a_mismatched_phase(self):
+        with project() as root:
+            self.prepare_passing_evidence(root)
+            envelope = self.phase_envelope("Plan")
+            envelope["gates"].append({"id": "G1", "result": "pass"})
+            self.assert_mismatch(verify(envelope, expected_phase="Specify"), "phase_mismatch")
+
+    def test_phase_binding_precedes_artifacts_and_status_checks(self):
+        for status in ("pass", "fail", "blocked"):
+            with self.subTest(status=status), project():
+                envelope = self.phase_envelope("Plan", status=status, artifacts=[f"{FEATURE}/absent.md"])
+                result = verify(envelope, expected_phase="Specify")
+                self.assert_mismatch(result, "phase_mismatch")
+                self.assertIs(False, result["data"]["advance"])
+
+
 class RequestContractTests(EnvelopeAssertions):
+    def test_compact_answer_cannot_advance_a_mismatched_phase(self):
+        fixture = REPO / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/verify-phase-envelope.json"
+        raw = json.loads(fixture.read_text(encoding="utf-8"))
+        raw["answer_format"] = "compact"
+        raw["inputs"]["expected_phase"] = "Plan"
+        with project():
+            request, error = parse_request(json.dumps(raw))
+            self.assertIsNone(error)
+            rejected = handle_request(request)
+        self.assertEqual((rejected["status"], rejected["data"]["advance"], mismatch(rejected)),
+                         ("expected_failure", False, "phase_mismatch"))
+
+    def test_invalid_expected_phases_are_input_errors(self):
+        for phase in (None, True, 3, [], {}, "", "Implement", "specify"):
+            with self.subTest(expected_phase=phase), project():
+                result = verify(good_envelope(), expected_phase=phase)
+                self.assertEqual(result["status"], "input_error")
+                self.assertIsNot(True, result.get("data", {}).get("advance"))
+
+    def test_expected_phase_is_required_even_when_the_claimed_gate_passes(self):
+        request = SimpleNamespace(helper_id="verify-phase-envelope", operation="verify-phase-envelope",
+                                  mode="read_only", request_id=None,
+                                  inputs={"envelope": good_envelope(), "workflow_file": WORKFLOW, "feature_dir": FEATURE})
+        with project():
+            result = dispatch_helper(request)
+        self.assertEqual(result["status"], "input_error")
+        self.assertIsNot(True, result.get("data", {}).get("advance"))
+
     def test_request_shape_errors_are_input_errors(self):
         with project():
             for label, inputs in (("workflow", {"workflow_file": ""}), ("feature", {"feature_dir": "../escape"}),
@@ -351,7 +468,8 @@ class RequestContractTests(EnvelopeAssertions):
         self.assertIn("verify-phase-envelope", HELPERS)
         raw = {"schema_version": "1.0", "helper_id": "verify-phase-envelope", "operation": "verify-phase-envelope",
                "mode": "read_only", "answer_format": "compact",
-               "inputs": {"envelope": good_envelope(), "workflow_file": WORKFLOW, "feature_dir": FEATURE}}
+               "inputs": {"envelope": good_envelope(), "expected_phase": "Specify",
+                          "workflow_file": WORKFLOW, "feature_dir": FEATURE}}
         request, error = parse_request(json.dumps(raw))
         self.assertIsNone(error)
         with project():
@@ -371,6 +489,7 @@ if __name__ == "__main__":
         DirectoryDescriptorTests,
         GateVerificationTests,
         ResultVerificationTests,
+        PhaseBindingTests,
         RequestContractTests,
     )
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in cases)

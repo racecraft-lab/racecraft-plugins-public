@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import functools
+import itertools
 import json
 import os
 import re
@@ -54,6 +56,30 @@ class FakeCli:
 
     def calls(self, verb: str) -> list[list[str]]:
         return [argv for argv in self.gh if argv[2] == verb]
+
+
+def after_cli_call(original, prefix: tuple[str, ...], occurrence: int, action):
+    """Inject one filesystem action after the chosen real Git command has returned."""
+    calls = 0
+
+    def invoke(root: Path, argv: list[str]) -> dict:
+        nonlocal calls
+        result = original(root, argv)
+        if tuple(argv[:len(prefix)]) == prefix:
+            calls += 1
+            if calls == occurrence:
+                action(root)
+        return result
+
+    return invoke
+
+
+def stage_unowned_entry(root: Path, *, entry: Path, content: str, commit_subject: str | None = None) -> None:
+    entry.write_text(content)
+    git(root, "add", "--", str(entry))
+    if commit_subject is not None:
+        git(root, "commit", "-q", "-m", commit_subject)
+    entry.unlink()
 
 
 class TerminalFixture(unittest.TestCase):
@@ -369,7 +395,7 @@ class StructuredContentEvidenceTests(PageRefusalFixture):
 
 
 class PayloadEvidenceTests(unittest.TestCase):
-    def test_both_shipped_runners_reject_every_hidden_content_variant(self) -> None:
+    def test_both_shipped_runners_reject_content_and_publication_violations(self) -> None:
         for plugin in ("dist/claude/speckit-pro", "dist/codex/speckit-pro"):
             with self.subTest(plugin=plugin):
                 script = (
@@ -379,7 +405,10 @@ class PayloadEvidenceTests(unittest.TestCase):
                     "scope = runpy.run_path(sys.argv[2])\n"
                     "suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(scope[name])\n"
                     "    for name in ('HiddenContentEvidenceTests', 'ConcealedPassageTests',\n"
-                    "                 'StructuredContentEvidenceTests', 'NarrativeTests'))\n"
+                    "                 'StructuredContentEvidenceTests', 'NarrativeTests',\n"
+                    "                 'PublicationOwnershipTests', 'UnexpectedArtifactEntryTests',\n"
+                    "                 'SiblingArtifactPublicationTests', 'StagedArtifactPublicationTests',\n"
+                    "                 'ArtifactSubstitutionTests'))\n"
                     "result = unittest.TextTestRunner().run(suite)\n"
                     "sys.exit(not result.wasSuccessful())\n"
                 )
@@ -564,6 +593,163 @@ class CleanupRetentionTests(TerminalFixture):
                 self.assertNotEqual(self.finish(until="pages")["status"], "ok")
                 self.assertEqual(external.read_text(), "external sentinel")
                 self.assertTrue(page.exists())
+
+
+class PublicationOwnershipTests(TerminalFixture):
+    def assert_unowned_entry_refused(self, variant: str) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host, variant=variant):
+                self.setUp()
+                self.assertEqual(self.finish(host=host, until="pages")["status"], "ok")
+                artifacts = self.root / FEATURE / "artifacts"
+                external = self.root.parent / "external.html"
+                external.write_text("private external sentinel", encoding="utf-8")
+                name = ".artifact-author-implementation-plan.0123456789abcdef.tmp" if variant == "temporary" else "unowned.html"
+                entry = artifacts / name
+                if variant == "symlink":
+                    entry.symlink_to(external)
+                elif variant == "hardlink":
+                    os.link(external, entry)
+                else:
+                    entry.write_text("retained private content", encoding="utf-8")
+                result = self.finish(host=host, execution_mode="headless")
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+                self.assertEqual(git(self.remote, "show-ref", check=False).returncode, 1)
+                self.assertNotIn(name, self.git("ls-files", "--", f"{FEATURE}/artifacts"))
+                self.assertTrue(entry.exists())
+                self.assertEqual(external.read_text(), "private external sentinel")
+
+    def test_retained_author_temporary_blocks_publication(self) -> None:
+        self.assert_unowned_entry_refused("temporary")
+
+    def test_unowned_final_html_blocks_publication(self) -> None:
+        self.assert_unowned_entry_refused("html")
+
+    def test_unowned_hardlink_blocks_publication_without_reading_target(self) -> None:
+        self.assert_unowned_entry_refused("hardlink")
+
+    def test_unowned_symlink_blocks_publication_without_publishing_target_string(self) -> None:
+        self.assert_unowned_entry_refused("symlink")
+
+
+class UnexpectedArtifactEntryTests(TerminalFixture):
+    def test_every_unexpected_entry_type_blocks_publication(self) -> None:
+        for name, kind in (("notes.txt", "file"), ("nested", "directory"), ("pipe", "fifo"),
+                           ("broken.html", "broken-link"), ("white space\npage.html", "file")):
+            with self.subTest(name=name):
+                self.setUp()
+                self.finish(until="pages")
+                entry = self.root / FEATURE / "artifacts" / name
+                if kind == "directory":
+                    entry.mkdir()
+                    (entry / "private.html").write_text("private content")
+                elif kind == "fifo":
+                    os.mkfifo(entry)
+                elif kind == "broken-link":
+                    entry.symlink_to("missing-target")
+                else:
+                    entry.write_text("private content")
+                self.assertEqual(self.finish(execution_mode="headless")["data"]["stop_label"], "stop_reason:integrity_failure")
+                self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+
+class PublicationTransactionFixture(TerminalFixture):
+    TRANSACTION_CASES = {
+        "sibling": ("specs/other-feature/artifacts/unowned.html", ("git", "add", "--"), 1,
+                    "private unrelated staged content", None),
+        "committed": (f"{FEATURE}/artifacts/unowned.html", ("git", "commit"), 2,
+                      "private committed content", "concurrent artifact commit"),
+    }
+
+    def assert_unowned_transaction_refused(self, scenario: str) -> None:
+        path, prefix, occurrence, content, subject = self.TRANSACTION_CASES[scenario]
+        with self.subTest(scenario=scenario):
+            self.finish(until="pages")
+            entry = self.root / path
+            entry.parent.mkdir(parents=True, exist_ok=True)
+            action = functools.partial(stage_unowned_entry, entry=entry, content=content, commit_subject=subject)
+            self.cli = after_cli_call(self.cli, prefix, occurrence, action)
+            result = self.finish(execution_mode="headless")
+            self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+            if subject is None:
+                self.assertEqual(self.subjects(), [])
+            self.assertEqual(git(self.remote, "show-ref", check=False).returncode, 1)
+
+
+class SiblingArtifactPublicationTests(PublicationTransactionFixture):
+    def test_unrelated_feature_artifacts_are_not_swept_into_the_commit(self) -> None:
+        self.finish(until="pages")
+        sibling = self.root / "specs/other-feature/artifacts"
+        sibling.mkdir(parents=True)
+        (sibling / "unowned.html").write_text("private unrelated content")
+        self.finish(execution_mode="headless")
+        self.assertNotIn("other-feature", self.git("ls-tree", "-r", "HEAD"))
+        remote = git(self.remote, "ls-tree", "-r", "art-007-draft-pr-emission", check=False)
+        self.assertNotIn("other-feature", remote.stdout)
+
+    def test_unowned_staged_artifacts_from_another_feature_block_publication(self) -> None:
+        self.assert_unowned_transaction_refused("sibling")
+
+
+class StagedArtifactPublicationTests(PublicationTransactionFixture):
+    def test_staged_then_removed_unowned_entries_block_every_commit_window(self) -> None:
+        for host, window in itertools.product(("claude", "codex"), (1, 2, 3)):
+            with self.subTest(host=host, window=window):
+                self.setUp()
+                self.finish(host=host, until="pages")
+                entry = self.root / FEATURE / "artifacts" / "unowned.html"
+                action = functools.partial(stage_unowned_entry, entry=entry, content="private staged content")
+                self.cli = after_cli_call(self.cli, ("git", "add", "--"), window, action)
+                result = self.finish(host=host, execution_mode="headless")
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                local = self.git("ls-tree", "-r", "HEAD", "--", f"{FEATURE}/artifacts")
+                self.assertNotIn("unowned.html", local)
+                remote = git(self.remote, "ls-tree", "-r", "art-007-draft-pr-emission", check=False)
+                self.assertNotIn("unowned.html", remote.stdout)
+
+    def test_committed_unowned_entry_blocks_push(self) -> None:
+        self.assert_unowned_transaction_refused("committed")
+
+
+class ArtifactSubstitutionTests(TerminalFixture):
+    def test_staging_substitution_cannot_publish_unvalidated_page_bytes_or_links(self) -> None:
+        for host in ("claude", "codex"):
+            for variant in ("rename", "hardlink", "symlink"):
+                with self.subTest(host=host, variant=variant):
+                    self.setUp()
+                    self.finish(host=host, until="pages")
+                    page = self.root / FEATURE / "artifacts/implementation-plan.html"
+                    saved = page.read_bytes()
+                    external = self.root.parent / "external.html"
+                    external.write_text("private external sentinel")
+                    original = self.cli
+                    changed = False
+
+                    def swap(root: Path, argv: list[str]) -> dict:
+                        nonlocal changed
+                        if argv[1:3] != ["add", "--"] or changed:
+                            return original(root, argv)
+                        changed = True
+                        page.unlink()
+                        if variant == "symlink":
+                            page.symlink_to(external)
+                        elif variant == "hardlink":
+                            os.link(external, page)
+                        else:
+                            replacement = page.with_name("replacement")
+                            replacement.write_text("unvalidated replacement content")
+                            replacement.rename(page)
+                        result = original(root, argv)
+                        page.unlink()
+                        page.write_bytes(saved)
+                        return result
+
+                    self.cli = swap
+                    result = self.finish(host=host, execution_mode="headless")
+                    self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                    self.assertEqual(self.subjects(), [])
+                    self.assertEqual(external.read_text(), "private external sentinel")
 
 
 class ConfidenceRecoveryTests(TerminalFixture):
