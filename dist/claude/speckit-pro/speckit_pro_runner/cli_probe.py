@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import functools
 import os
 import re
@@ -22,35 +23,53 @@ HOSTS = ("claude", "codex")
 # The operator's own install serves these, as it already does for the host agent and the runner's direct Git calls.
 OPERATOR_CLIS = ("git", "gh")
 SHARED_WRITE = stat.S_IWGRP | stat.S_IWOTH
-Aliases = Callable[[], frozenset[tuple[int, int]]]
+Reach = Callable[[], frozenset[tuple[int, int]]]
 
 
-def raise_walk_error(error: OSError) -> None:
-    raise error
+def ignore_vanished(error: OSError) -> None:
+    if not isinstance(error, FileNotFoundError):
+        raise error
 
 
-def worktree_aliases(worktree: Path) -> frozenset[tuple[int, int]]:
-    """Identify each worktree regular file that shares its inode with another name; an unreadable tree fails closed."""
-    aliases = set()
-    for directory, _subdirectories, files in os.walk(worktree, onerror=raise_walk_error):
-        for name in files:
+def worktree_reach(worktree: Path) -> frozenset[tuple[int, int]]:
+    """Identify the inodes a write through a worktree name can change: shared regular files and symlink targets.
+
+    A name or directory removed during the walk, a dangling link and a link loop reach nothing now.
+    Any other unreadable part of the worktree fails closed.
+    """
+    reached = set()
+    for directory, subdirectories, files in os.walk(worktree, onerror=ignore_vanished):
+        for name in (*subdirectories, *files):
+            path = os.path.join(directory, name)
             try:
-                info = os.lstat(os.path.join(directory, name))
+                info = os.lstat(path)
+                if stat.S_ISLNK(info.st_mode):
+                    info = os.stat(path)
+                elif not (stat.S_ISREG(info.st_mode) and info.st_nlink > 1):
+                    continue
             except FileNotFoundError:
-                continue  # A name removed during the walk no longer aliases anything.
-            if stat.S_ISREG(info.st_mode) and info.st_nlink > 1:
-                aliases.add((info.st_dev, info.st_ino))
-    return frozenset(aliases)
+                continue
+            except OSError as error:
+                if error.errno != errno.ELOOP:
+                    raise
+                continue
+            reached.add((info.st_dev, info.st_ino))
+    return frozenset(reached)
 
 
-def operator_installed(info: os.stat_result, aliases: Aliases | None) -> bool:
-    """The operator alone can change this inode, and no worktree name aliases it now."""
-    if aliases is None or info.st_uid != os.geteuid() or info.st_mode & SHARED_WRITE:
+def operator_installed(info: os.stat_result, chain: list[Path], reach: Reach) -> bool:
+    """Only the operator's identity can change this file, and no worktree name reaches it or its lookup chain.
+
+    Mode bits are read; ACLs are not, as before. A writer that relinks or rewrites the file
+    after validation already runs as the operator who installed it, so the probe cannot stop it.
+    """
+    if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & SHARED_WRITE:
         return False
-    return info.st_nlink == 1 or (info.st_dev, info.st_ino) not in aliases()
+    identities = {(info.st_dev, info.st_ino)} | {(link.st_dev, link.st_ino) for link in map(os.stat, set(chain))}
+    return not identities & reach()
 
 
-def reject_mutable_probe_alias(info: os.stat_result, path: Path, *, host: bool, operator_aliases: Aliases | None = None) -> None:
+def reject_mutable_probe_alias(info: os.stat_result, path: Path, *, host: bool) -> None:
     """A mutable inode cannot authenticate bytes used by a later child lookup.
 
     Reject ownership as well as effective write access: owners can chmod read-only
@@ -58,53 +77,61 @@ def reject_mutable_probe_alias(info: os.stat_result, path: Path, *, host: bool, 
     protection, because an alias may be absent at validation and relinked later.
     Hosts additionally require protected namespaces; other CLIs retain their
     external-directory policy, where replacing names already requires external write access.
-    Operator CLIs (given `operator_aliases`) also accept an inode only the operator's
-    own identity can change, such as a Homebrew install, unless a worktree name
-    aliases it at validation. The guarded threat is worktree content; a writer that
-    could relink such an inode later already runs as the operator who installed it.
     """
     writable = info.st_uid == os.geteuid() or os.access(path, os.W_OK, effective_ids=True)
     if host and stat.S_ISDIR(info.st_mode) and writable:
         raise ValueError("CLI lookup cannot authenticate a mutable directory")
-    if stat.S_ISREG(info.st_mode) and writable and not operator_installed(info, operator_aliases):
+    if stat.S_ISREG(info.st_mode) and writable:
         raise ValueError("CLI lookup cannot authenticate a mutable executable inode")
 
 
-def external_probe_path(path: Path, worktree: Path, links: int = 40, *, host: bool = False) -> Path:
+def external_probe_path(path: Path, worktree: Path, links: int = 40, *, host: bool = False,
+                        chain: list[Path] | None = None) -> Path:
     """Resolve links root-first; host lookups require protected ancestors at every hop.
 
     Protect the parent before observing a child: holding only an executable inode
     leaves directory replacement and the child's later PATH lookups unauthenticated.
     A same-identity writer must not own (and chmod) or effectively write any ancestor.
+    `chain`, when given, collects every ancestor and link hop the lookup visits.
     """
     if links < 0 or path.is_relative_to(worktree):
         raise ValueError("CLI path traverses the worktree or too many symlinks")
     if path.parent == path:
         reject_mutable_probe_alias(path.lstat(), path, host=host)
+        if chain is not None:
+            chain.append(path)
         return path
-    parent = external_probe_path(path.parent, worktree, links, host=host)
+    parent = external_probe_path(path.parent, worktree, links, host=host, chain=chain)
     candidate = parent.parent if path.name == ".." else parent / path.name
     if candidate.is_relative_to(worktree) or (candidate.is_dir() and candidate.samefile(worktree)):
         raise ValueError("CLI path traverses the worktree")
+    if chain is not None:
+        chain.append(candidate)
     if candidate.is_symlink():
         target = candidate.readlink()
-        return external_probe_path(target if target.is_absolute() else parent / target, worktree, links - 1, host=host)
+        return external_probe_path(target if target.is_absolute() else parent / target, worktree, links - 1,
+                                   host=host, chain=chain)
     if candidate.is_dir():
         reject_mutable_probe_alias(candidate.lstat(), candidate, host=host)
     return candidate
 
 
-def validate_probe_directory(directory: Path, worktree: Path, *, host: bool, operator_aliases: Aliases | None = None) -> None:
-    """Require protected regular-file targets for every selected CLI and helper name."""
-    external_probe_path(directory, worktree, host=host)
+def validate_probe_directory(directory: Path, worktree: Path, *, host: bool, reach: Reach | None = None) -> None:
+    """Require protected regular-file targets for every selected CLI and helper name.
+
+    With `reach` (operator CLIs), an operator-installed file that no worktree name reaches also passes.
+    """
+    ancestors: list[Path] = []
+    external_probe_path(directory, worktree, host=host, chain=ancestors)
     for entry in directory.iterdir():
-        info = entry.lstat()
+        chain, path, info = [*ancestors, entry], entry, entry.lstat()
         if stat.S_ISLNK(info.st_mode):
-            target = external_probe_path(entry, worktree, host=host)
-            if target.exists():
-                reject_mutable_probe_alias(target.stat(), target, host=host, operator_aliases=operator_aliases)
-        else:
-            reject_mutable_probe_alias(info, entry, host=host, operator_aliases=operator_aliases)
+            path = external_probe_path(entry, worktree, host=host, chain=chain)
+            if not path.exists():
+                continue
+            info = path.stat()
+        if reach is None or not operator_installed(info, chain, reach):
+            reject_mutable_probe_alias(info, path, host=host)
 
 
 def probe_search_path(root: Path, cli: str) -> str:
@@ -118,7 +145,7 @@ def probe_search_path(root: Path, cli: str) -> str:
     if os.name != "posix":
         raise ValueError("trusted CLI lookup requires POSIX")
     worktree = root.resolve(strict=True)
-    aliases = functools.cache(functools.partial(worktree_aliases, worktree)) if cli in OPERATOR_CLIS else None
+    reach = functools.cache(functools.partial(worktree_reach, worktree)) if cli in OPERATOR_CLIS else None
     directories = []
     for entry in os.environ.get("PATH", os.defpath).split(os.pathsep):
         directory = Path(entry)
@@ -127,7 +154,7 @@ def probe_search_path(root: Path, cli: str) -> str:
         try:
             directory = directory.resolve(strict=True)
             target = external_probe_path(directory / cli, worktree, host=cli in HOSTS)
-            validate_probe_directory(directory, worktree, host=cli in HOSTS, operator_aliases=aliases)
+            validate_probe_directory(directory, worktree, host=cli in HOSTS, reach=reach)
         except (OSError, RuntimeError, ValueError):
             continue
         if not directory.is_relative_to(worktree) and not target.is_relative_to(worktree):

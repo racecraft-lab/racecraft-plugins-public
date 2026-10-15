@@ -1160,7 +1160,7 @@ class HostProbePathSecurityTest(unittest.TestCase):
         """A missing worktree alias during validation never authenticates later helper bytes.
 
         Git and GitHub trust an inode only the operator can change (cli_probe.OPERATOR_CLIS),
-        so for them only the foreign-writable form still models an attack the probe can stop.
+        so for them the foreign-writable and shared-writable forms model the attacks the probe still stops.
         """
         helpers = self.area / "helpers"
         helpers.mkdir()
@@ -1170,8 +1170,9 @@ class HostProbePathSecurityTest(unittest.TestCase):
         }
         validate = readiness_record.cli_probe.validate_probe_directory
         which = shutil.which
-        forms = ("regular", "readonly", "indirect-symlink", "nonexecutable", "foreign-writable")
-        cases = [*itertools.product(("docker",), forms), *itertools.product(("git", "gh"), ("foreign-writable",))]
+        forms = ("regular", "readonly", "indirect-symlink", "nonexecutable", "foreign-writable", "shared-writable")
+        cases = [*itertools.product(("docker",), forms),
+                 *itertools.product(("git", "gh"), ("foreign-writable", "shared-writable"))]
         for (cli, form), consumer, location, window in itertools.product(
                 cases, consumers, (self.tools, helpers), ("after-validation", "after-lookup")):
             with self.subTest(cli=cli, consumer=consumer, location=location.name, window=window, form=form):
@@ -1186,7 +1187,7 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 payload.unlink()
                 if form == "indirect-symlink":
                     helper.symlink_to(inode)
-                inode.chmod({"readonly": 0o555, "nonexecutable": 0o644}.get(form, 0o755))
+                inode.chmod({"readonly": 0o555, "nonexecutable": 0o644, "shared-writable": 0o775}.get(form, 0o755))
                 self.assertEqual(1, inode.stat().st_nlink)
 
                 def attack() -> None:
