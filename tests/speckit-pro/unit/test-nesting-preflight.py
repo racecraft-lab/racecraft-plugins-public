@@ -76,6 +76,17 @@ class StatePersistenceTests(unittest.TestCase):
                 self.assertEqual("nesting_state_invalid", envelope["diagnostics"][0]["code"])
                 self.assertEqual(content, target.read_text(encoding="utf-8") if target.exists() else None)
 
+    def test_apply_writes_only_an_autopilot_state_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".specify").mkdir()
+            other = root / "package.json"
+            other.write_text('{"name": "x"}', encoding="utf-8")
+            completed, envelope, _ = apply_probe(root, "package.json", host="codex", nested_spawn="allowed")
+            self.assertEqual(2, completed.returncode, envelope)
+            self.assertEqual("nesting_state_invalid", envelope["diagnostics"][0]["code"])
+            self.assertEqual('{"name": "x"}', other.read_text(encoding="utf-8"))
+
     def test_apply_refuses_symlinks_and_paths_outside_the_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "repo"

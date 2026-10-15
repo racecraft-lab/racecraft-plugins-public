@@ -2,8 +2,9 @@
 
 The orchestrator dispatches one probe two levels deep and reports whether the nested spawn
 worked. A configured depth is recorded but never decides: Codex's `agents.max_depth` is ignored
-by its V2 backend. Depth never fails a run, so every input answers `ok`, and anything short of
-an observed allowed spawn means flat mode.
+by its V2 backend. Depth never fails a run, so every probe input answers `ok`, and anything short
+of an observed allowed spawn means flat mode. Apply mode alone can refuse, and only when it
+cannot write the run's existing autopilot-state.json.
 """
 
 from __future__ import annotations
@@ -73,6 +74,8 @@ def persist_nesting_mode(root: Path, state_file: Any, envelope: dict[str, Any]) 
     relative = Path(require_text(state_file, "state_file"))
     if relative.is_absolute() or any(part.casefold() == ".git" for part in relative.parts):
         raise ValueError("state_file must be a repository-relative state path outside .git")
+    if relative.name != "autopilot-state.json":
+        raise ValueError("state_file must name an autopilot-state.json file")
     target = root / relative
     opened = open_safe_parent_fd(target, root, create=False)
     if opened is None:
