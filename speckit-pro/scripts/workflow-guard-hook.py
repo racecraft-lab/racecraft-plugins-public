@@ -17,6 +17,7 @@ a turn may not end with commits that the upstream branch does not have;
 the hook answers ``{"decision": "block", "reason": ...}``. It yields when
 ``stop_hook_active`` is true so a blocked turn cannot loop. Pending plan work
 or unsettled ledger dispatches defer publication checks to their terminal step.
+Unavailable or invalid dispatch evidence does not defer the Git check.
 
 Anything unexpected fails open: the hook exits 0 with a note on stderr,
 because a broken guard must not lock an operator out of their own session.
@@ -296,7 +297,12 @@ def unpushed_decision(data: dict[str, Any]) -> str | None:
     root, state = active
     if stop_policy.publication_pending(state, {}):
         return None
-    snapshot = autopilot_state.execution_snapshot(root, state.get("workflow_file", ""), state)
+    try:
+        snapshot = autopilot_state.execution_snapshot(root, state.get("workflow_file", ""), state)
+    except Exception as exc:  # optional evidence must never bypass the Git check  # noqa: BLE001
+        print(f"workflow guard hook: dispatch evidence unavailable ({exc.__class__.__name__}); checking commits",
+              file=sys.stderr)
+        snapshot = None
     if snapshot is not None and stop_policy.publication_pending(state, snapshot["ledger"]["dispatches"]):
         return None
     ahead = git_count(root, "@{upstream}..HEAD")

@@ -57,6 +57,10 @@ def stop_class(reason: str) -> str:
 
 
 def publication_pending(state: dict[str, Any], dispatches: dict[str, Any]) -> bool:
-    """Pending phase work or unsettled agents defer the terminal unpushed-commit check."""
-    return (any(row.get("status") in {"pending", "in_progress"} for row in state.get("plan", []))
+    """Only evidenced pending work defers the terminal unpushed-commit check."""
+    plan = state.get("plan")
+    pending_plan = isinstance(plan, list) and any(
+        isinstance(row, dict) and row.get("status") in ("pending", "in_progress") for row in plan
+    )
+    return (pending_plan
             or any(item.get("outcome") in {"reserved", "running", "unknown"} for item in dispatches.values()))

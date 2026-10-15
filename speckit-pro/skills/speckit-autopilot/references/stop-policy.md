@@ -71,6 +71,9 @@ The unpushed-commit Stop hook checks settled publication work. Runner
 `publication_pending` defers that check while plan rows are pending/in progress
 or ledger dispatches are reserved, running, or unknown. Continue collecting
 workers; the plan terminal and completed-work checkpoints own their pushes.
+Missing, unreadable, malformed, or unbound ledger evidence cannot establish
+unsettled dispatches, so the hook still checks Git unless a valid pending plan
+row defers publication. Invalid plan rows do not prevent that check.
 
 Mark the stack ready for review with a "Decisions for you" section listing each
 deferred item and its evidence. Keep it draft only while a required gate is red.
