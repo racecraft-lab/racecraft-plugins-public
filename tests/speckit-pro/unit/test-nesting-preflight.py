@@ -45,6 +45,54 @@ def apply_probe(root: Path, state_file: str = "autopilot-state.json", **probe: o
     return run_runner(request, cwd=root)
 
 
+class StateEvidenceTests(unittest.TestCase):
+    def test_persisted_runner_outcomes_pass_state_validation(self) -> None:
+        validator = load_script("nesting_state_validator", REPO_ROOT / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py")
+        probes = [
+            {"nested_spawn": outcome, "configured_depth": depth}
+            for outcome in ("allowed", "refused", "not_run") for depth in (0, 3)
+        ] + [{}, {"nested_spawn": "unknown"}, {"configured_depth": -1}, {"unexpected": True},
+             {"host": "unknown"}, {"host": None}]
+        for host in ("claude-code", "codex"):
+            for probe in probes:
+                with self.subTest(host=host, probe=probe), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    (root / ".git").mkdir()
+                    (root / ".specify").mkdir()
+                    state_file = root / "autopilot-state.json"
+                    state_file.write_text("{}\n", encoding="utf-8")
+                    completed, envelope, _ = apply_probe(root, **{"host": host, **probe})
+                    self.assertEqual(0, completed.returncode, envelope)
+                    state = json.loads(state_file.read_text(encoding="utf-8"))
+                    self.assertEqual({"state_status_errors": []}, validator.validate_state_status(state))
+                    if probe.get("nested_spawn") == "refused":
+                        other_host = "codex" if host == "claude-code" else "claude-code"
+                        for prerequisite in (None, "", "wrong host prerequisite", nesting_preflight.PREREQUISITES[other_host]):
+                            with self.subTest(prerequisite=prerequisite):
+                                state["nesting_mode"]["data"]["prerequisite"] = prerequisite
+                                self.assertTrue(validator.validate_state_status(state)["state_status_errors"])
+
+    def test_apply_requires_a_nonempty_request_id_before_writing(self) -> None:
+        for host, request_id in itertools.product(("claude-code", "codex"), (None, "", "   ")):
+            with self.subTest(host=host, request_id=request_id), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                (root / ".git").mkdir()
+                (root / ".specify").mkdir()
+                state_file = root / "autopilot-state.json"
+                state_file.write_text("{}\n", encoding="utf-8")
+                request = {
+                    "schema_version": "1.0", "helper_id": "resolve-nesting-mode",
+                    "operation": "resolve-nesting-mode", "mode": "apply",
+                    "inputs": {"state_file": "autopilot-state.json", "host": host, "nested_spawn": "allowed"},
+                }
+                if request_id is not None:
+                    request["request_id"] = request_id
+                completed, envelope, _ = run_runner(request, cwd=root)
+                self.assertNotEqual(0, completed.returncode, envelope)
+                self.assertEqual("input_error", envelope["status"])
+                self.assertEqual("{}\n", state_file.read_text(encoding="utf-8"))
+
+
 class StatePersistenceTests(unittest.TestCase):
     def test_apply_persists_the_complete_envelope_on_each_host(self) -> None:
         for host in ("claude-code", "codex"):
@@ -190,7 +238,7 @@ class SkillContractTests(unittest.TestCase):
             .partition("## Step 1.5: Nesting Preflight")[2].partition("## Step 2:")[0]
             for host in ("claude", "codex")
         ]
-        for instruction in ("operation=resolve-nesting-mode mode=apply", "`state_file`", "The runner writes the complete response"):
+        for instruction in ("operation=resolve-nesting-mode mode=apply", "`request_id`", "`state_file`", "The runner writes the complete response"):
             self.assertTrue(all(instruction in section for section in sections), instruction)
         self.assertTrue(all("Persist the complete response" not in section for section in sections))
 

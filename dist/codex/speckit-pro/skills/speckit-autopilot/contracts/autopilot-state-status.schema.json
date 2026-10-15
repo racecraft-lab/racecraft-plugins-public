@@ -7,16 +7,26 @@
     "nesting_mode": {
       "description": "Complete runner response persisted by resolve-nesting-mode in apply mode. Absent before the nesting preflight; partial hand-written copies are invalid.",
       "type": "object",
-      "required": ["schema_version", "status", "data"],
+      "additionalProperties": false,
+      "required": ["schema_version", "status", "exit_code", "legacy_exit_code", "diagnostics", "request_id", "data"],
       "properties": {
         "schema_version": {"const": "1.0"},
         "status": {"const": "ok"},
+        "exit_code": {"type": "integer", "const": 0},
+        "legacy_exit_code": {"type": "null"},
+        "diagnostics": {"type": "array", "maxItems": 0},
+        "request_id": {"type": "string", "minLength": 1, "pattern": "\\S"},
         "data": {
           "type": "object",
-          "required": ["schema_version", "mode"],
+          "additionalProperties": false,
+          "required": ["schema_version", "mode", "reason", "host", "configured_depth", "prerequisite"],
           "properties": {
             "schema_version": {"const": "nesting-mode/v1"},
-            "mode": {"enum": ["flat", "nested"]}
+            "mode": {"enum": ["flat", "nested"]},
+            "reason": {"enum": ["nested_spawn_allowed", "nested_spawn_refused", "probe_not_run", "probe_invalid"]},
+            "host": {"enum": ["claude-code", "codex", null]},
+            "configured_depth": {"type": ["integer", "null"], "minimum": 0},
+            "prerequisite": {"type": ["string", "null"]}
           }
         }
       }

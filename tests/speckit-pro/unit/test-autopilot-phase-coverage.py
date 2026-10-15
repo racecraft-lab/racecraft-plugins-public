@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import shutil
@@ -41,7 +42,10 @@ CANONICAL_SCHEMA_PATHS = tuple(
 )
 # The validator imports these beside itself, so an installed copy needs them too.
 VALIDATOR_SUPPORT_FILES = (
-    *(PLUGIN_ROOT / "speckit_pro_runner" / name for name in ("__init__.py", "json_schema.py")),
+    *(PLUGIN_ROOT / "speckit_pro_runner" / name for name in (
+        "__init__.py", "json_schema.py", "atomic_write.py", "envelope.py", "strict_input.py", "trusted_io.py",
+        "helpers/__init__.py", "helpers/nesting_preflight.py",
+    )),
     *sorted(VALIDATOR.parent.glob("lib/*.py")),
 )
 MARKER_CHECKPOINT_SCHEMA = VALIDATOR.parents[1] / "contracts" / "marker-checkpoint.schema.json"
@@ -277,6 +281,109 @@ class _ValidatorRunner(object):
             return self.run_validator_paths(workflow_path, state_path, rule=rule)
 
 
+class NestingStateEvidenceTests(unittest.TestCase):
+    @staticmethod
+    def nesting_envelope(host: str = "codex") -> dict:
+        return {
+            "schema_version": "1.0", "status": "ok", "exit_code": 0,
+            "legacy_exit_code": None, "diagnostics": [], "request_id": "nesting-probe",
+            "data": {
+                "schema_version": "nesting-mode/v1", "mode": "nested",
+                "reason": "nested_spawn_allowed", "host": host,
+                "configured_depth": 3, "prerequisite": None,
+            },
+        }
+
+    def test_status_evidence_rejects_minimal_versioned_nesting_envelope(self) -> None:
+        for host in ("claude-code", "codex"):
+            with self.subTest(host=host):
+                state = state_json()
+                state["host"] = host
+                state["nesting_mode"] = {
+                    "schema_version": "1.0", "status": "ok",
+                    "data": {"schema_version": "nesting-mode/v1", "mode": "nested"},
+                }
+                errors = VALIDATOR_MODULE.validate_state_status(state)["state_status_errors"]
+                self.assertTrue(errors, state)
+
+    def test_status_evidence_requires_every_nesting_response_field(self) -> None:
+        self.assert_missing_fields_rejected("envelope")
+
+    def test_status_evidence_requires_every_nesting_data_field(self) -> None:
+        self.assert_missing_fields_rejected("data")
+
+    def assert_missing_fields_rejected(self, section: str) -> None:
+        for host in ("claude-code", "codex"):
+            envelope = self.nesting_envelope(host)
+            fields = envelope if section == "envelope" else envelope["data"]
+            for field in fields:
+                with self.subTest(host=host, field=field):
+                    incomplete = copy.deepcopy(envelope)
+                    target = incomplete if section == "envelope" else incomplete["data"]
+                    del target[field]
+                    errors = VALIDATOR_MODULE.validate_state_status({"nesting_mode": incomplete})["state_status_errors"]
+                    self.assertTrue(errors, incomplete)
+
+    def test_status_evidence_rejects_contradictory_nesting_data(self) -> None:
+        for host in ("claude-code", "codex"):
+            cases = [
+                {"mode": "flat"},
+                {"reason": "nested_spawn_refused"},
+                {"reason": "probe_not_run"},
+                {"reason": "probe_invalid"},
+                {"host": None},
+                {"prerequisite": "not the runner prerequisite"},
+            ]
+            for changes in cases:
+                with self.subTest(host=host, changes=changes):
+                    envelope = self.nesting_envelope(host)
+                    envelope["data"].update(changes)
+                    errors = VALIDATOR_MODULE.validate_state_status({"nesting_mode": envelope})["state_status_errors"]
+                    self.assertTrue(errors, envelope)
+
+    def test_status_evidence_rejects_forged_nesting_envelope_fields(self) -> None:
+        cases = {
+            "exit_code": (1, -1, False, None, "0"),
+            "legacy_exit_code": (0, False, "0"),
+            "diagnostics": (None, {}, [{"code": "forged"}]),
+            "request_id": (None, "", "   ", False, 1, [], {}),
+            "schema_version": (None, "2.0"),
+            "status": ("input_error", "blocked"),
+            "unexpected": (True,),
+        }
+        self.assert_invalid_fields_rejected("envelope", cases)
+
+    def test_status_evidence_rejects_invalid_nesting_data_fields(self) -> None:
+        cases = {
+            "schema_version": (None, "nesting-mode/v0"),
+            "mode": (None, "unknown", False),
+            "reason": (None, "unknown", {}),
+            "host": ("unknown", False, {}),
+            "configured_depth": (-1, True, 0.0, "3", [], {}),
+            "prerequisite": (False, {}, []),
+            "unexpected": (True,),
+        }
+        self.assert_invalid_fields_rejected("data", cases)
+
+    def assert_invalid_fields_rejected(self, section: str, cases: dict) -> None:
+        for host in ("claude-code", "codex"):
+            for field, values in cases.items():
+                for value in values:
+                    with self.subTest(host=host, field=field, value=value):
+                        envelope = self.nesting_envelope(host)
+                        target = envelope if section == "envelope" else envelope["data"]
+                        target[field] = value
+                        errors = VALIDATOR_MODULE.validate_state_status({"nesting_mode": envelope})["state_status_errors"]
+                        self.assertTrue(errors, envelope)
+
+    def test_status_evidence_fails_closed_without_the_nesting_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing.schema.json"
+            with mock.patch.object(VALIDATOR_MODULE, "STATE_STATUS_SCHEMA_PATH", missing):
+                errors = VALIDATOR_MODULE.validate_state_status({"nesting_mode": self.nesting_envelope()})["state_status_errors"]
+                self.assertTrue(errors)
+                self.assertEqual({"state_status_errors": []}, VALIDATOR_MODULE.validate_state_status({}))
+
 class AutopilotPhaseCoverageTests(_ValidatorRunner, unittest.TestCase):
     def test_status_evidence_rejects_a_hand_written_nesting_subset(self) -> None:
         state = state_json()
@@ -287,18 +394,19 @@ class AutopilotPhaseCoverageTests(_ValidatorRunner, unittest.TestCase):
 
     def test_status_evidence_checks_nesting_version_and_mode(self) -> None:
         cases = [
-            ({"schema_version": "nesting-mode/v1", "mode": mode}, 0) for mode in ("flat", "nested")
+            ({"mode": "flat", "reason": "probe_not_run"}, 0),
+            ({"mode": "nested"}, 0),
         ] + [
             ({"schema_version": "nesting-mode/v0", "mode": "nested"}, 1),
             ({"schema_version": "nesting-mode/v1", "mode": "unknown"}, 1),
-            ({"schema_version": "nesting-mode/v1"}, 1),
-            ({"mode": "nested"}, 1),
             (None, 1),
         ]
         for data, expected in cases:
             with self.subTest(data=data):
                 state = state_json()
-                state["nesting_mode"] = {"schema_version": "1.0", "status": "ok", "data": data}
+                envelope = NestingStateEvidenceTests.nesting_envelope()
+                envelope["data"] = {**envelope["data"], **data} if isinstance(data, dict) else data
+                state["nesting_mode"] = envelope
                 exit_code, report = self.run_validator(workflow_text(), state, rule="status-evidence")
                 self.assertEqual(expected, exit_code, report)
                 self.assertEqual(bool(expected), bool(report["state_status_errors"]), report)
@@ -3821,6 +3929,7 @@ class AutopilotPhaseCoverageRepairTests(_ValidatorRunner, unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (
+                                   NestingStateEvidenceTests,
                                    AutopilotPhaseCoverageTests,
                                    AutopilotPhaseCoverageReportSchemaTests,
                                    AutopilotPhaseCoverageRepairTests,

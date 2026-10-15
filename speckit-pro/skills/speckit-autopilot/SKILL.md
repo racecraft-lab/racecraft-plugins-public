@@ -1120,7 +1120,7 @@ answered, or NESTED_SPAWN=refused if the spawn was refused or no spawn tool
 was available.` Set `nested_spawn` from that reply (`allowed`, `refused`, or
 `not_run` when the probe never returned), then request
 `helper_id=resolve-nesting-mode operation=resolve-nesting-mode mode=apply`
-with `state_file` set to the repository-relative path of this run's existing
+with a nonempty `request_id` (a run-specific slug), `state_file` set to the repository-relative path of this run's existing
 `autopilot-state.json`, plus `host`, `nested_spawn` and `configured_depth`:
 <!-- host:claude: Claude reports its host id and the depth limit its runtime record resolved -->
 `host=claude-code`, `configured_depth=claude_subagent_runtime.spawn_depth.limit`.

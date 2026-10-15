@@ -16,10 +16,24 @@ write refuses symlinks, paths that leave the worktree, and a file that changed
 since it was read. Every refusal answers `input_error` with
 `nesting_state_invalid` and leaves the file as it was.
 
-The `status-evidence` rule rejects a `nesting_mode` that lacks
-`data.schema_version == "nesting-mode/v1"` or a `data.mode` in the receipt
-enum. A state without `nesting_mode` still passes, since records written before
-the preflight omit it.
+The apply request requires a nonempty `request_id` slug. The `status-evidence`
+rule requires every runner response field, including that ID, exact success
+codes, empty diagnostics and a closed data shape. It replays the existing
+nesting policy to reject contradictory mode, reason, host, depth and
+prerequisite combinations. A missing schema fails closed for present nesting
+evidence. A state without `nesting_mode` still passes, since records written
+before the preflight omit it.
+
+## Security evidence validation
+
+Finding F1361-4313b190 concerns false verified state evidence. The schema
+enforces completeness and types; the nesting policy owner checks semantic
+consistency. Both host labels use that same validation seam. Regression tests
+cover the minimal versioned envelope, every omitted response/data field,
+forged codes and IDs, extra fields, invalid scalar/container types,
+contradictory reasons and host-specific prerequisites. Actual persisted runner
+outputs cover allowed, refused, absent and invalid probes, with depths zero,
+three and absent. Configured depth remains observational, never a mode gate.
 
 ## Known limits
 
@@ -50,3 +64,8 @@ runs, or fail closed when they do.
 - **Live canary.** The receipt reader of `nesting_mode.data.mode` lives in
   the external canary harness. The next Claude Code canary must confirm the
   receipt has no `mode.not_observed`.
+- **Local evidence is not authentication.** Complete, internally consistent
+  JSON is not cryptographic proof of a runner invocation or nested spawn. A
+  writer able to fabricate every field can reproduce a valid response; this
+  gate rejects incomplete and contradictory evidence. Probe observation still
+  comes from the orchestrator.

@@ -16,6 +16,7 @@ from typing import Any
 
 from ..atomic_write import file_identity, open_safe_parent_fd, snapshot_write_target_fd, write_bytes_atomic
 from ..envelope import diagnostic, response
+from ..json_schema import json_values_equal
 from ..strict_input import require_text, unique_object
 from ..trusted_io import resolve_repo_root
 
@@ -69,6 +70,22 @@ def run_nesting_preflight_helper(entry: Any, request: Any) -> dict[str, Any]:
     return response("ok", request_id=request.request_id, data=nesting_mode(request.inputs))
 
 
+def nesting_evidence_matches(data: dict[str, Any]) -> bool:
+    """Accept only a result the nesting policy can actually produce.
+
+    Shape and types are checked by the state schema first. Replaying all probe
+    outcomes (including an invalid probe) keeps reason/mode/prerequisite rules
+    here with their producer, rather than copying them into the consumer.
+    """
+    inputs = {"host": data.get("host")}
+    if data.get("configured_depth") is not None:
+        inputs["configured_depth"] = data["configured_depth"]
+    return any(
+        json_values_equal(data, nesting_mode({**inputs, "nested_spawn": outcome}))
+        for outcome in (*SPAWN_OUTCOMES, None)
+    )
+
+
 def persist_nesting_mode(root: Path, state_file: Any, envelope: dict[str, Any]) -> None:
     """Preserve the current state and replace only its nesting record, refusing stale writes."""
     relative = Path(require_text(state_file, "state_file"))
@@ -104,8 +121,9 @@ def apply_nesting_preflight_helper(entry: Any, request: Any) -> dict[str, Any]:
     inputs = {key: value for key, value in request.inputs.items() if key not in {"repo_root", "state_file"}}
     envelope = response("ok", request_id=request.request_id, data=nesting_mode(inputs))
     try:
+        require_text(request.request_id, "request_id")
         persist_nesting_mode(root, request.inputs.get("state_file"), envelope)
     except (ValueError, OSError, RecursionError) as error:
         return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
-            "nesting_state_invalid", str(error), remediation_summary="Correct state_file and retry the nesting preflight.")])
+            "nesting_state_invalid", str(error), remediation_summary="Correct request_id and state_file, then retry the nesting preflight.")])
     return envelope

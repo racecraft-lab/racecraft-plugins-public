@@ -120,6 +120,7 @@ INSTALLED_PLUGIN_ROOT = Path(__file__).resolve().parents[3]
 if str(INSTALLED_PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(INSTALLED_PLUGIN_ROOT))
 from speckit_pro_runner.json_schema import json_schema_failures, json_values_equal  # noqa: E402
+from speckit_pro_runner.helpers.nesting_preflight import nesting_evidence_matches  # noqa: E402
 
 _LIB_DIR = str(Path(__file__).resolve().parent / "lib")
 if _LIB_DIR not in sys.path:
@@ -3799,15 +3800,17 @@ def validate_state_status(state: dict[str, Any]) -> dict[str, list[str]]:
     The check closes the status vocabulary; it does not mandate the field, so a
     legacy state that predates ``status`` still validates. When the canonical
     schema is not readable beside this script -- which happens whenever the
-    validator is copied out of the repository -- the check is skipped rather
-    than failed, so an extracted copy cannot manufacture a false violation.
+    validator is copied out of the repository -- legacy status-only checks
+    are skipped. Present nesting evidence requires its contract and fails closed.
     """
     if not STATE_STATUS_SCHEMA_PATH.is_file():
-        return {"state_status_errors": []}
+        return {"state_status_errors": ["nesting_mode contract is missing"] if "nesting_mode" in state else []}
     schema, errors = _canonical_schema(STATE_STATUS_SCHEMA_PATH, "autopilot-state status")
     if schema is None:
         return {"state_status_errors": errors}
     errors.extend(_json_schema_errors(state, schema, schema, "autopilot_state"))
+    if not errors and "nesting_mode" in state and not nesting_evidence_matches(state["nesting_mode"]["data"]):
+        errors.append("nesting_mode.data contradicts the runner nesting policy")
     return {"state_status_errors": errors}
 
 
