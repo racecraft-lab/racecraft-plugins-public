@@ -61,7 +61,9 @@ external trigger was identified.
   trusted installation whose executable and parent directories satisfy
   `cli_probe`. The helper stops at `tool_unavailable` if that installation is
   unavailable. The observed compatibility limit does not authorize bypassing
-  the existing executable trust boundary.
+  the existing executable trust boundary. Issue #1355 later lifted this limit
+  for `git` and `gh` only: `cli_probe.OPERATOR_CLIS` accepts an install that
+  only the operator's identity can change and that no worktree name aliases.
 - R1336-624c09eb: quoted, commented, or repeated `confidence_threshold`
   values are rejected by the strict configuration grammar. No tracked config
   or documentation uses these forms; they yield an input error or stop,
