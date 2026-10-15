@@ -76,9 +76,10 @@ class PlanningApprovalTest(unittest.TestCase):
     def test_public_spec_and_pr_template_do_not_claim_protected_assurance(self):
         root = Path(__file__).resolve().parents[3]
         for name in ("docs/adr/0013-plan-approval-record.md", "docs/adr/0017-recorded-plan-approval.md",
-                     ".github/pull_request_template.md"):
+                     ".github/pull_request_template.md", "GLOSSARY.md", "speckit-pro/skills/speckit-autopilot/SKILL.md",
+                     "speckit-pro/skills/speckit-autopilot/references/planning-approval.md"):
             text = (root / name).read_text()
-            self.assertNotRegex(text, r"(?i)\b(?:is|provides|ensures|guarantees)\s+(?:a\s+)?tamper[- ]proof\b")
+            self.assertNotRegex(text, r"(?i)\b(?:is|provides|ensures|guarantees)\s+(?:a\s+)?tamper[- ]?proof\b")
 
     def test_workflow_normalization_preserves_acceptance_requirements(self):
         path = self.feature / "workflow.md"
@@ -122,14 +123,34 @@ class PlanningApprovalTest(unittest.TestCase):
         self.assertEqual(record["assurance"], "recorded")
         self.assertEqual(self.call("verify")["data"]["record"], record)
         path = self.root / reply["data"]["record_path"]
-        for field, value in (("findings", {}), ("canary_issued", True), ("withdrawn_by", "withdrawal-1")):
+        for field, value, reason in (("findings", {}, "findings must cover exactly"),
+                                     ("canary_issued", True, "refuses canary-issued"),
+                                     ("withdrawn_by", "withdrawal-1", "refuses canary-issued, superseded or withdrawn")):
             with self.subTest(field=field):
                 bad = {**record, field: value}
                 path.write_text(json.dumps(bad))
-                self.assertEqual(self.call("verify")["status"], "input_error")
+                self.assertRefused(self.call("verify"), reason)
         record["findings"]["F1"]["check"]["status"] = "failed"
         path.write_text(json.dumps(record))
-        self.assertEqual(self.call("verify")["status"], "input_error")
+        self.assertRefused(self.call("verify"), "missing correction or passing check")
+
+    def test_dry_run_writes_nothing_and_apply_preserves_the_original_decision(self):
+        approval = self.approval()
+        dry = self.call("record", "dry_run", approval=approval)
+        self.assertEqual(dry["status"], "ok", dry)
+        self.assertFalse(dry["data"]["writes_state"])
+        path = self.root / dry["data"]["record_path"]
+        self.assertFalse(path.exists())
+        self.assertEqual(self.call("record", "apply", approval=approval)["status"], "ok")
+        original = path.read_bytes()
+        self.assertEqual(self.call("record", "apply", approval=approval)["status"], "ok")
+        changed = {**approval, "planning_run": "plan-2"}
+        self.assertRefused(self.call("record", "apply", approval=changed), "approval already exists")
+        self.assertEqual(path.read_bytes(), original)
+
+    def assertRefused(self, reply, reason):
+        self.assertEqual(reply["status"], "input_error", reply)
+        self.assertIn(reason, reply["diagnostics"][0]["message"])
 
     def test_new_approval_supersedes_the_previous_revision(self):
         first = self.call("record", "apply", approval=self.approval())["data"]
