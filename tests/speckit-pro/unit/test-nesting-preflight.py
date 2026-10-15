@@ -52,13 +52,14 @@ class ModeDecisionTests(unittest.TestCase):
                 self.assertEqual((mode, reason, has_prerequisite), (data["mode"], data["reason"], bool(data["prerequisite"])))
 
     def test_requesting_nested_still_requires_an_observed_spawn(self) -> None:
-        expected = {"allowed": ("nested", "nested_spawn_allowed"), "refused": ("flat", "nested_spawn_refused"),
-                    "not_run": ("flat", "probe_not_run")}
-        for host, (outcome, result) in itertools.product(("claude-code", "codex"), expected.items()):
-            with self.subTest(host=host, outcome=outcome):
-                data = resolve(host=host, nested_spawn=outcome, requested_mode="nested")
-                self.assertEqual(result, (data["mode"], data["reason"]))
-                self.assertEqual("nested", data["requested_mode"])
+        for host in ("claude-code", "codex"):
+            answers = [resolve(host=host, nested_spawn=spawn, requested_mode="nested")
+                       for spawn in ("allowed", "refused", "not_run")]
+            self.assertEqual([
+                ("nested", "nested_spawn_allowed", "nested"),
+                ("flat", "nested_spawn_refused", "nested"),
+                ("flat", "probe_not_run", "nested"),
+            ], [(answer["mode"], answer["reason"], answer["requested_mode"]) for answer in answers], host)
 
     def test_no_override_preserves_the_default_and_records_no_request(self) -> None:
         data = resolve(host="codex", nested_spawn="allowed")
@@ -151,15 +152,14 @@ class ReceiptModeTests(unittest.TestCase):
 
 class SkillContractTests(unittest.TestCase):
     def test_both_hosts_pass_the_operator_setting_unchanged(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                root = host_skill_root(host) / "speckit-autopilot"
-                text = (root / "SKILL.md").read_text(encoding="utf-8")
-                prerequisites = (root / "references/prerequisites.md").read_text(encoding="utf-8")
-                self.assertIn("SPECKIT_PLAN_STAGE_MODE", text)
-                self.assertIn("`requested_mode` unchanged", text)
-                self.assertIn("SPECKIT_PLAN_STAGE_MODE=flat", prerequisites)
-                self.assertIn("operator_requested_flat", prerequisites)
+        required = {
+            "SKILL.md": ("SPECKIT_PLAN_STAGE_MODE", "`requested_mode` unchanged"),
+            "references/prerequisites.md": ("SPECKIT_PLAN_STAGE_MODE=flat", "operator_requested_flat"),
+        }
+        for host, (relative, phrases) in itertools.product(("claude", "codex"), required.items()):
+            document = host_skill_root(host) / "speckit-autopilot" / relative
+            for phrase in phrases:
+                self.assertIn(phrase, document.read_text(encoding="utf-8"), f"{host}: {relative}")
 
     def test_both_hosts_run_the_preflight_before_the_main_loop_and_dispatch_flat_otherwise(self) -> None:
         for host in ("claude", "codex"):
