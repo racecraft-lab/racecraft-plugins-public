@@ -87,3 +87,29 @@ runs, or fail closed when they do.
 - **Literal backslashes and hard links.** On POSIX, backslashes name literal
   in-repository entries. A hard-linked state file is replaced atomically,
   leaving its other alias unchanged. Neither permits an outside write.
+
+### Accepted at the cross-host re-review of d3d46ee3
+
+These are Low or Info notes. Each fails closed or does not reach a wrong
+result on real runs.
+
+- **Formal mirror runs `state_path` twice.** `mirror_checkpoint` calls
+  `state_path` and discards the result, and `formal/helper.py` already ran it.
+  It is kept: it carries the beside-the-workflow check that
+  `autopilot_state.update` does not make. The cost is one extra parse of a
+  file capped at 1 MiB.
+- **Read bound travels in the snapshot dict.** `byte_limit` is an optional
+  key of the untyped snapshot. Only `autopilot_state.snapshot` sets it; every
+  other caller omits it and keeps the unbounded read it had before.
+- **Producer refuses only UUID request IDs.** The state privacy guard also
+  rejects home paths. A `request_id` holding a home path would be written,
+  then fail `status-evidence` closed. The skill asks for a run-specific slug.
+- **Owner check is structural.** The AST test checks that each of the three
+  callers calls `autopilot_state.update`. It does not prove that no other
+  write of `autopilot-state.json` exists; review grep found none.
+- **One repair-and-retry is prose only.** No test pins the retry count. A
+  state file the runner cannot write also breaks every later state step.
+- **Apply refuses an absolute `state_file`.** The skill asks for the
+  repository-relative path, and the one allowed retry can correct it.
+- **Commit shape.** f7481912 moves the formal and plan-stage callers onto the
+  owner and adds their new refusals in one commit. History is not rewritten.

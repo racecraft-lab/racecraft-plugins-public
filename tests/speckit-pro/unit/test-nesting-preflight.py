@@ -119,7 +119,7 @@ class StateEvidenceTests(unittest.TestCase):
 class StatePersistenceTests(unittest.TestCase):
     def test_shared_state_update_preserves_a_competing_writer(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+            root = Path(tmp).resolve()
             target = root / "autopilot-state.json"
             target.write_text('{"plan": []}', encoding="utf-8")
             newer = '{"plan": ["concurrent progress"]}'

@@ -101,7 +101,8 @@ ORDERED_STATE_CHECKPOINTS = (
 
 TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-# The tracked state file stores decision fields only. These three patterns match
+# The tracked state file stores decision fields only. These three patterns (the
+# UUID one is imported from speckit_pro_runner.autopilot_state below) match
 # the repository privacy scan's (tests/speckit-pro/lib/privacy_patterns.py), and a
 # test holds them equal, so the state guard rejects what the scan would reject.
 STATE_HOME_PATH_PATTERN = re.compile(

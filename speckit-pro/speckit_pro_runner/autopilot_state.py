@@ -36,7 +36,7 @@ def snapshot(root: Path, target: Path) -> dict[str, Any]:
             os.close(parent_fd)
         return captured
     except OSError as error:
-        raise ValueError("state_file must be a readable regular file with no symlink parents") from error
+        raise ValueError(f"state_file must be a readable regular file with no symlink parents: {error}") from error
 
 
 def update(root: Path, state_file: Any, mutate: Callable[[dict[str, Any]], None]) -> None:
