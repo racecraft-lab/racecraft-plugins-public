@@ -89,14 +89,15 @@ reach an accepted file:
 - **Names outside the worktree.** A hardlink or symlink in a sibling clone or
   in the shared `.git` directory of a linked worktree is not counted. Making
   one needs write access outside the worktree.
-- **Indirect worktree alias.** A worktree symlink to a pre-existing external
-  alias directory can reach an accepted `git` or `gh` executable or adjacent
-  helper through a hardlink or symlink inside that directory. The probe records
-  the external directory's inode but does not walk its children, so it accepts
-  the install despite that indirect worktree name. This needs an external alias
-  directory that already points at the install, created outside the worktree
-  by the operator; worktree content alone cannot create it. Writing through
-  that alias also needs operator-level access. This is a Low known limit.
+- **Indirect worktree alias.** A worktree symlink can point at an external
+  directory that already exists. That directory can hold a hardlink or
+  symlink to an accepted `git` or `gh` executable, an adjacent helper, or a
+  directory on the lookup chain. The probe records the external directory's
+  inode but does not walk its children. So it accepts the install even though
+  a worktree name reaches it. Worktree content alone cannot create the
+  external directory or its links; any local writer outside the worktree can.
+  Changing the install through that name still needs the operator's write
+  access. This is a Low known limit.
 - **Cost.** Each `git` or `gh` lookup that meets an operator-owned file walks
   the worktree once. On the build machine a `gh` lookup took about 0.8 s,
   with a 0.2 s walk of a 3,300-file clone and a 1,286-entry Homebrew
