@@ -30,18 +30,24 @@ def run_execution_helper(entry: Any, request: Any) -> dict[str, Any]:
             "execution-control": partial(execution_control, finalizer=finalize_run),
             "execute-verification": execute_verification, "task-results": task_results}
         result = handlers[entry.helper_id](root, inputs, request.mode)
-        if entry.helper_id == "execution-control" and request.mode == "apply":
-            mirror_execution_result(root, inputs["workflow_file"], result)
     except (ValueError, OSError, TypeError) as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_execution_request", str(exc))])
+    warnings: list[dict[str, Any]] = []
+    if entry.helper_id == "execution-control" and request.mode == "apply":
+        # The ledger change is already durable; a state-mirror failure must not hide it or its run_id.
+        try:
+            mirror_execution_result(root, inputs["workflow_file"], result)
+        except (ValueError, OSError, TypeError) as exc:
+            warnings.append(diagnostic("state_mirror_not_refreshed", str(exc), severity="warning",
+                                       remediation_summary="Repair autopilot-state.json, then refresh it with action=status mode=apply."))
     # A deferral refuses the dispatch, so it is an expected failure just like a checkpoint.
     failed = (result.get("helper_exit_code") == 1 if entry.helper_id == "task-results"
               else result.get("disposition") in {"checkpoint_required", "defer"})
     status = "expected_failure" if failed else "ok"
     result.update(helper_id=entry.helper_id, operation=entry.operation, mode=request.mode,
                   promotion_status=entry.promotion_status)
-    return response(status, request_id=request.request_id, data=result)
+    return response(status, request_id=request.request_id, data=result, diagnostics=warnings)
 
 
 class Refusal(NamedTuple):

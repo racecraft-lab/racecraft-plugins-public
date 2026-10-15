@@ -177,6 +177,19 @@ class RunFactsTests(TerminalFixture):
         self.assertEqual(recorded["status"], state["status"])
         self.assertEqual(recorded["execution_control"]["run_id"], result["data"]["ledger"]["run_id"])
 
+    def test_a_malformed_state_file_does_not_hide_an_applied_ledger_change(self) -> None:
+        for malformed in ("[]", "{not json"):
+            with self.subTest(state=malformed):
+                self.setUp()
+                (self.root / STATE).write_text(malformed, encoding="utf-8")
+                request = envelope.RunnerRequest("clock", "execution-control", "execution-control", "apply",
+                                                 {"workflow_file": WORKFLOW, "action": "start"}, "detailed")
+                result = registry.dispatch_helper(request)
+                self.assertEqual(result["status"], "ok", result)
+                self.assertTrue(result["data"]["ledger"]["run_id"])
+                self.assertEqual(["state_mirror_not_refreshed"], [item["code"] for item in result["diagnostics"]])
+                self.assertEqual((self.root / STATE).read_text(encoding="utf-8"), malformed)
+
 
 class TerminalClockTests(TerminalFixture):
     def test_terminal_refreshes_runner_clock_facts_on_both_hosts(self) -> None:
