@@ -62,6 +62,23 @@ def apply_probe(root: Path, state_file: str = "autopilot-state.json", **probe: o
     return run_runner(request, cwd=root)
 
 
+def assert_refused_state_file(
+    test_case: unittest.TestCase,
+    root: Path,
+    target: Path,
+    state_file: str,
+    content: str,
+    probe: dict[str, object],
+    diagnostic_code: str | None = None,
+) -> None:
+    target.write_text(content, encoding="utf-8")
+    completed, envelope, _ = apply_probe(root, state_file, **probe)
+    test_case.assertEqual(2, completed.returncode, envelope)
+    if diagnostic_code is not None:
+        test_case.assertEqual(diagnostic_code, envelope["diagnostics"][0]["code"])
+    test_case.assertEqual(content, target.read_text(encoding="utf-8"))
+
+
 class StateEvidenceTests(unittest.TestCase):
     def test_apply_persists_operator_mode_and_validates_its_complete_evidence(self) -> None:
         validator = load_script("phase_coverage_operator_mode", REPO_ROOT / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py")
@@ -85,6 +102,8 @@ class StateEvidenceTests(unittest.TestCase):
                     state["nesting_mode"]["data"]["requested_mode"] = "nested"
                     self.assertTrue(validator.validate_state_status(state)["state_status_errors"])
 
+
+class StateRequestIdTests(unittest.TestCase):
     def test_apply_refuses_uuid_request_ids_before_writing(self) -> None:
         private_id = "abcdefab-" + "1234-5678-abcd-" + "0123456789ab"
         with tempfile.TemporaryDirectory() as tmp:
@@ -100,6 +119,8 @@ class StateEvidenceTests(unittest.TestCase):
             self.assertEqual(False, result["data"]["writes_state"])
             self.assertEqual("{}\n", target.read_text(encoding="utf-8"))
 
+
+class PersistedStateEvidenceTests(unittest.TestCase):
     def test_persisted_runner_outcomes_pass_state_validation(self) -> None:
         validator = load_script("nesting_state_validator", REPO_ROOT / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py")
         probes = [
@@ -179,17 +200,18 @@ class StatePersistenceTests(unittest.TestCase):
                     self.assertEqual(changed, result["data"]["writes_state"])
                     self.assertEqual("nesting_state_write_failed", result["diagnostics"][0]["code"])
 
+
+class StateTargetRefusalTests(unittest.TestCase):
     def test_apply_refuses_an_oversized_state_without_replacing_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / ".specify").mkdir()
             target = root / "autopilot-state.json"
             content = json.dumps({"notes": "x" * 1_048_576})
-            target.write_text(content, encoding="utf-8")
-            completed, result, _ = apply_probe(root, host="codex")
-            self.assertEqual(2, completed.returncode, result)
-            self.assertEqual(content, target.read_text(encoding="utf-8"))
+            assert_refused_state_file(self, root, target, target.name, content, {"host": "codex"})
 
+
+class StateMutationOwnershipTests(unittest.TestCase):
     def test_state_mutations_have_one_owner(self) -> None:
         # A structural contract: none of the three callers may grow another
         # state read/modify/write implementation (AGENTS.md invariant 2).
@@ -219,6 +241,8 @@ class StatePersistenceTests(unittest.TestCase):
                 self.assertEqual([], state["plan"])
                 self.assertEqual("Phase 0", state["active_step"])
 
+
+class StateInvalidDataTests(unittest.TestCase):
     def test_invalid_state_is_refused_without_overwriting_it(self) -> None:
         for content in (None, "{", "[]", '{"plan": [], "plan": [1]}', '{"elapsed": NaN}'):
             with self.subTest(content=content), tempfile.TemporaryDirectory() as tmp:
@@ -232,17 +256,21 @@ class StatePersistenceTests(unittest.TestCase):
                 self.assertEqual("nesting_state_invalid", envelope["diagnostics"][0]["code"])
                 self.assertEqual(content, target.read_text(encoding="utf-8") if target.exists() else None)
 
+
+class StateTargetAllowlistTests(unittest.TestCase):
     def test_apply_writes_only_an_autopilot_state_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / ".specify").mkdir()
             other = root / "package.json"
-            other.write_text('{"name": "x"}', encoding="utf-8")
-            completed, envelope, _ = apply_probe(root, "package.json", host="codex", nested_spawn="allowed")
-            self.assertEqual(2, completed.returncode, envelope)
-            self.assertEqual("nesting_state_invalid", envelope["diagnostics"][0]["code"])
-            self.assertEqual('{"name": "x"}', other.read_text(encoding="utf-8"))
+            assert_refused_state_file(
+                self, root, other, "package.json", '{"name": "x"}',
+                {"host": "codex", "nested_spawn": "allowed"},
+                diagnostic_code="nesting_state_invalid",
+            )
 
+
+class StatePathContainmentTests(unittest.TestCase):
     def test_apply_refuses_symlinks_and_paths_outside_the_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "repo"
