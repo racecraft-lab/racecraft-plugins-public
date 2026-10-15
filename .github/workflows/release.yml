@@ -183,7 +183,7 @@ jobs:
       # name and default overwrite=false preserve the complete API input set.
       - name: Upload immutable release input snapshot
         id: upload_release_snapshot
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-note-input-${{ github.run_id }}-${{ github.run_attempt }}
           path: release-note-snapshot.json
@@ -212,7 +212,7 @@ jobs:
       - name: Download immutable release input snapshot
         id: download_release_snapshot
         if: ${{ always() && !cancelled() }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           artifact-ids: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}
           path: release-note-input
@@ -238,7 +238,7 @@ jobs:
       - name: Upload immutable release note audit
         id: upload_release_audit
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-note-audit-${{ github.run_id }}-${{ github.run_attempt }}
           path: release-note-audit.json
@@ -392,7 +392,7 @@ jobs:
 
       - name: Upload immutable release input snapshot
         id: upload_release_snapshot
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-note-input-typesafe-jev-${{ github.run_id }}-${{ github.run_attempt }}
           path: release-note-snapshot.json
@@ -421,7 +421,7 @@ jobs:
       - name: Download immutable release input snapshot
         id: download_release_snapshot
         if: ${{ always() && !cancelled() }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           artifact-ids: ${{ needs.capture-typesafe-jev-release-note-inputs.outputs.snapshot_artifact_id }}
           path: release-note-input
@@ -447,7 +447,7 @@ jobs:
       - name: Upload immutable release note audit
         id: upload_release_audit
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-note-audit-typesafe-jev-${{ github.run_id }}-${{ github.run_attempt }}
           path: release-note-audit.json

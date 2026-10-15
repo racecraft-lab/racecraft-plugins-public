@@ -201,7 +201,7 @@ CONTAINER_DISPATCH_HELPER_FILE = REPO_ROOT / 'tests' / 'speckit-pro' / 'run-cont
 INTERPRETER_PROBE_FILE = REPO_ROOT / 'tests' / 'speckit-pro' / 'lib' / 'preflight_interpreters.py'
 WORKFLOWS_DIR = REPO_ROOT / '.github' / 'workflows'
 validate_pr_checks_sentinel_CHECKOUT_PIN_RE = re.compile('uses: actions/checkout@[0-9a-f]{40}')
-UPLOAD_ARTIFACT_PIN = 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
+UPLOAD_ARTIFACT_PIN = 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
 SETUP_PYTHON_PIN_RE = re.compile('actions/setup-python@[0-9a-f]{40}')
 SETUP_PYTHON_COMMENTED_PIN_RE = re.compile('uses: actions/setup-python@[0-9a-f]{40} # v\\d+\\.\\d+\\.\\d+')
 HOSTED_PYTHON_VERSION = 'HOSTED_PYTHON_VERSION: "3.13.14"'
@@ -1058,7 +1058,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         with self.subTest(msg='capture uploads complete canonical Compare and PR inputs'):
             self.assertEqual(4, len(UPLOAD_ARTIFACT_PIN_RE.findall(content)))
             self.assertLess(capture_job.find('actions/checkout@'), capture_job.find('--capture-snapshot'))
-            self.assertTrue(_contains_all(capture_step + snapshot_upload_step, ('GITHUB_TOKEN: ${{ github.token }}', 'GITHUB_REPOSITORY: ${{ github.repository }}', 'RELEASE_BODY: ${{ needs.release.outputs.body }}', 'RELEASE_TAG: ${{ needs.release.outputs.tag_name }}', 'python3 scripts/compose-release-notes.py --capture-snapshot ', '--snapshot-output release-note-snapshot.json', 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a', 'name: release-note-input-${{ github.run_id }}-${{ github.run_attempt }}', 'path: release-note-snapshot.json', 'if-no-files-found: error', 'retention-days: 90')))
+            self.assertTrue(_contains_all(capture_step + snapshot_upload_step, ('GITHUB_TOKEN: ${{ github.token }}', 'GITHUB_REPOSITORY: ${{ github.repository }}', 'RELEASE_BODY: ${{ needs.release.outputs.body }}', 'RELEASE_TAG: ${{ needs.release.outputs.tag_name }}', 'python3 scripts/compose-release-notes.py --capture-snapshot ', '--snapshot-output release-note-snapshot.json', UPLOAD_ARTIFACT_PIN, 'name: release-note-input-${{ github.run_id }}-${{ github.run_attempt }}', 'path: release-note-snapshot.json', 'if-no-files-found: error', 'retention-days: 90')))
             self.assertNotIn('overwrite: true', snapshot_upload_step)
             capture_function = _python_function_block(composer_content, 'capture_release_input_snapshot')
             canonical_function = _python_function_block(composer_content, 'canonical_snapshot_bytes')
@@ -1073,7 +1073,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertEqual({'contents': 'write'}, _permission_map(composer_job))
         with self.subTest(msg='composer downloads the exact immutable snapshot by artifact id'):
             self.assertEqual(2, len(DOWNLOAD_ARTIFACT_PIN_RE.findall(content)))
-            self.assertTrue(_contains_all(snapshot_download_step, ('id: download_release_snapshot', 'if: ${{ always() && !cancelled() }}', 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c', 'artifact-ids: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}', 'path: release-note-input', 'digest-mismatch: error')))
+            self.assertTrue(_contains_all(snapshot_download_step, ('id: download_release_snapshot', 'if: ${{ always() && !cancelled() }}', 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333', 'artifact-ids: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}', 'path: release-note-input', 'digest-mismatch: error')))
         with self.subTest(msg='composer audits capture download and digest failures'):
             self.assertTrue(_contains_all(compose_step + audit_helper_content + policy_content, ('if: ${{ always() && !cancelled() }}', 'CAPTURE_RESULT: ${{ needs.capture-release-note-inputs.result }}', 'EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-release-note-inputs.outputs.snapshot_sha256 }}', 'SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_digest }}', 'SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}', 'run: python3 scripts/audit-release-notes.py', 'FAILURE_OUTCOME = "release_note_composition_failed"', 'FAILURE_OUTCOME = release_note_policy.FAILURE_OUTCOME', '"capture_result": capture_result', '"snapshot_download_outcome": download_outcome', 'if capture_result != "success":', 'if download_outcome != "success":', 'snapshot_sha256 != expected_sha256', 'snapshot["repository"] != environment["GITHUB_REPOSITORY"]', '"compare_headers"', '"release_body"', '"pulls"', 'not re.fullmatch(r"[0-9a-f]{64}", artifact_digest)', 'except AuditFailure as error:')))
             self.assertNotIn('release_note_audit_failed', audit_helper_content)
