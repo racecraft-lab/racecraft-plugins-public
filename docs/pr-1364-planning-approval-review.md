@@ -55,16 +55,21 @@ runner tests continue to exercise the source and both shipped hosts.
   This equivalence holds only for `-` bullets; `*`, `+`, numbered and
   blockquoted checkboxes bind the spelling, which fails closed.
 - The assurance guard splits sentences at `.`, `!` and `?` before it looks for
-  the assurance term. A term joined by one of those marks, or written as an
-  HTML entity, is not recognized. No scanned document uses such a spelling,
-  and no contributor writes the term that way in Markdown, TOML or YAML prose,
-  so this Low limit is accepted.
+  the assurance term. The guard matches spellings and misses some forms. A term
+  joined by one of those marks, split by an inline HTML tag such as `<wbr>` or
+  `<em>`, written as an HTML entity, or spelled with a look-alike letter from
+  another alphabet is not recognized. No scanned document uses such a spelling
+  today, so this Low limit is accepted.
 - The execution-section skip ends only at an unindented ATX heading of the same
-  or a higher level. A nested `Implementation Progress` heading inside a
-  planning section, an indented or setext heading after it, or an unclosed
-  fence would hide later planning lines. The shipped workflow template cannot
-  produce this: `### Implementation Progress` follows every planning section and
-  is closed by the unindented `## Post-Implementation Checklist`. Accepted Low.
+  or a higher level. An `Implementation Progress` heading followed by planning
+  lines under deeper headings, an indented or setext heading after it, or an
+  unclosed fence would hide later planning lines. The shipped workflow template
+  cannot produce this: `### Implementation Progress` is the last subsection of
+  `## Phase 7: Implement` and is closed by the unindented
+  `## Post-Implementation Checklist`. The sweep writes `Feedback Sweep Log` as a
+  sibling of `Consensus Resolution Log`, so the next sibling or higher heading
+  closes it, or appends it at the end of the file, where nothing follows.
+  Accepted Low.
 - These repairs address the Daybreak planning-digest and assurance-guard
   false-pass classes. They do
   not resolve the separate code-review finding about execution progress that
