@@ -52,6 +52,19 @@ runner tests continue to exercise the source and both shipped hosts.
   unchanged.
 - `x` and `X` both represent checked choices. Their spelling alone does not
   change the plan. Fenced spelling and text remain verbatim planning inputs.
+  This equivalence holds only for `-` bullets; `*`, `+`, numbered and
+  blockquoted checkboxes bind the spelling, which fails closed.
+- The assurance guard splits sentences at `.`, `!` and `?` before it looks for
+  the assurance term. A term joined by one of those marks, or written as an
+  HTML entity, is not recognized. No scanned document uses such a spelling,
+  and no contributor writes the term that way in Markdown, TOML or YAML prose,
+  so this Low limit is accepted.
+- The execution-section skip ends only at an unindented ATX heading of the same
+  or a higher level. A nested `Implementation Progress` heading inside a
+  planning section, an indented or setext heading after it, or an unclosed
+  fence would hide later planning lines. The shipped workflow template cannot
+  produce this: `### Implementation Progress` follows every planning section and
+  is closed by the unindented `## Post-Implementation Checklist`. Accepted Low.
 - These repairs address the Daybreak planning-digest and assurance-guard
   false-pass classes. They do
   not resolve the separate code-review finding about execution progress that
