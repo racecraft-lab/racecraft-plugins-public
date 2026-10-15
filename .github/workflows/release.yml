@@ -76,7 +76,7 @@ jobs:
 
       - name: Set up Node
         if: steps.release_prs.outputs.found == 'true'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
         with:
           node-version: 22
           # This job holds write permissions; never restore a dependency cache.
@@ -125,7 +125,7 @@ jobs:
 
       - name: Set up Node
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
         with:
           node-version: 22
           # This job holds write permissions; never restore a dependency cache.
