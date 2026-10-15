@@ -17,6 +17,10 @@ effort: high
 
 # Phase Executor
 
+When an explicit plan review requests a planning revision, use the shared
+`planning-approval` helper and return its manifest digest unchanged. Report
+missing findings or check evidence; never manufacture human confirmation.
+
 For runner helper calls, use the orchestrator-provided absolute launcher argv
 `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` in the bound
 workflow worktree. Request that context if missing; send one JSON request on
