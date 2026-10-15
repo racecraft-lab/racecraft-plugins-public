@@ -2,17 +2,20 @@
 
 The orchestrator dispatches one probe two levels deep and reports whether the nested spawn
 worked. An operator may request flat mode even when nesting works; requesting nested mode
-never overrides a refused probe. A configured depth is recorded but never decides.
-Every input answers `ok`, and anything short of valid allowed evidence means flat mode.
+never overrides a refused probe. The runner reads that request from `SPECKIT_PLAN_STAGE_MODE`
+in its own environment, so the orchestrator runs no extra command for it. A configured depth is
+recorded but never decides: Codex's `agents.max_depth` is ignored by its V2 backend. Every input answers `ok`, and anything short of valid allowed evidence means flat mode.
 """
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from ..envelope import response
 
 SCHEMA_VERSION = "nesting-mode/v1"
+REQUEST_VARIABLE = "SPECKIT_PLAN_STAGE_MODE"
 # Pinned to the `mode` enum in the canary receipt schema by test-nesting-preflight.py.
 MODES = ("flat", "nested")
 INPUTS = frozenset({"host", "nested_spawn", "configured_depth", "requested_mode"})
@@ -65,4 +68,7 @@ def nesting_mode(inputs: dict[str, Any]) -> dict[str, Any]:
 
 
 def run_nesting_preflight_helper(entry: Any, request: Any) -> dict[str, Any]:
-    return response("ok", request_id=request.request_id, data=nesting_mode(request.inputs))
+    inputs = dict(request.inputs)
+    if "requested_mode" not in inputs and REQUEST_VARIABLE in os.environ:
+        inputs["requested_mode"] = os.environ[REQUEST_VARIABLE]  # unchanged: an invalid value stays invalid
+    return response("ok", request_id=request.request_id, data=nesting_mode(inputs))

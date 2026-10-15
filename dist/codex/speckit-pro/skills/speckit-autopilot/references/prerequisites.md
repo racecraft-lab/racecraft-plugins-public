@@ -366,8 +366,9 @@ next run, and this run continues in flat mode. Missing depth never blocks a run.
 
 On either host, set `SPECKIT_PLAN_STAGE_MODE=flat` in the environment used to
 launch the session to hold the plan stage to flat mode, including a nest-capable
-Codex canary leg. Both hosts pass the value unchanged as `requested_mode` to
-`resolve-nesting-mode`. The runner records `data.requested_mode`, returns
+Codex canary leg. `resolve-nesting-mode` reads the value unchanged from the
+environment the runner inherits; the orchestrator runs no command to read it.
+The runner records `data.requested_mode`, returns
 `data.mode=flat` with `data.reason=operator_requested_flat` for a valid flat
 request, and the canary receipt copies `data.mode`. `SPECKIT_PLAN_STAGE_MODE=nested`
 still requires an allowed nested spawn; a refused or missing probe stays flat.

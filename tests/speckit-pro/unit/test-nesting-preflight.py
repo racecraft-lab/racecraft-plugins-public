@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -25,11 +26,19 @@ VALIDATOR = REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-re
 SCHEMA = json.loads(VALIDATOR.with_name("canary-receipt.schema.json").read_text(encoding="utf-8"))
 
 
-def resolve(**inputs: object) -> dict:
+REQUEST_VARIABLE = "SPECKIT_PLAN_STAGE_MODE"
+
+
+def setUpModule() -> None:
+    # The runner inherits this environment; an operator's own setting must not leak into the cases.
+    os.environ.pop(REQUEST_VARIABLE, None)
+
+
+def resolve(environment: dict[str, str] | None = None, **inputs: object) -> dict:
     """Call the helper through the runner, as the autopilot does; every call must succeed."""
     request = {"schema_version": "1.0", "request_id": "nesting-test", "helper_id": "resolve-nesting-mode",
                "operation": "resolve-nesting-mode", "mode": "read_only", "inputs": inputs}
-    completed, response, _ = run_runner(request)
+    completed, response, _ = run_runner(request, extra_env=environment)
     assert completed.returncode == 0, (completed.returncode, response)
     assert response["status"] == "ok", response
     return response["data"]
@@ -43,6 +52,17 @@ class ModeDecisionTests(unittest.TestCase):
                 self.assertEqual(("flat", "operator_requested_flat"), (data["mode"], data["reason"]))
                 self.assertEqual("flat", data["requested_mode"])
                 self.assertIsNone(data["prerequisite"])
+
+    def test_the_runner_reads_the_operator_setting_from_its_environment(self) -> None:
+        for host in ("claude-code", "codex"):
+            with self.subTest(host=host):
+                data = resolve({REQUEST_VARIABLE: "flat"}, host=host, nested_spawn="allowed")
+                self.assertEqual(("flat", "operator_requested_flat", "flat"),
+                                 (data["mode"], data["reason"], data["requested_mode"]))
+        refused = resolve({REQUEST_VARIABLE: "nested"}, host="codex", nested_spawn="refused")
+        self.assertEqual(("flat", "nested_spawn_refused"), (refused["mode"], refused["reason"]))
+        invalid = resolve({REQUEST_VARIABLE: ""}, host="codex", nested_spawn="allowed")
+        self.assertEqual(("flat", "probe_invalid"), (invalid["mode"], invalid["reason"]))
 
     def test_the_observed_spawn_picks_the_mode_on_each_host(self) -> None:
         expected = {"allowed": ("nested", "nested_spawn_allowed", False), "refused": ("flat", "nested_spawn_refused", True)}
@@ -140,7 +160,7 @@ class ReceiptModeTests(unittest.TestCase):
                     data["mode"], SCHEMA["properties"]["mode"], SCHEMA, "receipt.mode")
                 self.assertEqual([], failures)
 
-    def test_operator_flat_is_recorded_in_the_codex_receipt(self) -> None:
+    def test_an_operator_flat_answer_is_a_valid_codex_receipt_mode(self) -> None:
         validator = load_script("canary_receipt", VALIDATOR)
         fixtures = load_script("read_only_helper_fixtures", TEST_DIR / "test-speckit-pro-read-only-helpers.py")
         data = resolve(host="codex", nested_spawn="allowed", requested_mode="flat")
@@ -151,9 +171,9 @@ class ReceiptModeTests(unittest.TestCase):
 
 
 class SkillContractTests(unittest.TestCase):
-    def test_both_hosts_pass_the_operator_setting_unchanged(self) -> None:
+    def test_both_hosts_leave_the_operator_setting_to_the_runner(self) -> None:
         required = {
-            "SKILL.md": ("SPECKIT_PLAN_STAGE_MODE", "`requested_mode` unchanged"),
+            "SKILL.md": ("Do not read `SPECKIT_PLAN_STAGE_MODE`", "runs\nno extra command"),
             "references/prerequisites.md": ("SPECKIT_PLAN_STAGE_MODE=flat", "operator_requested_flat"),
         }
         for host, (relative, phrases) in itertools.product(("claude", "codex"), required.items()):

@@ -752,9 +752,9 @@ was available.` Set `nested_spawn` from that reply (`allowed`, `refused`, or
 `helper_id=resolve-nesting-mode operation=resolve-nesting-mode mode=read_only`
 with inputs `host`, `nested_spawn` and optional `configured_depth`:
 `host=claude-code`, `configured_depth=claude_subagent_runtime.spawn_depth.limit`.
-Both hosts read `SPECKIT_PLAN_STAGE_MODE` from the invocation environment with
-Python `os.environ`. If present, pass its value as `requested_mode` unchanged;
-if absent, omit that input. Do not trim, case-fold or replace an invalid value.
+Do not read `SPECKIT_PLAN_STAGE_MODE` or send `requested_mode`: the runner
+reads the variable unchanged from the environment it inherits, so this step runs
+no extra command.
 See [Nesting prerequisite](./references/prerequisites.md#nesting-prerequisite)
 for the operator setting and runner-owned precedence. Consume only the
 returned `data.mode`; neither a successful probe nor a depth setting selects
