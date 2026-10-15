@@ -128,23 +128,57 @@ class CliProbePathTrustTest(unittest.TestCase):
 
 
 @contextmanager
-def operator_install(cli, mode=0o755, alias=None):
-    """A real PATH directory outside the worktree, owned by the test user, holding an executable stub.
-
-    `alias` names where a second hardlink to the stub lives: "outside" or "worktree".
-    """
+def operator_tree():
+    """A worktree and a sole PATH directory beside it, both real and owned by the test user."""
     with tempfile.TemporaryDirectory(prefix="cli-probe-operator-") as scratch:
         base = Path(scratch).resolve()
         root, directory = base / "worktree", base / "bin"
         root.mkdir()
         directory.mkdir()
+        with patch.dict(os.environ, {"PATH": str(directory)}):
+            yield base, root, directory
+
+
+def write_stub(path, cli, mode=0o755):
+    path.write_text(f"#!/bin/sh\necho {cli}-operator-stub\n", encoding="utf-8")
+    path.chmod(mode)
+
+
+@contextmanager
+def operator_install(cli, mode=0o755, alias=None):
+    """A real PATH directory outside the worktree, owned by the test user, holding an executable stub.
+
+    `alias` names where a second hardlink to the stub lives: "outside" or "worktree".
+    """
+    with operator_tree() as (base, root, directory):
         stub = directory / cli
-        stub.write_text(f"#!/bin/sh\necho {cli}-operator-stub\n", encoding="utf-8")
-        stub.chmod(mode)
+        write_stub(stub, cli, mode)
         if alias:
             os.link(stub, {"outside": base, "worktree": root}[alias] / f"alias-{cli}")
-        with patch.dict(os.environ, {"PATH": str(directory)}):
-            yield root, directory
+        yield root, directory
+
+
+def symlink_to_worktree_aliased_file(base, root, directory, cli):
+    target = base / f"installed-{cli}"
+    write_stub(target, cli)
+    os.link(target, root / f"alias-{cli}")
+    (directory / cli).symlink_to(target)
+
+
+def symlink_chain_into_worktree(base, root, directory, cli):
+    payload = root / f"payload-{cli}"
+    write_stub(payload, cli)
+    (base / "hop").symlink_to(payload)
+    (directory / cli).symlink_to(base / "hop")
+
+
+def helper_hardlinked_from_worktree(_base, root, directory, cli):
+    write_stub(directory / cli, cli)
+    write_stub(root / "helper", "helper")
+    os.link(root / "helper", directory / "helper")
+
+
+ALIAS_FORMS = (symlink_to_worktree_aliased_file, symlink_chain_into_worktree, helper_hardlinked_from_worktree)
 
 
 class OperatorInstalledCliTest(unittest.TestCase):
@@ -160,26 +194,32 @@ class OperatorInstalledCliTest(unittest.TestCase):
                         result = module.probe(root, [cli, "--version"], allowed=(cli,), timeout=10)
                         self.assertEqual((0, f"{cli}-operator-stub"), (result["exit_status"], result["stdout_tail"]))
 
+    def assert_rejected(self, cli, **install) -> None:
+        with operator_install(cli, **install) as (root, _directory):
+            for name in COPIES:
+                with self.subTest(copy=name, cli=cli, **install), self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                    load(name).probe_search_path(root, cli)
+
     def test_operator_owned_docker_and_host_installs_stay_rejected(self) -> None:
         for cli in ("docker", *HOSTS):
-            with operator_install(cli) as (root, _directory):
-                for name in COPIES:
-                    with self.subTest(copy=name, cli=cli), self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
-                        load(name).probe_search_path(root, cli)
+            self.assert_rejected(cli)
 
     def test_operator_owned_install_shared_with_other_writers_is_rejected(self) -> None:
         for cli, mode in itertools.product(OPERATOR_CLIS, (0o775, 0o757)):
-            with operator_install(cli, mode) as (root, _directory):
-                for name in COPIES:
-                    with self.subTest(copy=name, cli=cli, mode=oct(mode)), \
-                            self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
-                        load(name).probe_search_path(root, cli)
+            self.assert_rejected(cli, mode=mode)
 
     def test_operator_owned_install_aliased_by_a_worktree_name_is_rejected(self) -> None:
         for cli in OPERATOR_CLIS:
-            with operator_install(cli, alias="worktree") as (root, _directory):
+            self.assert_rejected(cli, alias="worktree")
+
+    def test_every_retained_name_gets_the_worktree_alias_check(self) -> None:
+        """Symlink hops, symlink targets and helper names beside the CLI are all checked for git and gh."""
+        for cli, form in itertools.product(OPERATOR_CLIS, ALIAS_FORMS):
+            with operator_tree() as (base, root, directory):
+                form(base, root, directory, cli)
                 for name in COPIES:
-                    with self.subTest(copy=name, cli=cli), self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                    with self.subTest(copy=name, cli=cli, form=form.__name__), \
+                            self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
                         load(name).probe_search_path(root, cli)
 
     def test_unreadable_worktree_fails_closed_for_an_aliased_operator_install(self) -> None:
