@@ -181,6 +181,30 @@ def helper_hardlinked_from_worktree(_base, root, directory, cli):
 ALIAS_FORMS = (symlink_to_worktree_aliased_file, symlink_chain_into_worktree, helper_hardlinked_from_worktree)
 
 
+def cellar_install(base, directory, cli):
+    """A Homebrew-shaped chain: PATH entry -> hop directory -> versioned install file."""
+    (base / "cellar").mkdir()
+    (base / "hops").mkdir()
+    write_stub(base / "cellar" / cli, cli)
+    (base / "hops" / cli).symlink_to(base / "cellar" / cli)
+    (directory / cli).symlink_to(base / "hops" / cli)
+
+
+def worktree_link(reached):
+    """Worktree content (a checked-out symlink) through which an in-place write would reach the install."""
+    def form(base, root, directory, cli):
+        cellar_install(base, directory, cli)
+        target = {"file": directory / cli, "install": base / "cellar" / cli, "path-directory": directory,
+                  "install-directory": base / "cellar", "hop-directory": base / "hops"}[reached]
+        (root / "link").symlink_to(target)
+    form.__name__ = f"worktree_symlink_to_{reached}"
+    return form
+
+
+WORKTREE_LINK_FORMS = tuple(worktree_link(reached) for reached in
+                            ("file", "install", "path-directory", "install-directory", "hop-directory"))
+
+
 class OperatorInstalledCliTest(unittest.TestCase):
     """A user-owned install outside the worktree (Homebrew on Apple silicon) serves git and gh, unmocked."""
 
@@ -212,8 +236,11 @@ class OperatorInstalledCliTest(unittest.TestCase):
         for cli in OPERATOR_CLIS:
             self.assert_rejected(cli, alias="worktree")
 
-    def test_every_retained_name_gets_the_worktree_alias_check(self) -> None:
-        """Symlink hops, symlink targets and helper names beside the CLI are all checked for git and gh."""
+    def test_every_retained_name_rejects_worktree_content_that_reaches_it(self) -> None:
+        """Symlink targets and helper names aliased by a worktree hardlink, and links into the worktree, reject git and gh.
+
+        A chain into the worktree is rejected by the traversal rule before any alias check runs.
+        """
         for cli, form in itertools.product(OPERATOR_CLIS, ALIAS_FORMS):
             with operator_tree() as (base, root, directory):
                 form(base, root, directory, cli)
@@ -221,6 +248,38 @@ class OperatorInstalledCliTest(unittest.TestCase):
                     with self.subTest(copy=name, cli=cli, form=form.__name__), \
                             self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
                         load(name).probe_search_path(root, cli)
+
+    def test_worktree_symlink_reaching_the_lookup_chain_is_rejected(self) -> None:
+        """A write through a worktree symlink must not be able to change or replace an accepted install."""
+        for cli, form in itertools.product(OPERATOR_CLIS, WORKTREE_LINK_FORMS):
+            with operator_tree() as (base, root, directory):
+                form(base, root, directory, cli)
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli, form=form.__name__), \
+                            self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                        load(name).probe_search_path(root, cli)
+
+    def test_unrelated_worktree_links_and_vanishing_directories_keep_the_install(self) -> None:
+        """A virtual-environment link elsewhere, a dangling link, a link loop and a directory removed mid-walk are harmless."""
+        real_scandir = os.scandir
+
+        def vanishing(path=".", *args, **kwargs):
+            if Path(path).name == "gone":
+                raise FileNotFoundError(2, "No such file or directory", str(path))
+            return real_scandir(path, *args, **kwargs)
+
+        for cli in OPERATOR_CLIS:
+            with operator_tree() as (base, root, directory), patch("os.scandir", vanishing):
+                cellar_install(base, directory, cli)
+                os.link(base / "cellar" / cli, base / f"spare-{cli}")  # a second name outside the worktree
+                write_stub(base / "python3", "python3")
+                (root / ".venv-python").symlink_to(base / "python3")
+                (root / "dangling").symlink_to(base / "missing")
+                (root / "loop").symlink_to(root / "loop")
+                (root / "gone").mkdir()
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli):
+                        self.assertEqual(str(directory), load(name).probe_search_path(root, cli))
 
     def test_unreadable_worktree_fails_closed_for_an_aliased_operator_install(self) -> None:
         real_scandir = os.scandir
