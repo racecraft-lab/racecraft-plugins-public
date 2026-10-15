@@ -64,6 +64,13 @@ class ModeDecisionTests(unittest.TestCase):
         invalid = resolve({REQUEST_VARIABLE: ""}, host="codex", nested_spawn="allowed")
         self.assertEqual(("flat", "probe_invalid"), (invalid["mode"], invalid["reason"]))
 
+    def test_an_explicit_request_wins_over_the_environment(self) -> None:
+        flat = resolve({REQUEST_VARIABLE: "nested"}, host="codex", nested_spawn="allowed", requested_mode="flat")
+        self.assertEqual(("flat", "operator_requested_flat", "flat"),
+                         (flat["mode"], flat["reason"], flat["requested_mode"]))
+        nested = resolve({REQUEST_VARIABLE: "flat"}, host="codex", nested_spawn="allowed", requested_mode="nested")
+        self.assertEqual(("nested", "nested"), (nested["mode"], nested["requested_mode"]))
+
     def test_the_observed_spawn_picks_the_mode_on_each_host(self) -> None:
         expected = {"allowed": ("nested", "nested_spawn_allowed", False), "refused": ("flat", "nested_spawn_refused", True)}
         for host, (outcome, (mode, reason, has_prerequisite)) in itertools.product(("claude-code", "codex"), expected.items()):
