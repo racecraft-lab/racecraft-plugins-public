@@ -708,6 +708,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/planning_approval.py",
+        "display": "speckit_pro_runner/helpers/planning_approval.py"
+      },
+      "sha256": "32d63890025feda1caeb8d6834e9c3065ec0288974592f18c416989849cc1515"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
@@ -791,7 +799,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "da8e5a202b51566f632e7b2df4448a8977e24a99b398d3bcc7097e7e104198cc"
+      "sha256": "6465418164d912f8bf16f1ac46a324c92d0edc530cab258aab6215f8ff11f0b1"
     },
     {
       "path": {
