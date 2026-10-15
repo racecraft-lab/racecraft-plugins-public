@@ -751,8 +751,15 @@ was available.` Set `nested_spawn` from that reply (`allowed`, `refused`, or
 `not_run` when the probe never returned), then request
 `helper_id=resolve-nesting-mode operation=resolve-nesting-mode mode=apply`
 with a nonempty `request_id` (a run-specific slug), `state_file` set to the repository-relative path of this run's existing
-`autopilot-state.json`, plus `host`, `nested_spawn` and `configured_depth`:
+`autopilot-state.json`, plus `host`, `nested_spawn` and optional `configured_depth`:
 `host=claude-code`, `configured_depth=claude_subagent_runtime.spawn_depth.limit`.
+Do not read `SPECKIT_PLAN_STAGE_MODE` or send `requested_mode`: the runner
+reads the variable unchanged from the environment it inherits, so this step runs
+no extra command.
+See [Nesting prerequisite](./references/prerequisites.md#nesting-prerequisite)
+for the operator setting and runner-owned precedence. Consume only the
+returned `data.mode`; neither a successful probe nor a depth setting selects
+the dispatch path outside the helper.
 The runner writes the complete response as `nesting_mode` in that state file,
 preserving the other fields. Proceed only after the apply request succeeds;
 on a state-write refusal, repair the state path or file and retry the helper.

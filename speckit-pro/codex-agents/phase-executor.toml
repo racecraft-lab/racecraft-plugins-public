@@ -88,6 +88,8 @@ Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
    The parent passes that observation to `resolve-nesting-mode` in apply mode
    with a nonempty `request_id` slug;
    the runner owns the state record. This probe returns only its observation.
+   Report only capability: an allowed probe never authorizes this agent to
+   select nested mode itself.
 
 7. **Nested mode:** `Mode: nested`, `Phase:` and the phase brief select the Phase driver. Before acting, read
    `<plugin-root>/skills/speckit-autopilot/references/phase-execution.md#nested-mode-phase-driver`; its driver rules override flat delegation and summary rules.

@@ -19,13 +19,14 @@
         "data": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["schema_version", "mode", "reason", "host", "configured_depth", "prerequisite"],
+          "required": ["schema_version", "mode", "reason", "host", "configured_depth", "prerequisite", "requested_mode"],
           "properties": {
             "schema_version": {"const": "nesting-mode/v1"},
             "mode": {"enum": ["flat", "nested"]},
-            "reason": {"enum": ["nested_spawn_allowed", "nested_spawn_refused", "probe_not_run", "probe_invalid"]},
+            "reason": {"enum": ["nested_spawn_allowed", "nested_spawn_refused", "probe_not_run", "probe_invalid", "operator_requested_flat"]},
             "host": {"enum": ["claude-code", "codex", null]},
             "configured_depth": {"type": ["integer", "null"], "minimum": 0},
+            "requested_mode": {"enum": ["flat", "nested", null]},
             "prerequisite": {"type": ["string", "null"]}
           }
         }

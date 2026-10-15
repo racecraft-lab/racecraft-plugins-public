@@ -57,6 +57,12 @@ three and absent. Configured depth remains observational, never a mode gate.
   state paths. A red-first full-sequence regression covers both hosts through
   draft creation, completed state and committed, pushed bookkeeping. The
   owner's `autopilot-state.json` filename and confinement guards are unchanged.
+- **Main integration (#1360):** apply and read-only requests share the
+  runner's environment-backed operator mode selection. The complete state
+  schema includes `requested_mode` and `operator_requested_flat`; semantic
+  replay checks the request alongside the observed spawn. Integration tests
+  cover persisted operator flat mode, nested requests, refused probes, invalid
+  settings and contradictory evidence on both hosts.
 - **R1361-de21c359, R1361-bbe7bcff, R1361-487e2115:** UUID-shaped request IDs
   fail before writing; publication failures report their actual category and
   possible write effect; snapshots have a bounded read.

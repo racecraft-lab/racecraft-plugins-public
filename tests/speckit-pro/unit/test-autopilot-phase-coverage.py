@@ -291,7 +291,7 @@ class NestingStateEvidenceTests(unittest.TestCase):
             "data": {
                 "schema_version": "nesting-mode/v1", "mode": "nested",
                 "reason": "nested_spawn_allowed", "host": host,
-                "configured_depth": 3, "prerequisite": None,
+                "configured_depth": 3, "prerequisite": None, "requested_mode": None,
             },
         }
 
@@ -361,6 +361,7 @@ class NestingStateEvidenceTests(unittest.TestCase):
             "reason": (None, "unknown", {}),
             "host": ("unknown", False, {}),
             "configured_depth": (-1, True, 0.0, "3", [], {}),
+            "requested_mode": ("unknown", True, 1, [], {}),
             "prerequisite": (False, {}, []),
             "unexpected": (True,),
         }
