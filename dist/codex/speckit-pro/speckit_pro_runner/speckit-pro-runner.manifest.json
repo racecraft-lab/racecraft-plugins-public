@@ -679,7 +679,7 @@
         "value": "speckit_pro_runner/helpers/nesting_preflight.py",
         "display": "speckit_pro_runner/helpers/nesting_preflight.py"
       },
-      "sha256": "9e800c68fc0c69155a1993157ca98783391a4013dd8447b09604ef7b169f17bf"
+      "sha256": "14501a1330e83fd5d45500877ba8a106d349260e6bb298fc51afeeb57a55814d"
     },
     {
       "path": {
@@ -791,7 +791,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "da8e5a202b51566f632e7b2df4448a8977e24a99b398d3bcc7097e7e104198cc"
+      "sha256": "6f371fd53764c13adc57dbe07a1f9795ff1ec787ed90ce22d1ebb962193baf36"
     },
     {
       "path": {

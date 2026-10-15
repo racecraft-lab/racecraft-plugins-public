@@ -3,7 +3,27 @@
   "title": "SpecKit autopilot run status",
   "description": "Closed status vocabulary for the top-level autopilot-state.json run status. autopilot-state.json is the current-in-flight pointer for one run; the per-spec durable record is the workflow file, which survives archive. Retired spellings that must not reappear: complete, complete_pr_open, completed archived, running.",
   "type": "object",
+  "$defs": {
+    "nesting_mode": {
+      "description": "Complete runner response persisted by resolve-nesting-mode in apply mode. Absent before the nesting preflight; partial hand-written copies are invalid.",
+      "type": "object",
+      "required": ["schema_version", "status", "data"],
+      "properties": {
+        "schema_version": {"const": "1.0"},
+        "status": {"const": "ok"},
+        "data": {
+          "type": "object",
+          "required": ["schema_version", "mode"],
+          "properties": {
+            "schema_version": {"const": "nesting-mode/v1"},
+            "mode": {"enum": ["flat", "nested"]}
+          }
+        }
+      }
+    }
+  },
   "properties": {
+    "nesting_mode": {"$ref": "#/$defs/nesting_mode"},
     "status": {
       "type": "string",
       "enum": [

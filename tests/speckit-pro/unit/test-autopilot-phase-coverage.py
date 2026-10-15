@@ -219,7 +219,7 @@ def state_json(*, include_confidence: bool = True, include_post: bool = True, co
 class _ValidatorRunner(object):
     """Shared fixture for the tests below."""
 
-    def run_validator_paths(self, workflow_path: Path, state_path: Path) -> tuple[int, dict[str, object]]:
+    def run_validator_paths(self, workflow_path: Path, state_path: Path, *, rule: str | None = None) -> tuple[int, dict[str, object]]:
         local_validator = state_path.parent / VALIDATOR.relative_to(REPO_ROOT)
         installed_validator = getattr(self, "_installed_validator", None)
         if installed_validator is not None:
@@ -232,6 +232,8 @@ class _ValidatorRunner(object):
             "--state",
             str(state_path),
         ]
+        if rule is not None:
+            command.extend(["--rule", rule])
         try:
             state = json.loads(state_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, RecursionError):
@@ -262,7 +264,7 @@ class _ValidatorRunner(object):
         self.assertEqual(completed.stderr, "")
         return completed.returncode, json.loads(completed.stdout)
 
-    def run_validator(self, workflow: str, state: dict[str, object] | str) -> tuple[int, dict[str, object]]:
+    def run_validator(self, workflow: str, state: dict[str, object] | str, *, rule: str | None = None) -> tuple[int, dict[str, object]]:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             workflow_path = root / "workflow.md"
@@ -272,10 +274,35 @@ class _ValidatorRunner(object):
                 state_path.write_text(state, encoding="utf-8")
             else:
                 state_path.write_text(json.dumps(state), encoding="utf-8")
-            return self.run_validator_paths(workflow_path, state_path)
+            return self.run_validator_paths(workflow_path, state_path, rule=rule)
 
 
 class AutopilotPhaseCoverageTests(_ValidatorRunner, unittest.TestCase):
+    def test_status_evidence_rejects_a_hand_written_nesting_subset(self) -> None:
+        state = state_json()
+        state["nesting_mode"] = {"mode": "nested", "reason": "nested_spawn_allowed"}
+        exit_code, report = self.run_validator(workflow_text(), state, rule="status-evidence")
+        self.assertEqual(1, exit_code, report)
+        self.assertTrue(any("nesting_mode" in error for error in report["state_status_errors"]), report)
+
+    def test_status_evidence_checks_nesting_version_and_mode(self) -> None:
+        cases = [
+            ({"schema_version": "nesting-mode/v1", "mode": mode}, 0) for mode in ("flat", "nested")
+        ] + [
+            ({"schema_version": "nesting-mode/v0", "mode": "nested"}, 1),
+            ({"schema_version": "nesting-mode/v1", "mode": "unknown"}, 1),
+            ({"schema_version": "nesting-mode/v1"}, 1),
+            ({"mode": "nested"}, 1),
+            (None, 1),
+        ]
+        for data, expected in cases:
+            with self.subTest(data=data):
+                state = state_json()
+                state["nesting_mode"] = {"schema_version": "1.0", "status": "ok", "data": data}
+                exit_code, report = self.run_validator(workflow_text(), state, rule="status-evidence")
+                self.assertEqual(expected, exit_code, report)
+                self.assertEqual(bool(expected), bool(report["state_status_errors"]), report)
+
     @staticmethod
     def complete_checkpoint(*, commit_sha: str = "a" * 40) -> dict[str, object]:
         return {

@@ -107,6 +107,8 @@ Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
    command, spawn exactly one child agent as it asks, touch no files, and reply with the
    single `NESTED_SPAWN=` line it names. A refused spawn or a missing spawn tool is
    `NESTED_SPAWN=refused`, not a blocker.
+   The parent passes that observation to `resolve-nesting-mode` in apply mode;
+   the runner owns the state record. This probe returns only its observation.
 
 7. **Nested mode:** `Mode: nested`, `Phase:` and the phase brief select the Phase driver. Before acting, read
    `<plugin-root>/skills/speckit-autopilot/references/phase-execution.md#nested-mode-phase-driver`; its driver rules override flat delegation and summary rules.

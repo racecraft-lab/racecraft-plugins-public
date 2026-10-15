@@ -6,6 +6,7 @@ from __future__ import annotations
 import itertools
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -33,6 +34,60 @@ def resolve(**inputs: object) -> dict:
     assert completed.returncode == 0, (completed.returncode, response)
     assert response["status"] == "ok", response
     return response["data"]
+
+
+def apply_probe(root: Path, state_file: str = "autopilot-state.json", **probe: object) -> tuple:
+    request = {
+        "schema_version": "1.0", "request_id": "nesting-apply-test",
+        "helper_id": "resolve-nesting-mode", "operation": "resolve-nesting-mode", "mode": "apply",
+        "inputs": {"state_file": state_file, **probe},
+    }
+    return run_runner(request, cwd=root)
+
+
+class StatePersistenceTests(unittest.TestCase):
+    def test_apply_persists_the_complete_envelope_on_each_host(self) -> None:
+        for host in ("claude-code", "codex"):
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                (root / ".git").mkdir()
+                (root / ".specify").mkdir()
+                state_file = root / "autopilot-state.json"
+                state_file.write_text(json.dumps({"plan": [], "active_step": "Phase 0"}), encoding="utf-8")
+                completed, envelope, _ = apply_probe(root, host=host, nested_spawn="allowed", configured_depth=3)
+                self.assertEqual(0, completed.returncode, envelope)
+                state = json.loads(state_file.read_text(encoding="utf-8"))
+                self.assertEqual("nested", state["nesting_mode"]["data"]["mode"])
+                self.assertEqual("nesting-mode/v1", state["nesting_mode"]["data"]["schema_version"])
+                self.assertEqual(envelope, state["nesting_mode"])
+                self.assertEqual([], state["plan"])
+                self.assertEqual("Phase 0", state["active_step"])
+
+    def test_invalid_state_is_refused_without_overwriting_it(self) -> None:
+        for content in (None, "{", "[]", '{"plan": [], "plan": [1]}', '{"elapsed": NaN}'):
+            with self.subTest(content=content), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                (root / ".specify").mkdir()
+                target = root / "autopilot-state.json"
+                if content is not None:
+                    target.write_text(content, encoding="utf-8")
+                completed, envelope, _ = apply_probe(root, host="codex", nested_spawn="allowed")
+                self.assertEqual(2, completed.returncode, envelope)
+                self.assertEqual("nesting_state_invalid", envelope["diagnostics"][0]["code"])
+                self.assertEqual(content, target.read_text(encoding="utf-8") if target.exists() else None)
+
+    def test_apply_refuses_symlinks_and_paths_outside_the_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "repo"
+            (root / ".specify").mkdir(parents=True)
+            outside = Path(tmp) / "outside.json"
+            outside.write_text('{"keep": true}', encoding="utf-8")
+            (root / "autopilot-state.json").symlink_to(outside)
+            for path in ("autopilot-state.json", "../outside.json", str(outside)):
+                with self.subTest(path=path):
+                    completed, envelope, _ = apply_probe(root, path, host="claude-code", nested_spawn="allowed")
+                    self.assertEqual(2, completed.returncode, envelope)
+                    self.assertEqual('{"keep": true}', outside.read_text(encoding="utf-8"))
 
 
 class ModeDecisionTests(unittest.TestCase):
@@ -100,6 +155,12 @@ class ReceiptModeTests(unittest.TestCase):
     def test_runner_modes_equal_the_receipt_schema_enum(self) -> None:
         self.assertEqual(set(SCHEMA["properties"]["mode"]["enum"]), set(nesting_preflight.MODES))
 
+    def test_state_evidence_schema_uses_the_runner_version_and_receipt_modes(self) -> None:
+        schema_path = REPO_ROOT / "speckit-pro/skills/speckit-autopilot/contracts/autopilot-state-status.schema.json"
+        data = json.loads(schema_path.read_text(encoding="utf-8"))["$defs"]["nesting_mode"]["properties"]["data"]
+        self.assertEqual(nesting_preflight.SCHEMA_VERSION, data["properties"]["schema_version"]["const"])
+        self.assertEqual(set(nesting_preflight.MODES), set(data["properties"]["mode"]["enum"]))
+
     def test_a_flat_result_records_mode_flat_in_a_receipt(self) -> None:
         validator = load_script("canary_receipt", VALIDATOR)
         for nested_spawn, expected in (("refused", "flat"), ("allowed", "nested"), ("not_run", "flat")):
@@ -112,6 +173,16 @@ class ReceiptModeTests(unittest.TestCase):
 
 
 class SkillContractTests(unittest.TestCase):
+    def test_both_hosts_delegate_nesting_state_persistence_to_the_runner(self) -> None:
+        sections = [
+            (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")
+            .partition("## Step 1.5: Nesting Preflight")[2].partition("## Step 2:")[0]
+            for host in ("claude", "codex")
+        ]
+        for instruction in ("operation=resolve-nesting-mode mode=apply", "`state_file`", "The runner writes the complete response"):
+            self.assertTrue(all(instruction in section for section in sections), instruction)
+        self.assertTrue(all("Persist the complete response" not in section for section in sections))
+
     def test_both_hosts_run_the_preflight_before_the_main_loop_and_dispatch_flat_otherwise(self) -> None:
         for host in ("claude", "codex"):
             text = (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")
