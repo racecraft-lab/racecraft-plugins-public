@@ -15,8 +15,34 @@ planning choice after the excluded region and requires a new digest and refusal
 of the old approval. These boundary assertions fail on the pre-fix helper;
 the accepted bookkeeping/spelling assertions already passed there.
 
+## Assurance guard follow-up
+
+Finding F1364-e793efeb is a tamper-proof assurance gate false pass. The guard
+previously accepted any negation anywhere on the same line as an assurance
+term. It now checks each sentence independently and accepts an assurance term
+only in a complete, explicit denial: `The approval is not <term>` or
+`Nothing may describe it as <term>`. The term may be hyphenated, spaced or
+unhyphenated, with case ignored. All other sentences containing the term fail.
+An unrelated negation, a qualified negation, or a second positive claim cannot
+borrow the exemption from a denial.
+Markdown soft line breaks stay inside their sentence, so a wrapped qualifier
+or a preceding `The following statement is false:` cannot detach from a denial.
+
+`AssuranceGuardTest` injects document text into the actual public-document
+guard. Its named tests cover following and preceding negations; all spellings;
+genuine denials followed or preceded by positive claims; double negation and
+`not only`; sentence, clause and line boundaries; and each scanned public
+surface independently. The scan includes the shared skill/reference, agent
+source, Codex descriptor/agent, and both generated host payloads. The existing
+runner tests continue to exercise the source and both shipped hosts.
+
 ## Known limits
 
+- The assurance guard recognizes the two explicit denial forms above, rather
+  than inferring arbitrary English negation. Other denial wordings fail closed
+  and must use a recognized form or avoid the assurance term. Existing approval
+  guidance satisfies this narrow rule. This repository-only guard change does
+  not alter runtime policy or either host's generated payload.
 - Unfenced `Stage` and `Draft PR` table rows are declared execution bookkeeping
   and excluded. A planning directive placed in these rows uses a field outside
   its intended purpose; this accepted Low limit is unchanged.
@@ -26,7 +52,8 @@ the accepted bookkeeping/spelling assertions already passed there.
   unchanged.
 - `x` and `X` both represent checked choices. Their spelling alone does not
   change the plan. Fenced spelling and text remain verbatim planning inputs.
-- This repair addresses the Daybreak planning-digest false-pass class. It does
+- These repairs address the Daybreak planning-digest and assurance-guard
+  false-pass classes. They do
   not resolve the separate code-review finding about execution progress that
   unnecessarily invalidates approvals, or reopen prior accepted Low/Info notes.
 - Approval assurance remains recorded, without protection against an agent with

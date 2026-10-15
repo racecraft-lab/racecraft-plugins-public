@@ -6,10 +6,29 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from runner_invocation import run_runner
 from test_result import run_counted
+
+
+ASSURANCE_DOCUMENTS = (
+    "docs/adr/0013-plan-approval-record.md", "docs/adr/0017-recorded-plan-approval.md",
+    ".github/pull_request_template.md", "GLOSSARY.md", "speckit-pro/skills/speckit-autopilot/SKILL.md",
+    "speckit-pro/skills/speckit-autopilot/references/planning-approval.md",
+    "speckit-pro/agents/phase-executor.md", "speckit-pro/codex-agents/phase-executor.toml",
+    "speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml",
+    "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
+    "dist/claude/speckit-pro/skills/speckit-autopilot/references/planning-approval.md",
+    "dist/claude/speckit-pro/agents/phase-executor.md",
+    "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+    "dist/codex/speckit-pro/skills/speckit-autopilot/references/planning-approval.md",
+    "dist/codex/speckit-pro/codex-agents/phase-executor.toml",
+    "dist/codex/speckit-pro/skills/speckit-autopilot/agents/openai.yaml",
+)
+UNRELATED_NEGATIONS = tuple((word, separator) for word in ("No", "not", "never", "nothing")
+                            for separator in (". ", "; ", ", ", " and ", "\n"))
 
 
 class PlanningApprovalTest(unittest.TestCase):
@@ -77,13 +96,15 @@ class PlanningApprovalTest(unittest.TestCase):
 
     def test_public_spec_and_pr_template_do_not_claim_protected_assurance(self):
         root = Path(__file__).resolve().parents[3]
-        for name in ("docs/adr/0013-plan-approval-record.md", "docs/adr/0017-recorded-plan-approval.md",
-                     ".github/pull_request_template.md", "GLOSSARY.md", "speckit-pro/skills/speckit-autopilot/SKILL.md",
-                     "speckit-pro/skills/speckit-autopilot/references/planning-approval.md",
-                     "speckit-pro/agents/phase-executor.md"):
-            for line in (root / name).read_text().splitlines():
-                if re.search(r"(?i)tamper[- ]?proof", line):
-                    self.assertRegex(line, r"(?i)\b(?:not|never|nothing|no)\b", f"{name}: {line}")
+        for name in ASSURANCE_DOCUMENTS:
+            for sentence in re.split(r"[.!?]", (root / name).read_text()):
+                if re.search(r"(?i)tamper[- ]?proof", sentence):
+                    # Accept only complete, explicit denials. A negation elsewhere
+                    # in the document cannot exempt a positive assurance claim.
+                    # Markdown soft line breaks stay inside their sentence.
+                    self.assertRegex(sentence.strip(),
+                                     r"(?i)\A(?:The approval is not|Nothing may describe it as) tamper[- ]?proof\Z",
+                                     f"{name}: {sentence}")
 
     def test_workflow_normalization_preserves_acceptance_requirements(self):
         path = self.feature / "workflow.md"
@@ -169,6 +190,60 @@ class PlanningApprovalTest(unittest.TestCase):
         self.assertEqual(self.call("record", "apply", approval=revised)["status"], "ok")
         (self.feature / "plan.md").write_text("A plan")
         self.assertRefused(self.call("verify"), "subsequent supersession")
+
+
+class AssuranceGuardTest(unittest.TestCase):
+    def checkAssuranceText(self, text, document=None):
+        guard = PlanningApprovalTest("test_public_spec_and_pr_template_do_not_claim_protected_assurance")
+        root = Path(__file__).resolve().parents[3]
+        with patch.object(Path, "read_text", autospec=True) as read:
+            read.side_effect = lambda path: text if document is None or path == root / document else ""
+            guard.test_public_spec_and_pr_template_do_not_claim_protected_assurance()
+
+    def assertClaimsRejected(self, texts, documents=(None,)):
+        texts = tuple(texts)
+        for document in documents:
+            for text in texts:
+                with self.subTest(document=document, text=text), self.assertRaises(AssertionError):
+                    self.checkAssuranceText(text, document)
+
+    def test_positive_claim_rejects_unrelated_following_negation(self):
+        self.assertClaimsRejected(
+            f"The approval is tamper-proof{separator}{word} further review is needed."
+            for word, separator in UNRELATED_NEGATIONS)
+
+    def test_positive_claim_rejects_unrelated_preceding_negation(self):
+        self.assertClaimsRejected(
+            f"{word} further review is needed{separator}the approval is tamper-proof."
+            for word, separator in UNRELATED_NEGATIONS)
+
+    def test_claim_spellings_reject_unrelated_negation(self):
+        self.assertClaimsRejected(
+            text for term in ("tamperproof", "tamper proof", "TAMPER-PROOF")
+            for text in (f"No review needed; the approval is {term}.",
+                         f"The approval is {term}. Nothing else is needed."))
+
+    def test_genuine_denials_pass_without_exempting_other_claims(self):
+        for term in ("tamper-proof", "tamper proof", "tamperproof"):
+            for denial in (f"The approval is not {term}.", f"Nothing may describe it as {term}."):
+                with self.subTest(denial=denial):
+                    self.checkAssuranceText(denial)
+                    self.assertClaimsRejected((denial + f" The approval is {term}.",
+                                               f"The approval is {term}. " + denial))
+
+    def test_negated_qualifiers_and_double_negation_do_not_hide_claims(self):
+        self.assertClaimsRejected(("The approval is not only tamper-proof but also portable.",
+                                   "The approval is not not tamper-proof.",
+                                   "Nothing else matters: the approval is tamper-proof.",
+                                   "The approval is not tamper-proof and the record is tamperproof."))
+
+    def test_each_public_surface_rejects_a_claim_beside_a_denial(self):
+        self.assertClaimsRejected(("The approval is not tamper-proof. The record is tamperproof.",),
+                                  documents=ASSURANCE_DOCUMENTS)
+
+    def test_soft_line_breaks_do_not_separate_a_denial_from_its_qualifiers(self):
+        self.assertClaimsRejected(("The approval is not tamper-proof\nunless the record is signed.",
+                                   "The following statement is false:\nThe approval is not tamper-proof."))
 
 
 class WorkflowPlanningApprovalTest(PlanningApprovalTest):
@@ -263,4 +338,6 @@ class WorkflowPlanningApprovalTest(PlanningApprovalTest):
                     check()
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(WorkflowPlanningApprovalTest), label="test-planning-approval"))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (WorkflowPlanningApprovalTest, AssuranceGuardTest))
+    raise SystemExit(run_counted(suite, label="test-planning-approval"))
