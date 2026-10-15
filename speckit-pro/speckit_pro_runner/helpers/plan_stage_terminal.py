@@ -20,6 +20,7 @@ from typing import Any, Callable
 from .. import artifact_review, autopilot_state, cli_probe, stop_policy
 from ..atomic_write import write_bytes_atomic
 from ..envelope import RunnerRequest, diagnostic, response
+from ..execution_control import contained_workflow_file
 from ..trusted_io import resolve_repo_root, trusted_bytes
 from ..workflow_stage import AUTOPILOT_BASIC_INFO_HEADING, HTML_COMMENT_RE, workflow_stage_signals, workflow_table_rows
 from . import artifact_fill, artifact_publication, artifact_selection
@@ -126,7 +127,7 @@ def set_basic_row(text: str, key: str, value: str) -> str:
 
 def prepare(run: Run, inputs: dict[str, Any]) -> None:
     """Read the facts the sequence needs, and refuse before any write when one is missing."""
-    run.workflow = inputs["workflow_file"]
+    run.workflow = contained_workflow_file(run.root, inputs["workflow_file"])
     run.state = str(Path(run.workflow).with_name("autopilot-state.json"))
     run.feature = str(Path(inputs["plan_file"]).parent)
     for field_name in PLANNING:

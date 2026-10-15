@@ -50,6 +50,13 @@ three and absent. Configured depth remains observational, never a mode gate.
 - **R1361-ba5501be, R1361-67bded64:** the earlier filename guard and docstring
   fix are retained. Removing the filename guard reproduces the failing
   `package.json` refusal test before restoration.
+- **R1361-2e2b3491:** the later plan-stage caller migration regressed canonical
+  absolute workflow paths. Plan-stage preparation now uses the existing
+  contained-workflow normalizer before deriving the state path, so both
+  absolute and relative workflow inputs reach the shared owner as relative
+  state paths. A red-first full-sequence regression covers both hosts through
+  draft creation, completed state and committed, pushed bookkeeping. The
+  owner's `autopilot-state.json` filename and confinement guards are unchanged.
 - **R1361-de21c359, R1361-bbe7bcff, R1361-487e2115:** UUID-shaped request IDs
   fail before writing; publication failures report their actual category and
   possible write effect; snapshots have a bounded read.
