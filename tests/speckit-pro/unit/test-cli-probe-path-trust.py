@@ -205,19 +205,47 @@ def cellar_install(base, directory, cli):
     (directory / cli).symlink_to(base / "hops" / cli)
 
 
-def worktree_link(reached):
+def worktree_link(base, root, directory, cli, reached):
     """Worktree content (a checked-out symlink) through which an in-place write would reach the install."""
-    def form(base, root, directory, cli):
-        cellar_install(base, directory, cli)
-        target = {"file": directory / cli, "install": base / "cellar" / cli, "path-directory": directory,
-                  "install-directory": base / "cellar", "hop-directory": base / "hops"}[reached]
-        (root / "link").symlink_to(target)
-    form.__name__ = f"worktree_symlink_to_{reached}"
-    return form
+    cellar_install(base, directory, cli)
+    target = {"file": directory / cli, "install": base / "cellar" / cli, "path-directory": directory,
+              "install-directory": base / "cellar", "hop-directory": base / "hops"}[reached]
+    (root / "link").symlink_to(target)
 
 
-WORKTREE_LINK_FORMS = tuple(worktree_link(reached) for reached in
+WORKTREE_LINK_FORMS = tuple(partial(worktree_link, reached=reached) for reached in
                             ("file", "install", "path-directory", "install-directory", "hop-directory"))
+
+
+@contextmanager
+def unrelated_worktree_links(cli):
+    """Install alongside external hardlinks and unrelated, dangling and looping worktree symlinks."""
+    with operator_tree() as (base, root, directory):
+        cellar_install(base, directory, cli)
+        os.link(base / "cellar" / cli, base / f"spare-{cli}")  # a second name outside the worktree
+        write_stub(base / "python3", "python3")
+        (root / ".venv-python").symlink_to(base / "python3")
+        (root / "dangling").symlink_to(base / "missing")
+        (root / "loop").symlink_to(root / "loop")
+        yield root, directory
+
+
+def walk_failures():
+    """Inject unreadable directories, vanished directories and vanished names during traversal."""
+    real_scandir, real_lstat = os.scandir, os.lstat
+
+    def failing(error, real, match):
+        def read(path=".", *args, **kwargs):
+            if match(Path(path)):
+                raise error(2, "injected walk failure", str(path))
+            return real(path, *args, **kwargs)
+        return read
+
+    return {
+        "unreadable-directory": ("os.scandir", failing(PermissionError, real_scandir, lambda path: path.name == "sub")),
+        "vanished-directory": ("os.scandir", failing(FileNotFoundError, real_scandir, lambda path: path.name == "sub")),
+        "vanished-name": ("os.lstat", failing(FileNotFoundError, real_lstat, lambda path: path.name == "name")),
+    }
 
 
 class OperatorInstalledCliTest(unittest.TestCase):
@@ -244,7 +272,7 @@ class OperatorInstalledCliTest(unittest.TestCase):
             with operator_tree() as (base, root, directory):
                 form(base, root, directory, cli)
                 for name in COPIES:
-                    with self.subTest(copy=name, cli=cli, form=form.__name__), \
+                    with self.subTest(copy=name, cli=cli, form=getattr(form, "__name__", form)), \
                             self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
                         load(name).probe_search_path(root, cli)
 
@@ -274,34 +302,14 @@ class OperatorInstalledCliTest(unittest.TestCase):
     def test_unrelated_worktree_links_keep_the_install(self) -> None:
         """A virtual-environment link elsewhere, a dangling link and a link loop reach nothing on the lookup chain."""
         for cli in OPERATOR_CLIS:
-            with operator_tree() as (base, root, directory):
-                cellar_install(base, directory, cli)
-                os.link(base / "cellar" / cli, base / f"spare-{cli}")  # a second name outside the worktree
-                write_stub(base / "python3", "python3")
-                (root / ".venv-python").symlink_to(base / "python3")
-                (root / "dangling").symlink_to(base / "missing")
-                (root / "loop").symlink_to(root / "loop")
+            with unrelated_worktree_links(cli) as (root, directory):
                 for name in COPIES:
                     with self.subTest(copy=name, cli=cli):
                         self.assertEqual(str(directory), load(name).probe_search_path(root, cli))
 
     def test_worktree_walk_errors_fail_closed(self) -> None:
         """An unreadable, vanished or renamed worktree directory or name drops the directory; nothing is skipped."""
-        real_scandir, real_lstat = os.scandir, os.lstat
-
-        def failing(error, real, match):
-            def read(path=".", *args, **kwargs):
-                if match(Path(path)):
-                    raise error(2, "injected walk failure", str(path))
-                return real(path, *args, **kwargs)
-            return read
-
-        attacks = {
-            "unreadable-directory": ("os.scandir", failing(PermissionError, real_scandir, lambda path: path.name == "sub")),
-            "vanished-directory": ("os.scandir", failing(FileNotFoundError, real_scandir, lambda path: path.name == "sub")),
-            "vanished-name": ("os.lstat", failing(FileNotFoundError, real_lstat, lambda path: path.name == "name")),
-        }
-        for cli, (attack, (target, replacement)) in itertools.product(OPERATOR_CLIS, attacks.items()):
+        for cli, (attack, (target, replacement)) in itertools.product(OPERATOR_CLIS, walk_failures().items()):
             with operator_install(cli) as (root, _directory):
                 (root / "sub").mkdir()
                 (root / "sub" / "name").write_text("", encoding="utf-8")
