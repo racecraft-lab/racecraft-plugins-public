@@ -223,6 +223,7 @@ class CompactUnknownDispatchTests(unittest.TestCase):
     PAYLOADS = ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro")
 
     def prepare_unknowns(self, count=700, padding="implementation-worker-"):
+        (self.root / "feature/spec.md").write_text("# Spec\n")
         self.ledger_path.write_text(json.dumps(self.seed))
         completed = execution_control(self.root, {**self.binding, "action": "complete",
                                                 "dispatch_id": "seed", "outcome": "unknown"}, "apply")
