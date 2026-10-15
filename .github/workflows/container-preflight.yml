@@ -84,7 +84,7 @@ jobs:
       - name: Upload change-detection evidence
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: container-preflight-change-detection-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/container-preflight-changes
@@ -129,7 +129,7 @@ jobs:
       - name: Upload Linux amd64 heavy evidence
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: container-preflight-linux-amd64-heavy-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.EVIDENCE_DIR }}
@@ -174,7 +174,7 @@ jobs:
       - name: Upload Linux arm64 heavy evidence
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: container-preflight-linux-arm64-heavy-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.EVIDENCE_DIR }}
@@ -222,7 +222,7 @@ jobs:
       - name: Upload Windows x64 availability evidence
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: container-preflight-windows-x64-availability-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/container-preflight-windows-availability/x64
@@ -232,7 +232,7 @@ jobs:
       - name: Upload Windows ARM64 availability evidence
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: container-preflight-windows-arm64-availability-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/container-preflight-windows-availability/arm64
@@ -276,7 +276,7 @@ jobs:
       - name: Upload Windows x64 smoke evidence
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: container-preflight-windows-x64-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/container-preflight-windows-x64
@@ -320,7 +320,7 @@ jobs:
       - name: Upload Windows ARM64 smoke evidence
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: container-preflight-windows-arm64-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/container-preflight-windows-arm64
@@ -365,7 +365,7 @@ jobs:
       - name: Upload Linux amd64 required-check evidence
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: container-preflight-linux-amd64-required-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/container-preflight-linux-amd64-sentinel
@@ -410,7 +410,7 @@ jobs:
       - name: Upload Linux arm64 required-check evidence
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: container-preflight-linux-arm64-required-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/container-preflight-linux-arm64-sentinel
