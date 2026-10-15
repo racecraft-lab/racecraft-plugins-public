@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.45.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.45.1...speckit-pro-v2.45.2) (2026-10-15)
+
+
+### Bug Fixes
+
+* **speckit-pro:** plan-stage PR query finds a user-installed gh ([#1356](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1356)) ([6c9d4a5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6c9d4a5e83e06ac4fa1dd8f2b590d0cfa2df8a0b)), closes [#1355](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1355)
+
 ## [2.45.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.45.0...speckit-pro-v2.45.1) (2026-10-14)
 
 
