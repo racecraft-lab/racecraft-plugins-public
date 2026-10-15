@@ -55,10 +55,9 @@ runner tests continue to exercise the source and both shipped hosts.
   This equivalence holds only for `-` bullets; `*`, `+`, numbered and
   blockquoted checkboxes bind the spelling, which fails closed.
 - The assurance guard splits sentences at `.`, `!` and `?` before it looks for
-  the assurance term. The guard matches spellings and misses some forms. A term
-  joined by one of those marks, split by an inline HTML tag such as `<wbr>` or
-  `<em>`, written as an HTML entity, or spelled with a look-alike letter from
-  another alphabet is not recognized. No scanned document uses such a spelling
+  the assurance term. A term joined by one of those marks, split by an inline
+  HTML tag such as `<wbr>` or `<em>`, written as an HTML entity, or spelled
+  with a look-alike letter from another alphabet is not recognized. No scanned document uses such a spelling
   today, so this Low limit is accepted.
 - The execution-section skip ends only at an unindented ATX heading of the same
   or a higher level. An `Implementation Progress` heading followed by planning
@@ -66,10 +65,12 @@ runner tests continue to exercise the source and both shipped hosts.
   unclosed fence would hide later planning lines. The shipped workflow template
   cannot produce this: `### Implementation Progress` is the last subsection of
   `## Phase 7: Implement` and is closed by the unindented
-  `## Post-Implementation Checklist`. The sweep writes `Feedback Sweep Log` as a
-  sibling of `Consensus Resolution Log`, so the next sibling or higher heading
-  closes it, or appends it at the end of the file, where nothing follows.
-  Accepted Low.
+  `## Post-Implementation Checklist`. No code places `Feedback Sweep Log`; the
+  sweep protocol tells the agent where to write it. When the file has a
+  `Consensus Resolution Log` heading, the log goes beside it at the same level,
+  so the next sibling or higher heading closes it. Otherwise the agent appends
+  `## Feedback Sweep Log` at the end of the file, and no current writer adds
+  text after it. Accepted Low.
 - These repairs address the Daybreak planning-digest and assurance-guard
   false-pass classes. They do
   not resolve the separate code-review finding about execution progress that
