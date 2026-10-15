@@ -943,8 +943,8 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "generate-spec-index-write":
         return run_spec_index_write(entry, request)
 
-    if entry.helper_id in READINESS_HANDLERS:
-        return READINESS_HANDLERS[entry.helper_id](entry, request)
+    if entry.helper_id in STATE_HELPER_HANDLERS:
+        return STATE_HELPER_HANDLERS[entry.helper_id](entry, request)
 
     if entry.helper_id in ARTIFACT_PAGE_HANDLERS:
         return ARTIFACT_PAGE_HANDLERS[entry.helper_id](entry, request)
@@ -968,8 +968,8 @@ def finish_plan_stage(entry: MutationEntry, request: Any) -> dict[str, Any]:
     return run_plan_stage_terminal_helper(entry, request, dispatch_helper)
 
 
-# The one table that routes a scaffold readiness helper id to its handler.
-READINESS_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+# The table that routes runner-owned state helper ids to their handlers.
+STATE_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "write-readiness-record": run_readiness_record_helper,
     "record-feature-offers": run_feature_offers_helper,
 }
