@@ -1159,8 +1159,7 @@ class HostProbePathSecurityTest(unittest.TestCase):
     def test_other_cli_probes_reject_relinked_helpers(self) -> None:
         """A missing worktree alias during validation never authenticates later helper bytes.
 
-        Git and GitHub trust an inode only the operator can change (cli_probe.OPERATOR_CLIS),
-        so for them the foreign-writable and shared-writable forms model the attacks the probe still stops.
+        Git and GitHub trust an operator-only inode (cli_probe.OPERATOR_CLIS): only writable-by-others forms apply.
         """
         helpers = self.area / "helpers"
         helpers.mkdir()
@@ -1171,8 +1170,7 @@ class HostProbePathSecurityTest(unittest.TestCase):
         validate = readiness_record.cli_probe.validate_probe_directory
         which = shutil.which
         forms = ("regular", "readonly", "indirect-symlink", "nonexecutable", "foreign-writable", "shared-writable")
-        cases = [*itertools.product(("docker",), forms),
-                 *itertools.product(("git", "gh"), ("foreign-writable", "shared-writable"))]
+        cases = [*itertools.product(("docker",), forms), *itertools.product(("git", "gh"), forms[-2:])]
         for (cli, form), consumer, location, window in itertools.product(
                 cases, consumers, (self.tools, helpers), ("after-validation", "after-lookup")):
             with self.subTest(cli=cli, consumer=consumer, location=location.name, window=window, form=form):

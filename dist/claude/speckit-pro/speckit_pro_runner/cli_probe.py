@@ -26,34 +26,40 @@ SHARED_WRITE = stat.S_IWGRP | stat.S_IWOTH
 Reach = Callable[[], frozenset[tuple[int, int]]]
 
 
-def ignore_vanished(error: OSError) -> None:
-    if not isinstance(error, FileNotFoundError):
-        raise error
+def raise_walk_error(error: OSError) -> None:
+    raise error
+
+
+def reached_identity(path: str) -> tuple[int, int] | None:
+    """The inode a write through this worktree name can change, when the name is a link or a shared file.
+
+    A dangling link and a link loop reach nothing now; any other read failure raises.
+    """
+    info = os.lstat(path)
+    if stat.S_ISREG(info.st_mode) and info.st_nlink > 1:
+        return info.st_dev, info.st_ino
+    if not stat.S_ISLNK(info.st_mode):
+        return None
+    try:
+        info = os.stat(path)
+    except OSError as error:
+        if error.errno in (errno.ENOENT, errno.ELOOP):
+            return None
+        raise
+    return info.st_dev, info.st_ino
 
 
 def worktree_reach(worktree: Path) -> frozenset[tuple[int, int]]:
     """Identify the inodes a write through a worktree name can change: shared regular files and symlink targets.
 
-    A name or directory removed during the walk, a dangling link and a link loop reach nothing now.
-    Any other unreadable part of the worktree fails closed.
+    Any walk failure raises, a directory or name that vanishes included, so the caller fails closed.
     """
-    reached = set()
-    for directory, subdirectories, files in os.walk(worktree, onerror=ignore_vanished):
+    reached: set[tuple[int, int]] = set()
+    for directory, subdirectories, files in os.walk(worktree, onerror=raise_walk_error):
         for name in (*subdirectories, *files):
-            path = os.path.join(directory, name)
-            try:
-                info = os.lstat(path)
-                if stat.S_ISLNK(info.st_mode):
-                    info = os.stat(path)
-                elif not (stat.S_ISREG(info.st_mode) and info.st_nlink > 1):
-                    continue
-            except FileNotFoundError:
-                continue
-            except OSError as error:
-                if error.errno != errno.ELOOP:
-                    raise
-                continue
-            reached.add((info.st_dev, info.st_ino))
+            identity = reached_identity(os.path.join(directory, name))
+            if identity is not None:
+                reached.add(identity)
     return frozenset(reached)
 
 
