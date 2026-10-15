@@ -232,6 +232,8 @@ class PendingAgentTests(unittest.TestCase):
             self.assertEqual({}, run_hook("unpushed", stop)[1])
             execution_control(root, {**binding, "action": "complete", "dispatch_id": "planner", "outcome": "completed"}, "apply")
             self.assertEqual("block", run_hook("unpushed", stop)[1]["decision"])
+            nested = {**stop, "cwd": str(state.parent)}
+            self.assertEqual("block", run_hook("unpushed", nested)[1].get("decision"))
 
 
 class HookMatcherExemptionTests(unittest.TestCase):

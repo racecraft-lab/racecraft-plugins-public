@@ -258,7 +258,7 @@ def lockfile_decision(data: dict[str, Any]) -> str | None:
     return None
 
 
-def active_state(root: Path) -> dict[str, Any] | None:
+def active_state(root: Path) -> tuple[Path, dict[str, Any]] | None:
     for directory in (root, *root.parents):
         state = directory / STATE_PATH
         if state.is_file():
@@ -267,7 +267,7 @@ def active_state(root: Path) -> dict[str, Any] | None:
                 status = value.get("status")
             except (OSError, ValueError, AttributeError):
                 return None
-            return value if status in ACTIVE_STATUSES else None
+            return (directory, value) if status in ACTIVE_STATUSES else None
         if (directory / ".git").exists():
             break
     return None
@@ -290,8 +290,11 @@ def unpushed_decision(data: dict[str, Any]) -> str | None:
     if data.get("stop_hook_active") is True:
         return None
     root = work_root(data)
-    state = active_state(root)
-    if state is None or stop_policy.publication_pending(state, {}):
+    active = active_state(root)
+    if active is None:
+        return None
+    root, state = active
+    if stop_policy.publication_pending(state, {}):
         return None
     snapshot = autopilot_state.execution_snapshot(root, state.get("workflow_file", ""), state)
     if snapshot is not None and stop_policy.publication_pending(state, snapshot["ledger"]["dispatches"]):
