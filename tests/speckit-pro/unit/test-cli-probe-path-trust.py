@@ -126,6 +126,21 @@ class CliProbePathTrustTest(unittest.TestCase):
     def test_other_cli_path_directory_stays_outside_the_directory_rule(self) -> None:
         assert_probe(self, ("git", "gh", "docker"), writable="directory", accepted=True)
 
+    def test_operator_owned_helper_still_rejects_docker_and_host_directories(self) -> None:
+        """The git and gh relaxation never reaches another CLI's lookup, even for a helper name beside it."""
+        for cli in ("docker", *HOSTS):
+            with probe_fixture(cli, "file") as (root, directory, _target):
+                helper = directory / "gh"
+                helper.write_text("#!/bin/sh\n", encoding="utf-8")
+                helper.chmod(0o555)
+                for name in COPIES:
+                    module = load(name)
+                    with self.subTest(copy=name, cli=cli), probe_identity(directory, helper, "file", None), \
+                            patch.dict(os.environ, {"PATH": str(directory)}):
+                        self.assertEqual(str(directory), module.probe_search_path(root, "gh"))
+                        with self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                            module.probe_search_path(root, cli)
+
 
 @contextmanager
 def operator_tree():
@@ -259,41 +274,45 @@ class OperatorInstalledCliTest(unittest.TestCase):
                             self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
                         load(name).probe_search_path(root, cli)
 
-    def test_unrelated_worktree_links_and_vanishing_directories_keep_the_install(self) -> None:
-        """A virtual-environment link elsewhere, a dangling link, a link loop and a directory removed mid-walk are harmless."""
-        real_scandir = os.scandir
-
-        def vanishing(path=".", *args, **kwargs):
-            if Path(path).name == "gone":
-                raise FileNotFoundError(2, "No such file or directory", str(path))
-            return real_scandir(path, *args, **kwargs)
-
+    def test_unrelated_worktree_links_keep_the_install(self) -> None:
+        """A virtual-environment link elsewhere, a dangling link and a link loop reach nothing on the lookup chain."""
         for cli in OPERATOR_CLIS:
-            with operator_tree() as (base, root, directory), patch("os.scandir", vanishing):
+            with operator_tree() as (base, root, directory):
                 cellar_install(base, directory, cli)
                 os.link(base / "cellar" / cli, base / f"spare-{cli}")  # a second name outside the worktree
                 write_stub(base / "python3", "python3")
                 (root / ".venv-python").symlink_to(base / "python3")
                 (root / "dangling").symlink_to(base / "missing")
                 (root / "loop").symlink_to(root / "loop")
-                (root / "gone").mkdir()
                 for name in COPIES:
                     with self.subTest(copy=name, cli=cli):
                         self.assertEqual(str(directory), load(name).probe_search_path(root, cli))
 
-    def test_unreadable_worktree_fails_closed_for_an_aliased_operator_install(self) -> None:
-        real_scandir = os.scandir
+    def test_worktree_walk_errors_fail_closed(self) -> None:
+        """An unreadable, vanished or renamed worktree directory or name drops the directory; nothing is skipped."""
+        real_scandir, real_lstat = os.scandir, os.lstat
 
-        def unreadable(path=".", *args, **kwargs):
-            if Path(path).resolve().is_relative_to(root):
-                raise PermissionError(13, "Permission denied", str(path))
-            return real_scandir(path, *args, **kwargs)
+        def failing(error, real, match):
+            def read(path=".", *args, **kwargs):
+                if match(Path(path)):
+                    raise error(2, "injected walk failure", str(path))
+                return real(path, *args, **kwargs)
+            return read
 
-        for cli in OPERATOR_CLIS:
-            with operator_install(cli, alias="outside") as (root, _directory), patch("os.scandir", unreadable):
-                for name in COPIES:
-                    with self.subTest(copy=name, cli=cli), self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
-                        load(name).probe_search_path(root, cli)
+        attacks = {
+            "unreadable-directory": ("os.scandir", failing(PermissionError, real_scandir, lambda path: path.name == "sub")),
+            "vanished-directory": ("os.scandir", failing(FileNotFoundError, real_scandir, lambda path: path.name == "sub")),
+            "vanished-name": ("os.lstat", failing(FileNotFoundError, real_lstat, lambda path: path.name == "name")),
+        }
+        for cli, (attack, (target, replacement)) in itertools.product(OPERATOR_CLIS, attacks.items()):
+            with operator_install(cli) as (root, _directory):
+                (root / "sub").mkdir()
+                (root / "sub" / "name").write_text("", encoding="utf-8")
+                with patch(target, replacement):
+                    for name in COPIES:
+                        with self.subTest(copy=name, cli=cli, attack=attack), \
+                                self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                            load(name).probe_search_path(root, cli)
 
 
 def build_suite() -> unittest.TestSuite:
