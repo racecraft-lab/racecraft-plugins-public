@@ -35,8 +35,9 @@ so Claude's run-start allow rules still cover the whole step.
   run-start allow rules still cover the step. The value still arrives
   unchanged, and an explicit `requested_mode` input still wins.
 - **A conservative Codex environment policy hides the request.** With
-  `shell_environment_policy.inherit` `core` or `none`, or an `include_only`
-  list, the runner never sees the variable and the answer records
+  `shell_environment_policy.inherit` `core` or `none`, an exclude pattern that
+  matches the variable, or an include allowlist (`include_only` or `filters`)
+  that omits it, the runner never sees the variable and the answer records
   `requested_mode: null`. This needs a non-default operator setting, the old
   skill-side read had the same exposure, and `prerequisites.md` names it.
 - **Precedence is described in operator docs.** `prerequisites.md` and

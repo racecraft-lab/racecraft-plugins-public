@@ -680,9 +680,10 @@ launch the session to hold the plan stage to flat mode, including a nest-capable
 Codex canary leg. `resolve-nesting-mode` reads the value unchanged from the
 environment the runner inherits; the orchestrator runs no command to read it.
 On Codex, a `shell_environment_policy` that drops inherited variables
-(`inherit` `core` or `none`, or an `include_only` list without it) hides the
-request, and the answer records `requested_mode: null`; keep the variable
-inherited or set it with `shell_environment_policy.set`. Any include allowlist
+(`inherit` `core` or `none`, an `exclude` or `filters` exclude pattern that
+matches it, or an include allowlist without it) hides the request, and the
+answer records `requested_mode: null`; keep the variable inherited or set it
+with `shell_environment_policy.set`. Any include allowlist
 must also permit `SPECKIT_PLAN_STAGE_MODE`, including values supplied by `set`.
 The runner records `data.requested_mode`, returns
 `data.mode=flat` with `data.reason=operator_requested_flat` for a valid flat
