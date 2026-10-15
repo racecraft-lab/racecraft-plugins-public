@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.45.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.45.2...speckit-pro-v2.45.3) (2026-10-15)
+
+
+### Bug Fixes
+
+* **speckit-pro:** honor operator requests for flat planning mode ([#1360](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1360)) ([4b67723](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4b67723c763231ff328e23c841c30b8c3064e5cf)), closes [#1359](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1359)
+
 ## [2.45.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.45.1...speckit-pro-v2.45.2) (2026-10-15)
 
 
