@@ -30,6 +30,15 @@ so Claude's run-start allow rules still cover the whole step.
   `SPECKIT_PLAN_STAGE_MODE` value is reported with the same reason as a bad
   probe, and a refused probe then shows no prerequisite hint. It always falls
   back to flat, the safe side.
+- **The runner reads the variable, not the skill.** The ticket asked the skill
+  to pass the value through unchanged. The runner reads it instead, so Claude's
+  run-start allow rules still cover the step. The value still arrives
+  unchanged, and an explicit `requested_mode` input still wins.
+- **A conservative Codex environment policy hides the request.** With
+  `shell_environment_policy.inherit` `core` or `none`, or an `include_only`
+  list, the runner never sees the variable and the answer records
+  `requested_mode: null`. This needs a non-default operator setting, the old
+  skill-side read had the same exposure, and `prerequisites.md` names it.
 - **Precedence is described in operator docs.** `prerequisites.md` and
   `GLOSSARY.md` state the precedence for operators. The runner alone decides;
   the skill and agents no longer restate it.
