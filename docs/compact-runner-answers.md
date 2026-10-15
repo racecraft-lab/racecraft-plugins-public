@@ -5,6 +5,12 @@ The runner envelope is the deep module boundary: autopilot root requests select
 answers. Compact answers retain status, next action, and decision data. The
 default remains detailed for existing consumers.
 
+Execution-control compact answers project `ledger` to its `run_id`; the complete
+validated history remains at `ledger_path` and in detailed answers. Action
+results, disposition, refusal reasons, authorization, clock facts and mirror
+warnings retain their existing fields. Ledger growth therefore cannot displace
+an applied result or its state-refresh remediation from the compact answer.
+
 The cap includes serialized stdout and duplicate stderr diagnostics. Ordinary
 answers allow 16 KiB. The envelope alone selects caps: Tasks and Plan-repair
 handoffs add six times their accepted UTF-8 text bytes to that metadata budget.
@@ -33,7 +39,6 @@ instructs reconciliation without repeating a mutation.
   minor contract registration and generated guidance growth. No gating regression
   or acknowledgement is introduced. Its reported architecture edge from
   `gates/payloads.py` to `runtime.py` is also present on the base revision.
-- Very long execution ledgers may approach the ordinary cap; no real overflow
-  was reproduced. Root examples omit the compact field, but the shared skill
+- Root examples omit the compact field, but the shared skill
   rule applies. No guidance consumes the removed dry-run top-level `argv`;
   apply retains its record. Overflow omits `request_id` after stopping the run.

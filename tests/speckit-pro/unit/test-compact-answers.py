@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import itertools
 import subprocess
 import tempfile
 import sys
@@ -16,6 +17,7 @@ sys.path.insert(0, str(REPO / "speckit-pro"))
 sys.path.insert(0, str(REPO / "tests/speckit-pro/lib"))
 from speckit_pro_runner.envelope import parse_request, response  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
+from speckit_pro_runner.execution_control import execution_control  # noqa: E402
 from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noqa: E402
 from speckit_pro_runner.helpers.read_only import (  # noqa: E402
     PLAN_REPAIR_MESSAGE_LIMIT_BYTES,
@@ -82,6 +84,119 @@ class CompactAnswerTests(unittest.TestCase):
         with patch("speckit_pro_runner.helpers.registry.dispatch_helper", return_value=body):
             result = handle_request(self.request("count-markers", answer_format="detailed"))
         self.assertEqual(result, body)
+
+
+class CompactExecutionProjectionTests(unittest.TestCase):
+    request = CompactAnswerTests.request
+
+    def test_execution_history_projection_keeps_refusals_and_nested_results(self):
+        ledger = {"run_id": "existing-run", "dispatches": {"old": {"outcome": "completed"}},
+                  "corrective_epochs": [{"dispatches": {"old-fix": {"outcome": "failed"}}}],
+                  "excluded_intervals": [{"evidence": "large history " * 2000}]}
+        for disposition in ("continue", "defer", "checkpoint_required"):
+            data = {"helper_id": "execution-control", "ledger": ledger, "ledger_path": "feature/ledger.json",
+                    "disposition": disposition, "reasons": ["fixture-reason"], "dispatch_id": "existing-worker",
+                    "authorization_granted": False, "checkpoint_due": True}
+            status = "ok" if disposition == "continue" else "expected_failure"
+            for wrapped in (False, True):
+                body = response(status, data={"result": data} if wrapped else data)
+                before = json.dumps(body, sort_keys=True)
+                with self.subTest(disposition=disposition, wrapped=wrapped), patch(
+                        "speckit_pro_runner.helpers.registry.dispatch_helper", return_value=body):
+                    answer = handle_request(self.request("execution-control"))
+                    self.assertEqual(answer["status"], status)
+                    projected = answer["data"]["result"] if wrapped else answer["data"]
+                    self.assertEqual(projected, {**data, "ledger": {"run_id": "existing-run"}})
+                    self.assertEqual(json.dumps(body, sort_keys=True), before)
+
+    def test_other_helpers_keep_their_ledger_evidence(self):
+        body = response("ok", data={"helper_id": "other-helper", "ledger": {"dispatches": ["evidence"]}})
+        with patch("speckit_pro_runner.helpers.registry.dispatch_helper", return_value=body):
+            answer = handle_request(self.request("count-markers"))
+        self.assertEqual(answer["data"], body["data"])
+
+
+class CompactExecutionTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name).resolve()
+        (self.root / ".specify").mkdir()
+        (self.root / "feature").mkdir()
+        (self.root / "feature/workflow.md").write_text("# Workflow\n")
+        self.binding = {"workflow_file": "feature/workflow.md"}
+        started = execution_control(self.root, {**self.binding, "action": "start"}, "apply")
+        self.binding["expected_run_id"] = started["ledger"]["run_id"]
+        self.ledger_path = self.root / started["ledger_path"]
+        reserved = execution_control(self.root, {**self.binding, "action": "reserve",
+                                               "dispatch_id": "seed", "kind": "implementation"}, "apply")
+        self.seed = reserved["ledger"]
+
+    def invoke(self, payload, action, count, state, mode="apply", answer_format="compact"):
+        ledger = {**self.seed, "dispatches": {f"implementation-{i}": dict(self.seed["dispatches"]["seed"])
+                                             for i in range(count)}}
+        self.ledger_path.write_text(json.dumps(ledger))
+        # A public read validates the fixture rather than trusting a hand-built ledger.
+        execution_control(self.root, {**self.binding, "action": "status"}, "read_only")
+        state_path = self.root / "feature/autopilot-state.json"
+        state_path.write_text(state)
+        before = self.ledger_path.read_bytes()
+        inputs = {**self.binding, "action": action}
+        if action == "reserve":
+            inputs.update(dispatch_id="next-worker", kind="implementation")
+        raw = {"schema_version": "1.0", "helper_id": "execution-control", "operation": "execution-control",
+               "request_id": "applied-result", "mode": mode, "answer_format": answer_format, "inputs": inputs}
+        done = subprocess.run([sys.executable, str(REPO / payload / "scripts/run-speckit-pro.py")],
+                              input=json.dumps(raw), capture_output=True, text=True, cwd=self.root,
+                              check=False, timeout=30)
+        answer = json.loads(done.stdout)
+        # Check durable effects even when the envelope loses the answer.
+        persisted = execution_control(self.root, {**self.binding, "action": "status"}, "read_only")["ledger"]
+        self.assertEqual(len(persisted["dispatches"]), count + (action == "reserve" and mode == "apply"))
+        if mode != "apply":
+            self.assertEqual(self.ledger_path.read_bytes(), before)
+        self.assertEqual(state_path.read_text(), state)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(answer["status"], "ok", answer)
+        self.assertEqual(answer["data"]["ledger"]["run_id"], self.binding["expected_run_id"])
+        self.assertEqual(answer["data"]["disposition"], "continue")
+        self.assertFalse(answer["data"]["authorization_granted"])
+        if action == "reserve":
+            self.assertEqual(answer["data"]["dispatch_id"], "next-worker")
+            self.assertEqual(persisted["dispatches"].get("next-worker", {}).get("outcome"),
+                             "reserved" if mode == "apply" else None)
+        if answer_format == "compact":
+            self.assertLessEqual(len(done.stdout.encode()) + len(done.stderr.encode()), 16384)
+            self.assertEqual(answer["data"]["ledger"], {"run_id": self.binding["expected_run_id"]})
+        else:
+            self.assertEqual(answer["data"]["ledger"], persisted)
+        if mode == "apply":
+            self.assertEqual([diag["code"] for diag in answer["diagnostics"]], ["state_mirror_not_refreshed"])
+            if answer_format == "compact":
+                self.assertIn("action=status mode=apply", answer["next_action"])
+        else:
+            self.assertEqual(answer["diagnostics"], [])
+
+    def check_mirror_failure_matrix(self, action):
+        payloads = ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro")
+        for payload, count, state in itertools.product(payloads, (109, 110, 300), ("[]", "{not json")):
+            with self.subTest(action=action, payload=payload, count=count, state=state):
+                self.invoke(payload, action, count, state)
+
+    def test_compact_status_retains_applied_result_when_the_state_mirror_fails(self):
+        self.check_mirror_failure_matrix("status")
+
+    def test_compact_reserve_retains_applied_result_when_the_state_mirror_fails(self):
+        self.check_mirror_failure_matrix("reserve")
+
+    def test_detailed_applied_results_and_non_apply_mirror_controls(self):
+        for action in ("status", "reserve"):
+            for state in ("[]", "{not json"):
+                for mode, answer_format in (("apply", "detailed"), ("read_only", "compact"), ("dry_run", "compact")):
+                    if action == "reserve" and mode == "read_only":
+                        continue  # Mutating actions intentionally reject read_only mode.
+                    with self.subTest(action=action, state=state, mode=mode, answer_format=answer_format):
+                        self.invoke("speckit-pro", action, 110, state, mode, answer_format)
 
 
 class CompactLauncherTests(unittest.TestCase):

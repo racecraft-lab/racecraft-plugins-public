@@ -20,6 +20,39 @@ agents were still running.
   `in_progress`, or any ledger dispatch is `reserved`, `running` or `unknown`.
   The plan terminal and completed-work checkpoints own their pushes.
 
+## Compact applied-result repair
+
+Finding `F1363-d2805a40` exposed full execution-ledger history competing with
+the applied action and mirror warning for the compact envelope's 16 KiB budget.
+The envelope now projects execution-control's ledger to `run_id` on every
+compact path. The full ledger remains durable at `ledger_path`, and detailed
+responses retain it. The action's other fields and diagnostics are preserved.
+
+`test-compact-answers.py` exercises validated ledgers with 109, 110 and 300
+implementation dispatches through source, Claude and Codex launchers:
+
+- `test_compact_status_retains_applied_result_when_the_state_mirror_fails`:
+  apply status with JSON-array and invalid-JSON state, preserving run identity,
+  disposition, warning, remediation and the wire-size cap after the durable write.
+- `test_compact_reserve_retains_applied_result_when_the_state_mirror_fails`:
+  the same states and sizes for reserve, proving the next dispatch is durably
+  reserved and its returned ID is retained.
+- `test_detailed_applied_results_and_non_apply_mirror_controls`: detailed
+  status/reserve retain the complete result; read-only status and dry-run
+  status/reserve leave ledger and state bytes unchanged and emit no mirror warning.
+- `test_execution_history_projection_keeps_refusals_and_nested_results`:
+  history in other ledger fields (epochs and excluded intervals), nested result
+  wrappers, continue/defer/checkpoint dispositions, false authorization, action
+  fields and detailed-result immutability. `test_other_helpers_keep_their_ledger_evidence`
+  limits this projection to execution-control.
+
+The adversarial pass follows the ledger through the helper's durable-write,
+mirror-warning and envelope windows. Projection occurs after all three helper
+actions (execution-control, execute-verification and task-results) are routed;
+only execution-control's tagged result is projected. The shared source and both
+regenerated payloads use the same rule. No pathname lookup, link traversal,
+rename handling or ledger validation changes in this repair.
+
 ## Known limits
 
 - **Plan-row deferral is wider than "agents pending".** The canonical plan
