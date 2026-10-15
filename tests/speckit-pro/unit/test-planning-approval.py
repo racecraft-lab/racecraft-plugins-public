@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Planning approval at the portable runner request seam."""
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -78,9 +79,11 @@ class PlanningApprovalTest(unittest.TestCase):
         root = Path(__file__).resolve().parents[3]
         for name in ("docs/adr/0013-plan-approval-record.md", "docs/adr/0017-recorded-plan-approval.md",
                      ".github/pull_request_template.md", "GLOSSARY.md", "speckit-pro/skills/speckit-autopilot/SKILL.md",
-                     "speckit-pro/skills/speckit-autopilot/references/planning-approval.md"):
-            text = (root / name).read_text()
-            self.assertNotRegex(text, r"(?i)\b(?:is|provides|ensures|guarantees)\s+(?:a\s+)?tamper[- ]?proof\b")
+                     "speckit-pro/skills/speckit-autopilot/references/planning-approval.md",
+                     "speckit-pro/agents/phase-executor.md"):
+            for line in (root / name).read_text().splitlines():
+                if re.search(r"(?i)tamper[- ]?proof", line):
+                    self.assertRegex(line, r"(?i)\b(?:not|never|nothing|no)\b", f"{name}: {line}")
 
     def test_workflow_normalization_preserves_acceptance_requirements(self):
         path = self.feature / "workflow.md"
@@ -165,7 +168,7 @@ class PlanningApprovalTest(unittest.TestCase):
         revised["supersedes"] = first["record_path"]
         self.assertEqual(self.call("record", "apply", approval=revised)["status"], "ok")
         (self.feature / "plan.md").write_text("A plan")
-        self.assertEqual(self.call("verify")["status"], "input_error")
+        self.assertRefused(self.call("verify"), "subsequent supersession")
 
 
 class WorkflowPlanningApprovalTest(PlanningApprovalTest):
