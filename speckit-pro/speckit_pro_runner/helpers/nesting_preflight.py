@@ -9,15 +9,13 @@ cannot write the run's existing autopilot-state.json.
 
 from __future__ import annotations
 
-import json
-import os
 from pathlib import Path
 from typing import Any
 
-from ..atomic_write import file_identity, open_safe_parent_fd, snapshot_write_target_fd, write_bytes_atomic
+from .. import autopilot_state
 from ..envelope import diagnostic, response
 from ..json_schema import json_values_equal
-from ..strict_input import require_text, unique_object
+from ..strict_input import require_text
 from ..trusted_io import resolve_repo_root
 
 SCHEMA_VERSION = "nesting-mode/v1"
@@ -88,29 +86,7 @@ def nesting_evidence_matches(data: dict[str, Any]) -> bool:
 
 def persist_nesting_mode(root: Path, state_file: Any, envelope: dict[str, Any]) -> None:
     """Preserve the current state and replace only its nesting record, refusing stale writes."""
-    relative = Path(require_text(state_file, "state_file"))
-    if relative.is_absolute() or any(part.casefold() == ".git" for part in relative.parts):
-        raise ValueError("state_file must be a repository-relative state path outside .git")
-    if relative.name != "autopilot-state.json":
-        raise ValueError("state_file must name an autopilot-state.json file")
-    target = root / relative
-    opened = open_safe_parent_fd(target, root, create=False)
-    if opened is None:
-        raise ValueError("state_file parent is missing")
-    parent_fd, name, _ = opened
-    try:
-        snapshot = snapshot_write_target_fd(parent_fd, name)
-        snapshot["parent"] = file_identity(os.fstat(parent_fd))
-    finally:
-        os.close(parent_fd)
-    if not snapshot["exists"]:
-        raise ValueError("state_file must already exist")
-    state = json.loads(snapshot["content"], object_pairs_hook=unique_object)
-    if not isinstance(state, dict):
-        raise ValueError("state_file must hold a JSON object")
-    state["nesting_mode"] = envelope
-    content = (json.dumps(state, indent=2, allow_nan=False) + "\n").encode("utf-8")
-    write_bytes_atomic(target, content, trust_root=root, expected_snapshot=snapshot)
+    autopilot_state.update(root, state_file, lambda state: state.update(nesting_mode=envelope))
 
 
 def apply_nesting_preflight_helper(entry: Any, request: Any) -> dict[str, Any]:
