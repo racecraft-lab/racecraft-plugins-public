@@ -239,6 +239,15 @@ class OperatorInstalledCliTest(unittest.TestCase):
                 with self.subTest(copy=name, cli=cli, **install), self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
                     load(name).probe_search_path(root, cli)
 
+    def assert_forms_rejected(self, forms) -> None:
+        for cli, form in itertools.product(OPERATOR_CLIS, forms):
+            with operator_tree() as (base, root, directory):
+                form(base, root, directory, cli)
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli, form=form.__name__), \
+                            self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                        load(name).probe_search_path(root, cli)
+
     def test_operator_owned_docker_and_host_installs_stay_rejected(self) -> None:
         for cli in ("docker", *HOSTS):
             self.assert_rejected(cli)
@@ -256,23 +265,11 @@ class OperatorInstalledCliTest(unittest.TestCase):
 
         A chain into the worktree is rejected by the traversal rule before any alias check runs.
         """
-        for cli, form in itertools.product(OPERATOR_CLIS, ALIAS_FORMS):
-            with operator_tree() as (base, root, directory):
-                form(base, root, directory, cli)
-                for name in COPIES:
-                    with self.subTest(copy=name, cli=cli, form=form.__name__), \
-                            self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
-                        load(name).probe_search_path(root, cli)
+        self.assert_forms_rejected(ALIAS_FORMS)
 
     def test_worktree_symlink_reaching_the_lookup_chain_is_rejected(self) -> None:
         """A write through a worktree symlink must not be able to change or replace an accepted install."""
-        for cli, form in itertools.product(OPERATOR_CLIS, WORKTREE_LINK_FORMS):
-            with operator_tree() as (base, root, directory):
-                form(base, root, directory, cli)
-                for name in COPIES:
-                    with self.subTest(copy=name, cli=cli, form=form.__name__), \
-                            self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
-                        load(name).probe_search_path(root, cli)
+        self.assert_forms_rejected(WORKTREE_LINK_FORMS)
 
     def test_unrelated_worktree_links_keep_the_install(self) -> None:
         """A virtual-environment link elsewhere, a dangling link and a link loop reach nothing on the lookup chain."""
