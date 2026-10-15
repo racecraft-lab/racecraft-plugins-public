@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/atomic_write.py",
         "display": "speckit_pro_runner/atomic_write.py"
       },
-      "sha256": "8036e752139c0583a7aa572ef6d4ce202671ce0af0afdd7db33f731d09b6b9d6"
+      "sha256": "fa42b65b08d830daf2dd293b8d7d0e7147fc41d0ccfb75b33f3ef8d1fee30ea3"
     },
     {
       "path": {
@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/autopilot_state.py",
         "display": "speckit_pro_runner/autopilot_state.py"
       },
-      "sha256": "b60103bd7485f2a6d2e5202e18783a53751d4f6b4633e7e9b888224dc84a8522"
+      "sha256": "5598ddd95abdff2d15b60ba73ec3d0774be60f42a7a68c712bdb0cc47d235a93"
     },
     {
       "path": {
@@ -319,7 +319,7 @@
         "value": "speckit_pro_runner/formal/lifecycle.py",
         "display": "speckit_pro_runner/formal/lifecycle.py"
       },
-      "sha256": "f5ad106003ce72cc876368fe7a1579908830031c4e81385b557e1428606f1db2"
+      "sha256": "fd5c6dc28b2c9fc2c5f256cb5676d43ff448c0f906de12dcc8e6133047dcc265"
     },
     {
       "path": {

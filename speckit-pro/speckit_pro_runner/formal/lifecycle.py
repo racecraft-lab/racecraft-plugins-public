@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -131,17 +132,18 @@ def state_path(root: Path, workflow: str, value: str) -> Path:
     return path
 
 
+def mirror_formal_checkpoint(state: dict[str, Any], *, workflow: str, record: dict[str, Any]) -> None:
+    """Replace one formal checkpoint without dropping the other state fields."""
+    formal = state.get("formal_checkpoints", {})
+    if not isinstance(formal, dict) or not isinstance(formal.get("checkpoints", {}), dict):
+        raise SelectionError("Malformed formal_checkpoints state mirror")
+    checkpoints = formal.get("checkpoints", {})
+    checkpoint = record["checkpoint"]
+    checkpoints[checkpoint] = {key: record[key] for key in ("verdict", "fingerprint", "evidence")}
+    state["formal_checkpoints"] = {"schema_version": "1.0", "workflow_file": workflow,
+                                   "selection": record["selection"], "checkpoints": checkpoints}
+
+
 def mirror_checkpoint(root: Path, workflow: str, value: str, record: dict[str, Any]) -> None:
     state_path(root, workflow, value)
-
-    def mirror(state: dict[str, Any]) -> None:
-        formal = state.get("formal_checkpoints", {})
-        if not isinstance(formal, dict) or not isinstance(formal.get("checkpoints", {}), dict):
-            raise SelectionError("Malformed formal_checkpoints state mirror")
-        checkpoints = formal.get("checkpoints", {})
-        checkpoint = record["checkpoint"]
-        checkpoints[checkpoint] = {key: record[key] for key in ("verdict", "fingerprint", "evidence")}
-        state["formal_checkpoints"] = {"schema_version": "1.0", "workflow_file": workflow,
-                                       "selection": record["selection"], "checkpoints": checkpoints}
-
-    autopilot_state.update(root, value, mirror)
+    autopilot_state.update(root, value, partial(mirror_formal_checkpoint, workflow=workflow, record=record))

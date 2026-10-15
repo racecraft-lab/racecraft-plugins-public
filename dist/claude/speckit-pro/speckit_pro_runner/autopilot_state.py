@@ -31,6 +31,7 @@ def snapshot(root: Path, target: Path) -> dict[str, Any]:
         try:
             captured = snapshot_write_target_fd(parent_fd, name, byte_limit=MAX_STATE_BYTES)
             captured["parent"] = file_identity(os.fstat(parent_fd))
+            captured["byte_limit"] = MAX_STATE_BYTES
         finally:
             os.close(parent_fd)
         return captured
