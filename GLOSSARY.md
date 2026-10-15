@@ -119,15 +119,15 @@ The fixed, size-capped result a phase driver returns: the phase, its status, the
 _Avoid_: phase summary, handoff note
 
 **Flat mode**:
-How the plan stage runs when the host cannot nest subagents two levels deep: the root dispatches each phase's executors directly, under the compact-answer contract. The canary receipt records it, and a run never fails just for being flat.
+How the plan stage runs when the operator requests flat or the host cannot nest subagents two levels deep: the root dispatches each phase's executors directly, under the compact-answer contract. The canary receipt records it, and a run never fails just for being flat.
 _Avoid_: degraded mode, fallback run
 
 **Nesting preflight**:
-The once-per-run test of whether the active host really lets a subagent spawn a child, run through `resolve-nesting-mode`. An observed spawn selects nested mode; anything else selects flat mode. A configured depth is recorded and never decides, and depth never fails a run.
+The once-per-run test of whether the active host really lets a subagent spawn a child, run through `resolve-nesting-mode`. An operator flat request restricts the result to flat; otherwise an observed spawn selects nested mode and anything else selects flat. A nested request cannot override a refused probe. The request and configured depth are recorded; depth never decides or fails a run.
 _Avoid_: depth check, depth gate
 
 **Nested mode**:
-How the plan stage runs when the nesting preflight observed a two-level spawn: phase drivers run each phase below the root. The canary receipt records it.
+How the plan stage runs when the nesting preflight observed a two-level spawn and the operator has not requested flat: phase drivers run each phase below the root. The canary receipt records it.
 _Avoid_: deep mode
 
 **Compact answer**:

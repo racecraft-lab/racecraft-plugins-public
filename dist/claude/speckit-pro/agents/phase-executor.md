@@ -95,6 +95,8 @@ Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
    command, spawn exactly one child agent as it asks, touch no files, and reply with the
    single `NESTED_SPAWN=` line it names. A refused spawn or a missing spawn tool is
    `NESTED_SPAWN=refused`, not a blocker.
+   Report only capability: an allowed probe never authorizes this agent to
+   select nested mode itself.
 
 7. **Nested mode:** `Mode: nested`, `Phase:` and the phase brief select the Phase driver. Before acting, read
    `<plugin-root>/skills/speckit-autopilot/references/phase-execution.md#nested-mode-phase-driver`; its driver rules override flat delegation and summary rules.

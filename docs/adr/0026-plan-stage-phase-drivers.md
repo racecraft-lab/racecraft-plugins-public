@@ -43,7 +43,11 @@ We decided five things.
    agent threads; V2 ignores it ([Codex 0.160.0 source](https://github.com/openai/codex/blob/rust-v0.160.0/codex-rs/config/src/config_toml.rs)).
    Prerequisites explain how to enable two-level nesting on hosts that enforce
    a depth limit. A configured depth alone does not select flat mode, and depth
-   never fails a run.
+   never fails a run. (Amended 2026-10-15: an operator can also hold a
+   nest-capable host to flat with `SPECKIT_PLAN_STAGE_MODE=flat`, which the
+   runner reads, so Gate 8 can run Codex in flat mode
+   ([#1359](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1359)).
+   A nested request never overrides a refused probe.)
 
 Proof comes in two parts. Repo tests fail first: the terminal helper finishes
 in one call, each helper answer and envelope stays under its cap, and skill
