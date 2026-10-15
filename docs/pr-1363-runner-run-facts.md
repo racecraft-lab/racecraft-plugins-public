@@ -59,3 +59,14 @@ agents were still running.
   order; diffs of the state file may reorder once.
 - **The clock tests live in test-plan-stage-terminal.py**, not the
   test-autopilot-stage-resolution.py the issue proposed.
+- **A hand-repaired state can hide reserved dispatches from the hook.** After a
+  `state_mirror_not_refreshed` warning, an agent that rewrites the state by hand
+  without the `status mode=apply` refresh leaves no bound mirror. With no
+  pending plan row, the hook then asks for a push while ledger agents are still
+  reserved or running. Not blocking: it fails closed (an extra push demand),
+  the canonical plan keeps rows `pending` during a run, and the warning's
+  remediation names the refresh call.
+- **The mirror warning catches only `ValueError`, `OSError` and `TypeError`.**
+  A `RecursionError` from a deeply nested state file would escape the
+  applied-result path. Unreachable in practice: it needs a deliberately crafted
+  state file.
