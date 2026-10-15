@@ -170,6 +170,9 @@ class PlanningApprovalTest(unittest.TestCase):
 
 class WorkflowPlanningApprovalTest(PlanningApprovalTest):
     def assertWorkflowEdit(self, before, after, *, preserves=False):
+        # Each scenario has independent approval history and confirmation evidence.
+        for record in (self.feature / "plan-approvals").glob("*.json"):
+            record.unlink()
         # An excluded edit must not hide a planning choice after the excluded region.
         choice = "\n## Security plan\n- [x] Allow external requests\n"
         path = self.feature / "workflow.md"
@@ -224,13 +227,11 @@ class WorkflowPlanningApprovalTest(PlanningApprovalTest):
                 self.assertWorkflowEdit(before, before.replace("[ ]", "[x]"), preserves=True)
 
     def test_fenced_checkbox_state_invalidates_approval(self):
-        for fence in ("```", "~~~"):
-            with self.subTest(fence=fence):
-                before = f"{fence}text\n- [x] Require review\n{fence}\n"
-                self.assertWorkflowEdit(before, before.replace("[x]", "[ ]"))
-                self.assertWorkflowEdit(before, before.replace("[x]", "[X]"))
-                # Also check that unchanged fenced input does not disable later binding.
-                self.assertWorkflowEdit(before, before, preserves=True)
+        for before in ("```text\n- [x] Require review\n```\n", "~~~text\n- [x] Require review\n~~~\n"):
+            self.assertWorkflowEdit(before, before.replace("[x]", "[ ]"))
+            self.assertWorkflowEdit(before, before.replace("[x]", "[X]"))
+            # Also check that unchanged fenced input does not disable later binding.
+            self.assertWorkflowEdit(before, before, preserves=True)
 
     def test_planning_choice_text_invalidates_approval(self):
         before = "## Security plan\n- [x] Require review\n"
