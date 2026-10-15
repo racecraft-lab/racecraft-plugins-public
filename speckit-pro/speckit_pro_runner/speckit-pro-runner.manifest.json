@@ -84,6 +84,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/autopilot_state.py",
+        "display": "speckit_pro_runner/autopilot_state.py"
+      },
+      "sha256": "301e4b4140fabdaa8dbca00702bfdede01a2e04a49a52fce7b57a34d0419852a"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/canonical_json.py",
         "display": "speckit_pro_runner/canonical_json.py"
       },
@@ -311,7 +319,7 @@
         "value": "speckit_pro_runner/formal/lifecycle.py",
         "display": "speckit_pro_runner/formal/lifecycle.py"
       },
-      "sha256": "6ece16ef8d8ae7372a4f2c66217083a3b9815e68962cb18a9d18351441692913"
+      "sha256": "3bf9cf19fabb612861940417d402d7efa617da2b3f6019e5e015093f36a04cbd"
     },
     {
       "path": {
@@ -599,7 +607,7 @@
         "value": "speckit_pro_runner/helpers/execution_requests.py",
         "display": "speckit_pro_runner/helpers/execution_requests.py"
       },
-      "sha256": "0d5a27747b7e5dce6986cda0432d3f5ec1c906311d7f9ec6b2dbc7a8333f2dc1"
+      "sha256": "99d7aeab959468d06372effb0dfa11a5b9e7841f872267d6d803e9d40f20ed2d"
     },
     {
       "path": {
@@ -703,7 +711,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "c27289f5942e6a81349b4803f056b62327ab4f5c37b3daf45258430fbac72e30"
+      "sha256": "00a81c50e3b90079472ab3a02acebd6cf0122aba9d4442ff94515f28dd615bc3"
     },
     {
       "path": {
@@ -999,7 +1007,7 @@
         "value": "speckit_pro_runner/stop_policy.py",
         "display": "speckit_pro_runner/stop_policy.py"
       },
-      "sha256": "81fda70991e7079ba6036264aec7b13270f9d091dbbb2a559e00e4843376e885"
+      "sha256": "efcdde250a4cba413acb2f0ceabb47dc0e8ebd7f764e19892d82240eb8ce7c37"
     },
     {
       "path": {

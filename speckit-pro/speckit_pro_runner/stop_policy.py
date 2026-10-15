@@ -13,6 +13,8 @@ Each reason has exactly one class:
 
 from __future__ import annotations
 
+from typing import Any
+
 AUTHORITY = "authority"
 EXHAUSTED = "exhausted"
 HARM_HALT = "harm_halt"
@@ -52,3 +54,9 @@ def stop_class(reason: str) -> str:
         return STOP_REASONS[reason]
     except KeyError:
         raise ValueError(f"unknown stop reason: {reason!r}") from None
+
+
+def publication_pending(state: dict[str, Any], dispatches: dict[str, Any]) -> bool:
+    """Pending phase work or unsettled agents defer the terminal unpushed-commit check."""
+    return (any(row.get("status") in {"pending", "in_progress"} for row in state.get("plan", []))
+            or any(item.get("outcome") in {"reserved", "running", "unknown"} for item in dispatches.values()))

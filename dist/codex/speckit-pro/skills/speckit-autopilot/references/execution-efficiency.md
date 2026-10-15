@@ -361,16 +361,18 @@ and recovered dispatch results. Operator retry, continuation, and exception
 approvals share that rule. Changing the action or kind does not make a
 consumed event new; obtain a distinct genuine parent event for each transition.
 
-After a successful or `expected_failure` ledger response, the native orchestrator
-mirrors `result.data` fields `ledger_path`, `disposition`, `reasons`,
-`elapsed_seconds`, and `checkpoint_due`, plus `result.data.ledger.run_id`, into
-the optional `autopilot-state.json.execution_control` object. These fields are
-directly in `data`, not `data.stdout_json`. The helper writes its durable ledger,
-not the one-run status file; workers do not own this mirror. Preserve the existing
-top-level status and pending plan rows. An input error has diagnostics, not a
-new mirror. On resume, read the live helper result before refreshing the mirror;
-a stale mirror never initializes, overwrites, or resets a ledger. This record
-is for user visibility, not independent proof of authority or completed work.
+In `mode=apply`, the `execution-control` helper refreshes an existing
+`autopilot-state.json` beside the workflow: it stamps UTC `updated_at` and
+projects `ledger_path`, `run_id`, `disposition`, `reasons`, `elapsed_seconds`,
+and `checkpoint_due` from the ledger into `execution_control`. The shared state
+writer also refreshes these facts at the plan terminal and formal checkpoint
+writes. Elapsed time uses the ledger's clock and evidenced wait exclusions.
+After the native orchestrator changes plan rows or status, call `action=status` in
+`mode=apply` with the unchanged run binding. Read-only and dry-run calls leave
+state untouched. Workers leave this mirror to the runner, which preserves the
+top-level status and pending plan rows. A stale mirror never initializes,
+overwrites, or resets a ledger. This record is for user visibility,
+not independent proof of authority or completed work.
 
 One corrective cycle per failure family and two corrective cycles per spec
 are the shared ceilings. The operator-approved infrastructure recovery above

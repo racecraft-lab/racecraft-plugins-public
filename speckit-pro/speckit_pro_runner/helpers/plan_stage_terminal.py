@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from .. import artifact_review, cli_probe, stop_policy
+from .. import artifact_review, autopilot_state, cli_probe, stop_policy
 from ..atomic_write import write_bytes_atomic
 from ..envelope import RunnerRequest, diagnostic, response
 from ..trusted_io import resolve_repo_root, trusted_bytes
@@ -398,9 +398,13 @@ def record_pull_request(run: Run, found: dict[str, Any], pages: dict[str, Any]) 
     """Write the `Draft PR` row whole and `plan/completed`, in the separate bookkeeping commit."""
     total = len(pages["selected"]) or len(pages["gaps"])
     note = f" — {len(pages['gaps'])} of {total} artifacts missing" if pages["gaps"] else ""
-    write(run.root, run.workflow, set_basic_row(workflow_text(run), "Draft PR", f"[#{found['number']}]({found['url']}){note}"))
+    previous = workflow_text(run)
+    recorded = set_basic_row(previous, "Draft PR", f"[#{found['number']}]({found['url']}){note}")
     state = json.loads(text_of(run.root, run.state))
-    write(run.root, run.state, json.dumps({**state, "stage": "plan", "status": "completed"}, indent=2) + "\n")
+    completed = {**state, "stage": "plan", "status": "completed"}
+    if recorded != previous or state != completed:
+        autopilot_state.write_state(run.root, run.workflow, completed)
+        write(run.root, run.workflow, recorded)
     commit(run, [run.workflow, run.state], f"chore({run.info['spec id']}): record the draft pull request")
     push(run)
 

@@ -23,6 +23,7 @@ for _root in (SHARED_LIB, PLUGIN_ROOT):
         sys.path.insert(0, str(_root))
 
 from speckit_pro_runner.gates import active_path_guard  # noqa: E402
+from speckit_pro_runner.execution_control import execution_control  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HOOK = REPO_ROOT / "speckit-pro" / "scripts" / "workflow-guard-hook.py"
@@ -180,6 +181,12 @@ class WorkflowGuardHookTests(unittest.TestCase):
             state.parent.mkdir(parents=True)
             with self.subTest(msg="no autopilot state means no decision even with unpushed commits"):
                 self.assertEqual({}, run_hook("unpushed", stop)[1])
+            for progress in ("pending", "in_progress"):
+                with self.subTest(msg="agents still own unfinished plan work", progress=progress):
+                    state.write_text(json.dumps({"status": "in_progress", "plan": [
+                        {"step": "Phase 3: Plan", "status": progress},
+                    ]}), encoding="utf-8")
+                    self.assertEqual({}, run_hook("unpushed", stop)[1])
             state.write_text(json.dumps({"status": "in_progress"}), encoding="utf-8")
             with self.subTest(msg="active state with no upstream blocks and names the commit count"):
                 out = run_hook("unpushed", stop)[1]
@@ -202,6 +209,29 @@ class WorkflowGuardHookTests(unittest.TestCase):
             state.write_text("{not json", encoding="utf-8")
             with self.subTest(msg="an unreadable state fails open"):
                 self.assertEqual({}, run_hook("unpushed", stop)[1])
+
+
+class PendingAgentTests(unittest.TestCase):
+    def test_an_unsettled_ledger_agent_defers_push_with_no_pending_plan_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            git(root, "init", "-q")
+            workflow = "docs/ai/specs/.process/workflow.md"
+            (root / workflow).parent.mkdir(parents=True)
+            (root / workflow).write_text("# Workflow\n")
+            git(root, "add", ".")
+            git(root, "commit", "-qm", "seed")
+            control = execution_control(root, {"workflow_file": workflow, "action": "start"}, "apply")
+            binding = {"workflow_file": workflow, "expected_run_id": control["ledger"]["run_id"]}
+            execution_control(root, {**binding, "action": "reserve", "dispatch_id": "planner", "kind": "implementation"}, "apply")
+            state = root / "docs/ai/specs/.process/autopilot-state.json"
+            state.write_text(json.dumps({"workflow_file": workflow, "status": "in_progress", "plan": [],
+                                         "execution_control": {"ledger_path": control["ledger_path"],
+                                                               "run_id": binding["expected_run_id"]}}))
+            stop = {"hook_event_name": "Stop", "stop_hook_active": False, "cwd": str(root)}
+            self.assertEqual({}, run_hook("unpushed", stop)[1])
+            execution_control(root, {**binding, "action": "complete", "dispatch_id": "planner", "outcome": "completed"}, "apply")
+            self.assertEqual("block", run_hook("unpushed", stop)[1]["decision"])
 
 
 class HookMatcherExemptionTests(unittest.TestCase):
@@ -262,7 +292,7 @@ class RealHookManifestTests(unittest.TestCase):
 
 def build_suite() -> unittest.TestSuite:
     suite = unittest.TestSuite()
-    for case in (WorkflowGuardHookTests, HookMatcherExemptionTests, RealHookManifestTests):
+    for case in (WorkflowGuardHookTests, PendingAgentTests, HookMatcherExemptionTests, RealHookManifestTests):
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     return suite
 

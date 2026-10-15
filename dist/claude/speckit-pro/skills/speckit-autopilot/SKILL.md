@@ -152,6 +152,9 @@ The operator owns the session setting; the plugin does not veto it.
 
 At kickoff/resume, read [Bounded Execution and Verification](./references/execution-efficiency.md).
 Initialize/recover its durable execution-control ledger before phase dispatch.
+Leave run clock facts to the runner; after updating the one-run state, refresh
+it with the bound `execution-control action=status mode=apply` call described
+in that reference. Let in-flight workers finish before terminal publication.
 It owns task metadata, native batching, proof reuse, the shared repair
 ceilings, and the honest checkpoint rules across every phase, nested worker,
 and Post step. Agent replacement never resets budgets. A run has no

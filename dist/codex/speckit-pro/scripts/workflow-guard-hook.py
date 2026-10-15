@@ -11,11 +11,12 @@ invokes a different package manager is denied with
 ``tool_input.command`` string; the manifest's matcher is the only place the
 tool is named, which is the one field the installed-runtime guard exempts.
 
-``unpushed`` (Stop): while an autopilot run is active
+``unpushed`` (Stop): at a settled publication boundary of an active autopilot run
 (``docs/ai/specs/.process/autopilot-state.json`` with an in-flight status),
 a turn may not end with commits that the upstream branch does not have;
 the hook answers ``{"decision": "block", "reason": ...}``. It yields when
-``stop_hook_active`` is true so a blocked turn cannot loop.
+``stop_hook_active`` is true so a blocked turn cannot loop. Pending plan work
+or unsettled ledger dispatches defer publication checks to their terminal step.
 
 Anything unexpected fails open: the hook exits 0 with a note on stderr,
 because a broken guard must not lock an operator out of their own session.
@@ -34,6 +35,10 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+if sys.version_info >= (3, 11):
+    from speckit_pro_runner import autopilot_state, stop_policy  # noqa: E402
 
 HOOK_VERSION = "workflow-guard-v1"
 LOCKFILES = {
@@ -253,18 +258,19 @@ def lockfile_decision(data: dict[str, Any]) -> str | None:
     return None
 
 
-def active_state(root: Path) -> bool:
+def active_state(root: Path) -> dict[str, Any] | None:
     for directory in (root, *root.parents):
         state = directory / STATE_PATH
         if state.is_file():
             try:
-                status = json.loads(state.read_text(encoding="utf-8")).get("status")
+                value = json.loads(state.read_text(encoding="utf-8"))
+                status = value.get("status")
             except (OSError, ValueError, AttributeError):
-                return False
-            return status in ACTIVE_STATUSES
+                return None
+            return value if status in ACTIVE_STATUSES else None
         if (directory / ".git").exists():
             break
-    return False
+    return None
 
 
 def git_count(root: Path, *args: str) -> int | None:
@@ -284,7 +290,11 @@ def unpushed_decision(data: dict[str, Any]) -> str | None:
     if data.get("stop_hook_active") is True:
         return None
     root = work_root(data)
-    if not active_state(root):
+    state = active_state(root)
+    if state is None or stop_policy.publication_pending(state, {}):
+        return None
+    snapshot = autopilot_state.execution_snapshot(root, state.get("workflow_file", ""), state)
+    if snapshot is not None and stop_policy.publication_pending(state, snapshot["ledger"]["dispatches"]):
         return None
     ahead = git_count(root, "@{upstream}..HEAD")
     if ahead is None:

@@ -7,6 +7,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, NamedTuple
 
+from ..autopilot_state import mirror_execution_result
 from ..envelope import diagnostic, response
 from ..execution_control import execution_control
 from ..task_results import task_results
@@ -29,6 +30,8 @@ def run_execution_helper(entry: Any, request: Any) -> dict[str, Any]:
             "execution-control": partial(execution_control, finalizer=finalize_run),
             "execute-verification": execute_verification, "task-results": task_results}
         result = handlers[entry.helper_id](root, inputs, request.mode)
+        if entry.helper_id == "execution-control" and request.mode == "apply":
+            mirror_execution_result(root, inputs["workflow_file"], result)
     except (ValueError, OSError, TypeError) as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_execution_request", str(exc))])
