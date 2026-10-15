@@ -98,12 +98,13 @@ class PlanningApprovalTest(unittest.TestCase):
         root = Path(__file__).resolve().parents[3]
         for name in ASSURANCE_DOCUMENTS:
             for sentence in re.split(r"[.!?]", (root / name).read_text()):
-                if re.search(r"(?i)tamper[- ]?proof", sentence):
+                # Any non-word joint, including a wrapped line or a Unicode dash, spells the term.
+                if re.search(r"(?i)tamper[\W_]*proof", sentence):
                     # Accept only complete, explicit denials. A negation elsewhere
                     # in the document cannot exempt a positive assurance claim.
                     # Markdown soft line breaks stay inside their sentence.
-                    self.assertRegex(sentence.strip(),
-                                     r"(?i)\A(?:The approval is not|Nothing may describe it as) tamper[- ]?proof\Z",
+                    self.assertRegex(" ".join(sentence.split()),
+                                     r"(?i)\A(?:The approval is not|Nothing may describe it as) tamper[\W_]*proof\Z",
                                      f"{name}: {sentence}")
 
     def test_workflow_normalization_preserves_acceptance_requirements(self):
@@ -244,6 +245,12 @@ class AssuranceGuardTest(unittest.TestCase):
     def test_soft_line_breaks_do_not_separate_a_denial_from_its_qualifiers(self):
         self.assertClaimsRejected(("The approval is not tamper-proof\nunless the record is signed.",
                                    "The following statement is false:\nThe approval is not tamper-proof."))
+
+    def test_wrapped_and_unusual_term_spellings_are_still_claims(self):
+        joints = "\n", "-\n", "  ", " - ", "‐", "‑", "–", " "
+        self.assertClaimsRejected(map("The approval is tamper{}proof.".format, joints))
+        # A genuine denial wrapped across lines stays a denial.
+        self.checkAssuranceText("The approval is not\ntamper-proof.")
 
 
 class WorkflowPlanningApprovalTest(PlanningApprovalTest):
