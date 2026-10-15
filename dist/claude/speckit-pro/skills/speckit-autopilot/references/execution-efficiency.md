@@ -8,7 +8,8 @@ it does not replace their dispatch, authorization, or mandatory gate rules.
 
 Invoke runner helper `execution-control`, operation `execution-control`, with
 `inputs.workflow_file` and `inputs.action`. Use `mode=apply` for ledger changes
-(`dry_run` previews); `action=status` is `mode=read_only`.
+(`dry_run` previews). Use `action=status mode=read_only` to inspect the ledger,
+or `action=status mode=apply` to refresh its existing one-run state mirror.
 
 Every non-start action requires `inputs.expected_run_id` from the last genuine
 `result.data.ledger.run_id`. First-ever kickoff may omit it; a known resume
