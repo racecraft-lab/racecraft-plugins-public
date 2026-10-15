@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import itertools
 import os
 import sys
 from contextlib import contextmanager
@@ -34,6 +35,7 @@ def load(name: str):
 
 CLIS = ("codex", "claude", "git", "gh", "docker")
 HOSTS = ("codex", "claude")
+OPERATOR_CLIS = ("git", "gh")
 
 
 @contextmanager
@@ -106,8 +108,11 @@ class CliProbePathTrustTest(unittest.TestCase):
     def test_root_owned_read_only_executable_is_accepted(self) -> None:
         assert_probe(self, accepted=True)
 
-    def test_runner_owned_executable_is_rejected(self) -> None:
-        assert_probe(self, owned="file")
+    def test_runner_owned_docker_and_host_executables_are_rejected(self) -> None:
+        assert_probe(self, ("docker", *HOSTS), owned="file")
+
+    def test_runner_owned_operator_executable_is_accepted(self) -> None:
+        assert_probe(self, OPERATOR_CLIS, owned="file", accepted=True)
 
     def test_runner_writable_executable_is_rejected(self) -> None:
         assert_probe(self, writable="file")
@@ -122,9 +127,80 @@ class CliProbePathTrustTest(unittest.TestCase):
         assert_probe(self, ("git", "gh", "docker"), writable="directory", accepted=True)
 
 
+@contextmanager
+def operator_install(cli, mode=0o755, alias=None):
+    """A real PATH directory outside the worktree, owned by the test user, holding an executable stub.
+
+    `alias` names where a second hardlink to the stub lives: "outside" or "worktree".
+    """
+    with tempfile.TemporaryDirectory(prefix="cli-probe-operator-") as scratch:
+        base = Path(scratch).resolve()
+        root, directory = base / "worktree", base / "bin"
+        root.mkdir()
+        directory.mkdir()
+        stub = directory / cli
+        stub.write_text(f"#!/bin/sh\necho {cli}-operator-stub\n", encoding="utf-8")
+        stub.chmod(mode)
+        if alias:
+            os.link(stub, {"outside": base, "worktree": root}[alias] / f"alias-{cli}")
+        with patch.dict(os.environ, {"PATH": str(directory)}):
+            yield root, directory
+
+
+class OperatorInstalledCliTest(unittest.TestCase):
+    """A user-owned install outside the worktree (Homebrew on Apple silicon) serves git and gh, unmocked."""
+
+    def test_operator_owned_git_and_gh_are_found_and_run(self) -> None:
+        for cli, alias in itertools.product(OPERATOR_CLIS, (None, "outside")):
+            with operator_install(cli, alias=alias) as (root, directory):
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli, alias=alias):
+                        module = load(name)
+                        self.assertEqual(str(directory), module.probe_search_path(root, cli))
+                        result = module.probe(root, [cli, "--version"], allowed=(cli,), timeout=10)
+                        self.assertEqual((0, f"{cli}-operator-stub"), (result["exit_status"], result["stdout_tail"]))
+
+    def test_operator_owned_docker_and_host_installs_stay_rejected(self) -> None:
+        for cli in ("docker", *HOSTS):
+            with operator_install(cli) as (root, _directory):
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli), self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                        load(name).probe_search_path(root, cli)
+
+    def test_operator_owned_install_shared_with_other_writers_is_rejected(self) -> None:
+        for cli, mode in itertools.product(OPERATOR_CLIS, (0o775, 0o757)):
+            with operator_install(cli, mode) as (root, _directory):
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli, mode=oct(mode)), \
+                            self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                        load(name).probe_search_path(root, cli)
+
+    def test_operator_owned_install_aliased_by_a_worktree_name_is_rejected(self) -> None:
+        for cli in OPERATOR_CLIS:
+            with operator_install(cli, alias="worktree") as (root, _directory):
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli), self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                        load(name).probe_search_path(root, cli)
+
+    def test_unreadable_worktree_fails_closed_for_an_aliased_operator_install(self) -> None:
+        real_scandir = os.scandir
+
+        def unreadable(path=".", *args, **kwargs):
+            if Path(path).resolve().is_relative_to(root):
+                raise PermissionError(13, "Permission denied", str(path))
+            return real_scandir(path, *args, **kwargs)
+
+        for cli in OPERATOR_CLIS:
+            with operator_install(cli, alias="outside") as (root, _directory), patch("os.scandir", unreadable):
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli), self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                        load(name).probe_search_path(root, cli)
+
 
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(CliProbePathTrustTest)
+    loader = unittest.defaultTestLoader
+    return unittest.TestSuite([loader.loadTestsFromTestCase(CliProbePathTrustTest),
+                               loader.loadTestsFromTestCase(OperatorInstalledCliTest)])
 
 
 def main() -> int:
