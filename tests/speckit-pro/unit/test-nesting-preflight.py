@@ -36,12 +36,34 @@ def resolve(**inputs: object) -> dict:
 
 
 class ModeDecisionTests(unittest.TestCase):
+    def test_operator_can_hold_a_nest_capable_host_to_flat(self) -> None:
+        for host in ("claude-code", "codex"):
+            with self.subTest(host=host):
+                data = resolve(host=host, nested_spawn="allowed", requested_mode="flat")
+                self.assertEqual(("flat", "operator_requested_flat"), (data["mode"], data["reason"]))
+                self.assertEqual("flat", data["requested_mode"])
+                self.assertIsNone(data["prerequisite"])
+
     def test_the_observed_spawn_picks_the_mode_on_each_host(self) -> None:
         expected = {"allowed": ("nested", "nested_spawn_allowed", False), "refused": ("flat", "nested_spawn_refused", True)}
         for host, (outcome, (mode, reason, has_prerequisite)) in itertools.product(("claude-code", "codex"), expected.items()):
             with self.subTest(host=host, outcome=outcome):
                 data = resolve(host=host, nested_spawn=outcome)
                 self.assertEqual((mode, reason, has_prerequisite), (data["mode"], data["reason"], bool(data["prerequisite"])))
+
+    def test_requesting_nested_still_requires_an_observed_spawn(self) -> None:
+        expected = {"allowed": ("nested", "nested_spawn_allowed"), "refused": ("flat", "nested_spawn_refused"),
+                    "not_run": ("flat", "probe_not_run")}
+        for host, (outcome, result) in itertools.product(("claude-code", "codex"), expected.items()):
+            with self.subTest(host=host, outcome=outcome):
+                data = resolve(host=host, nested_spawn=outcome, requested_mode="nested")
+                self.assertEqual(result, (data["mode"], data["reason"]))
+                self.assertEqual("nested", data["requested_mode"])
+
+    def test_no_override_preserves_the_default_and_records_no_request(self) -> None:
+        data = resolve(host="codex", nested_spawn="allowed")
+        self.assertEqual(("nested", "nested_spawn_allowed"), (data["mode"], data["reason"]))
+        self.assertIsNone(data["requested_mode"])
 
     def test_a_configured_depth_alone_decides_neither_mode(self) -> None:
         for host, depth in (("claude-code", 3), ("claude-code", 1), ("codex", 2), ("codex", 0)):
@@ -86,6 +108,13 @@ class DepthNeverStopsTheRunTests(unittest.TestCase):
         data = resolve(host="claude-code", nested_spawn="refused", configured_depth=1)
         self.assertEqual("flat", data["mode"])
 
+    def test_malformed_requested_modes_degrade_to_flat(self) -> None:
+        for requested in (None, "", "auto", "FLAT", True, 1, ["flat"], {"mode": "flat"}):
+            with self.subTest(requested=requested):
+                data = resolve(host="codex", nested_spawn="allowed", requested_mode=requested)
+                self.assertEqual(("flat", "probe_invalid"), (data["mode"], data["reason"]))
+                self.assertIsNone(data["requested_mode"])
+
     def test_no_stop_policy_label_keys_on_depth(self) -> None:
         for path in (REPO_ROOT / "speckit-pro/speckit_pro_runner/stop_policy.py",
                      REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/stop-policy.md"):
@@ -110,8 +139,28 @@ class ReceiptModeTests(unittest.TestCase):
                     data["mode"], SCHEMA["properties"]["mode"], SCHEMA, "receipt.mode")
                 self.assertEqual([], failures)
 
+    def test_operator_flat_is_recorded_in_the_codex_receipt(self) -> None:
+        validator = load_script("canary_receipt", VALIDATOR)
+        fixtures = load_script("read_only_helper_fixtures", TEST_DIR / "test-speckit-pro-read-only-helpers.py")
+        data = resolve(host="codex", nested_spawn="allowed", requested_mode="flat")
+        receipt = fixtures.receipt()
+        receipt["mode"] = data["mode"]
+        self.assertEqual("flat", receipt["mode"])
+        self.assertEqual([], validator.validate_receipt(receipt))
+
 
 class SkillContractTests(unittest.TestCase):
+    def test_both_hosts_pass_the_operator_setting_unchanged(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                root = host_skill_root(host) / "speckit-autopilot"
+                text = (root / "SKILL.md").read_text(encoding="utf-8")
+                prerequisites = (root / "references/prerequisites.md").read_text(encoding="utf-8")
+                self.assertIn("SPECKIT_PLAN_STAGE_MODE", text)
+                self.assertIn("`requested_mode` unchanged", text)
+                self.assertIn("SPECKIT_PLAN_STAGE_MODE=flat", prerequisites)
+                self.assertIn("operator_requested_flat", prerequisites)
+
     def test_both_hosts_run_the_preflight_before_the_main_loop_and_dispatch_flat_otherwise(self) -> None:
         for host in ("claude", "codex"):
             text = (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")

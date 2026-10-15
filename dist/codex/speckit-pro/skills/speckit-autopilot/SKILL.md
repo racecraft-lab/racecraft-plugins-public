@@ -848,8 +848,17 @@ answered, or NESTED_SPAWN=refused if the spawn was refused or no spawn tool
 was available.` Set `nested_spawn` from that reply (`allowed`, `refused`, or
 `not_run` when the probe never returned), then request
 `helper_id=resolve-nesting-mode operation=resolve-nesting-mode mode=read_only`
-with inputs `host`, `nested_spawn` and `configured_depth`:
-`host=codex`; omit `configured_depth` unless `agents.max_depth` is set.
+with inputs `host`, `nested_spawn` and optional `configured_depth`:
+`host=codex`; pass `configured_depth` only when its effective integer value is
+known from the caller, otherwise omit it. Do not infer it from config files
+that may be overridden by the invocation.
+Both hosts read `SPECKIT_PLAN_STAGE_MODE` from the invocation environment with
+Python `os.environ`. If present, pass its value as `requested_mode` unchanged;
+if absent, omit that input. Do not trim, case-fold or replace an invalid value.
+See [Nesting prerequisite](./references/prerequisites.md#nesting-prerequisite)
+for the operator setting and runner-owned precedence. Consume only the
+returned `data.mode`; neither a successful probe nor a depth setting selects
+the dispatch path outside the helper.
 Persist the complete response as
 `nesting_mode` in `autopilot-state.json` and the workflow Notes; the canary
 receipt's `mode` is `data.mode`. When `data.mode` is `flat`, log

@@ -1,9 +1,9 @@
 """Nesting preflight: pick the plan-stage dispatch mode from an observed nested spawn (ADR 0026).
 
 The orchestrator dispatches one probe two levels deep and reports whether the nested spawn
-worked. A configured depth is recorded but never decides: Codex's `agents.max_depth` is ignored
-by its V2 backend. Depth never fails a run, so every input answers `ok`, and anything short of
-an observed allowed spawn means flat mode.
+worked. An operator may request flat mode even when nesting works; requesting nested mode
+never overrides a refused probe. A configured depth is recorded but never decides.
+Every input answers `ok`, and anything short of valid allowed evidence means flat mode.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from ..envelope import response
 SCHEMA_VERSION = "nesting-mode/v1"
 # Pinned to the `mode` enum in the canary receipt schema by test-nesting-preflight.py.
 MODES = ("flat", "nested")
-INPUTS = frozenset({"host", "nested_spawn", "configured_depth"})
+INPUTS = frozenset({"host", "nested_spawn", "configured_depth", "requested_mode"})
 SPAWN_OUTCOMES = frozenset({"allowed", "refused", "not_run"})
 PREREQUISITES = {
     "claude-code": (
@@ -38,11 +38,16 @@ def configured_depth(raw: Any) -> int | None:
 def nesting_mode(inputs: dict[str, Any]) -> dict[str, Any]:
     host = inputs.get("host")
     outcome = inputs.get("nested_spawn", "not_run")
+    requested = inputs.get("requested_mode")
+    valid_request = isinstance(requested, str) and requested in MODES
     valid = (isinstance(host, str) and host in PREREQUISITES and not set(inputs) - INPUTS
              and isinstance(outcome, str) and outcome in SPAWN_OUTCOMES
+             and ("requested_mode" not in inputs or valid_request)
              and ("configured_depth" not in inputs or configured_depth(inputs["configured_depth"]) is not None))
     if not valid:
         reason, mode = "probe_invalid", MODES[0]
+    elif requested == "flat":
+        reason, mode = "operator_requested_flat", MODES[0]
     elif outcome == "allowed":
         reason, mode = "nested_spawn_allowed", MODES[1]
     else:
@@ -54,6 +59,7 @@ def nesting_mode(inputs: dict[str, Any]) -> dict[str, Any]:
         "reason": reason,
         "host": known_host,
         "configured_depth": configured_depth(inputs.get("configured_depth")),
+        "requested_mode": requested if valid_request else None,
         "prerequisite": PREREQUISITES[known_host] if known_host and reason == "nested_spawn_refused" else None,
     }
 

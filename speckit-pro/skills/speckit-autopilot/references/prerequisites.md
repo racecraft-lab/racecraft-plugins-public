@@ -675,6 +675,18 @@ SKILL.md Step 1.5 and helper `resolve-nesting-mode`; when the host refuses a
 nested spawn, `data.prerequisite` tells the user the setting to change for the
 next run, and this run continues in flat mode. Missing depth never blocks a run.
 
+On either host, set `SPECKIT_PLAN_STAGE_MODE=flat` in the environment used to
+launch the session to hold the plan stage to flat mode, including a nest-capable
+Codex canary leg. Both hosts pass the value unchanged as `requested_mode` to
+`resolve-nesting-mode`. The runner records `data.requested_mode`, returns
+`data.mode=flat` with `data.reason=operator_requested_flat` for a valid flat
+request, and the canary receipt copies `data.mode`. `SPECKIT_PLAN_STAGE_MODE=nested`
+still requires an allowed nested spawn; a refused or missing probe stays flat.
+Leave the variable unset for the existing automatic selection. An empty or
+invalid value returns flat with `probe_invalid`; never normalize it or turn
+it into a nested request. A configured depth remains optional receipt metadata;
+omit it when the effective invocation value is unavailable.
+
 ## Step 0.8: Capability Coverage & Plugin Limitation Check
 
 The prerequisite script reports one `capability_coverage` advisory.
