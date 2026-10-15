@@ -417,7 +417,8 @@ environment the runner inherits; the orchestrator runs no command to read it.
 On Codex, a `shell_environment_policy` that drops inherited variables
 (`inherit` `core` or `none`, or an `include_only` list without it) hides the
 request, and the answer records `requested_mode: null`; keep the variable
-inherited or set it with `shell_environment_policy.set`.
+inherited or set it with `shell_environment_policy.set`. Any include allowlist
+must also permit `SPECKIT_PLAN_STAGE_MODE`, including values supplied by `set`.
 The runner records `data.requested_mode`, returns
 `data.mode=flat` with `data.reason=operator_requested_flat` for a valid flat
 request, and the canary receipt copies `data.mode`. `SPECKIT_PLAN_STAGE_MODE=nested`
