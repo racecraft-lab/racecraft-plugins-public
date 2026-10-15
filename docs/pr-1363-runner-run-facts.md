@@ -103,3 +103,14 @@ rename handling or ledger validation changes in this repair.
   A `RecursionError` from a deeply nested state file would escape the
   applied-result path. Unreachable in practice: it needs a deliberately crafted
   state file.
+- **Unknown-dispatch lists still grow in compact answers.** The ledger
+  projection removes dispatch history, but top-level `unknown_dispatch_ids`
+  and, on reserve, `blocked_by` list every unknown-outcome dispatch. A probe
+  returned `ok` at about 9.3 KB with 300 unknown dispatches on status; status
+  needs about 530 to overflow, reserve about half that. Unreachable on real
+  runs: an unknown dispatch blocks further reserves. Pre-existing; the
+  projection did not make it worse.
+- **The envelope names one helper.** `compact_decision_data` projects the
+  ledger only for `helper_id == "execution-control"`. A per-helper projection
+  hook would be cleaner ownership, but with one helper it would be speculative.
+  Move the rule to execution-control if a second helper needs a projection.

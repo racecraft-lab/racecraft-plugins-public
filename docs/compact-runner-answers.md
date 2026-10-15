@@ -8,8 +8,11 @@ default remains detailed for existing consumers.
 Execution-control compact answers project `ledger` to its `run_id`; the complete
 validated history remains at `ledger_path` and in detailed answers. Action
 results, disposition, refusal reasons, authorization, clock facts and mirror
-warnings retain their existing fields. Ledger growth therefore cannot displace
-an applied result or its state-refresh remediation from the compact answer.
+warnings retain their existing fields. Dispatch history therefore cannot
+displace an applied result or its state-refresh remediation from the compact
+answer. Top-level `unknown_dispatch_ids` (and `blocked_by` on reserve) still
+grow with unknown-outcome dispatches; overflow needs hundreds of them, and an
+unknown dispatch blocks further reserves.
 
 The cap includes serialized stdout and duplicate stderr diagnostics. Ordinary
 answers allow 16 KiB. The envelope alone selects caps: Tasks and Plan-repair
