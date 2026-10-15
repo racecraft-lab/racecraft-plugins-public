@@ -40,7 +40,9 @@ def run_execution_helper(entry: Any, request: Any) -> dict[str, Any]:
             mirror_execution_result(root, inputs["workflow_file"], result)
         except (ValueError, OSError, TypeError) as exc:
             warnings.append(diagnostic("state_mirror_not_refreshed", str(exc), severity="warning",
-                                       remediation_summary="Repair autopilot-state.json, then refresh it with action=status mode=apply."))
+                                       remediation_summary="Repair autopilot-state.json, then refresh it with action=status mode=apply.",
+                                       remediation_actions=["Keep the applied result; repair autopilot-state.json, then "
+                                                            "call execution-control action=status mode=apply."]))
     # A deferral refuses the dispatch, so it is an expected failure just like a checkpoint.
     failed = (result.get("helper_exit_code") == 1 if entry.helper_id == "task-results"
               else result.get("disposition") in {"checkpoint_required", "defer"})

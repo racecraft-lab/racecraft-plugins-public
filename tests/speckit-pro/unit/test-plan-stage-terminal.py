@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import functools
 import itertools
 import json
@@ -189,6 +190,10 @@ class RunFactsTests(TerminalFixture):
                 self.assertTrue(result["data"]["ledger"]["run_id"])
                 self.assertEqual(["state_mirror_not_refreshed"], [item["code"] for item in result["diagnostics"]])
                 self.assertEqual((self.root / STATE).read_text(encoding="utf-8"), malformed)
+                # The compact answer must steer to a state refresh, never a retry of the applied mutation.
+                compact = envelope.answer_response(dataclasses.replace(request, answer_format="compact"), result)
+                self.assertIn("action=status mode=apply", compact["next_action"])
+                self.assertNotIn("retry", compact["next_action"].lower())
 
 
 class TerminalClockTests(TerminalFixture):
