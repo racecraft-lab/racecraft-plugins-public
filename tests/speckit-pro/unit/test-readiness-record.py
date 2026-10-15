@@ -1157,7 +1157,10 @@ class HostProbePathSecurityTest(unittest.TestCase):
                     self.marker.unlink(missing_ok=True)
 
     def test_other_cli_probes_reject_relinked_helpers(self) -> None:
-        """A missing worktree alias during validation never authenticates later helper bytes."""
+        """A missing worktree alias during validation never authenticates later helper bytes.
+
+        Git and GitHub trust an operator-only inode (cli_probe.OPERATOR_CLIS): only writable-by-others forms apply.
+        """
         helpers = self.area / "helpers"
         helpers.mkdir()
         consumers = {
@@ -1166,10 +1169,10 @@ class HostProbePathSecurityTest(unittest.TestCase):
         }
         validate = readiness_record.cli_probe.validate_probe_directory
         which = shutil.which
-        for cli, consumer, location, window, form in itertools.product(
-                ("git", "gh", "docker"), consumers, (self.tools, helpers),
-                ("after-validation", "after-lookup"),
-                ("regular", "readonly", "indirect-symlink", "nonexecutable", "foreign-writable")):
+        forms = ("regular", "readonly", "indirect-symlink", "nonexecutable", "foreign-writable", "shared-writable")
+        cases = [*itertools.product(("docker",), forms), *itertools.product(("git", "gh"), forms[-2:])]
+        for (cli, form), consumer, location, window in itertools.product(
+                cases, consumers, (self.tools, helpers), ("after-validation", "after-lookup")):
             with self.subTest(cli=cli, consumer=consumer, location=location.name, window=window, form=form):
                 launcher = self.tools / cli
                 launcher.write_text(consumers[consumer], encoding="utf-8")
@@ -1182,7 +1185,7 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 payload.unlink()
                 if form == "indirect-symlink":
                     helper.symlink_to(inode)
-                inode.chmod({"readonly": 0o555, "nonexecutable": 0o644}.get(form, 0o755))
+                inode.chmod({"readonly": 0o555, "nonexecutable": 0o644, "shared-writable": 0o775}.get(form, 0o755))
                 self.assertEqual(1, inode.stat().st_nlink)
 
                 def attack() -> None:
@@ -1218,8 +1221,9 @@ class HostProbePathSecurityTest(unittest.TestCase):
                     payload.unlink(missing_ok=True)
                     self.marker.unlink(missing_ok=True)
 
-    def test_any_cli_rejects_relinked_selected_executable(self) -> None:
-        for cli, window in itertools.product(("git", "gh", "docker", "claude", "codex"),
+    def test_docker_and_host_probes_reject_relinked_selected_executable(self) -> None:
+        """Git and GitHub accept the operator's own inode by design (cli_probe.OPERATOR_CLIS)."""
+        for cli, window in itertools.product(("docker", "claude", "codex"),
                                              ("after-validation", "after-lookup")):
             with self.subTest(cli=cli, window=window):
                 payload = self.root / "payload"

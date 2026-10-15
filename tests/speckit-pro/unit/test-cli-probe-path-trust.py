@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import itertools
 import os
 import sys
 from contextlib import contextmanager
@@ -34,6 +35,7 @@ def load(name: str):
 
 CLIS = ("codex", "claude", "git", "gh", "docker")
 HOSTS = ("codex", "claude")
+OPERATOR_CLIS = ("git", "gh")
 
 
 @contextmanager
@@ -106,8 +108,11 @@ class CliProbePathTrustTest(unittest.TestCase):
     def test_root_owned_read_only_executable_is_accepted(self) -> None:
         assert_probe(self, accepted=True)
 
-    def test_runner_owned_executable_is_rejected(self) -> None:
-        assert_probe(self, owned="file")
+    def test_runner_owned_docker_and_host_executables_are_rejected(self) -> None:
+        assert_probe(self, ("docker", *HOSTS), owned="file")
+
+    def test_runner_owned_operator_executable_is_accepted(self) -> None:
+        assert_probe(self, OPERATOR_CLIS, owned="file", accepted=True)
 
     def test_runner_writable_executable_is_rejected(self) -> None:
         assert_probe(self, writable="file")
@@ -121,10 +126,204 @@ class CliProbePathTrustTest(unittest.TestCase):
     def test_other_cli_path_directory_stays_outside_the_directory_rule(self) -> None:
         assert_probe(self, ("git", "gh", "docker"), writable="directory", accepted=True)
 
+    def test_operator_owned_helper_still_rejects_docker_and_host_directories(self) -> None:
+        """The git and gh relaxation never reaches another CLI's lookup, even for a helper name beside it."""
+        for cli in ("docker", *HOSTS):
+            with probe_fixture(cli, "file") as (root, directory, _target):
+                helper = directory / "gh"
+                helper.write_text("#!/bin/sh\n", encoding="utf-8")
+                helper.chmod(0o555)
+                for name in COPIES:
+                    module = load(name)
+                    with self.subTest(copy=name, cli=cli), probe_identity(directory, helper, "file", None), \
+                            patch.dict(os.environ, {"PATH": str(directory)}):
+                        self.assertEqual(str(directory), module.probe_search_path(root, "gh"))
+                        with self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                            module.probe_search_path(root, cli)
+
+
+@contextmanager
+def operator_tree():
+    """A worktree and a sole PATH directory beside it, both real and owned by the test user."""
+    with tempfile.TemporaryDirectory(prefix="cli-probe-operator-") as scratch:
+        base = Path(scratch).resolve()
+        root, directory = base / "worktree", base / "bin"
+        root.mkdir()
+        directory.mkdir()
+        with patch.dict(os.environ, {"PATH": str(directory)}):
+            yield base, root, directory
+
+
+def write_stub(path, cli, mode=0o755):
+    path.write_text(f"#!/bin/sh\necho {cli}-operator-stub\n", encoding="utf-8")
+    path.chmod(mode)
+
+
+@contextmanager
+def operator_install(cli, mode=0o755, alias=None):
+    """A real PATH directory outside the worktree, owned by the test user, holding an executable stub.
+
+    `alias` names where a second hardlink to the stub lives: "outside" or "worktree".
+    """
+    with operator_tree() as (base, root, directory):
+        stub = directory / cli
+        write_stub(stub, cli, mode)
+        if alias:
+            os.link(stub, {"outside": base, "worktree": root}[alias] / f"alias-{cli}")
+        yield root, directory
+
+
+def symlink_to_worktree_aliased_file(base, root, directory, cli):
+    target = base / f"installed-{cli}"
+    write_stub(target, cli)
+    os.link(target, root / f"alias-{cli}")
+    (directory / cli).symlink_to(target)
+
+
+def symlink_chain_into_worktree(base, root, directory, cli):
+    payload = root / f"payload-{cli}"
+    write_stub(payload, cli)
+    (base / "hop").symlink_to(payload)
+    (directory / cli).symlink_to(base / "hop")
+
+
+def helper_hardlinked_from_worktree(_base, root, directory, cli):
+    write_stub(directory / cli, cli)
+    write_stub(root / "helper", "helper")
+    os.link(root / "helper", directory / "helper")
+
+
+ALIAS_FORMS = (symlink_to_worktree_aliased_file, symlink_chain_into_worktree, helper_hardlinked_from_worktree)
+
+
+def cellar_install(base, directory, cli):
+    """A Homebrew-shaped chain: PATH entry -> hop directory -> versioned install file."""
+    (base / "cellar").mkdir()
+    (base / "hops").mkdir()
+    write_stub(base / "cellar" / cli, cli)
+    (base / "hops" / cli).symlink_to(base / "cellar" / cli)
+    (directory / cli).symlink_to(base / "hops" / cli)
+
+
+def worktree_link(base, root, directory, cli, reached):
+    """Worktree content (a checked-out symlink) through which an in-place write would reach the install."""
+    cellar_install(base, directory, cli)
+    target = {"file": directory / cli, "install": base / "cellar" / cli, "path-directory": directory,
+              "install-directory": base / "cellar", "hop-directory": base / "hops"}[reached]
+    (root / "link").symlink_to(target)
+
+
+WORKTREE_LINK_FORMS = tuple(partial(worktree_link, reached=reached) for reached in
+                            ("file", "install", "path-directory", "install-directory", "hop-directory"))
+
+
+@contextmanager
+def unrelated_worktree_links(cli):
+    """Install alongside external hardlinks and unrelated, dangling and looping worktree symlinks."""
+    with operator_tree() as (base, root, directory):
+        cellar_install(base, directory, cli)
+        os.link(base / "cellar" / cli, base / f"spare-{cli}")  # a second name outside the worktree
+        write_stub(base / "python3", "python3")
+        (root / ".venv-python").symlink_to(base / "python3")
+        (root / "dangling").symlink_to(base / "missing")
+        (root / "loop").symlink_to(root / "loop")
+        yield root, directory
+
+
+def walk_failures():
+    """Inject unreadable directories, vanished directories and vanished names during traversal."""
+    real_scandir, real_lstat = os.scandir, os.lstat
+
+    def failing(error, real, match):
+        def read(path=".", *args, **kwargs):
+            if match(Path(path)):
+                raise error(2, "injected walk failure", str(path))
+            return real(path, *args, **kwargs)
+        return read
+
+    return {
+        "unreadable-directory": ("os.scandir", failing(PermissionError, real_scandir, lambda path: path.name == "sub")),
+        "vanished-directory": ("os.scandir", failing(FileNotFoundError, real_scandir, lambda path: path.name == "sub")),
+        "vanished-name": ("os.lstat", failing(FileNotFoundError, real_lstat, lambda path: path.name == "name")),
+    }
+
+
+class OperatorInstalledCliTest(unittest.TestCase):
+    """A user-owned install outside the worktree (Homebrew on Apple silicon) serves git and gh, unmocked."""
+
+    def test_operator_owned_git_and_gh_are_found_and_run(self) -> None:
+        for cli, alias in itertools.product(OPERATOR_CLIS, (None, "outside")):
+            with operator_install(cli, alias=alias) as (root, directory):
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli, alias=alias):
+                        module = load(name)
+                        self.assertEqual(str(directory), module.probe_search_path(root, cli))
+                        result = module.probe(root, [cli, "--version"], allowed=(cli,), timeout=10)
+                        self.assertEqual((0, f"{cli}-operator-stub"), (result["exit_status"], result["stdout_tail"]))
+
+    def assert_rejected(self, cli, **install) -> None:
+        with operator_install(cli, **install) as (root, _directory):
+            for name in COPIES:
+                with self.subTest(copy=name, cli=cli, **install), self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                    load(name).probe_search_path(root, cli)
+
+    def assert_forms_rejected(self, forms) -> None:
+        for cli, form in itertools.product(OPERATOR_CLIS, forms):
+            with operator_tree() as (base, root, directory):
+                form(base, root, directory, cli)
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli, form=getattr(form, "__name__", form)), \
+                            self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                        load(name).probe_search_path(root, cli)
+
+    def test_operator_owned_docker_and_host_installs_stay_rejected(self) -> None:
+        for cli in ("docker", *HOSTS):
+            self.assert_rejected(cli)
+
+    def test_operator_owned_install_shared_with_other_writers_is_rejected(self) -> None:
+        for cli, mode in itertools.product(OPERATOR_CLIS, (0o775, 0o757)):
+            self.assert_rejected(cli, mode=mode)
+
+    def test_operator_owned_install_aliased_by_a_worktree_name_is_rejected(self) -> None:
+        for cli in OPERATOR_CLIS:
+            self.assert_rejected(cli, alias="worktree")
+
+    def test_every_retained_name_rejects_worktree_content_that_reaches_it(self) -> None:
+        """Symlink targets and helper names aliased by a worktree hardlink, and links into the worktree, reject git and gh.
+
+        A chain into the worktree is rejected by the traversal rule before any alias check runs.
+        """
+        self.assert_forms_rejected(ALIAS_FORMS)
+
+    def test_worktree_symlink_reaching_the_lookup_chain_is_rejected(self) -> None:
+        """A write through a worktree symlink must not be able to change or replace an accepted install."""
+        self.assert_forms_rejected(WORKTREE_LINK_FORMS)
+
+    def test_unrelated_worktree_links_keep_the_install(self) -> None:
+        """A virtual-environment link elsewhere, a dangling link and a link loop reach nothing on the lookup chain."""
+        for cli in OPERATOR_CLIS:
+            with unrelated_worktree_links(cli) as (root, directory):
+                for name in COPIES:
+                    with self.subTest(copy=name, cli=cli):
+                        self.assertEqual(str(directory), load(name).probe_search_path(root, cli))
+
+    def test_worktree_walk_errors_fail_closed(self) -> None:
+        """An unreadable, vanished or renamed worktree directory or name drops the directory; nothing is skipped."""
+        for cli, (attack, (target, replacement)) in itertools.product(OPERATOR_CLIS, walk_failures().items()):
+            with operator_install(cli) as (root, _directory):
+                (root / "sub").mkdir()
+                (root / "sub" / "name").write_text("", encoding="utf-8")
+                with patch(target, replacement):
+                    for name in COPIES:
+                        with self.subTest(copy=name, cli=cli, attack=attack), \
+                                self.assertRaisesRegex(ValueError, NO_SEARCH_DIRECTORY):
+                            load(name).probe_search_path(root, cli)
 
 
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(CliProbePathTrustTest)
+    loader = unittest.defaultTestLoader
+    return unittest.TestSuite([loader.loadTestsFromTestCase(CliProbePathTrustTest),
+                               loader.loadTestsFromTestCase(OperatorInstalledCliTest)])
 
 
 def main() -> int:
