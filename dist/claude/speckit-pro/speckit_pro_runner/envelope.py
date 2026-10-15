@@ -129,6 +129,10 @@ def compact_decision_data(data: dict[str, Any]) -> dict[str, Any]:
         # The durable ledger is available via ledger_path. Its unbounded history
         # must never crowd an applied action's result or mirror warning out of the answer.
         result["ledger"] = {"run_id": data["ledger"]["run_id"]}
+        for field, count_field in (("unknown_dispatch_ids", "unknown_dispatch_count"),
+                                   ("blocked_by", "blocked_by_count")):
+            if field in result:
+                result[count_field] = len(result.pop(field))
     if isinstance(result.get("result"), dict):
         result["result"] = compact_decision_data(result["result"])
     return result

@@ -53,6 +53,52 @@ only execution-control's tagged result is projected. The shared source and both
 regenerated payloads use the same rule. No pathname lookup, link traversal,
 rename handling or ledger validation changes in this repair.
 
+## Unknown-dispatch output repair
+
+Finding `F1363-ce3c1911` exposed the same compact applied-result loss through
+two historical lists outside the ledger: `unknown_dispatch_ids` and
+`blocked_by`. Compact execution-control answers now replace those lists with
+exact `unknown_dispatch_count` and `blocked_by_count` values, including nested
+results and refusals. Detailed answers retain both lists and the full ledger;
+the durable ledger remains available at `ledger_path`. This bounds historical
+ID output independently of dispatch count, ID length and JSON escaping, while
+keeping the action's dispatch ID, run ID, disposition, reasons and diagnostics.
+
+Finding `F1363-596e46be` identified an incorrect reachability claim in this
+document and compact-runner-answers.md. Unknown dispatches block unscoped or
+overlapping work. Implementation reserves for distinct `tdd_units` continue,
+so normal reserve/complete calls can accumulate unknown records. A fixed
+overflow count is misleading because serialized ID length also matters.
+
+The new `CompactUnknownDispatchTests` in `test-compact-answers.py` cover:
+
+- `test_unknown_status_apply_keeps_mirror_warning_on_all_launchers`: 700
+  validated unknowns, array/invalid-JSON mirror, durable write and warning.
+- `test_unknown_scoped_reserve_keeps_durable_dispatch_on_all_launchers`:
+  700 independent units, both malformed mirrors, durable next dispatch and ID.
+- `test_unknown_status_without_state_keeps_applied_result_on_all_launchers`:
+  800 unknowns, durable status write without a state file or warning.
+- `test_unknown_guarded_actions_keep_refusal_and_exact_blocker_count`: all
+  nine guarded actions, including unscoped reserve, retain refusal and counts
+  without adding a dispatch. `test_unknown_overlapping_reserve_counts_only_actual_blockers`
+  checks that one overlapping unit yields one blocker, not all unknowns.
+- `test_unknown_detailed_apply_and_compact_non_apply_controls`: detailed
+  apply retains full evidence; compact read-only/dry-run leave ledger bytes
+  unchanged without mirror warnings. Source and both host launchers are covered.
+- `test_unknown_compact_size_is_independent_of_id_length`: short, ordinary,
+  long Unicode and escaped IDs at the same history count.
+- `test_independent_units_can_accumulate_unknowns_through_public_actions`:
+  real reserve/complete calls produce unknowns and still admit a distinct unit.
+- `test_unknown_history_counts_preserve_nested_refusals_without_mutating_details`
+  in `CompactExecutionProjectionTests`: nested refusals keep decision fields,
+  count each list independently and leave the original detailed result intact.
+  `test_other_helpers_keep_their_ledger_evidence` excludes unrelated helpers.
+
+The focused adversarial pass checked both list producers in `_control_result`
+and `_update_ledger`, every guarded action, the write-before-mirror window,
+nested projection, and source/Claude/Codex launchers. The repair changes only
+response projection: no pathname, symlink, hard-link or rename operation changes.
+
 ## Known limits
 
 - **Plan-row deferral is wider than "agents pending".** The canonical plan
@@ -103,13 +149,6 @@ rename handling or ledger validation changes in this repair.
   A `RecursionError` from a deeply nested state file would escape the
   applied-result path. Unreachable in practice: it needs a deliberately crafted
   state file.
-- **Unknown-dispatch lists still grow in compact answers.** The ledger
-  projection removes dispatch history, but top-level `unknown_dispatch_ids`
-  and, on reserve, `blocked_by` list every unknown-outcome dispatch. A probe
-  returned `ok` at about 9.3 KB with 300 unknown dispatches on status; status
-  needs about 530 to overflow, reserve about half that. Unreachable on real
-  runs: an unknown dispatch blocks further reserves. Pre-existing; the
-  projection did not make it worse.
 - **The envelope names one helper.** `compact_decision_data` projects the
   ledger only for `helper_id == "execution-control"`. A per-helper projection
   hook would be cleaner ownership, but with one helper it would be speculative.

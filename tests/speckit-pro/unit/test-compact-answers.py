@@ -17,7 +17,7 @@ sys.path.insert(0, str(REPO / "speckit-pro"))
 sys.path.insert(0, str(REPO / "tests/speckit-pro/lib"))
 from speckit_pro_runner.envelope import parse_request, response  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
-from speckit_pro_runner.execution_control import execution_control  # noqa: E402
+from speckit_pro_runner.execution_control import execution_control, UNKNOWN_GUARDED_ACTIONS  # noqa: E402
 from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noqa: E402
 from speckit_pro_runner.helpers.read_only import (  # noqa: E402
     PLAN_REPAIR_MESSAGE_LIMIT_BYTES,
@@ -110,10 +110,29 @@ class CompactExecutionProjectionTests(unittest.TestCase):
                     self.assertEqual(json.dumps(body, sort_keys=True), before)
 
     def test_other_helpers_keep_their_ledger_evidence(self):
-        body = response("ok", data={"helper_id": "other-helper", "ledger": {"dispatches": ["evidence"]}})
+        body = response("ok", data={"helper_id": "other-helper", "ledger": {"dispatches": ["evidence"]},
+                                   "unknown_dispatch_ids": ["other"], "blocked_by": ["other"]})
         with patch("speckit_pro_runner.helpers.registry.dispatch_helper", return_value=body):
             answer = handle_request(self.request("count-markers"))
         self.assertEqual(answer["data"], body["data"])
+
+    def test_unknown_history_counts_preserve_nested_refusals_without_mutating_details(self):
+        for wrapped in (False, True):
+            with self.subTest(wrapped=wrapped):
+                data = {"helper_id": "execution-control", "ledger": {"run_id": "existing-run"},
+                        "ledger_path": "feature/ledger.json", "disposition": "checkpoint_required",
+                        "reasons": ["unknown_dispatch_blocks_unit"], "authorization_granted": False,
+                        "unknown_dispatch_ids": ["unknown-worker"] * 2000, "blocked_by": ["blocker"] * 1000}
+                body = response("expected_failure", data={"result": data} if wrapped else data)
+                before = json.dumps(body, sort_keys=True)
+                with patch("speckit_pro_runner.helpers.registry.dispatch_helper", return_value=body):
+                    answer = handle_request(self.request("execution-control"))
+                self.assertEqual(answer["status"], "expected_failure")
+                projected = answer["data"]["result"] if wrapped else answer["data"]
+                self.assertEqual(projected, {key: value for key, value in data.items()
+                                            if key not in {"unknown_dispatch_ids", "blocked_by"}}
+                                 | {"unknown_dispatch_count": 2000, "blocked_by_count": 1000})
+                self.assertEqual(json.dumps(body, sort_keys=True), before)
 
 
 class CompactExecutionTests(unittest.TestCase):
@@ -197,6 +216,146 @@ class CompactExecutionTests(unittest.TestCase):
                         continue  # Mutating actions intentionally reject read_only mode.
                     with self.subTest(action=action, state=state, mode=mode, answer_format=answer_format):
                         self.invoke("speckit-pro", action, 110, state, mode, answer_format)
+
+
+class CompactUnknownDispatchTests(unittest.TestCase):
+    setUp = CompactExecutionTests.setUp
+    PAYLOADS = ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro")
+
+    def prepare_unknowns(self, count=700, padding="implementation-worker-"):
+        self.ledger_path.write_text(json.dumps(self.seed))
+        completed = execution_control(self.root, {**self.binding, "action": "complete",
+                                                "dispatch_id": "seed", "outcome": "unknown"}, "apply")
+        record = completed["ledger"]["dispatches"]["seed"]
+        ledger = {**completed["ledger"], "dispatches": {
+            f"{padding}{i:04d}": {**record, "tdd_units": [f"unit-{i}"]} for i in range(count)}}
+        self.ledger_path.write_text(json.dumps(ledger))
+        validated = execution_control(self.root, {**self.binding, "action": "status"}, "read_only")
+        self.assertEqual(len(validated["unknown_dispatch_ids"]), count)
+        return ledger
+
+    def call(self, payload="speckit-pro", *, mode="apply", answer_format="compact", **inputs):
+        raw = {"schema_version": "1.0", "helper_id": "execution-control", "operation": "execution-control",
+               "request_id": "unknown-history", "mode": mode, "answer_format": answer_format,
+               "inputs": {**self.binding, "action": "status", **inputs}}
+        done = subprocess.run([sys.executable, str(REPO / payload / "scripts/run-speckit-pro.py")],
+                              input=json.dumps(raw), capture_output=True, text=True, cwd=self.root,
+                              check=False, timeout=30)
+        answer = json.loads(done.stdout)
+        self.assertEqual(done.returncode, answer["exit_code"], done.stderr)
+        if answer_format == "compact":
+            self.assertLessEqual(len(done.stdout.encode()) + len(done.stderr.encode()), 16384)
+        return answer
+
+    def assert_compact_result(self, answer, count, status="ok"):
+        self.assertEqual(answer["status"], status, answer)
+        data = answer["data"]
+        self.assertEqual(data["ledger"], {"run_id": self.binding["expected_run_id"]})
+        self.assertEqual(self.root / data["ledger_path"], self.ledger_path)
+        self.assertEqual(data["unknown_dispatch_count"], count)
+        self.assertNotIn("unknown_dispatch_ids", data)
+        self.assertFalse(data["authorization_granted"])
+        return data
+
+    def test_unknown_status_apply_keeps_mirror_warning_on_all_launchers(self):
+        for payload, state in itertools.product(self.PAYLOADS, ("[]", "{not json")):
+            with self.subTest(payload=payload, state=state):
+                self.prepare_unknowns()
+                path = self.root / "feature/autopilot-state.json"
+                path.write_text(state)
+                before = self.ledger_path.read_bytes()
+                answer = self.call(payload)
+                self.assertNotEqual(self.ledger_path.read_bytes(), before)
+                self.assertEqual(path.read_text(), state)
+                self.assert_compact_result(answer, 700)
+                self.assertEqual(answer["data"]["disposition"], "continue")
+                self.assertEqual([d["code"] for d in answer["diagnostics"]], ["state_mirror_not_refreshed"])
+                self.assertIn("action=status mode=apply", answer["next_action"])
+
+    def test_unknown_scoped_reserve_keeps_durable_dispatch_on_all_launchers(self):
+        for payload, state in itertools.product(self.PAYLOADS, ("[]", "{not json")):
+            with self.subTest(payload=payload, state=state):
+                self.prepare_unknowns()
+                (self.root / "feature/autopilot-state.json").write_text(state)
+                answer = self.call(payload, action="reserve", dispatch_id="next-worker",
+                                   kind="implementation", tdd_units=["next-unit"])
+                persisted = json.loads(self.ledger_path.read_text())
+                self.assertEqual(len(persisted["dispatches"]), 701)
+                self.assertEqual(persisted["dispatches"]["next-worker"]["outcome"], "reserved")
+                data = self.assert_compact_result(answer, 700)
+                self.assertEqual(data["dispatch_id"], "next-worker")
+                self.assertEqual(data["disposition"], "continue")
+                self.assertEqual([d["code"] for d in answer["diagnostics"]], ["state_mirror_not_refreshed"])
+
+    def test_unknown_status_without_state_keeps_applied_result_on_all_launchers(self):
+        for payload in self.PAYLOADS:
+            with self.subTest(payload=payload):
+                self.prepare_unknowns(800)
+                before = self.ledger_path.read_bytes()
+                answer = self.call(payload)
+                self.assertNotEqual(self.ledger_path.read_bytes(), before)
+                self.assertFalse((self.root / "feature/autopilot-state.json").exists())
+                self.assert_compact_result(answer, 800)
+                self.assertEqual(answer["diagnostics"], [])
+
+    def test_unknown_guarded_actions_keep_refusal_and_exact_blocker_count(self):
+        for payload, action in itertools.product(self.PAYLOADS, sorted(UNKNOWN_GUARDED_ACTIONS)):
+            with self.subTest(payload=payload, action=action):
+                self.prepare_unknowns()
+                answer = self.call(payload, action=action, dispatch_id="next-worker", kind="implementation",
+                                   spec_file="feature/spec.md")
+                self.assertEqual(len(json.loads(self.ledger_path.read_text())["dispatches"]), 700)
+                data = self.assert_compact_result(answer, 700, "expected_failure")
+                self.assertEqual(data["disposition"], "checkpoint_required")
+                self.assertEqual(data["reasons"], ["unknown_dispatch_blocks_unit"])
+                self.assertEqual(data["blocked_by_count"], 700)
+                self.assertNotIn("blocked_by", data)
+                self.assertNotIn("dispatch_id", data)
+
+    def test_unknown_overlapping_reserve_counts_only_actual_blockers(self):
+        self.prepare_unknowns()
+        answer = self.call(action="reserve", dispatch_id="next-worker", kind="implementation", tdd_units=["unit-0"])
+        data = self.assert_compact_result(answer, 700, "expected_failure")
+        self.assertEqual(data["blocked_by_count"], 1)
+        self.assertEqual(len(json.loads(self.ledger_path.read_text())["dispatches"]), 700)
+
+    def test_unknown_detailed_apply_and_compact_non_apply_controls(self):
+        for payload, mode in itertools.product(self.PAYLOADS, ("read_only", "dry_run")):
+            with self.subTest(payload=payload, mode=mode):
+                self.prepare_unknowns()
+                (self.root / "feature/autopilot-state.json").write_text("[]")
+                before = self.ledger_path.read_bytes()
+                compact = self.call(payload, mode=mode)
+                self.assertEqual(self.ledger_path.read_bytes(), before)
+                self.assertEqual(compact["diagnostics"], [])
+                self.assert_compact_result(compact, 700)
+                detailed = self.call(payload, answer_format="detailed")
+                self.assertEqual(detailed["status"], "ok")
+                self.assertEqual(len(detailed["data"]["unknown_dispatch_ids"]), 700)
+                self.assertEqual(detailed["data"]["ledger"], json.loads(self.ledger_path.read_text()))
+                self.assertNotIn("unknown_dispatch_count", detailed["data"])
+                self.assertEqual([d["code"] for d in detailed["diagnostics"]], ["state_mirror_not_refreshed"])
+
+    def test_unknown_compact_size_is_independent_of_id_length(self):
+        for padding in ("u", "implementation-worker-", "worker-" + "界\\\"" * 100):
+            with self.subTest(padding=padding[:25]):
+                self.prepare_unknowns(padding=padding)
+                self.assert_compact_result(self.call(), 700)
+
+    def test_independent_units_can_accumulate_unknowns_through_public_actions(self):
+        # No fabricated history: these unknowns come from normal reserve/complete calls.
+        self.ledger_path.write_text(json.dumps(self.seed))
+        self.call(action="complete", dispatch_id="seed", outcome="completed", answer_format="detailed")
+        for unit in ("alpha", "beta"):
+            reserved = self.call(action="reserve", dispatch_id=unit, kind="implementation",
+                                 tdd_units=[unit], answer_format="detailed")
+            self.assertEqual(reserved["status"], "ok")
+            completed = self.call(action="complete", dispatch_id=unit, outcome="unknown", answer_format="detailed")
+            self.assertEqual(completed["status"], "ok")
+        answer = self.call(action="reserve", dispatch_id="gamma", kind="implementation", tdd_units=["gamma"])
+        data = self.assert_compact_result(answer, 2)
+        self.assertEqual(data["dispatch_id"], "gamma")
+        self.assertEqual(json.loads(self.ledger_path.read_text())["dispatches"]["gamma"]["outcome"], "reserved")
 
 
 class CompactLauncherTests(unittest.TestCase):
