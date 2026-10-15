@@ -44,9 +44,9 @@ agents were still running.
   1 with a traceback instead of the documented fail-open exit 0, and would
   also disable `lockfile` mode. Unreachable in the shipped layout: both host
   payloads ship `speckit_pro_runner` beside `scripts/`.
-- **Hook snapshot errors fail open.** An unreadable ledger or a mirror without
-  `run_id` makes the hook return no decision. This matches the hook's
-  documented fail-open policy.
+- **Hook snapshot errors fall back to the Git check.** An unreadable ledger or a
+  mirror without `run_id` is not evidence of pending work; the hook notes it on
+  stderr and still checks commits (see pr-1363-security-fix.md).
 - **Duplicated facts.** The state path rule
   (`Path(workflow).with_name("autopilot-state.json")`) appears in
   `autopilot_state.py` twice, `plan_stage_terminal.py` and
