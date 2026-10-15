@@ -48,8 +48,9 @@ def normalized(name: str, content: bytes, workflow: str) -> bytes:
             skipping = 0
         if heading and heading[2] in EXECUTION_SECTIONS:
             skipping = len(heading[1])
-        if not skipping and not re.match(r"^\| \*\*(Stage|Draft PR)\*\* \|", line):
-            kept.append(line if fence else re.sub(r"^(\s*-\s+\[)[xX](\])", r"\1 \2", line))
+        if not skipping and (fence or not re.match(r"^\| \*\*(Stage|Draft PR)\*\* \|", line)):
+            # Checked spelling is equivalent; checked and unchecked choices are not.
+            kept.append(line if fence else re.sub(r"^(\s*-\s+\[)[xX](\])", r"\1x\2", line))
     return "".join(kept).encode("utf-8")
 
 

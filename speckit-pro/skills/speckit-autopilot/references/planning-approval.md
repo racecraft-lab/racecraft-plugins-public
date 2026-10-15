@@ -25,6 +25,9 @@ planning configuration and declared formal inputs. It normalizes task completion
 and declared workflow execution sections; runtime outputs and approval records
 are excluded. New or removed planning files change the digest. Required spec,
 plan and tasks must be readable. `data.manifest` states the versioned inventory.
+Workflow planning-choice checkbox state is bound to the revision; only `x` versus
+`X` spelling is equivalent. Fenced content is bound verbatim, including rows that
+would otherwise be execution bookkeeping.
 
 `apply` writes `data.record_path` under the feature's `plan-approvals/` directory;
 commit that file with the feature. Existing decisions cannot be overwritten.

@@ -15,6 +15,7 @@ class PlanningApprovalTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         (self.root / ".specify").mkdir()
+        self.runner_root = Path(__file__).resolve().parents[3] / "speckit-pro"
         self.feature = self.root / "specs/demo"
         self.feature.mkdir(parents=True)
         for name, text in {"spec.md": "A feature", "plan.md": "A plan",
@@ -25,7 +26,7 @@ class PlanningApprovalTest(unittest.TestCase):
         request = dict(schema_version="1.0", helper_id="planning-approval", operation="planning-approval",
                        mode=mode, inputs=dict(feature_dir="specs/demo", workflow_file="specs/demo/workflow.md",
                                               action=action, **extra))
-        _, reply, _ = run_runner(request, cwd=self.root)
+        _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
         return reply
 
     def test_progress_preserves_revision_but_planning_changes_do_not(self):
@@ -88,7 +89,7 @@ class PlanningApprovalTest(unittest.TestCase):
         path.write_text("## Success Criteria\n- [ ] Contract changed\n")
         self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
         path.write_text("## Success Criteria\n- [x] Contract correct\n")
-        self.assertEqual(self.call()["data"]["manifest_digest"], before)
+        self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
 
     def test_prompt_fences_do_not_hide_planning_inputs(self):
         path = self.feature / "workflow.md"
@@ -167,5 +168,95 @@ class PlanningApprovalTest(unittest.TestCase):
         self.assertEqual(self.call("verify")["status"], "input_error")
 
 
+class WorkflowPlanningApprovalTest(PlanningApprovalTest):
+    def assertWorkflowEdit(self, before, after, *, preserves=False):
+        # An excluded edit must not hide a planning choice after the excluded region.
+        choice = "\n## Security plan\n- [x] Allow external requests\n"
+        path = self.feature / "workflow.md"
+        path.write_text(before + choice)
+        recorded = self.call("record", "apply", approval=self.approval())
+        self.assertEqual(recorded["status"], "ok", recorded)
+        digest = recorded["data"]["record"]["manifest_digest"]
+        self.assertEqual(self.call("verify")["status"], "ok")
+        path.write_text(after + choice)
+        changed = self.call()["data"]["manifest_digest"]
+        verified = self.call("verify")
+        if preserves:
+            self.assertEqual(changed, digest)
+            self.assertEqual(verified["status"], "ok", verified)
+            path.write_text(after + choice.replace("[x]", "[ ]"))
+            changed = self.call()["data"]["manifest_digest"]
+            self.assertNotEqual(changed, digest)
+            verified = self.call("verify")
+        else:
+            self.assertNotEqual(changed, digest)
+        self.assertRefused(verified, changed + ".json")
+
+    def test_lowercase_planning_checkbox_state_invalidates_approval(self):
+        choices = ("## Security plan\n- [x] Require review\n",
+                   "## Success Criteria\n  - [x] Require review\n",
+                   "## Project Commands\n- [x] Require review\n")
+        for before in choices:
+            with self.subTest(workflow=before):
+                self.assertWorkflowEdit(before, before.replace("[x]", "[ ]"))
+                self.assertWorkflowEdit(before.replace("[x]", "[ ]"), before)
+
+    def test_uppercase_planning_checkbox_state_invalidates_approval(self):
+        self.assertWorkflowEdit("## Deployment plan\n- [X] Require review\n",
+                                "## Deployment plan\n- [ ] Require review\n")
+        self.assertWorkflowEdit("## Deployment plan\n  - [X] Require review\n",
+                                "## Deployment plan\n  - [ ] Require review\n")
+
+    def test_checked_marker_case_preserves_approval_but_not_a_choice_flip(self):
+        before = "## Deployment plan\n- [x] Require review\n"
+        self.assertWorkflowEdit(before, before.replace("[x]", "[X]"), preserves=True)
+
+    def test_execution_rows_preserve_approval_but_not_a_choice_flip(self):
+        for field in ("Stage", "Draft PR"):
+            with self.subTest(field=field):
+                before = f"| **{field}** | pending |\n"
+                self.assertWorkflowEdit(before, before.replace("pending", "updated"), preserves=True)
+
+    def test_execution_sections_preserve_approval_but_not_a_choice_flip(self):
+        for heading in ("Implementation Progress", "Feedback Sweep Log"):
+            with self.subTest(heading=heading):
+                before = f"## {heading}\n- [ ] Work\n### Details\nPending\n"
+                self.assertWorkflowEdit(before, before.replace("[ ]", "[x]"), preserves=True)
+
+    def test_fenced_checkbox_state_invalidates_approval(self):
+        for fence in ("```", "~~~"):
+            with self.subTest(fence=fence):
+                before = f"{fence}text\n- [x] Require review\n{fence}\n"
+                self.assertWorkflowEdit(before, before.replace("[x]", "[ ]"))
+                self.assertWorkflowEdit(before, before.replace("[x]", "[X]"))
+                # Also check that unchanged fenced input does not disable later binding.
+                self.assertWorkflowEdit(before, before, preserves=True)
+
+    def test_planning_choice_text_invalidates_approval(self):
+        before = "## Security plan\n- [x] Require review\n"
+        self.assertWorkflowEdit(before, before.replace("Require review", "Bypass review"))
+        self.assertWorkflowEdit(before, before, preserves=True)
+
+    def test_fenced_execution_rows_are_planning_inputs(self):
+        self.assertWorkflowEdit("```text\n| **Stage** | Require review |\n```\n",
+                                "```text\n| **Stage** | Bypass review |\n```\n")
+        self.assertWorkflowEdit("```text\n| **Draft PR** | Require review |\n```\n",
+                                "```text\n| **Draft PR** | Bypass review |\n```\n")
+
+    def test_shipped_hosts_bind_every_workflow_variant(self):
+        variants = (self.test_lowercase_planning_checkbox_state_invalidates_approval,
+                    self.test_uppercase_planning_checkbox_state_invalidates_approval,
+                    self.test_checked_marker_case_preserves_approval_but_not_a_choice_flip,
+                    self.test_execution_rows_preserve_approval_but_not_a_choice_flip,
+                    self.test_execution_sections_preserve_approval_but_not_a_choice_flip,
+                    self.test_fenced_checkbox_state_invalidates_approval,
+                    self.test_planning_choice_text_invalidates_approval,
+                    self.test_fenced_execution_rows_are_planning_inputs)
+        for host in ("claude", "codex"):
+            self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
+            for check in variants:
+                with self.subTest(host=host, variant=check.__name__):
+                    check()
+
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(PlanningApprovalTest), label="test-planning-approval"))
+    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(WorkflowPlanningApprovalTest), label="test-planning-approval"))
