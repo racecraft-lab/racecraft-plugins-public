@@ -9,15 +9,14 @@ cannot write the run's existing autopilot-state.json.
 
 from __future__ import annotations
 
-import json
-import os
 from pathlib import Path
 from typing import Any
 
-from ..atomic_write import file_identity, open_safe_parent_fd, snapshot_write_target_fd, write_bytes_atomic
+from .. import autopilot_state
+from ..atomic_write import AtomicWriteInterrupted
 from ..envelope import diagnostic, response
 from ..json_schema import json_values_equal
-from ..strict_input import require_text, unique_object
+from ..strict_input import require_text
 from ..trusted_io import resolve_repo_root
 
 SCHEMA_VERSION = "nesting-mode/v1"
@@ -88,42 +87,27 @@ def nesting_evidence_matches(data: dict[str, Any]) -> bool:
 
 def persist_nesting_mode(root: Path, state_file: Any, envelope: dict[str, Any]) -> None:
     """Preserve the current state and replace only its nesting record, refusing stale writes."""
-    relative = Path(require_text(state_file, "state_file"))
-    if relative.is_absolute() or any(part.casefold() == ".git" for part in relative.parts):
-        raise ValueError("state_file must be a repository-relative state path outside .git")
-    if relative.name != "autopilot-state.json":
-        raise ValueError("state_file must name an autopilot-state.json file")
-    target = root / relative
-    opened = open_safe_parent_fd(target, root, create=False)
-    if opened is None:
-        raise ValueError("state_file parent is missing")
-    parent_fd, name, _ = opened
-    try:
-        snapshot = snapshot_write_target_fd(parent_fd, name)
-        snapshot["parent"] = file_identity(os.fstat(parent_fd))
-    finally:
-        os.close(parent_fd)
-    if not snapshot["exists"]:
-        raise ValueError("state_file must already exist")
-    state = json.loads(snapshot["content"], object_pairs_hook=unique_object)
-    if not isinstance(state, dict):
-        raise ValueError("state_file must hold a JSON object")
-    state["nesting_mode"] = envelope
-    content = (json.dumps(state, indent=2, allow_nan=False) + "\n").encode("utf-8")
-    write_bytes_atomic(target, content, trust_root=root, expected_snapshot=snapshot)
+    autopilot_state.update(root, state_file, lambda state: state.update(nesting_mode=envelope))
 
 
 def apply_nesting_preflight_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Resolve and publish the complete envelope before root response compaction."""
     root = resolve_repo_root(request.inputs)
     if isinstance(root, dict):
-        return response("input_error", request_id=request.request_id, diagnostics=[root])
+        return response("input_error", request_id=request.request_id, data={"writes_state": False}, diagnostics=[root])
     inputs = {key: value for key, value in request.inputs.items() if key not in {"repo_root", "state_file"}}
     envelope = response("ok", request_id=request.request_id, data=nesting_mode(inputs))
     try:
-        require_text(request.request_id, "request_id")
+        request_id = require_text(request.request_id, "request_id")
+        if autopilot_state.UUID_PATTERN.search(request_id):
+            raise ValueError("request_id must be a public slug without a raw UUID")
         persist_nesting_mode(root, request.inputs.get("state_file"), envelope)
-    except (ValueError, OSError, RecursionError) as error:
-        return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
+    except (ValueError, RecursionError) as error:
+        return response("input_error", request_id=request.request_id, data={"writes_state": False}, diagnostics=[diagnostic(
             "nesting_state_invalid", str(error), remediation_summary="Correct request_id and state_file, then retry the nesting preflight.")])
+    except OSError as error:
+        return response("internal_failure", request_id=request.request_id,
+                        data={"writes_state": isinstance(error, AtomicWriteInterrupted)}, diagnostics=[diagnostic(
+                            "nesting_state_write_failed", str(error),
+                            remediation_summary="Inspect the current state and write failure before one repair attempt.")])
     return envelope

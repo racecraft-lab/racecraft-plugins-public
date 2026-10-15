@@ -1131,6 +1131,9 @@ with a nonempty `request_id` (a run-specific slug), `state_file` set to the repo
 The runner writes the complete response as `nesting_mode` in that state file,
 preserving the other fields. Proceed only after the apply request succeeds;
 on a state-write refusal, repair the state path or file and retry the helper.
+Make at most one repair-and-retry attempt. If persistence still fails, report
+the state-write diagnostic and return before Step 2; a storage failure is
+independent of the observed nesting depth.
 Record `data.mode` and `data.reason` in the workflow Notes; the canary reads
 `nesting_mode.data.mode` from the runner-written state. When `data.mode` is `flat`, log
 `data.prerequisite` once as a note and continue: the root dispatches each

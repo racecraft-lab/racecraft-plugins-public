@@ -109,16 +109,13 @@ STATE_HOME_PATH_PATTERN = re.compile(
     re.IGNORECASE,
 )
 STATE_HYPHENATED_HOME_PATH_PATTERN = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
-STATE_UUID_PATTERN = re.compile(
-    r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
-    re.IGNORECASE,
-)
 STATE_PRIVATE_KEYS = frozenset({"argv"})
 # The plugin root is fixed by this script's own location, never by request input.
 INSTALLED_PLUGIN_ROOT = Path(__file__).resolve().parents[3]
 # The plugin ships the runner beside its skills, so its validator is imported, not copied.
 if str(INSTALLED_PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(INSTALLED_PLUGIN_ROOT))
+from speckit_pro_runner.autopilot_state import UUID_PATTERN as STATE_UUID_PATTERN  # noqa: E402
 from speckit_pro_runner.json_schema import json_schema_failures, json_values_equal  # noqa: E402
 from speckit_pro_runner.helpers.nesting_preflight import nesting_evidence_matches  # noqa: E402
 

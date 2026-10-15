@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import itertools
+import ast
+import inspect
 import json
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 TEST_DIR = Path(__file__).resolve().parent
@@ -21,6 +24,11 @@ from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 from speckit_pro_runner.helpers import nesting_preflight  # noqa: E402
+from speckit_pro_runner import autopilot_state  # noqa: E402
+from speckit_pro_runner.formal import lifecycle  # noqa: E402
+from speckit_pro_runner.helpers import plan_stage_terminal  # noqa: E402
+from speckit_pro_runner.envelope import RunnerRequest  # noqa: E402
+from speckit_pro_runner.atomic_write import AtomicWriteInterrupted, WritePreconditionChanged  # noqa: E402
 
 VALIDATOR = REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py"
 SCHEMA = json.loads(VALIDATOR.with_name("canary-receipt.schema.json").read_text(encoding="utf-8"))
@@ -46,6 +54,21 @@ def apply_probe(root: Path, state_file: str = "autopilot-state.json", **probe: o
 
 
 class StateEvidenceTests(unittest.TestCase):
+    def test_apply_refuses_uuid_request_ids_before_writing(self) -> None:
+        private_id = "abcdefab-" + "1234-5678-abcd-" + "0123456789ab"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".specify").mkdir()
+            target = root / "autopilot-state.json"
+            target.write_text("{}\n", encoding="utf-8")
+            request = RunnerRequest("probe-" + private_id, "resolve-nesting-mode", "resolve-nesting-mode", "apply",
+                                    {"repo_root": str(root), "state_file": target.name, "host": "codex"})
+            with patch.object(nesting_preflight, "resolve_repo_root", return_value=root):
+                result = nesting_preflight.apply_nesting_preflight_helper(None, request)
+            self.assertEqual("input_error", result["status"])
+            self.assertEqual(False, result["data"]["writes_state"])
+            self.assertEqual("{}\n", target.read_text(encoding="utf-8"))
+
     def test_persisted_runner_outcomes_pass_state_validation(self) -> None:
         validator = load_script("nesting_state_validator", REPO_ROOT / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py")
         probes = [
@@ -94,6 +117,60 @@ class StateEvidenceTests(unittest.TestCase):
 
 
 class StatePersistenceTests(unittest.TestCase):
+    def test_shared_state_update_preserves_a_competing_writer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "autopilot-state.json"
+            target.write_text('{"plan": []}', encoding="utf-8")
+            newer = '{"plan": ["concurrent progress"]}'
+            original = autopilot_state.write_bytes_atomic
+
+            def compete(*args, **kwargs):
+                target.write_text(newer, encoding="utf-8")
+                return original(*args, **kwargs)
+
+            with patch.object(autopilot_state, "write_bytes_atomic", side_effect=compete):
+                with self.assertRaises(WritePreconditionChanged):
+                    autopilot_state.update(root, target.name, lambda state: state.update(status="completed"))
+            self.assertEqual(newer, target.read_text(encoding="utf-8"))
+
+    def test_write_failures_report_whether_state_may_have_changed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".specify").mkdir()
+            request = RunnerRequest("probe", "resolve-nesting-mode", "resolve-nesting-mode", "apply",
+                                    {"repo_root": str(root), "state_file": "autopilot-state.json", "host": "codex"})
+            for error, changed in ((WritePreconditionChanged("stale"), False), (OSError("write refused"), False),
+                                   (AtomicWriteInterrupted("publication uncertain"), True)):
+                with self.subTest(error=type(error).__name__), patch.object(nesting_preflight, "resolve_repo_root", return_value=root), patch.object(nesting_preflight, "persist_nesting_mode", side_effect=error):
+                    result = nesting_preflight.apply_nesting_preflight_helper(None, request)
+                    self.assertEqual("internal_failure", result["status"])
+                    self.assertEqual(changed, result["data"]["writes_state"])
+                    self.assertEqual("nesting_state_write_failed", result["diagnostics"][0]["code"])
+
+    def test_apply_refuses_an_oversized_state_without_replacing_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".specify").mkdir()
+            target = root / "autopilot-state.json"
+            content = json.dumps({"notes": "x" * 1_048_576})
+            target.write_text(content, encoding="utf-8")
+            completed, result, _ = apply_probe(root, host="codex")
+            self.assertEqual(2, completed.returncode, result)
+            self.assertEqual(content, target.read_text(encoding="utf-8"))
+
+    def test_state_mutations_have_one_owner(self) -> None:
+        # A structural contract: none of the three callers may grow another
+        # state read/modify/write implementation (AGENTS.md invariant 2).
+        for caller in (nesting_preflight.persist_nesting_mode, lifecycle.mirror_checkpoint,
+                       plan_stage_terminal.record_pull_request):
+            with self.subTest(caller=caller.__name__):
+                tree = ast.parse(inspect.getsource(caller))
+                calls = [node.func for node in ast.walk(tree) if isinstance(node, ast.Call)]
+                self.assertTrue(any(isinstance(call, ast.Attribute) and isinstance(call.value, ast.Name)
+                                    and call.value.id == "autopilot_state" and call.attr == "update"
+                                    for call in calls), "state mutations must use the shared owner")
+
     def test_apply_persists_the_complete_envelope_on_each_host(self) -> None:
         for host in ("claude-code", "codex"):
             with self.subTest(host=host), tempfile.TemporaryDirectory() as tmp:
@@ -141,6 +218,14 @@ class StatePersistenceTests(unittest.TestCase):
             (root / ".specify").mkdir(parents=True)
             outside = Path(tmp) / "outside.json"
             outside.write_text('{"keep": true}', encoding="utf-8")
+            # Positive control: unsupported apply mode must not look like a
+            # working symlink guard merely because every request is refused.
+            target = root / "autopilot-state.json"
+            target.write_text("{}", encoding="utf-8")
+            completed, result, _ = apply_probe(root, host="claude-code", nested_spawn="allowed")
+            self.assertEqual(0, completed.returncode, result)
+            self.assertEqual("nested", json.loads(target.read_text(encoding="utf-8"))["nesting_mode"]["data"]["mode"])
+            target.unlink()
             (root / "autopilot-state.json").symlink_to(outside)
             for path in ("autopilot-state.json", "../outside.json", str(outside)):
                 with self.subTest(path=path):

@@ -13,10 +13,14 @@ preserving every other field. `read_only` mode is unchanged.
 `state_file` must be a repository-relative path outside `.git` whose file name
 is `autopilot-state.json`, and that file must already hold a JSON object. The
 write refuses symlinks, paths that leave the worktree, and a file that changed
-since it was read. Every refusal answers `input_error` with
-`nesting_state_invalid` and leaves the file as it was.
+since it was read. Input refusals answer `input_error` with `nesting_state_invalid` and
+`data.writes_state=false`. Publication failures answer `internal_failure` with
+`nesting_state_write_failed`; `data.writes_state` is true when publication or
+cleanup may already have changed disk. Inspect the current state before retrying.
 
-The apply request requires a nonempty `request_id` slug. The `status-evidence`
+The apply request requires a nonempty `request_id` slug without a raw UUID.
+The producer and the state privacy validator share the UUID pattern.
+State reads are bounded to 1 MiB even if the file grows while being read. The `status-evidence`
 rule requires every runner response field, including that ID, exact success
 codes, empty diagnostics and a closed data shape. It replays the existing
 nesting policy to reject contradictory mode, reason, host, depth and
@@ -35,37 +39,51 @@ contradictory reasons and host-specific prerequisites. Actual persisted runner
 outputs cover allowed, refused, absent and invalid probes, with depths zero,
 three and absent. Configured depth remains observational, never a mode gate.
 
+## Review fixes
+
+- **R1361-6482de17:** `autopilot_state.update` owns the existing-object
+  read/modify/write for nesting, formal checkpoint mirroring and draft-PR
+  bookkeeping. It uses the existing shared snapshot-checked atomic writer.
+  The extraction is behavior preserving; migration of the two older callers
+  adds stale-write and unsafe-target refusal as a separate fix. A structural
+  regression check fails if any of the three callers bypasses that owner.
+- **R1361-ba5501be, R1361-67bded64:** the earlier filename guard and docstring
+  fix are retained. Removing the filename guard reproduces the failing
+  `package.json` refusal test before restoration.
+- **R1361-de21c359, R1361-bbe7bcff, R1361-487e2115:** UUID-shaped request IDs
+  fail before writing; publication failures report their actual category and
+  possible write effect; snapshots have a bounded read.
+- **R1361-28470c6c:** both rendered host skills permit one repair-and-retry,
+  then return with the storage diagnostic before executing phases.
+- **R1361-8f40809a:** the symlink test first requires a successful apply to a
+  regular state file, so unsupported apply mode cannot satisfy the test.
+- **R1361-f2b33bfb:** the Codex prompt's g0-setup clause now has a verb.
+
 ## Known limits
 
 Accepted at cross-host review. These do not reach the changed code on real
 runs, or fail closed when they do.
 
-- **Third state read-modify-write.** `persist_nesting_mode`,
-  `formal/lifecycle.py` `mirror_checkpoint`, and `plan_stage_terminal.py`
-  `record_pull_request` each read and rewrite `autopilot-state.json`
-  (AGENTS.md hard invariant 2). Consolidating them changes the other two
-  callers' behavior (stale-write refusal, atomic rename), so it is the
-  builder's follow-up as its own commit.
 - **State file next to the workflow.** The runner checks the file name, not
   that the file sits beside the workflow, because the apply request carries no
   workflow path. Only the orchestrator supplies `state_file`, from the path it
   created in Step 1.
-- **UUID request ids.** The persisted envelope keeps `request_id`. A raw UUID
-  there fails `state_privacy_errors`. Skill guidance uses slug ids, and the
-  failure is closed: the run's own validator stops it.
-- **Write races.** A concurrent writer or a failed rename also answers
-  `nesting_state_invalid` ("correct state_file and retry"). A retry succeeds,
-  so the misleading remediation costs one extra call.
-- **No size cap on the state read.** The state file is the run's own record,
-  written by the runner and the orchestrator.
-- **Retry wording.** Step 1.5 says to repair the state file and retry. A state
-  file the runner cannot write would also break every later step, so the
-  retry has no separate bound.
-- **Live canary.** The receipt reader of `nesting_mode.data.mode` lives in
-  the external canary harness. The next Claude Code canary must confirm the
-  receipt has no `mode.not_observed`.
+- **R1361-ca3045c0: mode-keyed dispatch.** `resolve-nesting-mode` is the only
+  helper registered in both read-only and mutation tables; the explicit mode
+  route leaves other helper dispatch unchanged.
+- **R1361-873d242a: strict envelope version/status.** The schema also pins
+  `schema_version=1.0` and `status=ok`. The producer emits those exact values;
+  incompatible or failed responses are refused rather than treated as mode
+  evidence.
+- **R1361-bca8eb13: live canary.** The receipt reader of
+  `nesting_mode.data.mode` lives in the external canary harness. The next
+  Claude Code canary must confirm the receipt has no `mode.not_observed`.
+  Local schema/producer tests cannot establish that external observation.
 - **Local evidence is not authentication.** Complete, internally consistent
   JSON is not cryptographic proof of a runner invocation or nested spawn. A
   writer able to fabricate every field can reproduce a valid response; this
   gate rejects incomplete and contradictory evidence. Probe observation still
   comes from the orchestrator.
+- **Literal backslashes and hard links.** On POSIX, backslashes name literal
+  in-repository entries. A hard-linked state file is replaced atomically,
+  leaving its other alias unchanged. Neither permits an outside write.

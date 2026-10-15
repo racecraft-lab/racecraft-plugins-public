@@ -45,6 +45,7 @@ VALIDATOR_SUPPORT_FILES = (
     *(PLUGIN_ROOT / "speckit_pro_runner" / name for name in (
         "__init__.py", "json_schema.py", "atomic_write.py", "envelope.py", "strict_input.py", "trusted_io.py",
         "helpers/__init__.py", "helpers/nesting_preflight.py",
+        "autopilot_state.py",
     )),
     *sorted(VALIDATOR.parent.glob("lib/*.py")),
 )

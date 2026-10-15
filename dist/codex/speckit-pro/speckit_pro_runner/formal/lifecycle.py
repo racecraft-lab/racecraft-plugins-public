@@ -6,10 +6,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .. import autopilot_state
 from ..strict_input import SelectionError, require_fields, require_text
 from .catalog import selected_catalog
 from .evidence import CHECKPOINT_ROWS, fingerprint, read_checkpoint, record_path, write_checkpoint
-from .primitives import CATALOG_PATH, FormalError, atomic_record, confined, read_json
+from .primitives import CATALOG_PATH, FormalError, confined, read_json
 from .selection import selection_from_workflow
 
 
@@ -131,14 +132,16 @@ def state_path(root: Path, workflow: str, value: str) -> Path:
 
 
 def mirror_checkpoint(root: Path, workflow: str, value: str, record: dict[str, Any]) -> None:
-    path = state_path(root, workflow, value)
-    state = read_json(path)
-    formal = state.get("formal_checkpoints", {})
-    if not isinstance(formal, dict) or not isinstance(formal.get("checkpoints", {}), dict):
-        raise SelectionError("Malformed formal_checkpoints state mirror")
-    checkpoints = formal.get("checkpoints", {})
-    checkpoint = record["checkpoint"]
-    checkpoints[checkpoint] = {key: record[key] for key in ("verdict", "fingerprint", "evidence")}
-    state["formal_checkpoints"] = {"schema_version": "1.0", "workflow_file": workflow,
-                                   "selection": record["selection"], "checkpoints": checkpoints}
-    atomic_record(path, state)
+    state_path(root, workflow, value)
+
+    def mirror(state: dict[str, Any]) -> None:
+        formal = state.get("formal_checkpoints", {})
+        if not isinstance(formal, dict) or not isinstance(formal.get("checkpoints", {}), dict):
+            raise SelectionError("Malformed formal_checkpoints state mirror")
+        checkpoints = formal.get("checkpoints", {})
+        checkpoint = record["checkpoint"]
+        checkpoints[checkpoint] = {key: record[key] for key in ("verdict", "fingerprint", "evidence")}
+        state["formal_checkpoints"] = {"schema_version": "1.0", "workflow_file": workflow,
+                                       "selection": record["selection"], "checkpoints": checkpoints}
+
+    autopilot_state.update(root, value, mirror)

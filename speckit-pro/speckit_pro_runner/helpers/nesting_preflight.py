@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import autopilot_state
+from ..atomic_write import AtomicWriteInterrupted
 from ..envelope import diagnostic, response
 from ..json_schema import json_values_equal
 from ..strict_input import require_text
@@ -93,13 +94,20 @@ def apply_nesting_preflight_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Resolve and publish the complete envelope before root response compaction."""
     root = resolve_repo_root(request.inputs)
     if isinstance(root, dict):
-        return response("input_error", request_id=request.request_id, diagnostics=[root])
+        return response("input_error", request_id=request.request_id, data={"writes_state": False}, diagnostics=[root])
     inputs = {key: value for key, value in request.inputs.items() if key not in {"repo_root", "state_file"}}
     envelope = response("ok", request_id=request.request_id, data=nesting_mode(inputs))
     try:
-        require_text(request.request_id, "request_id")
+        request_id = require_text(request.request_id, "request_id")
+        if autopilot_state.UUID_PATTERN.search(request_id):
+            raise ValueError("request_id must be a public slug without a raw UUID")
         persist_nesting_mode(root, request.inputs.get("state_file"), envelope)
-    except (ValueError, OSError, RecursionError) as error:
-        return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
+    except (ValueError, RecursionError) as error:
+        return response("input_error", request_id=request.request_id, data={"writes_state": False}, diagnostics=[diagnostic(
             "nesting_state_invalid", str(error), remediation_summary="Correct request_id and state_file, then retry the nesting preflight.")])
+    except OSError as error:
+        return response("internal_failure", request_id=request.request_id,
+                        data={"writes_state": isinstance(error, AtomicWriteInterrupted)}, diagnostics=[diagnostic(
+                            "nesting_state_write_failed", str(error),
+                            remediation_summary="Inspect the current state and write failure before one repair attempt.")])
     return envelope
