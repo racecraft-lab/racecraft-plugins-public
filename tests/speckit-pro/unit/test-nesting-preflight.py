@@ -64,15 +64,12 @@ def apply_probe(root: Path, state_file: str = "autopilot-state.json", **probe: o
 
 def assert_refused_state_file(
     test_case: unittest.TestCase,
-    root: Path,
     target: Path,
-    state_file: str,
-    content: str,
     probe: dict[str, object],
     diagnostic_code: str | None = None,
 ) -> None:
-    target.write_text(content, encoding="utf-8")
-    completed, envelope, _ = apply_probe(root, state_file, **probe)
+    content = target.read_text(encoding="utf-8")
+    completed, envelope, _ = apply_probe(target.parent, target.name, **probe)
     test_case.assertEqual(2, completed.returncode, envelope)
     if diagnostic_code is not None:
         test_case.assertEqual(diagnostic_code, envelope["diagnostics"][0]["code"])
@@ -208,7 +205,8 @@ class StateTargetRefusalTests(unittest.TestCase):
             (root / ".specify").mkdir()
             target = root / "autopilot-state.json"
             content = json.dumps({"notes": "x" * 1_048_576})
-            assert_refused_state_file(self, root, target, target.name, content, {"host": "codex"})
+            target.write_text(content, encoding="utf-8")
+            assert_refused_state_file(self, target, {"host": "codex"})
 
 
 class StateMutationOwnershipTests(unittest.TestCase):
@@ -263,8 +261,9 @@ class StateTargetAllowlistTests(unittest.TestCase):
             root = Path(tmp)
             (root / ".specify").mkdir()
             other = root / "package.json"
+            other.write_text('{"name": "x"}', encoding="utf-8")
             assert_refused_state_file(
-                self, root, other, "package.json", '{"name": "x"}',
+                self, other,
                 {"host": "codex", "nested_spawn": "allowed"},
                 diagnostic_code="nesting_state_invalid",
             )

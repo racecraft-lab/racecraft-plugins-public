@@ -294,26 +294,44 @@ def nesting_envelope(host: str = "codex") -> dict:
     }
 
 
-def _assert_nesting_fields_rejected(test_case: unittest.TestCase, section: str, cases: dict | None = None) -> None:
+def _nesting_field_cases(section: str, cases: dict | None, envelope: dict) -> list[tuple[str, object, bool]]:
     missing = cases is None
+    fields = envelope if section == "envelope" else envelope["data"]
+    field_cases = cases if cases is not None else {field: (None,) for field in fields}
+    return [
+        (field, value, missing)
+        for field, values in field_cases.items()
+        for value in values
+    ]
+
+
+def _assert_nesting_field_rejected(
+    test_case: unittest.TestCase,
+    envelope: dict,
+    section: str,
+    field_case: tuple[str, object, bool],
+) -> None:
+    field, value, missing = field_case
+    candidate = copy.deepcopy(envelope)
+    target = candidate if section == "envelope" else candidate["data"]
+    if missing:
+        del target[field]
+    else:
+        target[field] = value
+    errors = VALIDATOR_MODULE.validate_state_status({"nesting_mode": candidate})["state_status_errors"]
+    test_case.assertTrue(errors, candidate)
+
+
+def _assert_nesting_fields_rejected(test_case: unittest.TestCase, section: str, cases: dict | None = None) -> None:
     for host in ("claude-code", "codex"):
         envelope = nesting_envelope(host)
-        fields = envelope if section == "envelope" else envelope["data"]
-        field_cases = cases if cases is not None else {field: (None,) for field in fields}
-        for field, values in field_cases.items():
-            for value in values:
-                subtest = {"host": host, "field": field}
-                if not missing:
-                    subtest["value"] = value
-                with test_case.subTest(**subtest):
-                    candidate = copy.deepcopy(envelope)
-                    target = candidate if section == "envelope" else candidate["data"]
-                    if missing:
-                        del target[field]
-                    else:
-                        target[field] = value
-                    errors = VALIDATOR_MODULE.validate_state_status({"nesting_mode": candidate})["state_status_errors"]
-                    test_case.assertTrue(errors, candidate)
+        for field_case in _nesting_field_cases(section, cases, envelope):
+            field, value, missing = field_case
+            subtest = {"host": host, "field": field}
+            if not missing:
+                subtest["value"] = value
+            with test_case.subTest(**subtest):
+                _assert_nesting_field_rejected(test_case, envelope, section, field_case)
 
 
 class NestingStateEvidenceTests(unittest.TestCase):
