@@ -131,7 +131,15 @@ class CompactExecutionProjectionTests(unittest.TestCase):
                 projected = answer["data"]["result"] if wrapped else answer["data"]
                 self.assertEqual(projected, {key: value for key, value in data.items()
                                             if key not in {"unknown_dispatch_ids", "blocked_by"}}
-                                 | {"unknown_dispatch_count": 2000, "blocked_by_count": 1000})
+                                 | {"unknown_dispatch_count": 2000, "blocked_by_count": 1000,
+                                    "unknown_dispatch_ids": projected["unknown_dispatch_ids"],
+                                    "blocked_by": projected["blocked_by"]})
+                self.assertTrue(projected["unknown_dispatch_ids"])
+                self.assertTrue(projected["blocked_by"])
+                self.assertLess(len(projected["unknown_dispatch_ids"]), 2000)
+                self.assertLess(len(projected["blocked_by"]), 1000)
+                self.assertEqual(set(projected["unknown_dispatch_ids"]), {"unknown-worker"})
+                self.assertEqual(set(projected["blocked_by"]), {"blocker"})
                 self.assertEqual(json.dumps(body, sort_keys=True), before)
 
 
@@ -254,9 +262,14 @@ class CompactUnknownDispatchTests(unittest.TestCase):
         self.assertEqual(data["ledger"], {"run_id": self.binding["expected_run_id"]})
         self.assertEqual(self.root / data["ledger_path"], self.ledger_path)
         self.assertEqual(data["unknown_dispatch_count"], count)
-        self.assertNotIn("unknown_dispatch_ids", data)
+        ids = data["unknown_dispatch_ids"]
+        self.assertTrue(ids)
+        self.assertLessEqual(len(ids), count)
+        persisted_ids = sorted(json.loads(self.ledger_path.read_text())["dispatches"])
+        self.assertEqual(ids, persisted_ids[:len(ids)])
         self.assertFalse(data["authorization_granted"])
         return data
+
 
     def test_unknown_status_apply_keeps_mirror_warning_on_all_launchers(self):
         for payload, state in itertools.product(self.PAYLOADS, ("[]", "{not json")):
@@ -310,7 +323,9 @@ class CompactUnknownDispatchTests(unittest.TestCase):
                 self.assertEqual(data["disposition"], "checkpoint_required")
                 self.assertEqual(data["reasons"], ["unknown_dispatch_blocks_unit"])
                 self.assertEqual(data["blocked_by_count"], 700)
-                self.assertNotIn("blocked_by", data)
+                self.assertTrue(data["blocked_by"])
+                self.assertLess(len(data["blocked_by"]), 700)
+                self.assertTrue(set(data["blocked_by"]).issubset(data["unknown_dispatch_ids"]))
                 self.assertNotIn("dispatch_id", data)
 
     def test_unknown_overlapping_reserve_counts_only_actual_blockers(self):
@@ -318,6 +333,7 @@ class CompactUnknownDispatchTests(unittest.TestCase):
         answer = self.call(action="reserve", dispatch_id="next-worker", kind="implementation", tdd_units=["unit-0"])
         data = self.assert_compact_result(answer, 700, "expected_failure")
         self.assertEqual(data["blocked_by_count"], 1)
+        self.assertEqual(data["blocked_by"], ["implementation-worker-0000"])
         self.assertEqual(len(json.loads(self.ledger_path.read_text())["dispatches"]), 700)
 
     def test_unknown_detailed_apply_and_compact_non_apply_controls(self):
@@ -338,10 +354,12 @@ class CompactUnknownDispatchTests(unittest.TestCase):
                 self.assertEqual([d["code"] for d in detailed["diagnostics"]], ["state_mirror_not_refreshed"])
 
     def test_unknown_compact_size_is_independent_of_id_length(self):
-        for padding in ("u", "implementation-worker-", "worker-" + "界\\\"" * 100):
+        for padding in ("u", "implementation-worker-", "worker-" + "界\\\"" * 70):
             with self.subTest(padding=padding[:25]):
                 self.prepare_unknowns(padding=padding)
                 self.assert_compact_result(self.call(), 700)
+
+
 
     def test_independent_units_can_accumulate_unknowns_through_public_actions(self):
         # No fabricated history: these unknowns come from normal reserve/complete calls.
@@ -357,6 +375,57 @@ class CompactUnknownDispatchTests(unittest.TestCase):
         data = self.assert_compact_result(answer, 2)
         self.assertEqual(data["dispatch_id"], "gamma")
         self.assertEqual(json.loads(self.ledger_path.read_text())["dispatches"]["gamma"]["outcome"], "reserved")
+
+
+class CompactRecoveryIdsTests(unittest.TestCase):
+    setUp = CompactExecutionTests.setUp
+    PAYLOADS = CompactUnknownDispatchTests.PAYLOADS
+    prepare_unknowns = CompactUnknownDispatchTests.prepare_unknowns
+    call = CompactUnknownDispatchTests.call
+
+    def test_compact_only_root_receives_ids_to_reconcile_on_all_launchers(self):
+        for payload in self.PAYLOADS:
+            with self.subTest(payload=payload):
+                self.ledger_path.write_text(json.dumps(self.seed))
+                self.call(payload, action="complete", dispatch_id="seed", outcome="completed")
+                reserved = self.call(payload, action="reserve", dispatch_id="worker-a",
+                                     kind="implementation", tdd_units=["unit-a"])
+                self.assertEqual(reserved["data"]["dispatch_id"], "worker-a")
+                self.call(payload, action="complete", dispatch_id="worker-a", outcome="unknown")
+                status = self.call(payload)
+                blocked = self.call(payload, action="reserve", dispatch_id="worker-b",
+                                    kind="implementation", tdd_units=["unit-a"])
+                self.assertEqual(status["data"]["unknown_dispatch_ids"], ["worker-a"])
+                self.assertEqual(blocked["data"]["blocked_by"], ["worker-a"])
+                self.assertEqual(blocked["data"]["reasons"], ["unknown_dispatch_blocks_unit"])
+                self.assertNotIn("worker-b", json.loads(self.ledger_path.read_text())["dispatches"])
+
+    def test_compact_batches_reveal_remaining_exact_ids_after_resolution(self):
+        # 240 astral characters is the existing admission boundary and expands on the wire.
+        ledger = self.prepare_unknowns(3, padding="\U0001f680" * 236)
+        remaining = sorted(ledger["dispatches"])
+        for index in range(3):
+            answer = self.call()
+            self.assertEqual(answer["data"]["unknown_dispatch_count"], 3 - index)
+            self.assertEqual(answer["data"]["unknown_dispatch_ids"], remaining[:1])
+            dispatch_id = remaining.pop(0)
+            settled = self.call(action="complete", dispatch_id=dispatch_id, outcome="failed", native_observation={
+                "native_event_id": f"recovered-{index}", "run_id": self.binding["expected_run_id"],
+                "dispatch_id": dispatch_id, "action": "dispatch_result", "outcome": "failed"})
+            self.assertEqual(settled["status"], "ok")
+        self.assertNotIn("unknown_dispatch_ids", self.call()["data"])
+
+    def test_invalid_persisted_dispatch_ids_fail_before_apply_writes(self):
+        for payload, invalid_id in itertools.product(self.PAYLOADS, ("", " " * 10, "x" * 241)):
+            with self.subTest(payload=payload, invalid_id=invalid_id[:20]):
+                ledger = self.prepare_unknowns(1)
+                record = next(iter(ledger["dispatches"].values()))
+                ledger["dispatches"] = {invalid_id: record}
+                self.ledger_path.write_text(json.dumps(ledger))
+                before = self.ledger_path.read_bytes()
+                answer = self.call(payload)
+                self.assertEqual(answer["status"], "input_error")
+                self.assertEqual(self.ledger_path.read_bytes(), before)
 
 
 class CompactLauncherTests(unittest.TestCase):

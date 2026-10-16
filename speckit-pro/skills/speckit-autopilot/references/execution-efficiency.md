@@ -174,7 +174,10 @@ ownership from the caller's current workflow.
   event. Pass `tdd_units` on every implementation `reserve`; the runner records
   the dispatch's worktree snapshot and its unit, and an unknown outcome then
   blocks a new dispatch only when it shares that unit (`reasons` carries
-  `unknown_dispatch_blocks_unit` and `blocked_by`). An implementation dispatch
+  `unknown_dispatch_blocks_unit` and `blocked_by`). Compact `blocked_by` is a
+  bounded batch with exact `blocked_by_count`; settle it and refresh the
+  blocked action for the next batch, as the durable-ledger protocol below
+  describes. An implementation dispatch
   without `tdd_units` is unscoped and blocks all new dispatch until settled.
   Spawn a read-only reconciler agent that inspects the unit's owned paths and
   reports `no_effect`, `partial`, or `complete`. Pass `dispatch_id`, an
@@ -486,7 +489,12 @@ independent units. A `checkpoint_required` whose `reasons` is only
 `unknown_dispatch_blocks_unit` means reconcile each `blocked_by` id, not stop;
 after `unit_classification_mismatch`, re-inspect and call once more with the
 class the paths show, never cycling the three values. Read
-`unknown_dispatch_ids` from `status` before each wave. A corrective dispatch's
+`unknown_dispatch_ids` from `status` before each wave. Compact answers carry
+exact IDs in bounded batches alongside `unknown_dispatch_count` and
+`blocked_by_count`. Settle the returned IDs, then refresh compact `status` or
+retry the blocked action for the next batch. A count larger than its returned
+list means unresolved IDs remain; finish reconciliation and verification for
+each batch before advancing. A corrective dispatch's
 scope is its failure family, so do not reserve one against a failure inside a
 still-unknown unit. Never call this completion or a
 successful runtime measurement. Keep existing run status `in_progress` or

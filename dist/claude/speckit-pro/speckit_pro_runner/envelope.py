@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass
 from typing import Any
 
-from . import CONTRACT_VERSION
+from . import CONTRACT_VERSION, EXECUTION_HISTORY_COUNT_FIELDS
 
 STATUS_EXIT_CODES = {
     "ok": 0,
@@ -21,6 +21,7 @@ STATUS_EXIT_CODES = {
 REQUIRED_FIELDS = ("schema_version", "helper_id", "operation", "mode", "inputs")
 ALLOWED_FIELDS = set(REQUIRED_FIELDS) | {"request_id", "answer_format"}
 COMPACT_ANSWER_LIMIT_BYTES = 16 * 1024
+COMPACT_EXECUTION_HISTORY_LIMIT_BYTES = 3 * 1024
 COMPACT_HANDOFF_TEXT_FIELDS = {
     "publish-tasks-output": ("tasks_binding", "text"),
     "read-tasks-output": ("text",),
@@ -119,6 +120,19 @@ def invalid_request_fields(parsed: dict[str, Any]) -> list[str]:
     return sorted(fields)
 
 
+def compact_execution_ids(ids: list[str]) -> list[str]:
+    """Return a wire-bounded prefix, preserving every returned ID exactly."""
+    result: list[str] = []
+    size = 2  # JSON array brackets.
+    for dispatch_id in ids:
+        added = len(json.dumps(dispatch_id).encode("utf-8")) + (1 if result else 0)
+        if size + added > COMPACT_EXECUTION_HISTORY_LIMIT_BYTES:
+            break
+        result.append(dispatch_id)
+        size += added
+    return result
+
+
 def compact_decision_data(data: dict[str, Any]) -> dict[str, Any]:
     """Keep decisions and ledger identity, omitting replay metadata and history."""
     omitted = {"argv", "stdin_request", "authoritative_command", "invocation_contract"}
@@ -129,10 +143,10 @@ def compact_decision_data(data: dict[str, Any]) -> dict[str, Any]:
         # The durable ledger is available via ledger_path. Its unbounded history
         # must never crowd an applied action's result or mirror warning out of the answer.
         result["ledger"] = {"run_id": data["ledger"]["run_id"]}
-        for field, count_field in (("unknown_dispatch_ids", "unknown_dispatch_count"),
-                                   ("blocked_by", "blocked_by_count")):
+        for field, count_field in EXECUTION_HISTORY_COUNT_FIELDS:
             if field in result:
-                result[count_field] = len(result.pop(field))
+                result[count_field] = len(data[field])
+                result[field] = compact_execution_ids(data[field])
     if isinstance(result.get("result"), dict):
         result["result"] = compact_decision_data(result["result"])
     return result

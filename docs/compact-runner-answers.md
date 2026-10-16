@@ -8,11 +8,16 @@ default remains detailed for existing consumers.
 Execution-control compact answers project `ledger` to its `run_id`; the complete
 validated history remains at `ledger_path` and in detailed answers. Action
 results, disposition, refusal reasons, authorization, clock facts and mirror
-warnings retain their existing fields. Compact answers replace the historical
-`unknown_dispatch_ids` and `blocked_by` lists with `unknown_dispatch_count` and
-`blocked_by_count`, respectively, whenever those lists are present. Detailed
-answers retain the complete lists. Dispatch history and unknown ID length
-therefore cannot displace an applied result or its state-refresh remediation.
+warnings retain their existing fields. Compact answers retain complete dispatch
+IDs in bounded `unknown_dispatch_ids` and `blocked_by` batches, with exact
+`unknown_dispatch_count` and `blocked_by_count` totals whenever those lists are
+present. Each batch is bounded by its serialized size; IDs are never shortened.
+Persisted IDs obey the same nonempty, 240-character admission contract as new
+dispatches, so even a maximally escaped valid ID fits a batch. Invalid ledger
+IDs fail validation before any apply write. Detailed answers retain complete
+lists. Settle each returned batch through reconciliation and verification, then
+refresh compact status or retry the blocked action for the next batch. History
+growth cannot crowd the applied result or mirror warning out of the answer.
 Unknown dispatches block unscoped or overlapping work; implementation reserves
 for distinct `tdd_units` can continue and accumulate unknown outcomes. There is
 no fixed dispatch-count overflow threshold: serialized ID length also matters.

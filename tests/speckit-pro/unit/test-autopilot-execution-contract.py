@@ -139,6 +139,16 @@ class ExecutionContractTests(unittest.TestCase):
             self.assertNotIn("Re-spawn with the", text)
             self.assertIn("read-only reconciliation", text)
 
+    def test_both_hosts_describe_compact_id_batches_and_refresh(self):
+        for root in (SHARED, CODEX):
+            for relative in ("SKILL.md", "references/execution-efficiency.md", "references/phase-execution.md"):
+                with self.subTest(root=root.name, relative=relative):
+                    text = " ".join((root / relative).read_text().split())
+                    for field in ("blocked_by", "unknown_dispatch_ids", "blocked_by_count", "unknown_dispatch_count"):
+                        self.assertTrue(f"`{field}`" in text, f"{relative} missing {field}")
+                    self.assertTrue("bounded batches" in text, f"{relative} missing batch contract")
+                    self.assertTrue("refresh" in text, f"{relative} missing refresh instruction")
+
     def test_plan_rescope_reconciles_every_plan_artifact_before_g3_on_both_hosts(self):
         # A rescope once left research.md, quickstart.md, and the requirements
         # checklist on the old slice count while plan.md moved on, and no gate caught it.

@@ -57,12 +57,33 @@ rename handling or ledger validation changes in this repair.
 
 Finding `F1363-ce3c1911` exposed the same compact applied-result loss through
 two historical lists outside the ledger: `unknown_dispatch_ids` and
-`blocked_by`. Compact execution-control answers now replace those lists with
-exact `unknown_dispatch_count` and `blocked_by_count` values, including nested
-results and refusals. Detailed answers retain both lists and the full ledger;
+`blocked_by`. Compact execution-control answers retain bounded batches of
+complete IDs alongside exact `unknown_dispatch_count` and `blocked_by_count`
+values, including nested results and refusals. Detailed answers retain both
+complete lists and the full ledger;
 the durable ledger remains available at `ledger_path`. This bounds historical
 ID output independently of dispatch count, ID length and JSON escaping, while
 keeping the action's dispatch ID, run ID, disposition, reasons and diagnostics.
+
+Review findings `R1363-f813bca5` and `R1363-f2f9d554` exposed the counts-only
+projection's loss of actionable recovery IDs. Source, both rendered hosts and
+the Codex overlay now use the same bounded-batch protocol: settle returned IDs,
+then refresh compact status or retry the blocked action for the next batch.
+Counts describe totals and never stand in for dispatch IDs. The ledger
+validator enforces the existing nonempty, 240-character dispatch-ID admission
+bound on persisted keys before any apply write, so at least one valid ID fits
+every nonempty batch, even with maximum JSON escaping. Producer and envelope
+field names share the package contract constants (`R1363-53a37229`).
+
+`test_compact_only_root_receives_ids_to_reconcile_on_all_launchers` uses only
+compact runner requests to start from a reserved worker, complete it unknown,
+read status and attempt overlapping work; both needed ID lists name that worker.
+`test_compact_batches_reveal_remaining_exact_ids_after_resolution` settles
+maximum-length escaped IDs and retrieves the remaining IDs in successive
+compact answers. `test_invalid_persisted_dispatch_ids_fail_before_apply_writes`
+rejects blank, whitespace and overlength stored IDs without changing the ledger.
+`test_both_hosts_describe_compact_id_batches_and_refresh` checks the batch and
+count fields at all three guidance sites in both rendered hosts.
 
 Finding `F1363-596e46be` identified an incorrect reachability claim in this
 document and compact-runner-answers.md. Unknown dispatches block unscoped or
