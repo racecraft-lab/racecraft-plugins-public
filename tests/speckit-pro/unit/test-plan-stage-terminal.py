@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import functools
 import itertools
 import json
@@ -12,8 +13,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import unittest.mock
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -21,7 +24,7 @@ sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 sys.path.insert(0, str(ROOT / "speckit-pro"))
 from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
 from test_result import run_counted  # noqa: E402
-from speckit_pro_runner import artifact_review, envelope, stop_policy  # noqa: E402
+from speckit_pro_runner import artifact_review, envelope, execution_control, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
 
 SOURCE = ROOT / "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source"
@@ -125,6 +128,98 @@ class TerminalFixture(unittest.TestCase):
 
     def pages(self) -> list[str]:
         return sorted(path.stem for path in (self.root / FEATURE / "artifacts").glob("*.html"))
+
+
+class RunFactsTests(TerminalFixture):
+    def test_read_only_and_dry_run_leave_the_state_bytes_unchanged(self) -> None:
+        state = (self.root / STATE).read_bytes()
+        control = execution_control.execution_control(self.root, {"workflow_file": WORKFLOW, "action": "start"}, "apply")
+        for mode in ("read_only", "dry_run"):
+            with self.subTest(mode=mode):
+                request = envelope.RunnerRequest("clock", "execution-control", "execution-control", mode,
+                                                 {"workflow_file": WORKFLOW, "action": "status",
+                                                  "expected_run_id": control["ledger"]["run_id"]})
+                self.assertEqual(registry.dispatch_helper(request)["status"], "ok")
+                self.assertEqual((self.root / STATE).read_bytes(), state)
+
+    def test_terminal_excludes_evidenced_waits_from_elapsed_time(self) -> None:
+        started = time.time() - 100
+        binding = {"workflow_file": WORKFLOW}
+        with unittest.mock.patch.object(execution_control.time, "time", return_value=started):
+            control = execution_control.execution_control(self.root, {**binding, "action": "start"}, "apply")
+        binding.update(expected_run_id=control["ledger"]["run_id"])
+        event = {"kind": "human_uat", "run_id": binding["expected_run_id"]}
+        with unittest.mock.patch.object(execution_control.time, "time", return_value=started + 20):
+            execution_control.execution_control(self.root, {**binding, "action": "pause", "native_observation": {
+                **event, "native_event_id": "wait-start", "action": "wait_started"}}, "apply")
+        with unittest.mock.patch.object(execution_control.time, "time", return_value=started + 50):
+            execution_control.execution_control(self.root, {**binding, "action": "resume", "native_observation": {
+                **event, "native_event_id": "wait-end", "action": "wait_ended", "wait_start_event_id": "wait-start"}}, "apply")
+        (self.root / STATE).write_text(json.dumps({"stage": "plan", "status": "in_progress", "execution_control": {
+            "ledger_path": control["ledger_path"], "run_id": binding["expected_run_id"], "elapsed_seconds": 0}}))
+        self.assertEqual(self.finish(execution_mode="headless")["status"], "ok")
+        recorded = json.loads((self.root / STATE).read_text())
+        self.assertAlmostEqual(recorded["execution_control"]["elapsed_seconds"], 70, delta=5)
+
+    def test_execution_helper_refreshes_the_state_without_replacing_the_plan(self) -> None:
+        state = {"stage": "plan", "status": "in_progress",
+                 "plan": [{"step": "Phase 3: Plan", "status": "in_progress"}]}
+        (self.root / STATE).write_text(json.dumps(state), encoding="utf-8")
+        request = envelope.RunnerRequest("clock", "execution-control", "execution-control", "apply",
+                                         {"workflow_file": WORKFLOW, "action": "start"}, "detailed")
+        before = datetime.now(timezone.utc)
+        result = registry.dispatch_helper(request)
+        after = datetime.now(timezone.utc)
+        self.assertEqual(result["status"], "ok", result)
+        recorded = json.loads((self.root / STATE).read_text(encoding="utf-8"))
+        self.assertLessEqual(before, datetime.fromisoformat(recorded["updated_at"]))
+        self.assertLessEqual(datetime.fromisoformat(recorded["updated_at"]), after)
+        self.assertEqual(recorded["plan"], state["plan"])
+        self.assertEqual(recorded["status"], state["status"])
+        self.assertEqual(recorded["execution_control"]["run_id"], result["data"]["ledger"]["run_id"])
+
+    def test_a_malformed_state_file_does_not_hide_an_applied_ledger_change(self) -> None:
+        for malformed in ("[]", "{not json"):
+            with self.subTest(state=malformed):
+                self.setUp()
+                (self.root / STATE).write_text(malformed, encoding="utf-8")
+                request = envelope.RunnerRequest("clock", "execution-control", "execution-control", "apply",
+                                                 {"workflow_file": WORKFLOW, "action": "start"}, "detailed")
+                result = registry.dispatch_helper(request)
+                self.assertEqual(result["status"], "ok", result)
+                self.assertTrue(result["data"]["ledger"]["run_id"])
+                self.assertEqual(["state_mirror_not_refreshed"], [item["code"] for item in result["diagnostics"]])
+                self.assertEqual((self.root / STATE).read_text(encoding="utf-8"), malformed)
+                # The compact answer must steer to a state refresh, never a retry of the applied mutation.
+                compact = envelope.answer_response(dataclasses.replace(request, answer_format="compact"), result)
+                self.assertIn("action=status mode=apply", compact["next_action"])
+                self.assertNotIn("retry", compact["next_action"].lower())
+
+
+class TerminalClockTests(TerminalFixture):
+    def test_terminal_refreshes_runner_clock_facts_on_both_hosts(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                with unittest.mock.patch.object(execution_control.time, "time", return_value=time.time() - 100):
+                    control = execution_control.execution_control(self.root, {
+                        "workflow_file": WORKFLOW, "spec_file": PLANNING["spec_file"], "action": "start",
+                    }, "apply")
+                state = {"stage": "plan", "status": "in_progress", "plan": [],
+                         "updated_at": "2026-01-01T00:00:00Z",
+                         "execution_control": {"ledger_path": control["ledger_path"],
+                                               "run_id": control["ledger"]["run_id"], "elapsed_seconds": 0}}
+                (self.root / STATE).write_text(json.dumps(state), encoding="utf-8")
+                before = datetime.now(timezone.utc)
+                result = self.finish(host=host, execution_mode="headless")
+                after = datetime.now(timezone.utc)
+                self.assertEqual(result["status"], "ok", result)
+                recorded = json.loads((self.root / STATE).read_text(encoding="utf-8"))
+                updated = datetime.fromisoformat(recorded["updated_at"])
+                self.assertLessEqual(before, updated)
+                self.assertLessEqual(updated, after)
+                self.assertAlmostEqual(recorded["execution_control"]["elapsed_seconds"], 100, delta=5)
+                self.assertEqual(recorded["execution_control"]["run_id"], control["ledger"]["run_id"])
 
 
 class OneCallSequenceTests(TerminalFixture):

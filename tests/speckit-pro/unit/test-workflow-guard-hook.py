@@ -23,6 +23,7 @@ for _root in (SHARED_LIB, PLUGIN_ROOT):
         sys.path.insert(0, str(_root))
 
 from speckit_pro_runner.gates import active_path_guard  # noqa: E402
+from speckit_pro_runner.execution_control import execution_control  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HOOK = REPO_ROOT / "speckit-pro" / "scripts" / "workflow-guard-hook.py"
@@ -180,6 +181,12 @@ class WorkflowGuardHookTests(unittest.TestCase):
             state.parent.mkdir(parents=True)
             with self.subTest(msg="no autopilot state means no decision even with unpushed commits"):
                 self.assertEqual({}, run_hook("unpushed", stop)[1])
+            for progress in ("pending", "in_progress"):
+                with self.subTest(msg="agents still own unfinished plan work", progress=progress):
+                    state.write_text(json.dumps({"status": "in_progress", "plan": [
+                        {"step": "Phase 3: Plan", "status": progress},
+                    ]}), encoding="utf-8")
+                    self.assertEqual({}, run_hook("unpushed", stop)[1])
             state.write_text(json.dumps({"status": "in_progress"}), encoding="utf-8")
             with self.subTest(msg="active state with no upstream blocks and names the commit count"):
                 out = run_hook("unpushed", stop)[1]
@@ -202,6 +209,175 @@ class WorkflowGuardHookTests(unittest.TestCase):
             state.write_text("{not json", encoding="utf-8")
             with self.subTest(msg="an unreadable state fails open"):
                 self.assertEqual({}, run_hook("unpushed", stop)[1])
+
+
+class PublicationEvidenceTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name).resolve()
+        git(self.root, "init", "-q", "-b", "main")
+        self.workflow = "docs/ai/specs/.process/workflow.md"
+        self.state_path = self.root / "docs/ai/specs/.process/autopilot-state.json"
+        self.state_path.parent.mkdir(parents=True)
+        (self.root / self.workflow).write_text("# Workflow\n", encoding="utf-8")
+        control = execution_control(self.root, {"workflow_file": self.workflow, "action": "start"}, "apply")
+        self.binding = {"workflow_file": self.workflow, "expected_run_id": control["ledger"]["run_id"]}
+        execution_control(self.root, {**self.binding, "action": "reserve", "dispatch_id": "planner",
+                                      "kind": "implementation"}, "apply")
+        self.ledger_path = self.root / control["ledger_path"]
+        self.state = {"workflow_file": self.workflow, "status": "in_progress", "plan": [],
+                      "execution_control": {"ledger_path": control["ledger_path"],
+                                            "run_id": self.binding["expected_run_id"]}}
+        self.state_path.write_text(json.dumps(self.state), encoding="utf-8")
+        git(self.root, "add", ".")
+        git(self.root, "commit", "-qm", "active workflow")
+
+    def assert_publication_check(self, root: Path, state: dict, expected: str | None = "block") -> None:
+        state_path = root / self.state_path.relative_to(self.root)
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+        for cwd in (root, state_path.parent):
+            with self.subTest(cwd=cwd.relative_to(root).as_posix()):
+                code, out, error = run_hook("unpushed", {"hook_event_name": "Stop", "cwd": str(cwd)})
+                self.assertEqual(0, code, error)
+                self.assertEqual(expected, out.get("decision"), (out, error))
+                if expected == "block":
+                    self.assertIn("commit(s)", out["reason"])
+
+    def test_checkout_without_ignored_ledger_still_checks_unpushed_commits(self) -> None:
+        checkout = self.root / "checkout"
+        git(self.root, "clone", "-q", "--no-hardlinks", str(self.root), str(checkout))
+        self.assertFalse((checkout / self.ledger_path.relative_to(self.root)).exists())
+        git(checkout, "commit", "--allow-empty", "-qm", "unpublished")
+        self.assert_publication_check(checkout, self.state)
+
+    def test_stale_run_binding_still_checks_unpushed_commits(self) -> None:
+        self.state["execution_control"]["run_id"] = "new-checkout-run"
+        self.assert_publication_check(self.root, self.state)
+
+    def test_malformed_mirrors_still_check_unpushed_commits(self) -> None:
+        for mirror in ([], "bad", True, {}, {"run_id": "r"}, {"ledger_path": "missing"},
+                       {"run_id": [], "ledger_path": 42}):
+            with self.subTest(mirror=mirror):
+                self.assert_publication_check(self.root, {**self.state, "execution_control": mirror})
+
+    def test_wrong_workflow_binding_still_checks_unpushed_commits(self) -> None:
+        other = "docs/ai/specs/.process/other.md"
+        (self.root / other).write_text("# Other workflow\n", encoding="utf-8")
+        self.assert_publication_check(self.root, {**self.state, "workflow_file": other})
+
+    def test_invalid_workflow_fields_still_check_unpushed_commits(self) -> None:
+        for workflow in (None, [], {}, 42, "missing.md", "../outside.md"):
+            with self.subTest(workflow=workflow):
+                self.assert_publication_check(self.root, {**self.state, "workflow_file": workflow})
+
+    def test_rejected_ledger_paths_still_check_unpushed_commits(self) -> None:
+        for path in ("../outside/execution-control/run.json", str(self.ledger_path), ".git/execution-control/run.json"):
+            with self.subTest(path=path):
+                mirror = {**self.state["execution_control"], "ledger_path": path}
+                self.assert_publication_check(self.root, {**self.state, "execution_control": mirror})
+
+    def test_renamed_or_linked_ledger_still_checks_unpushed_commits(self) -> None:
+        renamed = self.ledger_path.with_name("renamed.json")
+        self.ledger_path.rename(renamed)
+        self.assert_publication_check(self.root, self.state)
+        self.assertFalse(self.ledger_path.exists())
+        self.ledger_path.symlink_to(renamed)
+        self.assert_publication_check(self.root, self.state)
+        renamed.unlink()
+        self.assert_publication_check(self.root, self.state)  # Dangling file link.
+
+    def test_linked_ledger_directory_still_checks_unpushed_commits(self) -> None:
+        directory = self.ledger_path.parent
+        renamed = directory.with_name("relocated-control")
+        directory.rename(renamed)
+        directory.symlink_to(renamed, target_is_directory=True)
+        self.assert_publication_check(self.root, self.state)
+
+    def test_mirror_dispatch_claims_cannot_substitute_for_bound_ledger(self) -> None:
+        self.ledger_path.unlink()
+        self.state["execution_control"]["dispatches"] = {"forged": {"outcome": "running"}}
+        self.assert_publication_check(self.root, self.state)
+
+    def test_unreadable_ledger_still_checks_unpushed_commits(self) -> None:
+        self.ledger_path.unlink()
+        self.ledger_path.mkdir()  # A real OS read failure, including in a VM running as root.
+        self.assert_publication_check(self.root, self.state)
+
+    def test_malformed_ledgers_still_check_unpushed_commits(self) -> None:
+        ledger = self.ledger_path.read_bytes()
+        broken_dispatch = json.loads(ledger)
+        broken_dispatch["dispatches"]["planner"] = None
+        for content in (b"{bad json", b"\xff", b"[]", b"null", b"{}", json.dumps(broken_dispatch).encode()):
+            with self.subTest(content=content):
+                self.ledger_path.write_bytes(content)
+                self.assert_publication_check(self.root, self.state)
+                self.assertEqual(content, self.ledger_path.read_bytes())
+
+    def test_non_object_plan_rows_still_check_unpushed_commits(self) -> None:
+        execution_control(self.root, {**self.binding, "action": "complete", "dispatch_id": "planner",
+                                      "outcome": "completed"}, "apply")
+        for row in (None, "bad", 42, [], {"status": []}, {"status": {}}):
+            with self.subTest(row=row):
+                self.assert_publication_check(self.root, {**self.state, "plan": [row]})
+
+    def test_invalid_plan_containers_still_check_unpushed_commits(self) -> None:
+        execution_control(self.root, {**self.binding, "action": "complete", "dispatch_id": "planner",
+                                      "outcome": "completed"}, "apply")
+        for plan in (None, False, 42, "pending", {"status": "pending"}):
+            with self.subTest(plan=plan):
+                self.assert_publication_check(self.root, {**self.state, "plan": plan})
+
+    def test_pending_plan_rows_defer_until_settled_despite_invalid_rows_and_missing_ledger(self) -> None:
+        self.ledger_path.unlink()
+        for progress in ("pending", "in_progress"):
+            with self.subTest(progress=progress):
+                state = {**self.state, "plan": [None, {"status": progress}]}
+                self.assert_publication_check(self.root, state, None)
+                state["plan"][1]["status"] = "completed"
+                self.assert_publication_check(self.root, state)
+
+    def test_unsettled_dispatches_defer_until_settled_despite_invalid_plan_rows(self) -> None:
+        ledger = json.loads(self.ledger_path.read_bytes())
+        state = {**self.state, "plan": [None]}
+        for outcome in ("reserved", "running", "unknown"):
+            with self.subTest(outcome=outcome):
+                ledger["dispatches"]["planner"]["outcome"] = outcome
+                self.ledger_path.write_text(json.dumps(ledger), encoding="utf-8")
+                # These are valid ledger snapshots, not malformed-state deferrals.
+                status = execution_control(self.root, {**self.binding, "action": "status"}, "read_only")
+                self.assertEqual(outcome, status["ledger"]["dispatches"]["planner"]["outcome"])
+                before = self.ledger_path.read_bytes()
+                self.assert_publication_check(self.root, state, None)
+                self.assertEqual(before, self.ledger_path.read_bytes())
+                ledger["dispatches"]["planner"]["outcome"] = "completed"
+                self.ledger_path.write_text(json.dumps(ledger), encoding="utf-8")
+                self.assert_publication_check(self.root, state)
+
+
+class PendingAgentTests(unittest.TestCase):
+    def test_an_unsettled_ledger_agent_defers_push_with_no_pending_plan_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            git(root, "init", "-q")
+            workflow = "docs/ai/specs/.process/workflow.md"
+            (root / workflow).parent.mkdir(parents=True)
+            (root / workflow).write_text("# Workflow\n")
+            git(root, "add", ".")
+            git(root, "commit", "-qm", "seed")
+            control = execution_control(root, {"workflow_file": workflow, "action": "start"}, "apply")
+            binding = {"workflow_file": workflow, "expected_run_id": control["ledger"]["run_id"]}
+            execution_control(root, {**binding, "action": "reserve", "dispatch_id": "planner", "kind": "implementation"}, "apply")
+            state = root / "docs/ai/specs/.process/autopilot-state.json"
+            state.write_text(json.dumps({"workflow_file": workflow, "status": "in_progress", "plan": [],
+                                         "execution_control": {"ledger_path": control["ledger_path"],
+                                                               "run_id": binding["expected_run_id"]}}))
+            stop = {"hook_event_name": "Stop", "stop_hook_active": False, "cwd": str(root)}
+            self.assertEqual({}, run_hook("unpushed", stop)[1])
+            execution_control(root, {**binding, "action": "complete", "dispatch_id": "planner", "outcome": "completed"}, "apply")
+            self.assertEqual("block", run_hook("unpushed", stop)[1]["decision"])
+            nested = {**stop, "cwd": str(state.parent)}
+            self.assertEqual("block", run_hook("unpushed", nested)[1].get("decision"))
 
 
 class HookMatcherExemptionTests(unittest.TestCase):
@@ -262,7 +438,8 @@ class RealHookManifestTests(unittest.TestCase):
 
 def build_suite() -> unittest.TestSuite:
     suite = unittest.TestSuite()
-    for case in (WorkflowGuardHookTests, HookMatcherExemptionTests, RealHookManifestTests):
+    for case in (WorkflowGuardHookTests, PublicationEvidenceTests, PendingAgentTests,
+                 HookMatcherExemptionTests, RealHookManifestTests):
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     return suite
 

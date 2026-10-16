@@ -3345,7 +3345,11 @@ is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
 `unit_classification_mismatch`, re-inspect the owned paths and call once more
 with the class the paths show; never cycle the three values. Read
 `unknown_dispatch_ids` from `status` before each wave so a blocked unit is
-seldom reserved.
+seldom reserved. Compact answers carry exact IDs in bounded batches alongside
+`unknown_dispatch_count` and `blocked_by_count`. Settle the returned IDs, then
+refresh compact `status` or retry the blocked action to retrieve the next
+batch. A count larger than its returned list means unresolved IDs remain;
+complete reconciliation and verification for each batch before advancing.
 
 A failed gate or test is not a blocked action: diagnose it through the
 consensus agents, fix it through the executor, rerun verification, and keep

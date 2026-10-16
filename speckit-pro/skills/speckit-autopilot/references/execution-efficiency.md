@@ -8,7 +8,8 @@ it does not replace their dispatch, authorization, or mandatory gate rules.
 
 Invoke runner helper `execution-control`, operation `execution-control`, with
 `inputs.workflow_file` and `inputs.action`. Use `mode=apply` for ledger changes
-(`dry_run` previews); `action=status` is `mode=read_only`.
+(`dry_run` previews). Use `action=status mode=read_only` to inspect the ledger,
+or `action=status mode=apply` to refresh its existing one-run state mirror.
 
 Every non-start action requires `inputs.expected_run_id` from the last genuine
 `result.data.ledger.run_id`. First-ever kickoff may omit it; a known resume
@@ -173,7 +174,10 @@ ownership from the caller's current workflow.
   event. Pass `tdd_units` on every implementation `reserve`; the runner records
   the dispatch's worktree snapshot and its unit, and an unknown outcome then
   blocks a new dispatch only when it shares that unit (`reasons` carries
-  `unknown_dispatch_blocks_unit` and `blocked_by`). An implementation dispatch
+  `unknown_dispatch_blocks_unit` and `blocked_by`). Compact `blocked_by` is a
+  bounded batch with exact `blocked_by_count`; settle it and refresh the
+  blocked action for the next batch, as the durable-ledger protocol below
+  describes. An implementation dispatch
   without `tdd_units` is unscoped and blocks all new dispatch until settled.
   Spawn a read-only reconciler agent that inspects the unit's owned paths and
   reports `no_effect`, `partial`, or `complete`. Pass `dispatch_id`, an
@@ -361,16 +365,18 @@ and recovered dispatch results. Operator retry, continuation, and exception
 approvals share that rule. Changing the action or kind does not make a
 consumed event new; obtain a distinct genuine parent event for each transition.
 
-After a successful or `expected_failure` ledger response, the native orchestrator
-mirrors `result.data` fields `ledger_path`, `disposition`, `reasons`,
-`elapsed_seconds`, and `checkpoint_due`, plus `result.data.ledger.run_id`, into
-the optional `autopilot-state.json.execution_control` object. These fields are
-directly in `data`, not `data.stdout_json`. The helper writes its durable ledger,
-not the one-run status file; workers do not own this mirror. Preserve the existing
-top-level status and pending plan rows. An input error has diagnostics, not a
-new mirror. On resume, read the live helper result before refreshing the mirror;
-a stale mirror never initializes, overwrites, or resets a ledger. This record
-is for user visibility, not independent proof of authority or completed work.
+In `mode=apply`, the `execution-control` helper refreshes an existing
+`autopilot-state.json` beside the workflow: it stamps UTC `updated_at` and
+projects `ledger_path`, `run_id`, `disposition`, `reasons`, `elapsed_seconds`,
+and `checkpoint_due` from the ledger into `execution_control`. The shared state
+writer also refreshes these facts at the plan terminal and formal checkpoint
+writes. Elapsed time uses the ledger's clock and evidenced wait exclusions.
+After the native orchestrator changes plan rows or status, call `action=status` in
+`mode=apply` with the unchanged run binding. Read-only and dry-run calls leave
+state untouched. Workers leave this mirror to the runner, which preserves the
+top-level status and pending plan rows. A stale mirror never initializes,
+overwrites, or resets a ledger. This record is for user visibility,
+not independent proof of authority or completed work.
 
 One corrective cycle per failure family and two corrective cycles per spec
 are the shared ceilings. The operator-approved infrastructure recovery above
@@ -483,7 +489,12 @@ independent units. A `checkpoint_required` whose `reasons` is only
 `unknown_dispatch_blocks_unit` means reconcile each `blocked_by` id, not stop;
 after `unit_classification_mismatch`, re-inspect and call once more with the
 class the paths show, never cycling the three values. Read
-`unknown_dispatch_ids` from `status` before each wave. A corrective dispatch's
+`unknown_dispatch_ids` from `status` before each wave. Compact answers carry
+exact IDs in bounded batches alongside `unknown_dispatch_count` and
+`blocked_by_count`. Settle the returned IDs, then refresh compact `status` or
+retry the blocked action for the next batch. A count larger than its returned
+list means unresolved IDs remain; finish reconciliation and verification for
+each batch before advancing. A corrective dispatch's
 scope is its failure family, so do not reserve one against a failure inside a
 still-unknown unit. Never call this completion or a
 successful runtime measurement. Keep existing run status `in_progress` or
