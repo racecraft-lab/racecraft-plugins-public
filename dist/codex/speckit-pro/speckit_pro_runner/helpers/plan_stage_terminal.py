@@ -17,9 +17,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from .. import artifact_review, cli_probe, stop_policy
+from .. import artifact_review, autopilot_state, cli_probe, stop_policy
 from ..atomic_write import write_bytes_atomic
 from ..envelope import RunnerRequest, diagnostic, response
+from ..execution_control import contained_workflow_file
 from ..trusted_io import resolve_repo_root, trusted_bytes
 from ..workflow_stage import AUTOPILOT_BASIC_INFO_HEADING, HTML_COMMENT_RE, workflow_stage_signals, workflow_table_rows
 from . import artifact_fill, artifact_publication, artifact_selection
@@ -126,7 +127,7 @@ def set_basic_row(text: str, key: str, value: str) -> str:
 
 def prepare(run: Run, inputs: dict[str, Any]) -> None:
     """Read the facts the sequence needs, and refuse before any write when one is missing."""
-    run.workflow = inputs["workflow_file"]
+    run.workflow = contained_workflow_file(run.root, inputs["workflow_file"])
     run.state = str(Path(run.workflow).with_name("autopilot-state.json"))
     run.feature = str(Path(inputs["plan_file"]).parent)
     for field_name in PLANNING:
@@ -399,8 +400,7 @@ def record_pull_request(run: Run, found: dict[str, Any], pages: dict[str, Any]) 
     total = len(pages["selected"]) or len(pages["gaps"])
     note = f" — {len(pages['gaps'])} of {total} artifacts missing" if pages["gaps"] else ""
     write(run.root, run.workflow, set_basic_row(workflow_text(run), "Draft PR", f"[#{found['number']}]({found['url']}){note}"))
-    state = json.loads(text_of(run.root, run.state))
-    write(run.root, run.state, json.dumps({**state, "stage": "plan", "status": "completed"}, indent=2) + "\n")
+    autopilot_state.update(run.root, run.state, lambda state: state.update(stage="plan", status="completed"))
     commit(run, [run.workflow, run.state], f"chore({run.info['spec id']}): record the draft pull request")
     push(run)
 

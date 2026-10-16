@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from functools import partial
 from pathlib import Path
 from typing import Any
 
+from .. import autopilot_state
 from ..strict_input import SelectionError, require_fields, require_text
 from .catalog import selected_catalog
 from .evidence import CHECKPOINT_ROWS, fingerprint, read_checkpoint, record_path, write_checkpoint
-from .primitives import CATALOG_PATH, FormalError, atomic_record, confined, read_json
+from .primitives import CATALOG_PATH, FormalError, confined, read_json
 from .selection import selection_from_workflow
 
 
@@ -130,9 +132,8 @@ def state_path(root: Path, workflow: str, value: str) -> Path:
     return path
 
 
-def mirror_checkpoint(root: Path, workflow: str, value: str, record: dict[str, Any]) -> None:
-    path = state_path(root, workflow, value)
-    state = read_json(path)
+def mirror_formal_checkpoint(state: dict[str, Any], *, workflow: str, record: dict[str, Any]) -> None:
+    """Replace one formal checkpoint without dropping the other state fields."""
     formal = state.get("formal_checkpoints", {})
     if not isinstance(formal, dict) or not isinstance(formal.get("checkpoints", {}), dict):
         raise SelectionError("Malformed formal_checkpoints state mirror")
@@ -141,4 +142,8 @@ def mirror_checkpoint(root: Path, workflow: str, value: str, record: dict[str, A
     checkpoints[checkpoint] = {key: record[key] for key in ("verdict", "fingerprint", "evidence")}
     state["formal_checkpoints"] = {"schema_version": "1.0", "workflow_file": workflow,
                                    "selection": record["selection"], "checkpoints": checkpoints}
-    atomic_record(path, state)
+
+
+def mirror_checkpoint(root: Path, workflow: str, value: str, record: dict[str, Any]) -> None:
+    state_path(root, workflow, value)
+    autopilot_state.update(root, value, partial(mirror_formal_checkpoint, workflow=workflow, record=record))
