@@ -1911,7 +1911,9 @@ surface returns** in its `{"status": "blocked", "reason": ...}` envelope (exit
 `observation_failed` do not stop the run: they end this run's sweep, so
 proceed into task work and report the reason as the `skipped` outcome above
 does. `isolation_boundary_unavailable` is the isolation stop and names
-`stop_reason:tampering_or_forged_evidence`.
+`stop_reason:tampering_or_forged_evidence`. The runner persists the harm-halt
+record before returning that isolation failure; resume and apply-mode requests
+remain refused until a human clears the recorded reason with `harm-halt`.
 
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool

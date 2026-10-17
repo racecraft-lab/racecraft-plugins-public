@@ -623,7 +623,7 @@
         "value": "speckit_pro_runner/helpers/feedback_sweep.py",
         "display": "speckit_pro_runner/helpers/feedback_sweep.py"
       },
-      "sha256": "178ab5d7de5a0e2d240712e4435d1dc6a22f7875ce76143153785a4b1b5de774"
+      "sha256": "0693febe2380b3d226a5db97cbe355f9d6aed9fb22d352b1f1e52cf4158d9687"
     },
     {
       "path": {
@@ -991,7 +991,7 @@
         "value": "speckit_pro_runner/runtime.py",
         "display": "speckit_pro_runner/runtime.py"
       },
-      "sha256": "f9b8663596f66529b8f7bfe353571b44b86faffb918d3ba0c8ba11b494f974b0"
+      "sha256": "5baab2add09491ba1d4564bc2768ba05ddcd1adf0fa27ac5cae9746ea9e68bf6"
     },
     {
       "path": {

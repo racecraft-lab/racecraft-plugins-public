@@ -9,10 +9,12 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
+from speckit_pro_runner.runtime import handle_request  # noqa: E402
 from mutation_request_case import MutationRequestCase  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -56,6 +58,20 @@ class HarmHaltTests(MutationRequestCase):
                 self.assertEqual("harm_halt_active", blocked["diagnostics"][0]["code"], blocked)
                 self.assertFalse((self.root / LIST_FILE).exists())
                 self.assertEqual("*\n", (self.root / RECORD).parent.joinpath(".gitignore").read_text(encoding="utf-8"))
+
+    def test_payload_gate_cannot_rebuild_dist_while_a_halt_stands(self) -> None:
+        sentinel = self.root / "dist" / "sentinel"
+        sentinel.parent.mkdir()
+        sentinel.write_text("keep", encoding="utf-8")
+        request = SimpleNamespace(schema_version="1.0", request_id="gate-attempt", helper_id="payload-gate",
+                                  operation="payload-completeness", mode="apply", inputs={"apply_dist": True})
+        self.halt("secret_exposure")
+        with patch("speckit_pro_runner.gates.registry.run_payload_gate") as payload_gate:
+            blocked = handle_request(request)
+        self.assertEqual("harm_halt_active", blocked["diagnostics"][0]["code"], blocked)
+        payload_gate.assert_not_called()
+        self.assertEqual("keep", sentinel.read_text(encoding="utf-8"))
+        self.assertEqual("refused", self.read_only_data()["resume"])
 
     def test_resume_refuses_until_the_clear_command_runs(self) -> None:
         self.halt()
