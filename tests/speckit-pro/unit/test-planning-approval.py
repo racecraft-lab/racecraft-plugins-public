@@ -16,7 +16,7 @@ from test_result import run_counted
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 from speckit_pro_runner.formal.evidence import write_checkpoint
 from speckit_pro_runner.helpers import planning_approval as approval_owner
-from speckit_pro_runner.helpers.read_only import render_spec_index
+from speckit_pro_runner.helpers.read_only import render_feature_spec_index, render_spec_index
 from speckit_pro_runner.workflow_stage import AUTOPILOT_STATUS_VALUES
 
 
@@ -280,6 +280,11 @@ class AssuranceGuardTest(unittest.TestCase):
 
 
 class WorkflowFixture(PlanningApprovalFixture):
+    def refreshMap(self):
+        path = self.feature / "SPEC-MOC.md"
+        if path.exists():
+            path.write_bytes(render_feature_spec_index(self.root, "specs/demo", path.read_bytes().decode()).encode())
+
     def assertWorkflowEdit(self, before, after, preserves=False, name="workflow.md"):
         # Each scenario has independent approval history and confirmation evidence.
         for record in (self.feature / "plan-approvals").glob("*.json"):
@@ -288,17 +293,23 @@ class WorkflowFixture(PlanningApprovalFixture):
         choice = "\n## Security plan\n- [x] Allow external requests\n"
         path = self.feature / name
         path.write_text(before + choice)
+        self.approval()  # Allocate evidence and confirmation paths before the final manifest.
+        self.refreshMap()
         recorded = self.call("record", "apply", approval=self.approval())
         self.assertEqual(recorded["status"], "ok", recorded)
         digest = recorded["data"]["record"]["manifest_digest"]
         self.assertEqual(self.call("verify")["status"], "ok")
         path.write_text(after + choice)
+        if name == "SPEC-MOC.md":
+            self.refreshMap()
         changed = self.call()["data"]["manifest_digest"]
         verified = self.call("verify")
         if preserves:
             self.assertEqual(changed, digest)
             self.assertEqual(verified["status"], "ok", verified)
             path.write_text(after + choice.replace("[x]", "[ ]"))
+            if name == "SPEC-MOC.md":
+                self.refreshMap()
             changed = self.call()["data"]["manifest_digest"]
             self.assertNotEqual(changed, digest)
             verified = self.call("verify")
