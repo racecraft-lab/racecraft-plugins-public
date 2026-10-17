@@ -79,7 +79,7 @@ def assert_refused_state_file(
 
 
 @contextmanager
-def state_target_workspace() -> Iterator[Path]:
+def specify_workspace() -> Iterator[Path]:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / ".specify").mkdir()
@@ -93,9 +93,7 @@ class StateEvidenceTests(unittest.TestCase):
                  ("nested", "allowed", "nested_spawn_allowed"),
                  ("nested", "refused", "nested_spawn_refused"), ("", "allowed", "probe_invalid"))
         for host, (requested, spawn, reason) in itertools.product(("claude-code", "codex"), cases):
-            with self.subTest(host=host, requested=requested, spawn=spawn), tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp)
-                (root / ".specify").mkdir()
+            with self.subTest(host=host, requested=requested, spawn=spawn), specify_workspace() as root:
                 target = root / "autopilot-state.json"
                 target.write_text("{}\n", encoding="utf-8")
                 with patch.dict(os.environ, {REQUEST_VARIABLE: requested}):
@@ -113,9 +111,7 @@ class StateEvidenceTests(unittest.TestCase):
 class StateRequestIdTests(unittest.TestCase):
     def test_apply_refuses_uuid_request_ids_before_writing(self) -> None:
         private_id = "abcdefab-" + "1234-5678-abcd-" + "0123456789ab"
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / ".specify").mkdir()
+        with specify_workspace() as root:
             target = root / "autopilot-state.json"
             target.write_text("{}\n", encoding="utf-8")
             request = RunnerRequest("probe-" + private_id, "resolve-nesting-mode", "resolve-nesting-mode", "apply",
@@ -194,9 +190,7 @@ class StatePersistenceTests(unittest.TestCase):
             self.assertEqual(newer, target.read_text(encoding="utf-8"))
 
     def test_write_failures_report_whether_state_may_have_changed(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / ".specify").mkdir()
+        with specify_workspace() as root:
             request = RunnerRequest("probe", "resolve-nesting-mode", "resolve-nesting-mode", "apply",
                                     {"repo_root": str(root), "state_file": "autopilot-state.json", "host": "codex"})
             for error, changed in ((WritePreconditionChanged("stale"), False), (OSError("write refused"), False),
@@ -210,7 +204,7 @@ class StatePersistenceTests(unittest.TestCase):
 
 class StateTargetRefusalTests(unittest.TestCase):
     def test_apply_refuses_an_oversized_state_without_replacing_it(self) -> None:
-        with state_target_workspace() as root:
+        with specify_workspace() as root:
             target = root / "autopilot-state.json"
             content = json.dumps({"notes": "x" * 1_048_576})
             target.write_text(content, encoding="utf-8")
@@ -251,9 +245,7 @@ class StateMutationOwnershipTests(unittest.TestCase):
 class StateInvalidDataTests(unittest.TestCase):
     def test_invalid_state_is_refused_without_overwriting_it(self) -> None:
         for content in (None, "{", "[]", '{"plan": [], "plan": [1]}', '{"elapsed": NaN}'):
-            with self.subTest(content=content), tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp)
-                (root / ".specify").mkdir()
+            with self.subTest(content=content), specify_workspace() as root:
                 target = root / "autopilot-state.json"
                 if content is not None:
                     target.write_text(content, encoding="utf-8")
@@ -265,7 +257,7 @@ class StateInvalidDataTests(unittest.TestCase):
 
 class StateTargetAllowlistTests(unittest.TestCase):
     def test_apply_writes_only_an_autopilot_state_file(self) -> None:
-        with state_target_workspace() as root:
+        with specify_workspace() as root:
             other = root / "package.json"
             other.write_text('{"name": "x"}', encoding="utf-8")
             assert_refused_state_file(
