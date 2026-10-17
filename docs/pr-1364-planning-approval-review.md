@@ -108,6 +108,18 @@ cases through the public manifest, record and verify request seam.
 - Unfenced `Stage` and `Draft PR` table rows are declared execution bookkeeping
   and excluded. A planning directive placed in these rows uses a field outside
   its intended purpose; this accepted Low limit is unchanged.
+- Plain bullets directly under `Lessons Learned`, or under its three template
+  subsections, are dropped whatever they say. The autopilot writes lessons
+  after implementation, and no planning step writes there. A planning
+  directive placed in a lesson bullet uses the section outside its purpose,
+  like the `Stage` row limit. Accepted Low.
+- A Formal Checkpoints status cell is erased for any lowercase identifier when
+  its evidence cell is `No selected model` or the owner's result path.
+  `checkpoint_signal` reads that live text, so a text-only edit to `pass`
+  after approval can change `planning_complete` with the same digest. The
+  approval does not vouch for that edit: formal selection stays bound, the
+  gate reads the current text, and checker verdicts are not planning inputs.
+  Accepted Info; the Daybreak re-check should confirm it.
 - `Implementation Progress` and `Feedback Sweep Log`, including their nested
   subsections, are declared execution bookkeeping and excluded. Put planning
   decisions under ordinary planning headings. These accepted Info limits are
@@ -133,8 +145,12 @@ cases through the public manifest, record and verify request seam.
   same level, so the next sibling or higher heading closes it. Otherwise the
   agent appends `## Feedback Sweep Log` at the end of the file, and no current
   writer adds planning text after it. Accepted Low.
-- The declared-progress repair also addresses the separate code-review
-  false-refusal finding. Prior accepted Low/Info notes remain unchanged;
+- The declared-progress repair partly addresses the separate code-review
+  false-refusal finding. The cross-host review of `00f2fda7` keeps it open
+  for writes that a resume can still meet, such as the Implement Checklist
+  Gate and the Quality Gates `Hardener` line; it does not accept those writes,
+  or the alternative status icons, as limits. Prior accepted Low/Info notes
+  remain unchanged;
   this repair does not claim a new independent Daybreak security verdict.
 - Approval assurance remains recorded, without protection against an agent with
   the operator's file access. Interactive confirmation is covered by its JSON

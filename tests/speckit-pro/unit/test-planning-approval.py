@@ -371,6 +371,7 @@ class DeclaredProgressTest(WorkflowFixture):
 
     def test_spec_map_status_preserves_approval(self):
         before = self.template("spec-moc-template.md")
+        self.assertEqual(before.count('status: ""'), 1)
         self.assertWorkflowEdit(before, before.replace('status: ""', 'status: in_progress'),
                                 preserves=True, name="SPEC-MOC.md")
 
