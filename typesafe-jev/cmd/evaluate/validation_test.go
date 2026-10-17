@@ -497,12 +497,15 @@ func TestChoiceOptionCap(t *testing.T) {
 // state was serialised, sent, billed, and returned as a bare HTTP 400 whose
 // text blames the question types. Found by smoke-testing the released plugin
 // with a 45,000-token state: exactly the failure the option cap fix was about.
+// budgetText is roughly n tokens of text, at the estimator's own ratio.
+func budgetText(tokens int) string { return strings.Repeat("a", tokens*bytesPerToken) }
+
+func budgetNoul(instructions string) question {
+	return question{Type: typeNoul, Instructions: instructions}
+}
+
 func TestContextBudget(t *testing.T) {
-	// Roughly n tokens of text, at the estimator's own ratio.
-	text := func(tokens int) string { return strings.Repeat("a", tokens*bytesPerToken) }
-	noul := func(instructions string) question {
-		return question{Type: typeNoul, Instructions: instructions}
-	}
+	text, noul := budgetText, budgetNoul
 
 	t.Run("a state within both budgets passes", func(t *testing.T) {
 		err := validateBudget(typesafeSpec, text(1_000), map[string]question{"q": noul("short")})
@@ -538,6 +541,22 @@ func TestContextBudget(t *testing.T) {
 			t.Errorf("the total-budget error should suggest fewer questions: %v", err)
 		}
 	})
+
+	// The estimate under-counts dense input rather than over-counting it, so a
+	// borderline request reaches the provider instead of being refused here on
+	// a guess. Being permissive at the edge is the point.
+	t.Run("the estimate does not over-count", func(t *testing.T) {
+		if got := estimateTokens(strings.Repeat("a", 4_000)); got > 1_100 {
+			t.Errorf("estimate %d is far above the ~1000 tokens 4000 ascii bytes cost", got)
+		}
+	})
+}
+
+// TestContextBudgetPerBackend covers the windows that differ by backend:
+// TypeSafe's 64k/32k default, its 262k long-context window, and OpenRouter's
+// 262k window, which takes no TypeSafe header.
+func TestContextBudgetPerBackend(t *testing.T) {
+	text, noul := budgetText, budgetNoul
 
 	// The budget has to be reached through validateRequest, which is what the
 	// tool actually calls. Testing validateBudget alone passes even when the
@@ -577,15 +596,6 @@ func TestContextBudget(t *testing.T) {
 		}
 		if strings.Contains(err.Error(), "JEV_LONG_CONTEXT") {
 			t.Errorf("openrouter was told to set a TypeSafe header: %v", err)
-		}
-	})
-
-	// The estimate under-counts dense input rather than over-counting it, so a
-	// borderline request reaches the provider instead of being refused here on
-	// a guess. Being permissive at the edge is the point.
-	t.Run("the estimate does not over-count", func(t *testing.T) {
-		if got := estimateTokens(strings.Repeat("a", 4_000)); got > 1_100 {
-			t.Errorf("estimate %d is far above the ~1000 tokens 4000 ascii bytes cost", got)
 		}
 	})
 }

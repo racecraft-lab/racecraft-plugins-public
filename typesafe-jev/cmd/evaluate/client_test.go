@@ -14,10 +14,10 @@ import (
 // and the transport. The server always goes through prepare and send.
 func (c *Client) Evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
 	body, headers, err := c.encode(in)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		body, err = c.post(ctx, body, headers)
 	}
-	return c.post(ctx, body, headers)
+	return body, err
 }
 
 // simpleIn is the smallest valid call, for tests about transport rather than

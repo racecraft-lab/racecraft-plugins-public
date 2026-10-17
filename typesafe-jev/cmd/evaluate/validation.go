@@ -277,25 +277,56 @@ func validateNoulCriteria(spec ProviderSpec, path string, criteria any) error {
 	return nil
 }
 
+// criteriaRule is one question type's contract for its criteria: present, the
+// right shape, and a bounded answer space. The answer space is enumerated in
+// the request, and both backends cap it. Without the bound the call is billed
+// and comes back as a generic HTTP 400 naming no field, which is the one
+// failure mode every other constraint here exists to avoid.
+type criteriaRule struct {
+	qtype       string // the question type, for the missing-criteria error
+	shape       string // what the criteria must be, for the wrong-shape error
+	least, most int    // the entry count bounds, inclusive
+	few         string // the error text under least
+	verb, unit  string // how the error over most counts the entries
+}
+
+var (
+	choiceRule = criteriaRule{
+		qtype: typeChoice, shape: "an object mapping each option to its description",
+		least: 1, most: maxChoiceOptions,
+		few: "must name at least one option", verb: "names", unit: "options",
+	}
+	scoreRule = criteriaRule{
+		qtype: typeScore, shape: "an ordered array of level descriptions",
+		least: minScoreLevels, most: maxScoreLevels,
+		few: fmt.Sprintf("needs at least %d ordered levels", minScoreLevels), verb: "has", unit: "levels",
+	}
+)
+
+// criteriaOf returns a question's criteria as T once rule holds for it.
+func criteriaOf[T map[string]any | []any](rule criteriaRule, path string, criteria any) (T, error) {
+	var zero T
+	if criteria == nil {
+		return zero, fmt.Errorf("%s.criteria is required for a %s question", path, rule.qtype)
+	}
+	v, ok := criteria.(T)
+	switch {
+	case !ok:
+		return zero, fmt.Errorf("%s.criteria must be %s", path, rule.shape)
+	case len(v) < rule.least:
+		return zero, fmt.Errorf("%s.criteria %s", path, rule.few)
+	case len(v) > rule.most:
+		return zero, fmt.Errorf("%s.criteria %s %d %s, over the %d the backend accepts", path, rule.verb, len(v), rule.unit, rule.most)
+	}
+	return v, nil
+}
+
 // validateChoiceCriteria requires a non-empty option map. Option names are the
 // answer space, so they are preserved exactly.
 func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error {
-	if criteria == nil {
-		return fmt.Errorf("%s.criteria is required for a choice question", path)
-	}
-	m, ok := criteria.(map[string]any)
-	if !ok {
-		return fmt.Errorf("%s.criteria must be an object mapping each option to its description", path)
-	}
-	if len(m) == 0 {
-		return fmt.Errorf("%s.criteria must name at least one option", path)
-	}
-	// The answer space is enumerated in the request, and both backends cap it.
-	// Without this check the call is billed and comes back as a generic HTTP
-	// 400 naming no field, which is the one failure mode every other
-	// constraint here exists to avoid.
-	if len(m) > maxChoiceOptions {
-		return fmt.Errorf("%s.criteria names %d options, over the %d the backend accepts", path, len(m), maxChoiceOptions)
+	m, err := criteriaOf[map[string]any](choiceRule, path, criteria)
+	if err != nil {
+		return err
 	}
 	for _, option := range sortedKeys(m) {
 		if strings.TrimSpace(option) == "" {
@@ -314,18 +345,9 @@ func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error 
 // meaning: a level's number is its position, so the slice is never sorted or
 // deduplicated.
 func validateScoreCriteria(spec ProviderSpec, path string, criteria any) error {
-	if criteria == nil {
-		return fmt.Errorf("%s.criteria is required for a score question", path)
-	}
-	levels, ok := criteria.([]any)
-	if !ok {
-		return fmt.Errorf("%s.criteria must be an ordered array of level descriptions", path)
-	}
-	if len(levels) < minScoreLevels {
-		return fmt.Errorf("%s.criteria needs at least %d ordered levels", path, minScoreLevels)
-	}
-	if len(levels) > maxScoreLevels {
-		return fmt.Errorf("%s.criteria has %d levels, over the %d the backend accepts", path, len(levels), maxScoreLevels)
+	levels, err := criteriaOf[[]any](scoreRule, path, criteria)
+	if err != nil {
+		return err
 	}
 	for i, level := range levels {
 		if err := validateEntry(spec, fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired); err != nil {
