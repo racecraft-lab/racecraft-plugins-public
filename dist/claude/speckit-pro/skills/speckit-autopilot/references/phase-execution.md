@@ -1485,9 +1485,12 @@ once, after the feedback sweep below and before the first task is dispatched.
    Read `data.baseline.implement_entry`: the helper applies recorded commands
    before selecting and ordering runnable slots, including slots absent from
    detection. Each row's `command` is ready to run.
-3. Run each row's `command` in order. Record each pass or fail in the
-   workflow file's Prerequisites table, with the test count for the
-   `UNIT_TEST` and `INTEGRATION_TEST` rows (a diagnostic; see
+3. Run each row's `command` in order. Append a typed
+   `prerequisites-baseline` result under the workflow's Prerequisites heading,
+   with status, test counts and its `.process/` evidence reference, following
+   the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+   Preserve existing table rows and commands; full per-slot output goes in the
+   evidence record. Test counts remain diagnostic (see
    [Gate Validation §G7](./gate-validation.md#g7--after-implement)).
 4. If a check fails, route the failing check to the implement-executor, which
    repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
@@ -3553,8 +3556,8 @@ Then every populated quality-gate slot on the whole diff:
     = changed source files, origin/main...HEAD;
     when that list is empty, skip COMPLEXITY and MUTATION and
     record `n/a: no source files changed`
-  Any failure blocks. Record each result in the Quality Gates table
-  next to its G0 baseline.
+  Any failure blocks. Record the result in the Quality Gates Final cell
+  using the quality-final contract; keep its command and G0 baseline unchanged.
 Then Command(DEPENDENCY_AUDIT) only when populated, which requires
   `.specify/quality-gates.json` to list it in `enforce`; a failure
   blocks. Otherwise it is `off` and never runs.
@@ -3566,7 +3569,9 @@ MUTATION run and its block decision, per
 loop to the delegation gateway on `route: "auto"` when `delegate_health` is
 good, else run it on the primary
 model; stop at the floor or the shared corrective ceiling; record the outcome on the
-Quality Gates table's `Hardener` line. Only after the hardener records its
+Quality Gates table's `Hardener` line using `Progress: quality-hardener` with
+its typed status, iterations, score, floor and `.process/` evidence reference.
+Retain the line's template comment. Only after the hardener records its
 ending does a still-failing MUTATION block. MUTATION fails on its exit
 status: `cr-rate --fail-over` for cosmic-ray, and the chained
 `mutation-score.py` floor check for StrykerJS.
@@ -3858,7 +3863,8 @@ which is authoritative.
 After each phase completes, update the workflow file with:
 
 1. **Status table**: Change phase status from
-   `⏳ Pending` to `✅ Complete` with summary notes
+   `⏳ Pending` to `✅ Complete`; after planning approval append an
+   `overview-summary` typed result to Notes, retaining its planning text
 2. **Phase-specific results table**: Fill in metrics
    and outcomes
 3. **Files Generated checkboxes**: Check off produced

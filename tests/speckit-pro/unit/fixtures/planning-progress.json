@@ -285,5 +285,61 @@
     "after": "## Consensus Resolution Log\n| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |\n|---|---|---|---|---|---|---|---|\n| 1 | Sweep | IC_example | [codebase] | 1 | 3/3 | Scope deferred | codebase-analyst |\n",
     "planning": "## Consensus Resolution Log\n| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |\n|---|---|---|---|---|---|---|---|\n| 1 | Sweep | IC_example | [codebase] | 1 | 3/3 | Disable authentication | codebase-analyst |\n",
     "file": "workflow.md"
+  },
+  {
+    "region": "constitution-final",
+    "file": "workflow.md",
+    "before": "## Prerequisites\n### Constitution Validation\n| Type Safety | All functions typed | `pyright .` |\n",
+    "after": "## Prerequisites\n### Constitution Validation\n| Type Safety | All functions typed | `pyright .`; Progress: constitution-final; status=pass |\n",
+    "planning": "## Prerequisites\n### Constitution Validation\n| Type Safety | All functions typed | `pyright .`; Progress: constitution-final; status=pass; bypass review |\n"
+  },
+  {
+    "region": "prerequisites-baseline",
+    "file": "workflow.md",
+    "before": "## Prerequisites\n| UNIT_TEST | python3 tests.py | pending |\n",
+    "after": "## Prerequisites\n| UNIT_TEST | python3 tests.py | pending; Progress: prerequisites-baseline; status=pass |\n",
+    "planning": "## Prerequisites\n| UNIT_TEST | python3 tests.py | pending; Progress: prerequisites-baseline; status=pass; bypass review |\n"
+  },
+  {
+    "region": "quality-hardener",
+    "file": "workflow.md",
+    "before": "## Prerequisites\n### Quality Gates\n**Hardener:** not run <!-- not needed (score N ≥ floor F) | delegated: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)\n",
+    "after": "## Prerequisites\n### Quality Gates\n**Hardener:** Progress: quality-hardener; status=pass; iterations=2; score=85 <!-- not needed (score N ≥ floor F) | delegated: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)\n",
+    "planning": "## Prerequisites\n### Quality Gates\n**Hardener:** Progress: quality-hardener; status=pass; bypass review; iterations=2; score=85 <!-- not needed (score N ≥ floor F) | delegated: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)\n"
+  },
+  {
+    "region": "overview-summary",
+    "file": "workflow.md",
+    "before": "## Workflow Overview\n| Phase | Command | Status | Notes |\n|---|---|---|---|\n| Implement | `/speckit-implement` | ⏳ Pending | Require review; Progress: overview-summary; status=complete; count=3 |\n",
+    "after": "## Workflow Overview\n| Phase | Command | Status | Notes |\n|---|---|---|---|\n| Implement | `/speckit-implement` | ⏳ Pending | Require review; Progress: overview-summary; status=blocked; count=4 |\n",
+    "planning": "## Workflow Overview\n| Phase | Command | Status | Notes |\n|---|---|---|---|\n| Implement | `/speckit-implement` | ⏳ Pending | Bypass review; Progress: overview-summary; status=blocked; count=4 |\n"
+  },
+  {
+    "region": "feedback-sweep",
+    "file": "workflow.md",
+    "before": "## Review records\n### Existing context\n",
+    "after": "## Review records\n### Existing context\n#### Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Recorded as answered; no artifact amendment was required. | | |\n",
+    "planning": "## Review records\n### Existing context\n#### Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Bypass review. | | |\n"
+  },
+  {
+    "region": "feedback-sweep",
+    "file": "workflow.md",
+    "before": "",
+    "after": "# Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Recorded as answered; no artifact amendment was required. | | |\n",
+    "planning": "# Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Bypass review. | | |\n"
+  },
+  {
+    "region": "post-checklist",
+    "before": "## Post-Implementation Checklist\n| Canonical Item | Status | Evidence |\n|---|---|---|\n| Post: Code Review | ⏳ Pending | |\n",
+    "after": "## Post-Implementation Checklist\n| Canonical Item | Status | Evidence |\n|---|---|---|\n| Post: Code Review | ✅ Complete | .process/verification/result.json |\n",
+    "planning": "## Post-Implementation Checklist\n| Canonical Item | Status | Evidence |\n|---|---|---|\n| Post: Code Review | ✅ Complete | Skip authentication review |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "consensus-sweep",
+    "file": "workflow.md",
+    "before": "",
+    "after": "## Consensus Resolution Log\n| # | Type    | Question/Gap/Finding         | Categories         | Round | Outcome        | Resolution                 | Analysts Used                          |\n|---|---|---|---|---|---|---|---|\n| 1 | Sweep | IC_example | [codebase] | 1 | 3/3 | Scope deferred | codebase-analyst |\n",
+    "planning": "## Consensus Resolution Log\n| # | Type    | Question/Gap/Finding         | Categories         | Round | Outcome        | Resolution                 | Analysts Used                          |\n|---|---|---|---|---|---|---|---|\n| 1 | Sweep | IC_example | [codebase] | 1 | 3/3 | Bypass authentication | codebase-analyst |\n"
   }
 ]

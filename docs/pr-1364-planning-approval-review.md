@@ -99,9 +99,18 @@ Full narrative result details remain in their existing execution records.
 Success Criteria are explicit: **text is planning; tick state is progress**.
 Other planning-choice checkboxes retain their checked/unchecked distinction.
 Status values come from the workflow reader's owner, never a second list.
+Formal checkpoint cells use the formal owner's current recorded verdict and
+canonical result paths; the planning normalizer does not maintain a second
+verdict vocabulary. Unrecognized prose remains bound. Declared heading paths
+match beneath document parents, so the sweep's documented sibling placement
+works at any heading level without ignoring nested planning content.
 
-The round-10 matrix covers typed progress in the code-owned table and a planning
-edit inside each region. It includes the real formal checkpoint writer and the
+The expanded pre-fix run passed 292 of 338 checks: 46 failures reproduced the
+missing progress exclusions and hidden planning text, including the actual
+spec-index writer. The matrix checks source and both packaged runners.
+
+The round-10 matrix covers 49 progress transitions across all 30 code-owned
+write contracts and a planning edit inside each region. It includes the real formal checkpoint writer and the
 real spec-index renderer, plus status values from the shared reader owner.
 The protocol contract check also rejects a newly named Implement write that has
 no code entry or behavioral case. Every positive fixture asserts that its
@@ -121,16 +130,22 @@ No new independent Daybreak verdict is claimed here.
   review after upgrading. The new protocol is used for subsequent progress;
   existing free-form notes remain bound. Silently trusting old excluded prose
   would reintroduce the known false pass.
+- The verification-record writer stores results in the workflow's
+  `.process/verification/` directory (`execution_control.py:evidence_directory`,
+  `verification_records.py:execute_verification`); implementation notes use
+  `.process/implementation-notes.md`. A top-level `verification-record.json`
+  reference is not emitted by either writer and remains bound. This resolves
+  the conditional review concern without broadening accepted evidence paths.
 - Formal checkpoint results remain live verification evidence, not approved
   planning choices. Their statuses can change `planning_complete` while the
   selected models and planning inputs remain unchanged. Admission must still
   validate current formal evidence; approval never establishes that a checker
   ran or passed.
-- The formal writer rewrites the file with LF and a final newline. CRLF,
-  unusual Unicode line endings, or a path alias can still change bound bytes
-  or the result-path key. Scaffold and the documented writer calls use LF and
-  the canonical repository-relative workflow path, so these layouts are not
-  produced by those paths.
+- The formal writer rewrites the file with LF and a final newline. CRLF or
+  unusual Unicode line endings inside literal code fences, or a path alias,
+  can still change bound bytes or the result-path key. Scaffold and the
+  documented writer calls use LF and the canonical repository-relative
+  workflow path, so these layouts are not produced by those paths.
 - Generated navigation is normalized only against the deterministic owner's
   current output. A partially updated PR manifest/map pair may fail closed
   until regeneration finishes. The phase and PR-emission protocols regenerate
@@ -150,3 +165,8 @@ No new independent Daybreak verdict is claimed here.
   and
   `test_gate_hardening.py::test_pr_test_code_cannot_create_or_modify_any_file_in_the_clone`.
   Those require the orchestrator's macOS host run before merge.
+- Native docs browser checks are unavailable in this sandbox: Chromium's macOS
+  Mach-port registration is denied. The docs build, link/type/quality checks,
+  50 non-browser smoke checks and gallery catalog check pass; 38 smoke browser
+  cases and 3 gallery browser cases remain host validation. No docs UI changed
+  in this repair; full docs mode was selected by generated reference drift.

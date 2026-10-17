@@ -65,10 +65,12 @@ For prose-capable progress fields, append the runner's typed result form:
 Progress: overview-summary; status=complete; count=3; evidence=specs/example/.process/result.json
 ```
 
-Use the write key for that region. Status, counts, iterations, scores, digests
-and evidence references are execution values; the code validates their shape.
+Use the write key directly in its listed template region, without adding task
+or result subheadings. Status, counts, iterations, scores, digests and evidence
+references are execution values; the code validates their shape.
 Keep existing planning notes and append `; Progress: ...` to a populated cell.
-A result on its own line uses `- Progress: ...`. Full narrative details stay in
+On subsequent updates replace that typed suffix in place; do not append a second
+suffix. A result on its own line uses `- Progress: ...`. Full narrative details stay in
 the existing implementation-notes or verification record named by `evidence`.
 Any unrecognized text, including an instruction in a status/evidence cell,
 remains planning-bound. The projection never discards an entire section.
@@ -86,8 +88,9 @@ the original decision.
 
 ## Additional Updates
 
-- **Constitution Validation table** — update after Specify (initial)
-  and Implement (final).
+- **Constitution Validation table** — update after Specify (initial).
+  After Implement, append a typed `constitution-final` result to its
+  Verification cells, preserving each principle, requirement and command.
 - **Consensus Resolution Log** — if consensus was used, add a row per
   resolution. Mandatory columns: `Round`, `Routed Categories`,
   `Outcome`, `Analysts Used`. See

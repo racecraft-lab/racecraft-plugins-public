@@ -179,9 +179,11 @@ detection. Teammate effort follows the lead. Do not claim that subagent-only
 1. Wait for all 3 teammates to mark their tasks completed
 2. Collect each teammate's final report (read via team mailbox or
    ask the lead to summarize each teammate's findings)
-3. Write a consolidated Post-Implementation Checklist entry to the
-   workflow file with one row per task (10/11/12/13/14):
-     | Task | Status | Findings | Action Needed |
+3. Update the existing canonical Post-Implementation Checklist rows in the
+   workflow file, keeping their labels and requirements:
+     | Canonical Item | Status | Evidence |
+   Evidence contains the typed post-checklist result or its .process/ reference;
+   detailed findings and actions stay in that execution record.
 4. Request graceful teammate shutdown and confirm automatic cleanup
 5. Continue to Task 15 (Reviewability Diff Gate) — serial tail in the
    parent session
@@ -277,9 +279,11 @@ synthesizing.
 
 ```text
 1. Receive all 3 subagent results as tool responses
-2. Write a consolidated Post-Implementation Checklist entry to the
-   workflow file with one row per task (10/11/12/13/14):
-     | Task | Status | Findings | Action Needed |
+2. Update the existing canonical Post-Implementation Checklist rows in the
+   workflow file, keeping their labels and requirements:
+     | Canonical Item | Status | Evidence |
+   Evidence contains the typed post-checklist result or its .process/ reference;
+   detailed findings and actions stay in that execution record.
 3. Continue to Task 15 (Reviewability Diff Gate) — serial
 ```
 

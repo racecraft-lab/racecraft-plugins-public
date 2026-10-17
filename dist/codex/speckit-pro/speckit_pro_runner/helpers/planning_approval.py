@@ -11,7 +11,7 @@ from typing import Any
 
 from ..atomic_write import snapshot_write_target, write_bytes_atomic
 from ..canonical_json import canonical_bytes
-from ..formal.evidence import CHECKPOINT_ROWS, record_path
+from ..formal.evidence import CHECKPOINT_ROWS, read_checkpoint, record_path
 from ..formal.primitives import CATALOG_PATH
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import next_fence, require_fields, require_text, unique_object
@@ -81,7 +81,6 @@ FIELD_PATTERNS = {
     "analysts": r"(?:All|(?:codebase-analyst|spec-context-analyst|domain-researcher)(?:, (?:codebase-analyst|spec-context-analyst|domain-researcher))*)",
     "commit": r"(?:[a-f0-9]{7,40})?",
     "checkpoint": r"(?:Pending|`[a-f0-9]{40}`)",
-    "formal": r"(?:disabled|pending_authoring|running|pass|passed|fail|failed|stale|waived|error|timeout|unavailable|invalid_configuration)",
 }
 # One owned table for every Implement write named by the protocol. Summaries are
 # accepted only at their listed locations; typed cell rules coexist with them.
@@ -129,8 +128,13 @@ PROGRESS_WRITES = {
 
 def execution_reference(value: str) -> bool:
     """Only relative execution-output paths, never free-form evidence prose."""
-    return bool(re.fullmatch(r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*?/\.process/[A-Za-z0-9_./-]+", value)
+    return bool(re.fullmatch(r"(?:[A-Za-z0-9_.-]+/)*\.process/[A-Za-z0-9_./-]+", value)
                 and ".." not in value.split("/") and "//" not in value)
+
+
+def progress_scope(rule: ProgressWrite, scope: tuple[str, ...]) -> bool:
+    """Match a declared heading path beneath any document-level parents."""
+    return any(scope[-len(target):] == target for target in rule.scopes)
 
 
 def summary_field(field: str, value: str) -> bool:
@@ -147,27 +151,32 @@ def summary_field(field: str, value: str) -> bool:
 
 
 def progress_summary(text: str, scope: tuple[str, ...]) -> str:
-    prefix, marker, value = text.strip().rpartition("Progress: ")
+    prefix, marker, value = text.rpartition("Progress: ")
     if not marker:
         return text
-    key, *fields = value.split("; ")
+    key, *fields = value.strip().split("; ")
     rule = PROGRESS_WRITES.get(key)
     parts = [field.partition("=") for field in fields]
-    if rule is None or scope not in rule.scopes or not parts:
+    if rule is None or not progress_scope(rule, scope) or not parts:
         return text
     if len({part[0] for part in parts}) != len(parts) or not all(
         separator and summary_field(field, value) for field, separator, value in parts
     ):
         return text
-    if prefix in ("", "- "):
+    if prefix.strip() in ("", "-"):
         # Keep an empty Markdown cell distinct from the table's outer pipes.
         return " "
-    return prefix[:-2] if prefix.endswith("; ") else text
+    return prefix[:-2] + text[len(text.rstrip()):] if prefix.endswith("; ") else text
 
 
 def progress_cell(kind: str, cell: str, label: str, root: Path, workflow: str) -> bool:
     if kind == "evidence":
         return not cell or execution_reference(cell)
+    if kind == "formal":
+        checkpoint = next(key for key, value in CHECKPOINT_ROWS.items() if value == label)
+        records = [read_checkpoint(root, workflow, checkpoint + suffix) for suffix in ("", "-waiver")]
+        return cell == "disabled" or (re.fullmatch(r"[a-z_]+", cell) is not None and
+            any(record is not None and record.get("verdict") == cell for record in records))
     if kind == "formal-evidence":
         checkpoint = next(key for key, value in CHECKPOINT_ROWS.items() if value == label)
         return cell == "No selected model" or cell in {
@@ -192,7 +201,12 @@ def progress_row(line: str, rule: ProgressWrite, root: Path, workflow: str) -> s
 
 
 def progress_scaffold(line: str, rules: list[ProgressWrite]) -> bool:
-    if any(line.strip() in rule.scaffold for rule in rules):
+    stripped = line.strip()
+    if any(stripped == item or item.startswith("#") and
+           re.fullmatch(r"#{1,6} " + re.escape(item.lstrip("# ")), stripped)
+           or stripped.startswith("|") and item.startswith("|") and
+           sweep_table_cells(stripped) == sweep_table_cells(item)
+           for rule in rules for item in rule.scaffold):
         return True
     if any(re.fullmatch(pattern, line.strip()) for rule in rules for pattern in rule.lines):
         return True
@@ -200,15 +214,15 @@ def progress_scaffold(line: str, rules: list[ProgressWrite]) -> bool:
 
 
 def hardener_progress(line: str, scope: tuple[str, ...]) -> str:
-    if scope not in QUALITY or not line.startswith("**Hardener:**"):
+    if not progress_scope(PROGRESS_WRITES["quality-hardener"], scope) or not line.startswith("**Hardener:**"):
         return line
     value, separator, suffix = line.removeprefix("**Hardener:**").strip().partition(" <!--")
-    value = "" if value == "not run" else progress_summary(value, scope)
+    value = "" if value == "not run" else progress_summary(value, scope).strip()
     return "**Hardener:** " + value + separator + suffix
 
 
 def progress_line(line: str, scope: tuple[str, ...], root: Path, workflow: str) -> str:
-    rules = [rule for rule in PROGRESS_WRITES.values() if scope in rule.scopes]
+    rules = [rule for rule in PROGRESS_WRITES.values() if progress_scope(rule, scope)]
     if progress_scaffold(line, rules):
         return ""
     line = "|".join(progress_summary(cell, scope) for cell in line.split("|"))
@@ -232,7 +246,7 @@ def workflow_content(content: bytes, root: Path, workflow: str) -> bytes:
         if heading:
             sections = [(level, title) for level, title in sections if level < len(heading[1])]
             sections.append((len(heading[1]), heading[2]))
-        scope = tuple(title for level, title in sections if level >= 2)
+        scope = tuple(title for _, title in sections)
         result = line if was_fenced or fence else progress_line(line.rstrip("\r\n"), scope, root, workflow)
         if result.strip() or was_fenced or fence:
             kept.append((scope, result.rstrip() if not (was_fenced or fence) else result))

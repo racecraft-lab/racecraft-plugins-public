@@ -1706,9 +1706,12 @@ once, after the feedback sweep below and before the first task is dispatched.
    Read `data.baseline.implement_entry`: the helper applies recorded commands
    before selecting and ordering runnable slots, including slots absent from
    detection. Each row's `command` is ready to run.
-3. Run each row's `command` in order. Record each pass or fail in the
-   workflow file's Prerequisites table, with the test count for the
-   `UNIT_TEST` and `INTEGRATION_TEST` rows (a diagnostic; see
+3. Run each row's `command` in order. Append a typed
+   `prerequisites-baseline` result under the workflow's Prerequisites heading,
+   with status, test counts and its `.process/` evidence reference, following
+   the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+   Preserve existing table rows and commands; full per-slot output goes in the
+   evidence record. Test counts remain diagnostic (see
    [Gate Validation §G7](./gate-validation.md#g7--after-implement)).
 4. If a check fails, route the failing check to the implement-executor, which
    repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.

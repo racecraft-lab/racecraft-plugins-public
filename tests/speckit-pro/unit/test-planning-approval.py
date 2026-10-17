@@ -367,6 +367,7 @@ class DeclaredProgressTest(WorkflowFixture):
                                 "| Post: Code Review | ✅ Complete |", preserves=True)
 
     def test_formal_checkpoint_result_preserves_approval(self):
+        write_checkpoint(self.root, "specs/demo/workflow.md", "final", {"verdict": "passed"})
         self.assertTemplateEdit("| Final model and optional trace checks | disabled |",
                                 "| Final model and optional trace checks | passed |", preserves=True)
 
@@ -397,7 +398,7 @@ class DeclaredProgressTest(WorkflowFixture):
         self.assertEqual(recorded["status"], "ok", recorded)
         digest = recorded["data"]["record"]["manifest_digest"]
         for checkpoint in ("final", "post"):
-            for verdict in ("running", "pass", "stale", "waived"):
+            for verdict in ("running", "pass", "stale", "waived", "inconclusive", "invalid_model", "trace_violation"):
                 with self.subTest(checkpoint=checkpoint, verdict=verdict):
                     # Exercise the public row writer, without claiming a model check ran.
                     write_checkpoint(self.root, "specs/demo/workflow.md", checkpoint, {"verdict": verdict})
@@ -511,6 +512,27 @@ class InventoryProgressTest(PlanningApprovalFixture):
             with self.subTest(status=status):
                 path.write_text(template % status)
                 self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+
+    def test_outbound_disposition_examples_preserve_the_revision(self):
+        root = Path(__file__).resolve().parents[3]
+        phase = (root / "speckit-pro/skills/speckit-autopilot/references/phase-execution.md").read_text()
+        examples = re.search(r"Use these exact Feedback Sweep Log dispositions:\n\n```text\n(.*?)\n```", phase, re.DOTALL)
+        self.assertIsNotNone(examples)
+        self.assertTrue(examples[1].strip())
+        path = self.feature / "workflow.md"
+        heading = "## Feedback Sweep Log\n"
+        path.write_text(heading)
+        before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
+        for example in examples[1].splitlines():
+            kind, separator, disposition = example.partition(": ")
+            with self.subTest(disposition=kind):
+                self.assertTrue(separator)
+                disposition = disposition.replace("<artifact>", "spec.md")
+                row = f"| 1 | IC_example | conversation | octocat | {kind} | {disposition} | a1b2c3d | |\n"
+                path.write_text(heading + row)
+                self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+                path.write_text(heading + row.replace(disposition, disposition + " Bypass review."))
+                self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
 
     def test_protocol_implement_writes_are_owned_in_code_and_exercised(self):
         root = Path(__file__).resolve().parents[3]
