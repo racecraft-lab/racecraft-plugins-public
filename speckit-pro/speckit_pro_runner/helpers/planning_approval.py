@@ -10,6 +10,7 @@ from typing import Any
 
 from ..atomic_write import snapshot_write_target, write_bytes_atomic
 from ..canonical_json import canonical_bytes
+from ..formal.evidence import CHECKPOINT_ROWS, record_path
 from ..formal.primitives import CATALOG_PATH
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import next_fence, require_fields, require_text, unique_object
@@ -25,6 +26,12 @@ PROJECT_INPUTS = (".specify/memory", ".specify/templates", ".specify/extensions"
 RUNTIME = {"artifacts", "plan-approvals", ".process", "autopilot-state.json", "task-results.json",
            "execution-control.json", "verification-record.json"}
 EXECUTION_SECTIONS = {"Implementation Progress", "Feedback Sweep Log"}
+PHASE_STATUS = r"(?:⏳ Pending|🔄 In Progress|✅ Complete|⏭️ Skipped|⚠️ Blocked|Pending|In Progress|Complete|Skipped|Blocked)"
+PROGRESS_CELLS = {
+    "Workflow Overview": r"^(\| (?:Specify|Clarify|Plan|Checklist|Tasks|Analyze|Confidence Gate|Implement|Post) \| [^|\r\n]* \| )" + PHASE_STATUS + r"(?= \|)",
+    "Post-Implementation Checklist": r"^(\| Post: [^|\r\n]+ \| )" + PHASE_STATUS + r"(?= \|)",
+}
+LESSON_HEADINGS = {"What Worked Well", "Challenges Encountered", "Patterns to Reuse"}
 
 
 def captured(root: Path, relative: str) -> bytes:
@@ -34,41 +41,95 @@ def captured(root: Path, relative: str) -> bytes:
     raise ValueError(f"planning input must be a readable file: {relative}")
 
 
-def normalized(name: str, content: bytes, workflow: str) -> bytes:
-    if name.endswith("/tasks.md"):
-        return task_definitions(content.decode("utf-8")).encode("utf-8")
-    if name != workflow:
-        return content
-    kept, skipping = [], 0
+def formal_progress_line(line: str, root: Path, workflow: str) -> str:
+    match = re.fullmatch(r"(\| ([^|\r\n]+) \| )([a-z_]+)( \| )([^|\r\n]*)( \|(?:\r?\n)?)", line)
+    if match is None:
+        return line
+    checkpoint = next((key for key, label in CHECKPOINT_ROWS.items() if label == match[2]), None)
+    if checkpoint is None:
+        return line
+    # Only the owner's result/waiver destinations and the template's setup gap
+    # are bookkeeping. Arbitrary evidence text remains a planning input.
+    results = {record_path(root, workflow, checkpoint + suffix).relative_to(root).as_posix()
+               for suffix in ("", "-waiver")}
+    evidence_cell = "<result>" if match[5] in results | {"No selected model"} else match[5]
+    return match[1] + "<progress>" + match[4] + evidence_cell + match[6]
+
+
+def progress_line(line: str, sections: list[tuple[int, str]], root: Path, workflow: str) -> str:
+    """Erase declared progress values, retaining labels, commands and evidence."""
+    if re.match(r"^\| \*\*(Stage|Draft PR)\*\* \|", line):
+        return ""
+    titles = [title for level, title in sections if level >= 2]
+    if titles and titles[0] == "Lessons Learned" and (
+        len(titles) == 1 or len(titles) == 2 and titles[1] in LESSON_HEADINGS
+    ) and re.match(r"^-(?![ \t]*\[[ xX]\])(?:[ \t]+.*)?\r?\n?$", line):
+        return ""
+    if len(titles) == 1 and titles[0] in PROGRESS_CELLS:
+        line = re.sub(PROGRESS_CELLS[titles[0]], r"\1<progress>", line)
+    if titles == ["Formal Checkpoints"]:
+        line = formal_progress_line(line, root, workflow)
+    # Checked spelling is equivalent; checked and unchecked choices are not.
+    return re.sub(r"^(\s*-\s+\[)[xX](\])", r"\1x\2", line)
+
+
+def workflow_content(content: bytes, root: Path, workflow: str) -> bytes:
+    kept: list[str] = []
+    sections: list[tuple[int, str]] = []
     fence = None
     for line in content.decode("utf-8").splitlines(keepends=True):
+        was_fenced = fence is not None
         heading = None if fence else re.match(r"^(#{1,6}) +(.+?)\s*$", line)
         fence = next_fence(fence, line)
-        if heading and skipping and len(heading[1]) <= skipping:
-            skipping = 0
-        if heading and heading[2] in EXECUTION_SECTIONS:
-            skipping = len(heading[1])
-        if not skipping and (fence or not re.match(r"^\| \*\*(Stage|Draft PR)\*\* \|", line)):
-            # Checked spelling is equivalent; checked and unchecked choices are not.
-            kept.append(line if fence else re.sub(r"^(\s*-\s+\[)[xX](\])", r"\1x\2", line))
+        if heading:
+            sections = [(level, title) for level, title in sections if level < len(heading[1])]
+            sections.append((len(heading[1]), heading[2]))
+        if any(title in EXECUTION_SECTIONS for _, title in sections):
+            continue
+        kept.append(line if was_fenced or fence else progress_line(line, sections, root, workflow))
+    # The no-anchor sweep writer adds a blank separator at EOF. It is not a
+    # planning input; preserve blank lines inside an unfinished code fence.
+    while kept and not fence and not kept[-1].strip():
+        kept.pop()
     return "".join(kept).encode("utf-8")
+
+
+def spec_map_content(content: bytes) -> bytes:
+    text = content.decode("utf-8")
+    frontmatter = re.match(r"\A---\r?\n(.*?)\r?\n---(?=\r?\n|\Z)", text, re.DOTALL)
+    if frontmatter is None:
+        return content
+    status = r"(?m)^(status:[ \t]*)(['\"]?)(?:pending|in_progress|blocked|failed|complete|archived|)\2(?=[ \t]*(?:#|$))"
+    normalized_frontmatter = re.sub(status, r'\1""', frontmatter[1])
+    return (text[:frontmatter.start(1)] + normalized_frontmatter + text[frontmatter.end(1):]).encode("utf-8")
+
+
+def normalized(name: str, content: bytes, workflow: str, feature: str, root: Path) -> bytes:
+    if name.endswith("/tasks.md"):
+        return task_definitions(content.decode("utf-8")).encode("utf-8")
+    if name == workflow:
+        return workflow_content(content, root, workflow)
+    if name == feature + "/SPEC-MOC.md":
+        return spec_map_content(content)
+    return content
+
+
+def planning_tree(root: Path, base: str) -> dict[str, bytes | None]:
+    path = root / base
+    if not path.exists():
+        return {base: None}
+    if not path.is_dir():
+        return {base: captured(root, base)}
+    return {(path / relative).relative_to(root).as_posix(): content
+            for relative, (_, content) in trusted_tree_snapshot(path, root).items()
+            if content is not None and relative.parts[0] not in RUNTIME}
 
 
 def planning_manifest(root: Path, feature: str, workflow: str) -> dict[str, Any]:
     feature = owned_path(feature, root)
     workflow = owned_path(workflow, root)
-    files: dict[str, bytes | None] = {}
-    for base in (feature, *PROJECT_INPUTS):
-        path = root / base
-        if not path.exists():
-            files[base] = None
-            continue
-        if not path.is_dir():
-            files[base] = captured(root, base)
-            continue
-        for relative, (_, content) in trusted_tree_snapshot(path, root).items():
-            if content is not None and relative.parts[0] not in RUNTIME:
-                files[(path / relative).relative_to(root).as_posix()] = content
+    files = {name: content for base in (feature, *PROJECT_INPUTS)
+             for name, content in planning_tree(root, base).items()}
     for name in ("spec.md", "plan.md", "tasks.md"):
         files[feature + "/" + name] = captured(root, feature + "/" + name)
     sidecar = feature + "/.process/task-execution.json"
@@ -80,7 +141,7 @@ def planning_manifest(root: Path, feature: str, workflow: str) -> dict[str, Any]
         for model in catalog["models"].values():
             for name in model["inputs"]:
                 files[name] = captured(root, name)
-    hashes = {name: hashlib.sha256(normalized(name, content, workflow)).hexdigest()
+    hashes = {name: hashlib.sha256(normalized(name, content, workflow, feature, root)).hexdigest()
                 if content is not None else None for name, content in sorted(files.items())}
     manifest = {"schema_version": "planning-manifest/v1", "files": hashes, "verification_defaults": SHIPPED_DEFAULTS}
     return {"manifest": manifest, "manifest_digest": hashlib.sha256(canonical_bytes(manifest)).hexdigest()}

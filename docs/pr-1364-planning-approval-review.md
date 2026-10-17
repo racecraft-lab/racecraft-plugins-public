@@ -36,8 +36,52 @@ surface independently. The scan includes the shared skill/reference, agent
 source, Codex descriptor/agent, and both generated host payloads. The existing
 runner tests continue to exercise the source and both shipped hosts.
 
+## Declared progress follow-up
+
+R1364-089042f4 and its separator variant R1364-225d0ebf are repaired in the
+shared planning-approval owner. Tests start with the shipped workflow and spec
+map templates, record approval, make each edit separately, and require both
+the same manifest digest and successful verification of the original record.
+
+| Declared progress | Planning input still bound |
+| --- | --- |
+| Workflow Overview status cells | Phase names, commands, notes and neighboring choices |
+| Post-Implementation Checklist status cells | Checklist requirements and evidence |
+| Formal Checkpoints result cells and canonical result-record paths | Checkpoint definitions, arbitrary evidence text and formal selection |
+| Plain Lessons Learned bullets, directly or in the template's lesson subsections | Prose, checkbox choices, fences and neighboring planning sections |
+| Feature SPEC-MOC frontmatter status | Other metadata, body text and status lookalikes outside frontmatter |
+| Blank separator before an appended Feedback Sweep Log | Preceding planning content and choices after the excluded section |
+
+Recognized phase and map status values alone are normalized; unexpected cell
+contents stay bound. Formal checkpoint rows use the formal owner's row names
+and result paths. Their identifier-valued results, canonical result/waiver paths
+and template setup gap are progress; arbitrary evidence prose stays bound.
+The regression matrix also invokes the actual checkpoint row writer for Final
+and Post results, without claiming to run a model checker.
+Lessons normalization does not extend into arbitrary subsections or
+fenced examples. SPEC-MOC normalization applies only to the feature's own map,
+not every file sharing that basename. Trailing blank separator lines outside
+fences are normalized so creating the end-of-file sweep log preserves approval.
+The earlier checkbox-choice and assurance-claim regression matrices remain in
+the same test file. Source and both generated host payloads exercise the new
+cases through the public manifest, record and verify request seam.
+
 ## Known limits
 
+- Ripwire's static caller graph reports dynamically discovered unittest methods
+  as dead code. The focused suite executes them through the standard unittest
+  loader, including the shipped-host matrix. These rows are reported in the
+  hand-back rather than suppressed in the acknowledgement ledger; a zero exit
+  and zero gating rows do not establish zero advisory major rows.
+- Other post-approval edits remain bound: Overview summary notes, Post evidence
+  and newly added rows, Success Criteria checkbox choices, Constitution text,
+  and generated SPEC-MOC blocks. They may contain requirements or approved
+  decisions, so this repair does not discard them wholesale. Status spellings
+  outside the normalizer's declared vocabulary fail closed, including the
+  alternative skipped icons accepted elsewhere by the workflow reader.
+- A manually added horizontal rule before Feedback Sweep Log remains bound.
+  The no-anchor protocol appends the heading with a blank separator, not a
+  horizontal rule; no current writer requires the latter layout.
 - The assurance guard recognizes the two explicit denial forms above, rather
   than inferring arbitrary English negation. Other denial wordings fail closed
   and must use a recognized form or avoid the assurance term. Existing approval
@@ -71,10 +115,9 @@ runner tests continue to exercise the source and both shipped hosts.
   same level, so the next sibling or higher heading closes it. Otherwise the
   agent appends `## Feedback Sweep Log` at the end of the file, and no current
   writer adds planning text after it. Accepted Low.
-- These repairs address the Daybreak planning-digest and assurance-guard
-  false-pass classes. They do
-  not resolve the separate code-review finding about execution progress that
-  unnecessarily invalidates approvals, or reopen prior accepted Low/Info notes.
+- The declared-progress repair also addresses the separate code-review
+  false-refusal finding. Prior accepted Low/Info notes remain unchanged;
+  this repair does not claim a new independent Daybreak security verdict.
 - Approval assurance remains recorded, without protection against an agent with
   the operator's file access. Interactive confirmation is covered by its JSON
   contract, not a live UI exercise.
@@ -83,5 +126,5 @@ runner tests continue to exercise the source and both shipped hosts.
   `test_gate_hardening.py::test_pr_test_code_cannot_touch_the_host_under_the_real_sandbox`
   and
   `test_gate_hardening.py::test_pr_test_code_cannot_create_or_modify_any_file_in_the_clone`.
-  Those remain orchestrator checks before merge. The finding remains open until
-  a later Daybreak re-check includes the fix commits and resolves every variant.
+  Those remain orchestrator checks before merge. The widened normalization
+  still requires the separate Daybreak re-check of this repair.

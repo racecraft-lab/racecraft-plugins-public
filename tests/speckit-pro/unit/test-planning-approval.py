@@ -12,6 +12,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from runner_invocation import run_runner
 from test_result import run_counted
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
+from speckit_pro_runner.formal.evidence import write_checkpoint
+
 
 ASSURANCE_DOCUMENTS = (
     "docs/adr/0013-plan-approval-record.md", "docs/adr/0017-recorded-plan-approval.md",
@@ -31,7 +34,7 @@ UNRELATED_NEGATIONS = tuple((word, separator) for word in ("No", "not", "never",
                             for separator in (". ", "; ", ", ", " and ", "\n"))
 
 
-class PlanningApprovalTest(unittest.TestCase):
+class PlanningApprovalFixture(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         (self.root / ".specify").mkdir()
@@ -49,6 +52,31 @@ class PlanningApprovalTest(unittest.TestCase):
         _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
         return reply
 
+    def approval(self):
+        (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"]}))
+        (self.feature / "artifacts").mkdir(exist_ok=True)
+        (self.feature / "artifacts/review.txt").write_text("Reviewed corrections and passing check")
+        digest = self.call()["data"]["manifest_digest"]
+        approval = dict(repository="example/project", planning_run="plan-1", repair_runs=["repair-1"],
+                    source_commit="a" * 40, canary_issued=False, supersedes=None,
+                    superseded_by=None, withdrawn_by=None,
+                    reviewed_evidence=["specs/demo/artifacts/review.txt"],
+                    confirmation=dict(reference="specs/demo/artifacts/confirmation.json", manifest_digest=digest,
+                                      decision="approve", approver="reviewer", time="2026-10-15T12:00:00Z"),
+                    findings={"F1": dict(requests=["Use bounded retries"], correction="Bounded to three",
+                                         check=dict(status="passed", manifest_digest=digest,
+                                                    reference="specs/demo/artifacts/review.txt"))})
+        (self.feature / "artifacts/confirmation.json").write_text(json.dumps(
+            {k: v for k, v in approval["confirmation"].items() if k != "reference"}))
+        return approval
+
+    def assertRefused(self, reply, reason):
+        self.assertEqual(reply["status"], "input_error", reply)
+        self.assertIn(reason, reply["diagnostics"][0]["message"])
+
+
+
+class PlanningApprovalTest(PlanningApprovalFixture):
     def test_progress_preserves_revision_but_planning_changes_do_not(self):
         reply = self.call()
         self.assertEqual(reply["status"], "ok", reply)
@@ -107,6 +135,9 @@ class PlanningApprovalTest(unittest.TestCase):
                                      r"(?i)\A(?:The approval is not|Nothing may describe it as) tamper[\W_]*proof\Z",
                                      f"{name}: {sentence}")
 
+
+
+class PlanningMeaningTest(PlanningApprovalFixture):
     def test_workflow_normalization_preserves_acceptance_requirements(self):
         path = self.feature / "workflow.md"
         path.write_text("## Success Criteria\n- [ ] Contract correct\n")
@@ -123,24 +154,9 @@ class PlanningApprovalTest(unittest.TestCase):
         path.write_text("```text\n## Implementation Progress\nTest: python3 other.py\n```\n")
         self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
 
-    def approval(self):
-        (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"]}))
-        (self.feature / "artifacts").mkdir(exist_ok=True)
-        (self.feature / "artifacts/review.txt").write_text("Reviewed corrections and passing check")
-        digest = self.call()["data"]["manifest_digest"]
-        approval = dict(repository="example/project", planning_run="plan-1", repair_runs=["repair-1"],
-                    source_commit="a" * 40, canary_issued=False, supersedes=None,
-                    superseded_by=None, withdrawn_by=None,
-                    reviewed_evidence=["specs/demo/artifacts/review.txt"],
-                    confirmation=dict(reference="specs/demo/artifacts/confirmation.json", manifest_digest=digest,
-                                      decision="approve", approver="reviewer", time="2026-10-15T12:00:00Z"),
-                    findings={"F1": dict(requests=["Use bounded retries"], correction="Bounded to three",
-                                         check=dict(status="passed", manifest_digest=digest,
-                                                    reference="specs/demo/artifacts/review.txt"))})
-        (self.feature / "artifacts/confirmation.json").write_text(json.dumps(
-            {k: v for k, v in approval["confirmation"].items() if k != "reference"}))
-        return approval
 
+
+class RecordedApprovalTest(PlanningApprovalFixture):
     def test_record_round_trip_and_refusal_of_incomplete_or_canary_evidence(self):
         approval = self.approval()
         reply = self.call("record", "apply", approval=approval)
@@ -174,10 +190,6 @@ class PlanningApprovalTest(unittest.TestCase):
         self.assertRefused(self.call("record", "apply", approval=changed), "approval already exists")
         self.assertEqual(path.read_bytes(), original)
 
-    def assertRefused(self, reply, reason):
-        self.assertEqual(reply["status"], "input_error", reply)
-        self.assertIn(reason, reply["diagnostics"][0]["message"])
-
     def test_new_approval_supersedes_the_previous_revision(self):
         first = self.call("record", "apply", approval=self.approval())["data"]
         confirmation = self.feature / "artifacts/confirmation.json"
@@ -191,6 +203,7 @@ class PlanningApprovalTest(unittest.TestCase):
         self.assertEqual(self.call("record", "apply", approval=revised)["status"], "ok")
         (self.feature / "plan.md").write_text("A plan")
         self.assertRefused(self.call("verify"), "subsequent supersession")
+
 
 
 class AssuranceGuardTest(unittest.TestCase):
@@ -253,14 +266,15 @@ class AssuranceGuardTest(unittest.TestCase):
         self.checkAssuranceText("The approval is not\ntamper-proof.")
 
 
-class WorkflowPlanningApprovalTest(PlanningApprovalTest):
-    def assertWorkflowEdit(self, before, after, *, preserves=False):
+
+class WorkflowFixture(PlanningApprovalFixture):
+    def assertWorkflowEdit(self, before, after, preserves=False, name="workflow.md"):
         # Each scenario has independent approval history and confirmation evidence.
         for record in (self.feature / "plan-approvals").glob("*.json"):
             record.unlink()
         # An excluded edit must not hide a planning choice after the excluded region.
         choice = "\n## Security plan\n- [x] Allow external requests\n"
-        path = self.feature / "workflow.md"
+        path = self.feature / name
         path.write_text(before + choice)
         recorded = self.call("record", "apply", approval=self.approval())
         self.assertEqual(recorded["status"], "ok", recorded)
@@ -280,6 +294,17 @@ class WorkflowPlanningApprovalTest(PlanningApprovalTest):
             self.assertNotEqual(changed, digest)
         self.assertRefused(verified, changed + ".json")
 
+    def template(self, name="workflow-template.md"):
+        return (self.runner_root / "skills/speckit-coach/templates" / name).read_text()
+
+    def assertTemplateEdit(self, old, new, *, preserves=False):
+        before = self.template()
+        self.assertEqual(before.count(old), 1)
+        self.assertWorkflowEdit(before, before.replace(old, new), preserves=preserves)
+
+
+
+class WorkflowPlanningApprovalTest(WorkflowFixture):
     def test_lowercase_planning_checkbox_state_invalidates_approval(self):
         choices = ("## Security plan\n- [x] Require review\n",
                    "## Success Criteria\n  - [x] Require review\n",
@@ -296,20 +321,16 @@ class WorkflowPlanningApprovalTest(PlanningApprovalTest):
                                 "## Deployment plan\n  - [ ] Require review\n")
 
     def test_checked_marker_case_preserves_approval_but_not_a_choice_flip(self):
-        before = "## Deployment plan\n- [x] Require review\n"
-        self.assertWorkflowEdit(before, before.replace("[x]", "[X]"), preserves=True)
+        self.assertWorkflowEdit("## Deployment plan\n- [x] Require review\n",
+                                "## Deployment plan\n- [X] Require review\n", preserves=True)
 
     def test_execution_rows_preserve_approval_but_not_a_choice_flip(self):
-        for field in ("Stage", "Draft PR"):
-            with self.subTest(field=field):
-                before = f"| **{field}** | pending |\n"
-                self.assertWorkflowEdit(before, before.replace("pending", "updated"), preserves=True)
-
-    def test_execution_sections_preserve_approval_but_not_a_choice_flip(self):
-        for heading in ("Implementation Progress", "Feedback Sweep Log"):
-            with self.subTest(heading=heading):
-                before = f"## {heading}\n- [ ] Work\n### Details\nPending\n"
-                self.assertWorkflowEdit(before, before.replace("[ ]", "[x]"), preserves=True)
+        rows = ((f"| **{field}** | pending |\n", "pending", "updated") for field in ("Stage", "Draft PR"))
+        sections = ((f"## {heading}\n- [ ] Work\n### Details\nPending\n", "[ ]", "[x]")
+                    for heading in ("Implementation Progress", "Feedback Sweep Log"))
+        for before, old, new in (*rows, *sections):
+            with self.subTest(workflow=before):
+                self.assertWorkflowEdit(before, before.replace(old, new), preserves=True)
 
     def test_fenced_checkbox_state_invalidates_approval(self):
         for before in ("```text\n- [x] Require review\n```\n", "~~~text\n- [x] Require review\n~~~\n"):
@@ -329,22 +350,119 @@ class WorkflowPlanningApprovalTest(PlanningApprovalTest):
         self.assertWorkflowEdit("```text\n| **Draft PR** | Require review |\n```\n",
                                 "```text\n| **Draft PR** | Bypass review |\n```\n")
 
+
+
+class DeclaredProgressTest(WorkflowFixture):
+    def test_overview_status_preserves_approval(self):
+        self.assertTemplateEdit("| Implement | `/speckit-implement` | ⏳ Pending |",
+                                "| Implement | `/speckit-implement` | 🔄 In Progress |", preserves=True)
+
+    def test_post_checklist_status_preserves_approval(self):
+        self.assertTemplateEdit("| Post: Code Review | ⏳ Pending |",
+                                "| Post: Code Review | ✅ Complete |", preserves=True)
+
+    def test_formal_checkpoint_result_preserves_approval(self):
+        self.assertTemplateEdit("| Final model and optional trace checks | disabled |",
+                                "| Final model and optional trace checks | passed |", preserves=True)
+
+    def test_lesson_bullet_preserves_approval(self):
+        self.assertTemplateEdit("### What Worked Well\n\n-\n",
+                                "### What Worked Well\n\n-\n- Small batches worked well.\n", preserves=True)
+
+    def test_spec_map_status_preserves_approval(self):
+        before = self.template("spec-moc-template.md")
+        self.assertWorkflowEdit(before, before.replace('status: ""', 'status: in_progress'),
+                                preserves=True, name="SPEC-MOC.md")
+
+    def test_new_sweep_log_separator_preserves_approval(self):
+        before = self.template()
+        path = self.feature / "workflow.md"
+        path.write_text(before)
+        recorded = self.call("record", "apply", approval=self.approval())
+        self.assertEqual(recorded["status"], "ok", recorded)
+        path.write_text(before + "\n## Feedback Sweep Log\n\n| Comment | Result |\n")
+        self.assertEqual(self.call()["data"]["manifest_digest"], recorded["data"]["record"]["manifest_digest"])
+        self.assertEqual(self.call("verify")["status"], "ok")
+
+    def test_formal_writer_results_preserve_approval(self):
+        path = self.feature / "workflow.md"
+        path.write_text(self.template())
+        recorded = self.call("record", "apply", approval=self.approval())
+        self.assertEqual(recorded["status"], "ok", recorded)
+        digest = recorded["data"]["record"]["manifest_digest"]
+        for checkpoint in ("final", "post"):
+            for verdict in ("running", "pass", "stale", "waived"):
+                with self.subTest(checkpoint=checkpoint, verdict=verdict):
+                    # Exercise the public row writer, without claiming a model check ran.
+                    write_checkpoint(self.root, "specs/demo/workflow.md", checkpoint, {"verdict": verdict})
+                    self.assertEqual(self.call()["data"]["manifest_digest"], digest)
+                    self.assertEqual(self.call("verify")["status"], "ok")
+        path.write_text(path.read_text().replace('"rationale":', '"changed_rationale":'))
+        self.assertNotEqual(self.call()["data"]["manifest_digest"], digest)
+        self.assertEqual(self.call("verify")["status"], "input_error")
+
+
+
+class PlanningNeighborsTest(WorkflowFixture):
+    def test_overview_command_remains_bound(self):
+        self.assertTemplateEdit("| Implement | `/speckit-implement` |",
+                                "| Implement | `/different-command` |")
+
+    def test_post_checklist_requirement_remains_bound(self):
+        self.assertTemplateEdit("| Post: Code Review |", "| Post: Skip Code Review |")
+
+    def test_formal_checkpoint_definition_remains_bound(self):
+        self.assertTemplateEdit("| Final model and optional trace checks |",
+                                "| Optional final model checks |")
+
+    def test_lesson_neighbor_planning_text_remains_bound(self):
+        self.assertTemplateEdit("<!-- Populate with your project's directory structure for quick reference during implementation -->",
+                                "The implementation must use a different directory layout.")
+
+    def test_spec_map_metadata_remains_bound(self):
+        before = self.template("spec-moc-template.md")
+        self.assertWorkflowEdit(before, before.replace("related: []", 'related: ["contract.md"]'),
+                                name="SPEC-MOC.md")
+
+    def test_sweep_neighbor_planning_text_remains_bound(self):
+        before = self.template() + "\n## Feedback Sweep Log\n\n| Comment | Result |\n"
+        self.assertWorkflowEdit(before, before.replace("project/", "different-project/"))
+
+    def test_progress_lookalikes_do_not_hide_planning(self):
+        cases = (
+            ("## Workflow Overview\n| Implement | `/speckit-implement` | ⏳ Pending | Require review |\n",
+             "Require review", "Skip review"),
+            ("## Post-Implementation Checklist\n| Post: Code Review | ⏳ Pending | Required evidence |\n",
+             "Required evidence", "Optional evidence"),
+            ("## Formal Checkpoints\n| Final model and optional trace checks | disabled | Required model |\n",
+             "Required model", "Optional model"),
+            ("## Lessons Learned\nPlanning prose requires review.\n", "requires", "skips"),
+            ("## Lessons Learned\n### Security plan\n- [x] Require review\n", "[x]", "[ ]"),
+            ("## Lessons Learned\n### What Worked Well\n```text\n- Require review\n```\n", "Require", "Skip"),
+            ("## Security plan\n| Implement | `/speckit-implement` | ⏳ Pending | |\n", "⏳ Pending", "✅ Complete"),
+            ("## Workflow Overview\n```text\n| Implement | `/speckit-implement` | ⏳ Pending | |\n```\n",
+             "⏳ Pending", "✅ Complete"),
+        )
+        for before, old, new in cases:
+            with self.subTest(before=before):
+                self.assertWorkflowEdit(before, before.replace(old, new))
+        before = '---\nstatus: pending\n---\nstatus: Require review\n'
+        self.assertWorkflowEdit(before, before.replace("Require review", "Skip review"), name="SPEC-MOC.md")
+
+
+
+class ShippedWorkflowTest(WorkflowFixture):
     def test_shipped_hosts_bind_every_workflow_variant(self):
-        variants = (self.test_lowercase_planning_checkbox_state_invalidates_approval,
-                    self.test_uppercase_planning_checkbox_state_invalidates_approval,
-                    self.test_checked_marker_case_preserves_approval_but_not_a_choice_flip,
-                    self.test_execution_rows_preserve_approval_but_not_a_choice_flip,
-                    self.test_execution_sections_preserve_approval_but_not_a_choice_flip,
-                    self.test_fenced_checkbox_state_invalidates_approval,
-                    self.test_planning_choice_text_invalidates_approval,
-                    self.test_fenced_execution_rows_are_planning_inputs)
         for host in ("claude", "codex"):
             self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
-            for check in variants:
-                with self.subTest(host=host, variant=check.__name__):
-                    check()
+            for case in (WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest):
+                for name in unittest.defaultTestLoader.getTestCaseNames(case):
+                    with self.subTest(host=host, variant=name):
+                        getattr(case, name)(self)
+
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (WorkflowPlanningApprovalTest, AssuranceGuardTest))
+    cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, AssuranceGuardTest,
+             WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest, ShippedWorkflowTest)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in cases)
     raise SystemExit(run_counted(suite, label="test-planning-approval"))
