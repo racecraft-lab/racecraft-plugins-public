@@ -663,18 +663,27 @@ class NavigationCompatibilityTest(NavigationFixture):
 
 
 class NavigationApprovalLifecycleTest(NavigationFixture):
-    def test_record_preserves_explicitly_reviewed_noncanonical_navigation(self):
+    def test_record_refuses_noncanonical_navigation_without_writes(self):
         self.approval()
-        self.map_path.write_text(render_spec_index(self.root)[0][0].rendered.replace("[spec.md]", "[Reviewed custom link]"))
-        original = self.map_path.read_bytes()
-        approval = self.approval()
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
-                reply = self.call("record", "apply", approval=approval)
-                self.assertEqual(reply["status"], "ok", reply)
-                self.assertEqual(self.map_path.read_bytes(), original)
-                self.assertEqual(self.call("verify")["status"], "ok")
+        canonical = render_spec_index(self.root)[0][0].rendered
+        self.map_path.write_text(canonical)
+        self.captureNavigation()
+        variants = {"edited row": canonical.replace("[spec.md]", "[Reviewed custom link]"),
+                    "missing final newline": canonical.rstrip("\n"),
+                    "authored unicode separator": canonical + "Authored\u2028line\n",
+                    "fenced markers": canonical.replace(self.blocks["BACKLINKS"], "```\n" + self.blocks["BACKLINKS"] + "```\n")}
+        for variant, text in variants.items():
+            self.assertNotEqual(text, canonical)
+            self.map_path.write_text(text)
+            original = self.map_path.read_bytes()
+            approval = self.approval()
+            for host in ("claude", "codex"):
+                with self.subTest(host=host, variant=variant):
+                    self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
+                    reply = self.call("record", "apply", approval=approval)
+                    self.assertRefused(reply, "regenerate")
+                    self.assertEqual(self.map_path.read_bytes(), original)
+                    self.assertFalse((self.feature / "plan-approvals").exists())
 
     def test_record_refreshes_canonical_backlinks_and_verifies_on_each_host(self):
         self.approval()  # Create reviewed evidence before the canonical map snapshot.
@@ -699,6 +708,39 @@ class NavigationApprovalLifecycleTest(NavigationFixture):
                 (self.root / recorded["data"]["record_path"]).unlink()
                 (self.feature / "artifacts/runtime.txt").unlink()
 
+
+
+class NavigationConfirmationLifecycleTest(NavigationFixture):
+    def test_confirmation_created_after_manifest_requires_regeneration_before_record(self):
+        self.approval()
+        confirmation_path = self.feature / "artifacts/confirmation.json"
+        confirmation_path.unlink()
+        repository = Path(__file__).resolve().parents[3]
+        for host in (None, "claude", "codex"):
+            with self.subTest(host=host or "source"):
+                self.runner_root = repository / "dist" / host / "speckit-pro" if host else repository / "speckit-pro"
+                self.map_path.write_text(render_spec_index(self.root)[0][0].rendered)
+                before = self.call()["data"]["manifest_digest"]
+                approval = self.approval()  # Confirmation is a new path, written after manifest.
+                self.assertEqual(approval["confirmation"]["manifest_digest"], before)
+                with self.subTest(step="stale confirmed revision"):
+                    self.assertRefused(self.call("record", "apply", approval=approval), "regenerate")
+                raw = self.call()["data"]["manifest_digest"]
+                self.assertNotEqual(raw, before)
+                approval["confirmation"]["manifest_digest"] = raw
+                approval["findings"]["F1"]["check"]["manifest_digest"] = raw
+                confirmation_path.write_text(json.dumps(
+                    {k: v for k, v in approval["confirmation"].items() if k != "reference"}))
+                with self.subTest(step="raw stale map cannot be re-approved"):
+                    self.assertRefused(self.call("record", "apply", approval=approval), "regenerate")
+                self.map_path.write_text(render_spec_index(self.root)[0][0].rendered)
+                repaired = self.approval()
+                self.assertEqual(repaired["confirmation"]["manifest_digest"], before)
+                self.assertEqual(self.call("record", "apply", approval=repaired)["status"], "ok")
+                self.assertEqual(self.call("verify")["status"], "ok")
+                for record in (self.feature / "plan-approvals").glob("*.json"):
+                    record.unlink()
+                confirmation_path.unlink()
 
 
 class GeneratedNavigationTest(PlanningApprovalFixture):
@@ -791,7 +833,7 @@ if __name__ == "__main__":
     cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, AssuranceGuardTest,
              WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest, InventoryProgressTest,
              ProgressExamplesTest, GeneratedNavigationTest, NavigationContentTest, NavigationStructureTest,
-             NavigationCompatibilityTest, NavigationApprovalLifecycleTest,
+             NavigationCompatibilityTest, NavigationApprovalLifecycleTest, NavigationConfirmationLifecycleTest,
              ShippedWorkflowTest)
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in cases)
     raise SystemExit(run_counted(suite, label="test-planning-approval"))

@@ -275,10 +275,12 @@ def map_navigation(content: str, expected: dict[str, tuple[str, ...]]) -> bytes:
         was_fenced = fence is not None
         fence = next_fence(fence, raw)
         zone = starts.get(raw.rstrip("\r\n"))
-        if zone is None or was_fenced or fence:
+        if zone is None:
             kept.append(raw)
             index += 1
             continue
+        if was_fenced or fence:
+            return canonical_bytes({"raw": content})
         newline = "\r\n" if raw.endswith("\r\n") else "\n"
         block = [raw, *(line + newline for line in expected[zone]), SPEC_INDEX_ENDS[zone] + newline]
         if zone in seen or raw_lines[index:index + len(block)] != block:
@@ -409,22 +411,34 @@ def refuse_superseded(root: Path, path: str) -> None:
                 raise ValueError("approval has a subsequent supersession or unreadable history; return to plan review")
 
 
-def write_approval(root: Path, feature: str, target: Path, record: dict[str, Any], snapshot: dict[str, Any]) -> None:
-    """Publish the decision and refresh only an already-canonical feature map."""
+def approval_map_snapshot(root: Path, feature: str) -> tuple[Path, dict[str, Any]] | None:
+    """Refuse stale generated maps before publishing a decision or changing files."""
     map_path = root / feature / "SPEC-MOC.md"
     map_snapshot = snapshot_write_target(map_path, root)
     original = map_snapshot["content"]
-    canonical_map = False
-    if isinstance(original, bytes):
-        try:
-            canonical_map = render_feature_spec_index(root, feature, original.decode("utf-8")).encode("utf-8") == original
-        except SpecIndexRenderError:
-            # An explicitly reviewed noncanonical map stays bound and untouched.
-            pass
+    if not isinstance(original, bytes) or b"<!-- GENERATED:" not in original:
+        return None
+    message = "regenerate navigation after creating evidence and confirmation files; rebuild and confirm the manifest before recording"
+    text = original.decode("utf-8")
+    try:
+        rendered = render_feature_spec_index(root, feature, text).encode("utf-8")
+    except SpecIndexRenderError as error:
+        raise ValueError(message) from error
+    projection = json.loads(map_navigation(text, spec_index_progress(root, feature)))
+    if rendered != original or "raw" in projection:
+        raise ValueError(message)
+    return map_path, map_snapshot
+
+
+def write_approval(root: Path, target: Path, record: dict[str, Any], snapshot: dict[str, Any],
+                   map_state: tuple[Path, dict[str, Any]] | None) -> None:
+    """Publish the decision and refresh its preflighted canonical feature map."""
     write_bytes_atomic(target, canonical_bytes(record) + b"\n", trust_root=root, expected_snapshot=snapshot)
-    if canonical_map:
+    if map_state is not None:
+        map_path, map_snapshot = map_state
+        original = map_snapshot["content"]
         try:
-            refreshed = render_feature_spec_index(root, feature, original.decode("utf-8")).encode("utf-8")
+            refreshed = render_feature_spec_index(root, record["feature_dir"], original.decode("utf-8")).encode("utf-8")
             if refreshed != original:
                 write_bytes_atomic(map_path, refreshed, trust_root=root, expected_snapshot=map_snapshot)
         except (SpecIndexRenderError, OSError) as error:
@@ -451,11 +465,12 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
         if record != stored:
             raise ValueError("record bindings or reviewed evidence changed; return to plan review")
     elif action == "record" and mode in {"dry_run", "apply"}:
+        map_state = approval_map_snapshot(root, feature)
         record = approval_record(root, feature, fields["approval"], binding)
         if target.exists() and json.loads(captured(root, path)) != record:
             raise ValueError("approval already exists; preserve the original decision")
         if mode == "apply":
-            write_approval(root, feature, target, record, snapshot)
+            write_approval(root, target, record, snapshot, map_state)
     else:
         raise ValueError("use manifest/verify in read_only, or record in dry_run/apply")
     return {"record": record, "record_path": path, "writes_state": mode == "apply"}

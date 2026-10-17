@@ -205,7 +205,8 @@ before mutation.
 | Missing individual markers, changed marker spelling, mixed newlines, added prose, fenced blocks and renamed link/scope targets | `NavigationStructureTest.test_noncanonical_markers_and_body_bytes_change_revision` |
 | Schema-1 PR rows, legacy markers and CRLF: omitted, duplicated and reordered bodies in both zones | `NavigationCompatibilityTest.test_schema_one_legacy_markers_and_crlf_bind_each_body_edit` |
 | Approval apply refreshes its own canonical map; dry-run preserves both files; source and both packaged hosts verify the record | `NavigationApprovalLifecycleTest.test_record_refreshes_canonical_backlinks_and_verifies_on_each_host` |
-| Explicitly reviewed noncanonical maps keep their bound bytes during record creation | `NavigationApprovalLifecycleTest.test_record_preserves_explicitly_reviewed_noncanonical_navigation` |
+| Stale or edited generated maps, missing final newline, authored Unicode separators and fenced markers are refused before record writes | `NavigationApprovalLifecycleTest.test_record_refuses_noncanonical_navigation_without_writes` |
+| A new confirmation path after manifest requires regeneration; approving the raw stale digest is refused; regeneration recovers on all hosts | `NavigationConfirmationLifecycleTest.test_confirmation_created_after_manifest_requires_regeneration_before_record` |
 
 The initial unfixed run reproduced 30 false passes across every reported variant
 group (496 of 526 checks passed). The generic progress fixture now models a real
@@ -216,9 +217,10 @@ The existing real-renderer schema-2 progress test also remains in place.
 Independent Standards and Spec review of the first repair found a whole-body
 encoding collision and an approval-record backlink lifecycle regression. The
 additional omission tests failed before the tagged encoding fix; the record
-round-trip test failed before the writer fix. Recording now refreshes only the
-feature's already-canonical map through the renderer owner after publishing the
-record. Its map write uses the captured content snapshot, preserving concurrent
+round-trip test failed before the writer fix. Recording preflights the complete generated map against the renderer and
+projection before evaluating confirmation. Stale or edited maps are refused with
+a regeneration instruction, including an attempted approval of their raw digest.
+A successful apply refreshes the feature map after publishing the record. Its map write uses the captured content snapshot, preserving concurrent
 edits. Verification remains read-only, and runtime backlink rows are still
 checked in full. Other runtime writers regenerate navigation before their
 checkpoint as required by the phase-boundary protocol; intermediate source/map
@@ -228,6 +230,17 @@ If record publication succeeds but the subsequent map refresh is interrupted,
 the helper reports that the record was written and requires regeneration before
 verification. The existing record remains audit evidence; a conflicting map is
 not overwritten and verification does not gain an exemption.
+
+The follow-up Standards review found the first-time confirmation ordering gap.
+Evidence files and the confirmation path must exist before the final canonical
+manifest snapshot. The reference now explains allocating the confirmation path,
+regenerating navigation, obtaining the digest and filling that same path. A
+source/Claude/Codex regression failed on both the initial confirmation and a raw
+stale-map re-approval before the preflight was added. The Spec axis also noted
+hand-authored maps without a final newline or with U+2028 in authored text. Native
+writers do not produce those forms; record preflight now refuses them before any
+write, while manifests retain their bytes. This is a known input limit rather
+than a silent, successful but unverifiable record.
 
 This changes the shared policy seam and renderer contract, with regenerated
 payloads for both hosts. No skill, agent or overlay instruction needs a different

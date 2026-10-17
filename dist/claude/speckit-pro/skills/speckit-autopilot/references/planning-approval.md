@@ -41,12 +41,20 @@ with its generator's output rather than discarded as a whole region.
 Older projection digests may require a new approval after this change. Do not
 rewrite a prior approval record to adopt the new digest.
 
+Prepare reviewed evidence and create the confirmation path (for example,
+`artifacts/confirmation.json` with placeholder JSON) before the final manifest.
+Regenerate feature navigation, obtain the manifest digest, then fill that same
+confirmation path with the decision. After adding another evidence or
+confirmation file, regenerate navigation and check the manifest again.
+Recording in `dry_run` or `apply` requires canonical generated navigation;
+stale or edited generated maps are refused with a regeneration instruction.
+Manifests continue to bind their noncanonical bytes.
+
 `apply` writes `data.record_path` under the feature's `plan-approvals/` directory;
 commit that file with the feature. Existing decisions cannot be overwritten.
 When the feature map is already canonical, the same write refreshes its generated
 backlinks to include the new record. Commit the refreshed map with the record.
-Reviewed noncanonical map bytes stay bound and unchanged. `dry_run` changes
-neither file.
+`dry_run` and a preflight refusal change neither file.
 `verify` rebuilds the manifest and evidence bindings and refuses a missing,
 changed, withdrawn, superseded or canary-issued record. Assurance is `recorded`:
 the record does not defend against an agent with the operator's file access.
