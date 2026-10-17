@@ -401,8 +401,14 @@ def record_pull_request(run: Run, found: dict[str, Any], pages: dict[str, Any]) 
     """Write the `Draft PR` row whole and `plan/completed`, in the separate bookkeeping commit."""
     total = len(pages["selected"]) or len(pages["gaps"])
     note = f" — {len(pages['gaps'])} of {total} artifacts missing" if pages["gaps"] else ""
-    write(run.root, run.workflow, set_basic_row(workflow_text(run), "Draft PR", f"[#{found['number']}]({found['url']}){note}"))
-    autopilot_state.update(run.root, run.state, lambda state: state.update(stage="plan", status="completed"))
+    previous = workflow_text(run)
+    recorded = set_basic_row(previous, "Draft PR", f"[#{found['number']}]({found['url']}){note}")
+    state = json.loads(text_of(run.root, run.state))
+    completed = {**state, "stage": "plan", "status": "completed"}
+    if recorded != previous or state != completed:
+        autopilot_state.update(run.root, run.state, lambda current: current.update(stage="plan", status="completed"),
+                               workflow=run.workflow)
+        write(run.root, run.workflow, recorded)
     commit(run, [run.workflow, run.state], f"chore({run.info['spec id']}): record the draft pull request")
     push(run)
 

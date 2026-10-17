@@ -10,11 +10,13 @@ import json
 import os
 import re
 from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from .atomic_write import file_identity, open_safe_parent_fd, snapshot_write_target_fd, write_bytes_atomic
 from .strict_input import require_text, unique_object
+from .execution_control import confined_path, execution_control
 
 
 MAX_STATE_BYTES = 1_048_576
@@ -39,7 +41,7 @@ def snapshot(root: Path, target: Path) -> dict[str, Any]:
         raise ValueError(f"state_file must be a readable regular file with no symlink parents: {error}") from error
 
 
-def update(root: Path, state_file: Any, mutate: Callable[[dict[str, Any]], None]) -> None:
+def update(root: Path, state_file: Any, mutate: Callable[[dict[str, Any]], None], *, workflow: str | None = None) -> None:
     """Update one existing state object, refusing unsafe targets and stale writes."""
     relative = Path(require_text(state_file, "state_file"))
     if relative.is_absolute() or any(part.casefold() == ".git" for part in relative.parts):
@@ -54,5 +56,40 @@ def update(root: Path, state_file: Any, mutate: Callable[[dict[str, Any]], None]
     if not isinstance(state, dict):
         raise ValueError("state_file must hold a JSON object")
     mutate(state)
+    if workflow is not None:
+        refresh_run_facts(root, workflow, state)
     content = (json.dumps(state, indent=2, allow_nan=False) + "\n").encode("utf-8")
     write_bytes_atomic(target, content, trust_root=root, expected_snapshot=captured)
+
+
+MIRROR_FIELDS = ("ledger_path", "disposition", "reasons", "elapsed_seconds", "checkpoint_due")
+
+
+def execution_snapshot(root: Path, workflow: str, state: dict[str, Any]) -> dict[str, Any] | None:
+    """Read the mirror's bound ledger without creating, resetting, or changing it."""
+    mirror = state.get("execution_control")
+    if mirror is None:
+        return None
+    if not isinstance(mirror, dict) or not mirror.get("ledger_path") or not mirror.get("run_id"):
+        raise ValueError("execution_control requires its ledger_path and run_id")
+    return execution_control(root, {"workflow_file": workflow, "action": "status",
+                                   "ledger_path": mirror["ledger_path"], "expected_run_id": mirror["run_id"]}, "read_only")
+
+
+def refresh_run_facts(root: Path, workflow: str, state: dict[str, Any]) -> None:
+    """Project the bound ledger and current UTC time into an existing state."""
+    snapshot = execution_snapshot(root, workflow, state)
+    if snapshot is not None:
+        state["execution_control"] = {key: snapshot[key] for key in MIRROR_FIELDS}
+        state["execution_control"]["run_id"] = snapshot["ledger"]["run_id"]
+    state["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+
+def mirror_execution_result(root: Path, workflow: str, result: dict[str, Any]) -> None:
+    """Refresh only execution facts in the state captured by the guarded writer."""
+    state_file = str(Path(workflow).with_name("autopilot-state.json"))
+    if not confined_path(root, state_file).exists():
+        return
+    # Bind the result's ledger; refresh_run_facts then projects every mirror field from it.
+    binding = {"ledger_path": result["ledger_path"], "run_id": result["ledger"]["run_id"]}
+    update(root, state_file, lambda state: state.update(execution_control=binding), workflow=workflow)

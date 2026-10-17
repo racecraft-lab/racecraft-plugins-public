@@ -16,6 +16,8 @@ interrupt) or on a harm halt (ADR 0010). ``may_end`` is the one query for that.
 
 from __future__ import annotations
 
+from typing import Any
+
 AUTHORITY = "authority"
 EXHAUSTED = "exhausted"
 HARM_HALT = "harm_halt"
@@ -68,3 +70,13 @@ def stop_class(reason: str) -> str:
 def may_end(state: str) -> bool:
     """Whether a run may end in `state`: an end state or a harm halt; anything else, unknown included, may not."""
     return state in END_STATES or STOP_REASONS.get(state) == HARM_HALT
+
+
+def publication_pending(state: dict[str, Any], dispatches: dict[str, Any]) -> bool:
+    """Only evidenced pending work defers the terminal unpushed-commit check."""
+    plan = state.get("plan")
+    pending_plan = isinstance(plan, list) and any(
+        isinstance(row, dict) and row.get("status") in ("pending", "in_progress") for row in plan
+    )
+    return (pending_plan
+            or any(item.get("outcome") in {"reserved", "running", "unknown"} for item in dispatches.values()))
