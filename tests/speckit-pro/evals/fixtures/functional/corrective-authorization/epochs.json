@@ -1,0 +1,307 @@
+{
+  "schema": "corrective-authorization-replay/v1",
+  "description": "Failure-path outcomes of the stage epoch, the re-plan epoch and the class correction: golden steps recorded before the failure-path seam, so the refactor can be proved to change none of them.",
+  "steps": [
+    {
+      "id": "greenfield",
+      "place_spec": "absent"
+    },
+    {
+      "id": "start",
+      "action": "start",
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-fix-a",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-a",
+        "kind": "corrective",
+        "failure_invariant": "FR-001"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "fix-a-failed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-a",
+        "outcome": "failed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "spec-written",
+      "place_spec": "spec.md"
+    },
+    {
+      "id": "bind",
+      "action": "bind-invariants",
+      "inputs": {
+        "spec_file": "$spec_file"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-fix-b",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-b",
+        "kind": "corrective",
+        "failure_invariant": "FR-002"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "fix-b-failed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-b",
+        "outcome": "failed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "ordinary-reserve-refused",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "kind": "corrective",
+        "failure_invariant": "FR-001"
+      },
+      "expect": {
+        "exit_code": 1,
+        "status": "expected_failure",
+        "reasons": [
+          "corrective_run_budget_exhausted"
+        ]
+      }
+    },
+    {
+      "id": "approved-exception",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "native_observation": {
+          "native_event_id": "operator-exception",
+          "run_id": "$run_id",
+          "action": "corrective_exception_approved",
+          "failure_invariant": "FR-001",
+          "dispatch_id": "fix-c",
+          "failure_kind": "application",
+          "refusal_reason": "corrective_run_budget_exhausted",
+          "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "spec_sha256": "$spec_sha256"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "fix-c-failed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "outcome": "failed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "class-correction-needs-approval",
+      "action": "reserve-class-correction",
+      "inputs": {
+        "dispatch_id": "fix-e",
+        "failure_class": {
+          "test_file": "tests/test_a.py",
+          "failure_signature": "timeout after 5s",
+          "change_kind": "test_timeout"
+        }
+      },
+      "refused": "no operator approval covers this failure class"
+    },
+    {
+      "id": "stage-recorded",
+      "write": {
+        "feature/workflow.md": "# Workflow\n\n## Workflow Overview\n\n| Phase | Command | Status | Notes |\n|-------|---------|--------|-------|\n| Specify | `/speckit-run` | ✅ Complete | |\n| Clarify | `/speckit-run` | ✅ Complete | |\n| Plan | `/speckit-run` | ✅ Complete | |\n| Checklist | `/speckit-run` | ✅ Complete | |\n| Tasks | `/speckit-run` | ✅ Complete | |\n| Analyze | `/speckit-run` | ✅ Complete | |\n| Confidence Gate | `/speckit-run` | ✅ Complete | |\n| Implement | `/speckit-run` | ⏳ Pending | |\n\n### Basic Information\n\n| Field | Value |\n|-------|-------|\n| **Branch** | `test-branch` |\n| **Stage** | implement |\n"
+      }
+    },
+    {
+      "id": "stage-needs-implement",
+      "action": "begin-stage-epoch",
+      "inputs": {
+        "autopilot_args": [
+          "--stage",
+          "plan"
+        ]
+      },
+      "refused": "requires an explicit --stage implement"
+    },
+    {
+      "id": "stage-epoch-opens",
+      "action": "begin-stage-epoch",
+      "inputs": {
+        "autopilot_args": [
+          "--stage",
+          "implement"
+        ]
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "data": {
+          "stage_epoch_opened": true,
+          "corrective_epoch": 1
+        },
+        "ledger": {
+          "corrective_cycles": 0
+        }
+      }
+    },
+    {
+      "id": "stage-epoch-is-idempotent",
+      "action": "begin-stage-epoch",
+      "inputs": {
+        "autopilot_args": [
+          "--stage",
+          "implement"
+        ]
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "data": {
+          "stage_epoch_opened": false,
+          "corrective_epoch": 1
+        }
+      }
+    },
+    {
+      "id": "fresh-allowance-after-stage",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-d",
+        "kind": "corrective",
+        "failure_invariant": "FR-001"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "fix-d-completed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-d",
+        "outcome": "completed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "scope-amended",
+      "place_spec": "spec-amended.md"
+    },
+    {
+      "id": "replan-needs-spec-file",
+      "action": "begin-replan-epoch",
+      "refused": "requires an explicit spec_file"
+    },
+    {
+      "id": "replan-stale-digest",
+      "action": "begin-replan-epoch",
+      "inputs": {
+        "spec_file": "$spec_file",
+        "native_observation": {
+          "native_event_id": "operator-replan",
+          "run_id": "$run_id",
+          "action": "replan_epoch_approved",
+          "spec_sha256": "$spec_sha256"
+        }
+      },
+      "refused": "does not match this run and the current spec"
+    },
+    {
+      "id": "replan-epoch-opens",
+      "action": "begin-replan-epoch",
+      "inputs": {
+        "spec_file": "$spec_file",
+        "native_observation": {
+          "native_event_id": "operator-replan",
+          "run_id": "$run_id",
+          "action": "replan_epoch_approved",
+          "spec_sha256": "$spec_file_sha256"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "data": {
+          "corrective_epoch": 2
+        },
+        "ledger": {
+          "corrective_cycles": 0,
+          "approved_invariants": [
+            "FR-001",
+            "FR-002",
+            "FR-003"
+          ]
+        }
+      }
+    },
+    {
+      "id": "replan-replay",
+      "action": "begin-replan-epoch",
+      "inputs": {
+        "spec_file": "$spec_file",
+        "native_observation": {
+          "native_event_id": "operator-replan",
+          "run_id": "$run_id",
+          "action": "replan_epoch_approved",
+          "spec_sha256": "$spec_file_sha256"
+        }
+      },
+      "refused": "already consumed"
+    }
+  ]
+}
