@@ -5,8 +5,8 @@ description: "Install the typesafe-jev plugin in Claude Code or Codex, install i
 
 Use this route to install the `typesafe-jev` plugin, which adds one MCP tool,
 `evaluate`, and two skills. The tool asks TypeSafe's Jev model for typed
-judgments with probabilities: `noul`, `choice`, and `score` answers instead of
-prose.
+judgments with probabilities: `noul`, `choice`, `score`, and `box` answers
+instead of prose.
 
 ## What You Need
 
@@ -19,7 +19,9 @@ prose.
 - Optionally, a TypeSafe or OpenRouter API key. Without one, the plugin still
   connects: its server offers no tools and its instructions say how to add a
   key. Each call with a key sends the state and questions you pass to that
-  provider, which bills for the call.
+  provider, which bills for the call. When the operator sets `JEV_IMAGES=true`,
+  image bytes named in a request leave the machine as well and are billed.
+  The server does not log the key or the image.
 
 ## Install The Plugin
 

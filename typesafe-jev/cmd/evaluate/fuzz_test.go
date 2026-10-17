@@ -81,7 +81,7 @@ var callRequestErrors = map[string]bool{
 // FuzzCallRequestDecode: the `evaluate call` stdin decoder never panics,
 // fails only with fixed text, and rejects unknown fields and oversize input.
 func FuzzCallRequestDecode(f *testing.F) {
-	// The size limit is checked once here rather than per input: a 16 MiB
+	// The size limit is checked once here rather than per input: a 32 MiB
 	// read on every iteration would leave the fuzzer almost no time to search.
 	atLimit := validRequest + strings.Repeat(" ", maxRequestBody-len(validRequest))
 	if _, err := readCallRequest(strings.NewReader(atLimit)); err != nil {

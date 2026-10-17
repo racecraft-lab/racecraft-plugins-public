@@ -22,9 +22,10 @@ Adapted from TypeSafe AI's official agent skill.
   License: MIT, see the LICENSE file beside this one.
 
 Racecraft Lab's changes are limited to the "Make the judgment now" section
-below, the matching line in the front-matter description, and the backend note
-under "Design the judgments". Everything else is upstream's text, kept verbatim
-and re-diffed against the source on each upstream release.
+below, the matching line in the front-matter description, and the backend,
+images, and box notes under "Design the judgments". Everything else is
+upstream's text, kept verbatim and re-diffed against the source on each
+upstream release.
 
 Why adapt rather than ship alongside: upstream's skill teaches an agent to
 write SDK or HTTP code against the TypeSafe API. That is right when you are
@@ -80,6 +81,15 @@ a judgment made about it.
 
 Which backend the tool uses is fixed by the operator's `JEV_PROVIDER` setting,
 not by anything you pass. The server's own instructions name it at connect time.
+
+**Images, box, and long context.** Images and `box` stay off until the operator
+sets `JEV_IMAGES=true`. Name a PNG or JPEG in `images` and reference that name
+as a whole string or `{"image":"name"}`. The server builds TypeSafe's `assets`
+map or OpenRouter's `image_url` data URL; do not send either yourself. `box`
+needs Jev 1.14 and returns four edges from 0 to 1. TypeSafe's default window
+is 64,000 and 32,000 tokens; `JEV_LONG_CONTEXT=true` raises both to 262,144.
+OpenRouter's window is already 262,144. Image bytes leave the machine and are
+billed.
 
 ## Read the live docs
 
@@ -196,6 +206,19 @@ reports an absent field as absent and never substitutes a number, so check the
 field is there before you branch on it. Both of these constrain the tool's
 transport only; neither says anything about what TypeSafe's own API accepts or
 returns in an application you write.
+
+<!-- Racecraft Lab addition, 2026-10-17. -->
+**Images and box on the APIs themselves.** An application that calls the
+providers directly must not share one image body. TypeSafe wants a top-level
+`assets` map, every asset referenced from state, instructions, or criteria,
+and the header `TypeSafe-Danger-Zone-Images: true`. OpenRouter wants
+OpenAI-style `image_url` data-URL parts in those same places, and it silently
+ignores a TypeSafe `assets` map while still billing the call. `box` is
+instructions only and needs Jev 1.14. TypeSafe accepts at most 10 score
+levels. Long context to 262,144 tokens is
+`TypeSafe-Danger-Zone-Long-Context: true` on TypeSafe and the default window
+on OpenRouter. Read [Images](https://docs.typesafe.ai/images.md) and
+[Box](https://docs.typesafe.ai/primitives/box.md) before writing that call.
 
 ## Compose and verify
 
