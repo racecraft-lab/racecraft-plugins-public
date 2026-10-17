@@ -141,8 +141,9 @@ No new independent Daybreak verdict is claimed here.
   selected models and planning inputs remain unchanged. Admission must still
   validate current formal evidence; approval never establishes that a checker
   ran or passed. Compact records under `.specify/formal-evidence/` are included
-  in `formal/helper.py:check`'s `commit_paths`; `formal-methods.md`'s Commit and
-  resume protocol requires those paths to be committed with the workflow.
+  in `formal/helper.py:check`'s `commit_paths`, including waiver records through
+  `formal/lifecycle.py:waive_checkpoint`. `formal-methods.md`'s Commit and resume
+  protocol requires those paths to be committed with the workflow.
   A checkout missing them is incomplete and fails closed. Raw ignored formal
   run output is a separate path and is not read by this projection.
 - The formal writer rewrites the file with LF and a final newline. CRLF or
