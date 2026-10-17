@@ -841,6 +841,35 @@ func TestImagesOverTheRequestCapFailBeforeEncoding(t *testing.T) {
 	}
 }
 
+// OpenRouter carries the whole data URL in every image_url part, so one small
+// image referenced many times can build a body far past the cap from a state
+// of a few hundred bytes. The cap counts each reference there.
+func TestOpenRouterImageCapCountsEachReference(t *testing.T) {
+	img := image.NewNRGBA(image.Rect(0, 0, 280, 280))
+	rand.NewChaCha8([32]byte{}).Read(img.Pix)
+	var buf bytes.Buffer
+	if err := (&png.Encoder{CompressionLevel: png.NoCompression}).Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	// About 314 KB, so 120 references are about 50 MB of base64.
+	state := make([]any, 120)
+	for i := range state {
+		state[i] = "door"
+	}
+	in := evaluateIn{
+		State:     state,
+		Images:    map[string]imageSource{"door": {DataBase64: b64(buf.Bytes())}},
+		Questions: map[string]question{"q": {Type: typeNoul, Instructions: "i"}},
+	}
+	if _, _, err := encodeRequest(withImages(openrouterSpec), in); err == nil || !strings.Contains(err.Error(), "together") {
+		t.Fatalf("openrouter: error = %v", err)
+	}
+	// TypeSafe sends each image once, in assets, however often it is named.
+	if _, _, err := encodeRequest(withImages(typesafeSpec), in); err != nil {
+		t.Fatalf("typesafe: %v", err)
+	}
+}
+
 func TestCallRejectsAssetsAndAcceptsImages(t *testing.T) {
 	_, err := readCallRequest(strings.NewReader(`{"state":"s","questions":{"q":{"type":"noul","instructions":"i"}},"assets":{"a":{"type":"image"}}}`))
 	if err == nil {

@@ -13,6 +13,7 @@ import (
 	_ "image/jpeg" // registers the decoder DecodeConfig uses
 	_ "image/png"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -329,6 +330,17 @@ func loadImages(spec ProviderSpec, sources map[string]imageSource, state any, qu
 	if err != nil {
 		return nil, err
 	}
+	// Every image is in the body as base64: once on TypeSafe, in assets, and
+	// once per reference on OpenRouter, where each image_url part carries the
+	// whole data URL. A total past the request cap fails it anyway. Stopping
+	// here keeps the bytes from all being held, encoded, and marshalled first.
+	uses := map[string]int{}
+	if spec.Name != "typesafe" {
+		if uses, err = countImageUses(state, questions, sources); err != nil {
+			return nil, err
+		}
+	}
+	rawLimit := base64.StdEncoding.DecodedLen(maxRequestBody)
 	loaded := make(map[string]preparedImage, len(sources))
 	total := 0
 	for _, name := range sortedKeys(sources) {
@@ -336,14 +348,13 @@ func loadImages(spec ProviderSpec, sources map[string]imageSource, state any, qu
 		if err != nil {
 			return nil, err
 		}
-		// Every image is in the body at least once as base64, so a total that
-		// encodes past the request cap fails it anyway. Stopping here keeps
-		// many files, or one file named many times, from all being held,
-		// encoded, and marshalled first.
-		total += len(img.data)
-		if base64.StdEncoding.EncodedLen(total) > maxRequestBody {
-			return nil, fmt.Errorf("images together are over the %d byte request limit once base64-encoded; send fewer or smaller images", maxRequestBody)
+		copies := max(uses[name], 1)
+		// Divided rather than multiplied, so a huge reference count cannot
+		// overflow, and total never passes rawLimit.
+		if len(img.data) > (rawLimit-total)/copies {
+			return nil, fmt.Errorf("images together are over the %d byte request limit once base64-encoded; send fewer or smaller images, or reference each one fewer times", maxRequestBody)
 		}
+		total += copies * len(img.data)
 		loaded[name] = img
 	}
 	return loaded, nil
@@ -598,17 +609,21 @@ func markerName(m map[string]any) (string, bool) {
 
 // rewriteImageSites walks state and the instruction and criteria values.
 // Question types and object keys are not values, so an image named "noul" or
-// "box" cannot rewrite the question's own type field.
+// "box" cannot rewrite the question's own type field. It returns new trees and
+// never writes to its arguments, so a counting pass can share them with the
+// encoder.
 func rewriteImageSites(state any, questions map[string]any, visit func(string, any) (any, bool, error)) (any, map[string]any, error) {
 	state, err := rewriteValue(state, visit, "state")
 	if err != nil {
 		return nil, nil, err
 	}
+	out := make(map[string]any, len(questions))
 	for _, id := range sortedKeys(questions) {
 		q, ok := questions[id].(map[string]any)
 		if !ok {
 			return nil, nil, fmt.Errorf("questions.%s is malformed", id)
 		}
+		q = maps.Clone(q)
 		if ins, ok := q["instructions"]; ok {
 			q["instructions"], err = rewriteValue(ins, visit, "questions."+id+".instructions")
 			if err != nil {
@@ -625,9 +640,9 @@ func rewriteImageSites(state any, questions map[string]any, visit func(string, a
 				return nil, nil, err
 			}
 		}
-		questions[id] = q
+		out[id] = q
 	}
-	return state, questions, nil
+	return state, out, nil
 }
 
 // skipRoot wraps visit so the value at root is descended into but is never
