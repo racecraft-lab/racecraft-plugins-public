@@ -29,7 +29,7 @@ from .quality_gates_proposal import run_quality_gates_proposal_helper
 from .readiness_record import run_feature_offers_helper, run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
 from .scaffold_identity import run_scaffold_branch_helper
-from .nesting_preflight import run_nesting_preflight_helper
+from .nesting_preflight import apply_nesting_preflight_helper, run_nesting_preflight_helper
 from .phase_brief import run_phase_brief_helper
 from .phase_envelope import run_phase_envelope_helper
 from .tasks_output import run_read_tasks_output_helper
@@ -504,6 +504,11 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "golden_only", "fixture_semantic", mutation_authoritative_request("planning-approval"),
         ("planning-approval-apply",),
     ),
+    "resolve-nesting-mode": MutationEntry(
+        "resolve-nesting-mode", "resolve-nesting-mode", ("apply",), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("resolve-nesting-mode"),
+        ("complete-state-envelope", "preserve-state", "unsafe-state"),
+    ),
     "publish-tasks-output": MutationEntry(
         "publish-tasks-output", "publish-tasks-output", ("apply",), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("publish-tasks-output"),
@@ -830,7 +835,7 @@ SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
 
 def dispatch_helper(request: Any) -> dict[str, Any]:
     entry = HELPERS.get(request.helper_id)
-    if entry is None and request.helper_id in MUTATION_HELPERS:
+    if (entry is None or request.mode != "read_only") and request.helper_id in MUTATION_HELPERS:
         return dispatch_mutation_helper(MUTATION_HELPERS[request.helper_id], request)
     if entry is None:
         return response(
@@ -949,8 +954,8 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "generate-spec-index-write":
         return run_spec_index_write(entry, request)
 
-    if entry.helper_id in READINESS_HANDLERS:
-        return READINESS_HANDLERS[entry.helper_id](entry, request)
+    if entry.helper_id in STATE_HELPER_HANDLERS:
+        return STATE_HELPER_HANDLERS[entry.helper_id](entry, request)
 
     if entry.helper_id in ARTIFACT_PAGE_HANDLERS:
         return ARTIFACT_PAGE_HANDLERS[entry.helper_id](entry, request)
@@ -974,9 +979,10 @@ def finish_plan_stage(entry: MutationEntry, request: Any) -> dict[str, Any]:
     return run_plan_stage_terminal_helper(entry, request, dispatch_helper)
 
 
-# The one table that routes a scaffold readiness helper id to its handler.
-READINESS_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+# The table that routes runner-owned state helper ids to their handlers.
+STATE_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "planning-approval": run_planning_approval_helper,
+    "resolve-nesting-mode": apply_nesting_preflight_helper,
     "write-readiness-record": run_readiness_record_helper,
     "record-feature-offers": run_feature_offers_helper,
 }

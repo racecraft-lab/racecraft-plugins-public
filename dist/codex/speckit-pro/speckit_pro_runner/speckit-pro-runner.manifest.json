@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/atomic_write.py",
         "display": "speckit_pro_runner/atomic_write.py"
       },
-      "sha256": "4462d9cd0ff20976c5740b3a1a03613f7c0d20b66b1addf8fa9bd78ce12f2a07"
+      "sha256": "fa42b65b08d830daf2dd293b8d7d0e7147fc41d0ccfb75b33f3ef8d1fee30ea3"
     },
     {
       "path": {
@@ -80,6 +80,14 @@
         "display": "speckit_pro_runner/author_broker.py"
       },
       "sha256": "fc7ea56d3ad72994fe3a6db7c905e3fa712e0fd1aa0e74bde1249eac71298a59"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/autopilot_state.py",
+        "display": "speckit_pro_runner/autopilot_state.py"
+      },
+      "sha256": "f08fcc8177898c28b181af21fd270ed4e052aafab24b1ff662ba1f1b5c984ae0"
     },
     {
       "path": {
@@ -311,7 +319,7 @@
         "value": "speckit_pro_runner/formal/lifecycle.py",
         "display": "speckit_pro_runner/formal/lifecycle.py"
       },
-      "sha256": "6ece16ef8d8ae7372a4f2c66217083a3b9815e68962cb18a9d18351441692913"
+      "sha256": "fd5c6dc28b2c9fc2c5f256cb5676d43ff448c0f906de12dcc8e6133047dcc265"
     },
     {
       "path": {
@@ -679,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/nesting_preflight.py",
         "display": "speckit_pro_runner/helpers/nesting_preflight.py"
       },
-      "sha256": "c6151b64654dcd032d81dac4e2b043715509620944b93bf2bcededeecc32a12a"
+      "sha256": "8a9de98b0352e1bb6c2e74fcde76953f6c0af1801171b8c567b7bbf4e689d0e3"
     },
     {
       "path": {
@@ -703,7 +711,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "c27289f5942e6a81349b4803f056b62327ab4f5c37b3daf45258430fbac72e30"
+      "sha256": "8357c44555f52b1353e4193e2b72c4846029ad5f4bf67b128aead771a4a60c0d"
     },
     {
       "path": {
@@ -799,7 +807,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "6465418164d912f8bf16f1ac46a324c92d0edc530cab258aab6215f8ff11f0b1"
+      "sha256": "8fea184012b59b09eb4c75cbff2a5ca0e8af90d6d2e74a5c6d750198af6f6fee"
     },
     {
       "path": {

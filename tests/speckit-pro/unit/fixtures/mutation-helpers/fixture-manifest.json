@@ -10,6 +10,13 @@
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/planning-approval.json"
     },
     {
+      "helper_id": "resolve-nesting-mode",
+      "operation": "resolve-nesting-mode",
+      "modes": ["apply"],
+      "failure_classes": ["nesting_state_invalid"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/resolve-nesting-mode.json"
+    },
+    {
       "helper_id": "publish-tasks-output",
       "operation": "publish-tasks-output",
       "modes": ["apply"],
