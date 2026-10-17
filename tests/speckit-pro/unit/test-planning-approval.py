@@ -561,20 +561,22 @@ class NavigationFixture(PlanningApprovalFixture):
                 self.assertEqual(reply["status"], "ok", reply)
                 self.assertNotEqual(reply["data"]["manifest_digest"], self.binding["manifest_digest"])
 
+    def assertBodyRowEditsBound(self, zone, copies):
+        block = self.blocks[zone]
+        lines = block.splitlines(keepends=True)
+        for offset, line in enumerate(lines[1:-1], 1):
+            with self.subTest(zone=zone, row=line, copies=copies):
+                edited = "".join(lines[:offset] + [line] * copies + lines[offset + 1:])
+                self.assertNavigationBound(self.original.replace(block, edited))
+
 
 
 class NavigationContentTest(NavigationFixture):
     def test_omitted_prs_header_notice_and_each_row_change_revision(self):
-        lines = self.blocks["PRS"].splitlines(keepends=True)
-        for offset, line in enumerate(lines[1:-1], 1):
-            with self.subTest(omitted=line):
-                self.assertNavigationBound(self.original.replace(
-                    self.blocks["PRS"], "".join(lines[:offset] + lines[offset + 1:])))
+        self.assertBodyRowEditsBound("PRS", 0)
 
     def test_omitted_each_backlink_changes_revision(self):
-        for line in self.blocks["BACKLINKS"].splitlines(keepends=True)[1:-1]:
-            with self.subTest(omitted=line):
-                self.assertNavigationBound(self.original.replace(line, "", 1))
+        self.assertBodyRowEditsBound("BACKLINKS", 0)
 
     def test_omitted_entire_body_changes_revision(self):
         all_empty = self.original
@@ -594,11 +596,8 @@ class NavigationContentTest(NavigationFixture):
         self.assertNavigationBound(self.original.replace(self.blocks["PRS"], "").replace(self.blocks["BACKLINKS"], ""))
 
     def test_duplicate_each_canonical_row_changes_revision(self):
-        for zone, block in self.blocks.items():
-            lines = block.splitlines(keepends=True)
-            for offset, line in enumerate(lines[1:-1], 1):
-                with self.subTest(zone=zone, duplicated=line):
-                    self.assertNavigationBound(self.original.replace(block, "".join(lines[:offset] + [line] + lines[offset:])))
+        for zone in self.blocks:
+            self.assertBodyRowEditsBound(zone, 2)
 
     def test_reordered_canonical_rows_change_revision(self):
         for zone, block in self.blocks.items():
