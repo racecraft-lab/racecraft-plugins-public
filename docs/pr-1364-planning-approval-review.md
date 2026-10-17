@@ -82,6 +82,24 @@ cases through the public manifest, record and verify request seam.
 - A manually added horizontal rule before Feedback Sweep Log remains bound.
   The no-anchor protocol appends the heading with a blank separator, not a
   horizontal rule; no current writer requires the latter layout.
+- The formal row writer rewrites the whole workflow with LF and a final
+  newline. CRLF, missing final newlines or unusual Unicode line separators
+  may therefore change other bound bytes. A missing checkpoint row can cause
+  a new table to be appended; a row under a deeper heading stays bound. The
+  shipped template uses LF, a final newline and all four rows directly under
+  Formal Checkpoints, so none of these layouts is scaffold-produced.
+- A workflow path alias, including a symlink or a leading `./`, can give the
+  formal writer a different result-path key from the approval helper's
+  canonical path. That result path stays bound and fails closed. Scaffold
+  supplies the canonical repository-relative workflow path.
+- A blank separator inserted before a mid-file Feedback Sweep Log can remain
+  bound. The template has no Consensus Resolution Log anchor, so its sweep
+  takes the covered end-of-file path. A later agent-authored anchor and its
+  separator layout are not produced by a deterministic writer.
+- The host matrix uses the source checkpoint row writer with each packaged
+  approval helper. Both packaged writers are byte-identical to source;
+  generated-artifact validation enforces that parity. This is not a live
+  formal model-checker run on either host.
 - The assurance guard recognizes the two explicit denial forms above, rather
   than inferring arbitrary English negation. Other denial wordings fail closed
   and must use a recognized form or avoid the assurance term. Existing approval
