@@ -119,10 +119,13 @@ export default function (pi: ExtensionAPI) {
     label: "Jev",
     description:
       "Jev is a fast structured-decision model: unstructured state in, typed answers " +
-      "(noul, choice, score) with calibrated confidence out; 70-500ms, schema-enforced. " +
+      "(noul, choice, score, box) with calibrated confidence out; 70-500ms, schema-enforced. " +
       "Use for classification, routing, scoring, extraction, branching, guardrails/judging, " +
       "and map-reduce over large data — wherever hand-written logic is too brittle or latency matters. " +
-      "Not for prose, code, or free-form text: the answer space must be enumerable up front (max 255 options).",
+      "Not for prose, code, or free-form text: the answer space must be enumerable up front (max 255 options, score scales of 2 to 10). " +
+      "Images are named in the images map and referenced from state, instructions, or criteria. " +
+      "They are sent only when the operator set JEV_IMAGES=true, and the bytes leave the machine and are billed. " +
+      "Box locates one target in an image and needs Jev 1.14.",
     promptSnippet:
       "Classify, route, score, extract, or guard with Jev: typed answers and calibrated confidence to branch on, in 70-500ms, instead of parsing prose.",
     // filter: an empty INSTRUCTIONS must not inject a blank guideline.
@@ -140,7 +143,7 @@ export default function (pi: ExtensionAPI) {
           additionalProperties: Type.Object({
             type: Type.String({
               description:
-                "noul (probability a yes/no condition holds), choice (one option from the criteria map), or score (probability-weighted position on ordered criteria levels)",
+                "noul (probability a yes/no condition holds), choice (one option from the criteria map), score (probability-weighted position on 2 to 10 ordered criteria levels), or box (four edges of one target in an image; instructions only, needs Jev 1.14)",
             }),
             instructions: Type.Any({
               description:
@@ -149,13 +152,38 @@ export default function (pi: ExtensionAPI) {
             criteria: Type.Optional(
               Type.Any({
                 description:
-                  'noul: optional {"true": ..., "false": ...} descriptions; choice (required): map of option to description or null; score (required): ordered array of at least 2 level descriptions',
+                  'noul: optional {"true": ..., "false": ...} descriptions; choice (required): map of option to description or null; score (required): ordered array of 2 to 10 level descriptions; box: omit',
               }),
             ),
           }),
         },
       ),
-      model: Type.Optional(Type.String({ description: "model to use; default jev-latest" })),
+      model: Type.Optional(
+        Type.String({
+          description:
+            "model to use; defaults to the latest Jev on the configured endpoint. Box needs Jev 1.14: jev-preview or jev-1.14.0 on TypeSafe, typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter",
+        }),
+      ),
+      images: Type.Optional(
+        Type.Object(
+          {},
+          {
+            description:
+              "named PNG or JPEG images referenced from state, instructions, or criteria by a whole string equal to the name, or by {image: name}. Requires JEV_IMAGES=true. The bytes leave the machine and are billed. Do not send assets or image_url parts; the server builds the wire format.",
+            additionalProperties: Type.Object({
+              path: Type.Optional(
+                Type.String({ description: "absolute path of a local PNG or JPEG. Do not also set data_base64" }),
+              ),
+              data_base64: Type.Optional(
+                Type.String({
+                  description: "standard base64 of a PNG or JPEG, with padding and no data: prefix. Do not also set path",
+                }),
+              ),
+              format: Type.Optional(Type.String({ description: "optional png, jpg, or jpeg" })),
+            }),
+          },
+        ),
+      ),
     }),
     async execute(_toolCallId, params, signal) {
       return { content: [{ type: "text", text: await callEvaluate(params, signal) }], details: {} }

@@ -227,3 +227,52 @@ func TestLiveThroughLauncherOverStdio(t *testing.T) {
 		}
 	}
 }
+
+// TestLiveImagesAndBox uploads one picture. It is a second opt-in on top of
+// EVALUATE_LIVE so the ordinary live suite never sends image bytes.
+//
+//	EVALUATE_LIVE=1 EVALUATE_LIVE_IMAGES=1 JEV_IMAGES=true \
+//	  JEV_MODEL=jev-1.14.0 JEV_PROVIDER=typesafe \
+//	  go test -count=1 -run TestLiveImagesAndBox -v ./cmd/evaluate
+//
+// A model this process knows is Jev 1.13 still runs the image question and
+// skips box, which that model rejects. This test is not run in CI.
+func TestLiveImagesAndBox(t *testing.T) {
+	if os.Getenv("EVALUATE_LIVE") != "1" || os.Getenv("EVALUATE_LIVE_IMAGES") != "1" {
+		t.Skip("set EVALUATE_LIVE=1 and EVALUATE_LIVE_IMAGES=1 to upload an image")
+	}
+	cfg, c := liveConfig(t)
+	if !cfg.AllowImages {
+		t.Skip("set JEV_IMAGES=true; images and box stay off without it")
+	}
+
+	pngBytes := mustPNG(t, 280, 280)
+	questions := map[string]question{
+		"present": {Type: typeNoul, Instructions: "Does the image contain a solid colored region?"},
+	}
+	model := c.Model
+	if knownBoxReject(cfg.Provider.Name, model) {
+		t.Logf("skipping box: model %s is Jev 1.13", model)
+	} else {
+		questions["region"] = question{Type: typeBox, Instructions: "the colored region of the image"}
+	}
+	body, err := runEvaluate(context.Background(), c, evaluateIn{
+		State: map[string]any{"photo": map[string]any{"image": "swatch"}},
+		Images: map[string]imageSource{
+			"swatch": {DataBase64: b64(pngBytes), Format: "png"},
+		},
+		Questions: questions,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), b64(pngBytes)) {
+		t.Fatal("the response echoed the image bytes")
+	}
+	for id := range questions {
+		if !strings.Contains(string(body), `"`+id+`"`) {
+			t.Errorf("response has no answer for %q", id)
+		}
+	}
+	t.Logf("backend=%s model=%s response_bytes=%d", cfg.Provider.Name, model, len(body))
+}

@@ -505,14 +505,14 @@ func TestContextBudget(t *testing.T) {
 	}
 
 	t.Run("a state within both budgets passes", func(t *testing.T) {
-		err := validateBudget(text(1_000), map[string]question{"q": noul("short")})
+		err := validateBudget(typesafeSpec, text(1_000), map[string]question{"q": noul("short")})
 		if err != nil {
 			t.Errorf("a small request should pass: %v", err)
 		}
 	})
 
 	t.Run("a state over the state budget is refused", func(t *testing.T) {
-		err := validateBudget(text(maxStateTokens+5_000), map[string]question{"q": noul("short")})
+		err := validateBudget(typesafeSpec, text(typesafeQuestionTokens+5_000), map[string]question{"q": noul("short")})
 		if err == nil {
 			t.Fatal("an oversized state should be refused before the call is billed")
 		}
@@ -530,7 +530,7 @@ func TestContextBudget(t *testing.T) {
 		for i := range 40 {
 			questions[fmt.Sprintf("q%d", i)] = noul(text(2_000))
 		}
-		err := validateBudget(text(1_000), questions)
+		err := validateBudget(typesafeSpec, text(1_000), questions)
 		if err == nil {
 			t.Fatal("the total budget should be enforced, not only the state one")
 		}
@@ -544,17 +544,39 @@ func TestContextBudget(t *testing.T) {
 	// check is never wired in, which is how this was first written.
 	t.Run("validateRequest enforces it", func(t *testing.T) {
 		in := evaluateIn{
-			State: text(maxStateTokens + 5_000),
+			State: text(typesafeQuestionTokens + 5_000),
 			Questions: map[string]question{
 				"q": {Type: typeNoul, Instructions: "short"},
 			},
 		}
-		err := validateRequest(providers["openrouter"], in)
+		err := validateRequest(typesafeSpec, in)
 		if err == nil {
 			t.Fatal("validateRequest let an oversized request through")
 		}
-		if !strings.Contains(err.Error(), "tokens") {
+		if !strings.Contains(err.Error(), "tokens") || !strings.Contains(err.Error(), "JEV_LONG_CONTEXT") {
 			t.Errorf("error is not the budget one: %v", err)
+		}
+		// The same text fits OpenRouter's 262k window, and TypeSafe's once
+		// long context is enabled. Neither may keep the old 32k cap.
+		if err := validateRequest(openrouterSpec, in); err != nil {
+			t.Errorf("openrouter rejected a request inside 262k tokens: %v", err)
+		}
+		long := typesafeSpec
+		long.LongContext = true
+		long.RequestTokens = longContextTokens
+		long.QuestionTokens = longContextTokens
+		if err := validateRequest(long, in); err != nil {
+			t.Errorf("long context rejected a request inside 262k tokens: %v", err)
+		}
+	})
+
+	t.Run("openrouter still refuses a request past 262k", func(t *testing.T) {
+		err := validateBudget(openrouterSpec, text(longContextTokens+1_000), map[string]question{"q": noul("short")})
+		if err == nil {
+			t.Fatal("openrouter accepted a request past its context window")
+		}
+		if strings.Contains(err.Error(), "JEV_LONG_CONTEXT") {
+			t.Errorf("openrouter was told to set a TypeSafe header: %v", err)
 		}
 	})
 

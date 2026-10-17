@@ -18,9 +18,11 @@ import (
 // maxBody caps response size so an oversized reply cannot exhaust memory.
 const maxBody = 16 << 20
 
-// maxRequestBody caps the serialized request. This is a local safety policy to
-// keep a runaway state object from being sent, not a published provider limit.
-const maxRequestBody = 16 << 20
+// maxRequestBody caps the serialized request. Both publishers document a 32 MiB
+// body (TypeSafe's request rules and OpenRouter's Jev image limits, fetched
+// 2026-10-17). The previous 16 MiB cap rejected a single image that the
+// backends accept: base64 makes a 16 MiB file about 22 MiB of JSON.
+const maxRequestBody = 32 << 20
 
 const (
 	attributionURL   = "https://github.com/racecraft-lab/racecraft-plugins-public"
@@ -28,7 +30,8 @@ const (
 )
 
 // Client calls a Jev evaluation endpoint: the TypeSafe API directly, or
-// OpenRouter's Decisions router. Both take the same request body.
+// OpenRouter's Decisions router. The JSON body is the same until a request
+// carries images; encodeRequest then builds each backend's own wire format.
 type Client struct {
 	// Provider carries the endpoint, the retry policy, and the backend name
 	// that appears in errors. It is fixed for the life of the process: a tool
@@ -74,14 +77,16 @@ func newHTTPClient() *http.Client {
 
 // Evaluate posts a request and returns the raw response JSON, including any
 // fields this server does not recognize.
-func (c *Client) Evaluate(ctx context.Context, req any) ([]byte, error) {
-	body, err := json.Marshal(req)
+func (c *Client) Evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
+	body, headers, err := encodeRequest(c.Provider, in)
 	if err != nil {
-		return nil, err
+		// A bad image or a wire-format refusal never left the machine. call
+		// maps this type to exit 2, the same as the other local rejections.
+		return nil, &requestInvalidError{err}
 	}
 	if len(body) > maxRequestBody {
-		return nil, fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state or fewer questions",
-			c.Provider.Name, len(body), maxRequestBody)
+		return nil, &requestInvalidError{fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state or fewer questions",
+			c.Provider.Name, len(body), maxRequestBody)}
 	}
 
 	// One deadline for the whole evaluation. Retry waits are spent from the
@@ -92,7 +97,7 @@ func (c *Client) Evaluate(ctx context.Context, req any) ([]byte, error) {
 
 	delay := c.Backoff
 	for attempt := 0; ; attempt++ {
-		b, status, header, err := c.attempt(ctx, body)
+		b, status, header, err := c.attempt(ctx, body, headers)
 		if err != nil {
 			return nil, err
 		}
@@ -186,13 +191,17 @@ func retryAfter(header string, now time.Time) (time.Duration, bool) {
 
 // attempt makes one HTTP request and returns the body, the status, and the
 // Retry-After header if there was one.
-func (c *Client) attempt(ctx context.Context, body []byte) ([]byte, int, string, error) {
+func (c *Client) attempt(ctx context.Context, body []byte, extra map[string]string) ([]byte, int, string, error) {
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Provider.EndpointURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, 0, "", err
 	}
 	r.Header.Set("Authorization", "Bearer "+c.APIKey.reveal())
 	r.Header.Set("Content-Type", "application/json")
+	for key, value := range extra {
+		// Only the headers encodeRequest decided this backend may send.
+		r.Header.Set(key, value)
+	}
 	if c.Provider.Attribution {
 		// Fixed values. Never derived from a local path or repository content.
 		r.Header.Set("HTTP-Referer", attributionURL)
