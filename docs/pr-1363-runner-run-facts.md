@@ -6,11 +6,13 @@ agents were still running.
 
 ## Rule
 
-- `autopilot_state.write_state` stamps UTC `updated_at` and projects the
-  execution-control mirror (`ledger_path`, `run_id`, `disposition`, `reasons`,
-  `elapsed_seconds`, `checkpoint_due`) from the bound ledger. The plan
-  terminal, the formal checkpoint mirror and the `execution-control` helper in
-  `mode=apply` all write state through it.
+- `autopilot_state.update(..., workflow=...)` stamps UTC `updated_at` and
+  projects the execution-control mirror (`ledger_path`, `run_id`,
+  `disposition`, `reasons`, `elapsed_seconds`, `checkpoint_due`) from the bound
+  ledger (`refresh_run_facts`). The plan terminal, the formal checkpoint mirror
+  and the `execution-control` helper in `mode=apply` all write state through
+  it. Nesting persistence calls `update` without `workflow`, so it keeps
+  main's timestamp behavior.
 - The `execution-control` helper refreshes an existing state file only after
   its ledger change is durable. If that refresh fails (for example a malformed
   state file), the helper still answers with the applied result and its
@@ -149,12 +151,12 @@ response projection: no pathname, symlink, hard-link or rename operation changes
   stderr and still checks commits (see pr-1363-security-fix.md).
 - **Duplicated facts.** The state path rule
   (`Path(workflow).with_name("autopilot-state.json")`) appears in
-  `autopilot_state.py` twice, `plan_stage_terminal.py` and
+  `autopilot_state.py`, `plan_stage_terminal.py` and
   `formal/lifecycle.py`. The unsettled-outcome set in
-  `stop_policy.publication_pending` copies one in `execution_control.py`. The
-  mirror projection appears twice in `autopilot_state.py`. Behavior is
-  consistent today; a later refactor should give each fact one home.
-- **The formal state mirror no longer sorts keys.** `write_state` writes
+  `stop_policy.publication_pending` copies one in `execution_control.py`.
+  Behavior is consistent today; a later refactor should give each fact one
+  home.
+- **The formal state mirror no longer sorts keys.** `autopilot_state.update` writes
   insertion order where `atomic_record` sorted keys. No reader depends on key
   order; diffs of the state file may reorder once.
 - **The clock tests live in test-plan-stage-terminal.py**, not the
@@ -243,3 +245,24 @@ Additional review notes retained for subsequent reviews:
   uncapped and omits the field when no dispatch is unknown. The list is far
   smaller than the ledger (about 9 KB for 700 IDs), and the guidance only
   delegates this read when IDs remain outside a compact batch.
+
+## Review follow-up at 080e8319
+
+- Low, fixed: this document still named `autopilot_state.write_state` as the
+  run-facts owner after the merge removed it; it now names
+  `autopilot_state.update(..., workflow=...)`.
+- Low, fixed: `mirror_execution_result` projected the mirror fields from the
+  applied result, then `refresh_run_facts` overwrote every one of them from
+  the bound ledger. It now binds only `ledger_path` and `run_id` and lets
+  `refresh_run_facts` own the projection. The written state is unchanged.
+- Info, accepted: `refresh_run_facts` names its local `snapshot`, shadowing the
+  module function `snapshot()`; the module docstring does not list the
+  execution mirror; `plan_stage_terminal.record_pull_request` states
+  `stage="plan", status="completed"` in both its idempotency check and its
+  update; `test-compact-answers.py` borrows `setUp`/`call` from fixture classes
+  and passes `mode` through `**inputs`; the duplicate `mypy.ini` entry removal
+  rides in a `refactor(tests)` commit.
+- Info, accepted: detailed `status` omits `unknown_dispatch_ids` when no
+  dispatch is unknown, so a phase-local delegate that indexes it directly gets
+  a `KeyError` (fails loudly; only delegated when a compact count exceeds its
+  batch, so the key is present).
