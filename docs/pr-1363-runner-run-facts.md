@@ -228,3 +228,18 @@ Additional review notes retained for subsequent reviews:
   `execution-efficiency.md` and `phase-execution.md` (existing pattern; the
   contract test pins all three). Compact checkpoint always returns the same
   insertion-order prefix; no guidance consumes `completed_dispatch_ids`.
+
+## Review follow-up at 614530c7
+
+- Low, fixed: the recovery guidance said to parse the detailed answer but not
+  where. A delegate that reads the answer as tool output first can still lose
+  the IDs to host truncation. The guidance now has it parse the runner's stdout
+  with `python3` before printing, and the contract test pins that wording on
+  both hosts. The runner output is unchanged.
+- Info, accepted: the guidance's reason (the ledger precedes the list) relies on
+  `emit_response` sorting keys; no test pins that order, but the instruction
+  stays correct if the order changes.
+- Info, accepted: detailed `status` returns the full `unknown_dispatch_ids` list
+  uncapped and omits the field when no dispatch is unknown. The list is far
+  smaller than the ledger (about 9 KB for 700 IDs), and the guidance only
+  delegates this read when IDs remain outside a compact batch.

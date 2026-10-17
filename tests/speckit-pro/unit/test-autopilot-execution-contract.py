@@ -150,6 +150,7 @@ class ExecutionContractTests(unittest.TestCase):
                     self.assertTrue("refresh" in text, f"{relative} missing refresh instruction")
                     for rule in ("To inspect IDs outside a returned batch", "phase-local", "answer_format: detailed",
                                  "Independent units may continue when the runner permits",
+                                 "parses the runner's stdout with `python3` before printing",
                                  "returns only `data.unknown_dispatch_ids`"):
                         self.assertTrue(rule in text, f"{relative} missing recovery scope instruction: {rule}")
 
