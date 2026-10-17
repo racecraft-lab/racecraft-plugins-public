@@ -102,26 +102,6 @@ class StopReasonParityTests(unittest.TestCase):
                 f"reference row for {reason} must name class {stop_class}",
             )
 
-    def test_reference_tables_match_the_registry_entry_for_entry(self) -> None:
-        from speckit_pro_runner.stop_policy import END_STATES
-
-        text = REFERENCE.read_text(encoding="utf-8")
-        reasons = dict(re.findall(r"(?m)^\| `stop_reason:([^`]+)` \| (\w+) \|", text))
-        self.assertEqual(reasons, _runner_set())
-        ends = dict(re.findall(r"(?m)^\| `([a-z_]+)` \| (terminal|interrupt) \|", text))
-        self.assertEqual(ends, dict(END_STATES))
-
-    def test_only_an_end_state_or_a_harm_halt_may_end_a_run(self) -> None:
-        from speckit_pro_runner.stop_policy import END_STATES, may_end
-
-        for state in END_STATES:
-            self.assertTrue(may_end(state), state)
-        for reason, stop_class in _runner_set().items():
-            self.assertEqual(may_end(reason), stop_class == "harm_halt", reason)
-        self.assertEqual(set(END_STATES.values()), {"terminal", "interrupt"})
-        self.assertFalse(may_end("integrity_failure"), "a removed reason is unregistered, so it fails closed")
-        self.assertFalse(may_end("made_up_reason"))
-
     def test_both_autopilot_skills_link_the_shared_reference(self) -> None:
         for host, skill in HOST_SKILLS.items():
             text = (skill / "SKILL.md").read_text(encoding="utf-8")
@@ -143,6 +123,30 @@ class StopReasonParityTests(unittest.TestCase):
     def test_an_unknown_reason_is_detected(self) -> None:
         sample = "Halt with `stop_reason:made_up_reason` now."
         self.assertNotIn(MARKER.findall(sample)[0], _runner_set())
+
+
+class RunEndRegistryTests(unittest.TestCase):
+    """The reference tables state the registry entry for entry, and the registry alone decides what may end a run."""
+
+    def test_reference_tables_match_the_registry_entry_for_entry(self) -> None:
+        from speckit_pro_runner.stop_policy import END_STATES
+
+        text = REFERENCE.read_text(encoding="utf-8")
+        reasons = dict(re.findall(r"(?m)^\| `stop_reason:([^`]+)` \| (\w+) \|", text))
+        self.assertEqual(reasons, _runner_set())
+        ends = dict(re.findall(r"(?m)^\| `([a-z_]+)` \| (terminal|interrupt) \|", text))
+        self.assertEqual(ends, dict(END_STATES))
+
+    def test_only_an_end_state_or_a_harm_halt_may_end_a_run(self) -> None:
+        from speckit_pro_runner.stop_policy import END_STATES, may_end
+
+        for state in END_STATES:
+            self.assertTrue(may_end(state), state)
+        for reason, stop_class in _runner_set().items():
+            self.assertEqual(may_end(reason), stop_class == "harm_halt", reason)
+        self.assertEqual(set(END_STATES.values()), {"terminal", "interrupt"})
+        self.assertFalse(may_end("integrity_failure"), "a removed reason is unregistered, so it fails closed")
+        self.assertFalse(may_end("made_up_reason"))
 
 
 def _h4_body(text: str, title: str) -> str:
@@ -299,6 +303,7 @@ class ScaffoldOlderCliStopTests(unittest.TestCase):
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite([loader.loadTestsFromTestCase(StopReasonParityTests),
+                               loader.loadTestsFromTestCase(RunEndRegistryTests),
                                loader.loadTestsFromTestCase(ScaffoldStopReasonPrintTests),
                                loader.loadTestsFromTestCase(StopReasonPrintTests),
                                loader.loadTestsFromTestCase(ScaffoldOlderCliStopTests)])

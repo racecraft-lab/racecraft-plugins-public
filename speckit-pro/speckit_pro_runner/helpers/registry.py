@@ -930,7 +930,8 @@ def mutation_request_refusal(entry: MutationEntry, request: Any) -> dict[str, An
             ],
         )
 
-    return None
+    # A standing harm halt refuses every apply-mode helper but its own clear (ADR 0010).
+    return harm_halt_refusal(entry, request)
 
 
 def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, Any]:
@@ -943,13 +944,6 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id in {"execution-control", "execute-verification", "task-results"}:
         return run_execution_helper(entry, request)
-
-    halted = harm_halt_refusal(entry, request)
-    if halted is not None:
-        return halted
-
-    if entry.helper_id == "harm-halt":
-        return run_harm_halt_helper(entry, request)
 
     if entry.helper_id == "decisions-list":
         return run_decisions_list_helper(entry, request)
@@ -996,6 +990,7 @@ STATE_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "resolve-nesting-mode": apply_nesting_preflight_helper,
     "write-readiness-record": run_readiness_record_helper,
     "record-feature-offers": run_feature_offers_helper,
+    "harm-halt": run_harm_halt_helper,
 }
 # The one table that routes a PR-emission helper id to its handler.
 PR_EMISSION_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {

@@ -20,6 +20,7 @@ HARM_HALTS = ("secret_exposure", "tampering_or_forged_evidence", "identity_misma
 WORKFLOW = "specs/001-feature/.process/workflow.md"
 LIST_FILE = "specs/001-feature/.process/decisions-list/decisions.json"
 RECORD = ".specify/harm-halt/halt.json"
+SAFE_STATE = "HEAD 0123abc before the plan stage"
 SECRET = "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"
 ENTRY = {"kind": "scope_answer", "option_chosen": "a", "rejected_alternative": "b", "evidence": "c", "affected_unit": "d"}
 
@@ -29,7 +30,8 @@ class HarmHaltTests(MutationRequestCase):
     files = {WORKFLOW: "# Workflow\n"}
 
     def halt(self, reason: str = "tampering_or_forged_evidence", evidence: str = "page hash differs") -> dict[str, Any]:
-        return self.call("apply", action="halt", reason=reason, evidence=evidence, last_safe_state="HEAD 0123abc before the plan stage")
+        trigger = {"reason": reason, "evidence": evidence, "last_safe_state": SAFE_STATE}
+        return self.call("apply", action="halt", **trigger)
 
     def write_attempt(self) -> dict[str, Any]:
         """Any other apply-mode helper stands for a commit, push, PR edit or publish."""
@@ -49,7 +51,7 @@ class HarmHaltTests(MutationRequestCase):
                 self.assertEqual("ok", self.halt(reason)["status"])
                 record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
                 self.assertEqual(reason, record["reason"])
-                self.assertEqual("HEAD 0123abc before the plan stage", record["last_safe_state"])
+                self.assertEqual(SAFE_STATE, record["last_safe_state"])
                 blocked = self.write_attempt()
                 self.assertEqual("harm_halt_active", blocked["diagnostics"][0]["code"], blocked)
                 self.assertFalse((self.root / LIST_FILE).exists())
