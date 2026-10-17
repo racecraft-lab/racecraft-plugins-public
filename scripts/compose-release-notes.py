@@ -404,6 +404,21 @@ def canonical_snapshot_bytes(snapshot: Mapping[str, object]) -> bytes:
     return f"{encoded}\n".encode("utf-8")
 
 
+def compare_page_commits(
+    response: Mapping[str, object], first: Mapping[str, object], page: int, expected: int,
+) -> list[object]:
+    """Validate page metadata and length before adding it to the captured range."""
+    if type(response.get("total_commits")) is not int or response["total_commits"] != first["total_commits"]:
+        raise CompositionError(f"Compare API page {page} has inconsistent total_commits")
+    for key in ("base_commit", "merge_base_commit"):
+        if response.get(key) != first.get(key):
+            raise CompositionError(f"Compare API page {page} has inconsistent {key}")
+    items = response.get("commits")
+    if not isinstance(items, list) or len(items) != expected:
+        raise CompositionError(f"Compare API page {page} is truncated or inconsistent: expected {expected} commits")
+    return items
+
+
 def fetch_complete_compare(client: GitHubClient, base: str, head: str) -> dict[str, object]:
     """Assemble paginated commits into the existing immutable Compare shape.
 
@@ -423,15 +438,8 @@ def fetch_complete_compare(client: GitHubClient, base: str, head: str) -> dict[s
         response = first
         if page > 1:
             response, _headers = client.request_json("GET", f"{path}&page={page}")
-        if type(response.get("total_commits")) is not int or response["total_commits"] != total:
-            raise CompositionError(f"Compare API page {page} has inconsistent total_commits")
-        for key in ("base_commit", "merge_base_commit"):
-            if response.get(key) != first.get(key):
-                raise CompositionError(f"Compare API page {page} has inconsistent {key}")
-        items = response.get("commits")
         expected = min(COMPARE_PAGE_SIZE, total - len(commits))
-        if not isinstance(items, list) or len(items) != expected:
-            raise CompositionError(f"Compare API page {page} is truncated or inconsistent: expected {expected} commits")
+        items = compare_page_commits(response, first, page, expected)
         for item in items:
             sha = item.get("sha") if isinstance(item, dict) else None
             if not isinstance(sha, str) or not sha.strip() or sha in seen_shas:
