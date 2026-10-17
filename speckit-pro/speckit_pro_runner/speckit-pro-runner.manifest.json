@@ -719,7 +719,7 @@
         "value": "speckit_pro_runner/helpers/planning_approval.py",
         "display": "speckit_pro_runner/helpers/planning_approval.py"
       },
-      "sha256": "d1d45ebb8d3e5fcc1b848a62ed71f26690beac54fa755cb075d5cf6091c2db8f"
+      "sha256": "c26982f220a870143a3f7d3ede5afab587355266e6d71cf09960955946c70779"
     },
     {
       "path": {
@@ -767,7 +767,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "65f57d8a7df5dfedf241a3ee4d3ced5b104fbb64f60d6b10457c0ed32655429e"
+      "sha256": "3c3e0e8c78bbcef7e9afbe42c6111db3c29c8e2019087f44584aeaf7d1992af4"
     },
     {
       "path": {

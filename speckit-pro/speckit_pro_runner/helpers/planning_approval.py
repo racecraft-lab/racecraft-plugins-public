@@ -19,7 +19,8 @@ from ..task_execution import owned_path, task_definitions
 from ..trusted_io import trusted_tree_snapshot
 from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
 from ..sweep_export import SWEEP_LOG_HEADING, sweep_is_table_rule, sweep_table_cells
-from .read_only import SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS, SPEC_INDEX_ENDS, spec_index_progress
+from .read_only import (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS, SPEC_INDEX_ENDS,
+                        SpecIndexRenderError, render_feature_spec_index, spec_index_progress)
 from .execution_requests import Refusal, run_contained_helper
 
 # Inventory roots are runner-owned, never a caller-selected subset. Feature additions
@@ -281,11 +282,11 @@ def map_navigation(content: str, expected: dict[str, tuple[str, ...]]) -> bytes:
         newline = "\r\n" if raw.endswith("\r\n") else "\n"
         block = [raw, *(line + newline for line in expected[zone]), SPEC_INDEX_ENDS[zone] + newline]
         if zone in seen or raw_lines[index:index + len(block)] != block:
-            return content.encode("utf-8")
+            return canonical_bytes({"raw": content})
         seen.add(zone)
         kept.extend((raw, block[-1]))
         index += len(block)
-    return "".join(kept).encode("utf-8")
+    return canonical_bytes({"projected": kept})
 
 
 def spec_map_content(content: bytes, root: Path, feature: str) -> bytes:
@@ -408,6 +409,28 @@ def refuse_superseded(root: Path, path: str) -> None:
                 raise ValueError("approval has a subsequent supersession or unreadable history; return to plan review")
 
 
+def write_approval(root: Path, feature: str, target: Path, record: dict[str, Any], snapshot: dict[str, Any]) -> None:
+    """Publish the decision and refresh only an already-canonical feature map."""
+    map_path = root / feature / "SPEC-MOC.md"
+    map_snapshot = snapshot_write_target(map_path, root)
+    original = map_snapshot["content"]
+    canonical_map = False
+    if isinstance(original, bytes):
+        try:
+            canonical_map = render_feature_spec_index(root, feature, original.decode("utf-8")).encode("utf-8") == original
+        except SpecIndexRenderError:
+            # An explicitly reviewed noncanonical map stays bound and untouched.
+            pass
+    write_bytes_atomic(target, canonical_bytes(record) + b"\n", trust_root=root, expected_snapshot=snapshot)
+    if canonical_map:
+        try:
+            refreshed = render_feature_spec_index(root, feature, original.decode("utf-8")).encode("utf-8")
+            if refreshed != original:
+                write_bytes_atomic(map_path, refreshed, trust_root=root, expected_snapshot=map_snapshot)
+        except (SpecIndexRenderError, OSError) as error:
+            raise ValueError("approval record was written; map refresh failed; regenerate navigation before verification") from error
+
+
 def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     action = inputs.get("action")
     required = {"feature_dir", "workflow_file", "action"} | ({"approval"} if action == "record" else set())
@@ -432,7 +455,7 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
         if target.exists() and json.loads(captured(root, path)) != record:
             raise ValueError("approval already exists; preserve the original decision")
         if mode == "apply":
-            write_bytes_atomic(target, canonical_bytes(record) + b"\n", trust_root=root, expected_snapshot=snapshot)
+            write_approval(root, feature, target, record, snapshot)
     else:
         raise ValueError("use manifest/verify in read_only, or record in dry_run/apply")
     return {"record": record, "record_path": path, "writes_state": mode == "apply"}

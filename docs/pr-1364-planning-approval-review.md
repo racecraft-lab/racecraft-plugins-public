@@ -182,8 +182,9 @@ Finding `F1364-400139c5` names an **approval-binding false pass**: set membershi
 discarded missing, duplicated and reordered generated navigation. The renderer's
 public progress output now preserves the complete ordered body, including blank
 and repeated lines. Approval projects a body only when its complete marker block
-matches that output. Marker bytes, placement and surrounding authored bytes stay
-bound. A nonmatching or duplicate block keeps the unprojected map (after the
+matches that output. Projected and raw maps use distinct tagged encodings, so
+deleting all generated body text cannot imitate the projected bytes. Marker
+bytes, placement and surrounding authored bytes stay bound. A nonmatching or duplicate block keeps the unprojected map (after the
 independently declared frontmatter-status normalization).
 
 All tests below live in `tests/speckit-pro/unit/test-planning-approval.py`.
@@ -195,6 +196,7 @@ before mutation.
 | --- | --- |
 | Omit PRS notice, table header, separator or either required PR row | `NavigationContentTest.test_omitted_prs_header_notice_and_each_row_change_revision` |
 | Omit any BACKLINKS row while its artifact exists | `NavigationContentTest.test_omitted_each_backlink_changes_revision` |
+| Empty either or both entire bodies while retaining markers; empty BACKLINKS before a PR manifest exists | `NavigationContentTest.test_omitted_entire_body_changes_revision`; `NavigationCompatibilityTest.test_empty_backlinks_with_no_pr_manifest_change_revision` |
 | Remove PRS, BACKLINKS or both complete marker pairs and bodies | `NavigationContentTest.test_removed_marker_pairs_change_revision` |
 | Duplicate any canonical body row | `NavigationContentTest.test_duplicate_each_canonical_row_changes_revision` |
 | Duplicate either marker pair | `NavigationStructureTest.test_duplicate_and_relocated_marker_pairs_change_revision` (`duplicate`) |
@@ -202,12 +204,30 @@ before mutation.
 | Relocate either complete marker pair across authored content | `NavigationStructureTest.test_duplicate_and_relocated_marker_pairs_change_revision` (`relocated`) |
 | Missing individual markers, changed marker spelling, mixed newlines, added prose, fenced blocks and renamed link/scope targets | `NavigationStructureTest.test_noncanonical_markers_and_body_bytes_change_revision` |
 | Schema-1 PR rows, legacy markers and CRLF: omitted, duplicated and reordered bodies in both zones | `NavigationCompatibilityTest.test_schema_one_legacy_markers_and_crlf_bind_each_body_edit` |
+| Approval apply refreshes its own canonical map; dry-run preserves both files; source and both packaged hosts verify the record | `NavigationApprovalLifecycleTest.test_record_refreshes_canonical_backlinks_and_verifies_on_each_host` |
+| Explicitly reviewed noncanonical maps keep their bound bytes during record creation | `NavigationApprovalLifecycleTest.test_record_preserves_explicitly_reviewed_noncanonical_navigation` |
 
 The initial unfixed run reproduced 30 false passes across every reported variant
 group (496 of 526 checks passed). The generic progress fixture now models a real
 schema-1 PR manifest transition and its complete generated body; its previous
 empty-to-partial backlink transition contradicted the canonical-output contract.
 The existing real-renderer schema-2 progress test also remains in place.
+
+Independent Standards and Spec review of the first repair found a whole-body
+encoding collision and an approval-record backlink lifecycle regression. The
+additional omission tests failed before the tagged encoding fix; the record
+round-trip test failed before the writer fix. Recording now refreshes only the
+feature's already-canonical map through the renderer owner after publishing the
+record. Its map write uses the captured content snapshot, preserving concurrent
+edits. Verification remains read-only, and runtime backlink rows are still
+checked in full. Other runtime writers regenerate navigation before their
+checkpoint as required by the phase-boundary protocol; intermediate source/map
+states fail closed.
+
+If record publication succeeds but the subsequent map refresh is interrupted,
+the helper reports that the record was written and requires regeneration before
+verification. The existing record remains audit evidence; a conflicting map is
+not overwritten and verification does not gain an exemption.
 
 This changes the shared policy seam and renderer contract, with regenerated
 payloads for both hosts. No skill, agent or overlay instruction needs a different

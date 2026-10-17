@@ -43,6 +43,10 @@ rewrite a prior approval record to adopt the new digest.
 
 `apply` writes `data.record_path` under the feature's `plan-approvals/` directory;
 commit that file with the feature. Existing decisions cannot be overwritten.
+When the feature map is already canonical, the same write refreshes its generated
+backlinks to include the new record. Commit the refreshed map with the record.
+Reviewed noncanonical map bytes stay bound and unchanged. `dry_run` changes
+neither file.
 `verify` rebuilds the manifest and evidence bindings and refuses a missing,
 changed, withdrawn, superseded or canary-issued record. Assurance is `recorded`:
 the record does not defend against an agent with the operator's file access.

@@ -4511,6 +4511,13 @@ def spec_index_progress(repo_root: Path, feature: str) -> dict[str, tuple[str, .
     }
 
 
+def render_feature_spec_index(repo_root: Path, feature: str, text: str) -> str:
+    """Render one feature map through the same owner as repository regeneration."""
+    spec_dir = repo_root / feature
+    return _spec_index_rebuild_map(spec_dir / "SPEC-MOC.md", text, spec_dir,
+                                   repo_root=repo_root, specs_dir=repo_root / "specs", is_home=False)
+
+
 def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool]:
     """Render every in-scope map in memory; never mutate the repository."""
 
@@ -4539,14 +4546,7 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
         original = _spec_index_read_text(moc, root)
         if not _spec_index_is_gated(original):
             continue
-        rebuilt = _spec_index_rebuild_map(
-            moc,
-            original,
-            spec_dir,
-            repo_root=root,
-            specs_dir=specs_dir,
-            is_home=False,
-        )
+        rebuilt = render_feature_spec_index(root, spec_dir.relative_to(root).as_posix(), original)
         rendered.append(RenderedSpecIndexMap(moc, spec_dir.name, original, rebuilt))
 
     home_dir = root / "docs" / "ai" / "specs"

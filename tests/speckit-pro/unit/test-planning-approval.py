@@ -565,15 +565,27 @@ class NavigationFixture(PlanningApprovalFixture):
 
 class NavigationContentTest(NavigationFixture):
     def test_omitted_prs_header_notice_and_each_row_change_revision(self):
-        for line in self.blocks["PRS"].splitlines(keepends=True)[1:-1]:
+        lines = self.blocks["PRS"].splitlines(keepends=True)
+        for offset, line in enumerate(lines[1:-1], 1):
             with self.subTest(omitted=line):
                 self.assertNavigationBound(self.original.replace(
-                    self.blocks["PRS"], self.blocks["PRS"].replace(line, "", 1)))
+                    self.blocks["PRS"], "".join(lines[:offset] + lines[offset + 1:])))
 
     def test_omitted_each_backlink_changes_revision(self):
         for line in self.blocks["BACKLINKS"].splitlines(keepends=True)[1:-1]:
             with self.subTest(omitted=line):
                 self.assertNavigationBound(self.original.replace(line, "", 1))
+
+    def test_omitted_entire_body_changes_revision(self):
+        all_empty = self.original
+        for zone, block in self.blocks.items():
+            marker_lines = block.splitlines(keepends=True)
+            empty_block = marker_lines[0] + marker_lines[-1]
+            all_empty = all_empty.replace(block, empty_block)
+            with self.subTest(zone=zone):
+                self.assertNavigationBound(self.original.replace(block, empty_block))
+        with self.subTest(zone="all"):
+            self.assertNavigationBound(all_empty)
 
     def test_removed_marker_pairs_change_revision(self):
         for zone, block in self.blocks.items():
@@ -583,9 +595,10 @@ class NavigationContentTest(NavigationFixture):
 
     def test_duplicate_each_canonical_row_changes_revision(self):
         for zone, block in self.blocks.items():
-            for line in block.splitlines(keepends=True)[1:-1]:
+            lines = block.splitlines(keepends=True)
+            for offset, line in enumerate(lines[1:-1], 1):
                 with self.subTest(zone=zone, duplicated=line):
-                    self.assertNavigationBound(self.original.replace(block, block.replace(line, line + line, 1)))
+                    self.assertNavigationBound(self.original.replace(block, "".join(lines[:offset] + [line] + lines[offset:])))
 
     def test_reordered_canonical_rows_change_revision(self):
         for zone, block in self.blocks.items():
@@ -624,6 +637,15 @@ class NavigationStructureTest(NavigationFixture):
 
 
 class NavigationCompatibilityTest(NavigationFixture):
+    def test_empty_backlinks_with_no_pr_manifest_change_revision(self):
+        (self.feature / ".process/prs.json").unlink()
+        rendered, _ = render_spec_index(self.root)
+        self.map_path.write_text(rendered[0].rendered)
+        self.captureNavigation()
+        block = self.blocks["BACKLINKS"]
+        marker_lines = block.splitlines(keepends=True)
+        self.assertNavigationBound(self.original.replace(block, marker_lines[0] + marker_lines[-1]))
+
     def test_schema_one_legacy_markers_and_crlf_bind_each_body_edit(self):
         (self.feature / ".process/prs.json").write_text(json.dumps({"schemaVersion": 1, "records": [
             {"slice": f"us{number}", "pr": number, "merged_sha": "a" * 40} for number in (1, 2)]}))
@@ -639,6 +661,44 @@ class NavigationCompatibilityTest(NavigationFixture):
             for variant, damaged in variants.items():
                 with self.subTest(zone=zone, variant=variant):
                     self.assertNavigationBound(self.original.replace(block, damaged))
+
+
+class NavigationApprovalLifecycleTest(NavigationFixture):
+    def test_record_preserves_explicitly_reviewed_noncanonical_navigation(self):
+        self.approval()
+        self.map_path.write_text(render_spec_index(self.root)[0][0].rendered.replace("[spec.md]", "[Reviewed custom link]"))
+        original = self.map_path.read_bytes()
+        approval = self.approval()
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
+                reply = self.call("record", "apply", approval=approval)
+                self.assertEqual(reply["status"], "ok", reply)
+                self.assertEqual(self.map_path.read_bytes(), original)
+                self.assertEqual(self.call("verify")["status"], "ok")
+
+    def test_record_refreshes_canonical_backlinks_and_verifies_on_each_host(self):
+        self.approval()  # Create reviewed evidence before the canonical map snapshot.
+        source = Path(__file__).resolve().parents[3]
+        runners = (source / "speckit-pro", *(source / "dist" / host / "speckit-pro" for host in ("claude", "codex")))
+        for runner in runners:
+            with self.subTest(runner=runner.relative_to(source).as_posix()):
+                self.runner_root = runner
+                rendered, _ = render_spec_index(self.root)
+                self.map_path.write_text(rendered[0].rendered)
+                approval = self.approval()
+                original = self.map_path.read_bytes()
+                self.assertEqual(self.call("record", "dry_run", approval=approval)["status"], "ok")
+                self.assertEqual(self.map_path.read_bytes(), original)
+                recorded = self.call("record", "apply", approval=approval)
+                self.assertEqual(recorded["status"], "ok", recorded)
+                self.assertEqual(self.call("verify")["status"], "ok")
+                self.assertEqual(self.map_path.read_text(), render_spec_index(self.root)[0][0].rendered)
+                (self.feature / "artifacts/runtime.txt").write_text("A completed runtime write")
+                self.map_path.write_text(render_spec_index(self.root)[0][0].rendered)
+                self.assertEqual(self.call("verify")["status"], "ok")
+                (self.root / recorded["data"]["record_path"]).unlink()
+                (self.feature / "artifacts/runtime.txt").unlink()
 
 
 
@@ -731,7 +791,8 @@ class ShippedWorkflowTest(WorkflowFixture):
 if __name__ == "__main__":
     cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, AssuranceGuardTest,
              WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest, InventoryProgressTest,
-             ProgressExamplesTest, GeneratedNavigationTest, NavigationContentTest, NavigationStructureTest, NavigationCompatibilityTest,
+             ProgressExamplesTest, GeneratedNavigationTest, NavigationContentTest, NavigationStructureTest,
+             NavigationCompatibilityTest, NavigationApprovalLifecycleTest,
              ShippedWorkflowTest)
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in cases)
     raise SystemExit(run_counted(suite, label="test-planning-approval"))
