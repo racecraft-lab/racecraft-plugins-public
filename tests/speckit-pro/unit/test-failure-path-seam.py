@@ -27,14 +27,18 @@ SEAM_ACTIONS = {"bind-invariants", "reserve", "authorize-corrective-retry", "aut
 SOURCE = Path(control.__file__)
 
 
+def greenfield_ledger(root: Path) -> dict:
+    """A ledger started before its spec exists, then the two-invariant spec the tests bind."""
+    (root / "workflow.md").write_text("# Workflow\n")
+    ledger = control.initial_ledger(root / "spec.md", 1000.0)
+    (root / "spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+    return ledger
+
+
 class FailurePathSeamTests(unittest.TestCase):
     def setUp(self) -> None:
-        temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name).resolve()
-        (self.root / "workflow.md").write_text("# Workflow\n")
-        self.ledger = control.initial_ledger(self.root / "spec.md", 1000.0)
-        (self.root / "spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.ledger = greenfield_ledger(self.root)
 
     def call(self, reasons=(), **inputs):
         return control.FailurePathCall(self.root, self.ledger, inputs, self.root / "spec.md",
