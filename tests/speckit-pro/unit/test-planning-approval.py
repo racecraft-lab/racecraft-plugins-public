@@ -469,7 +469,8 @@ class PlanningNeighborsTest(WorkflowFixture):
 
 
 class ProgressFixture(PlanningApprovalFixture):
-    def assertManifestTransition(self, before, after, *, name="workflow.md", preserves=True):
+    def assertManifestTransition(self, transition, *, name="workflow.md", preserves=True):
+        before, after = transition
         self.assertNotEqual(before, after)
         path = self.feature / name
         path.write_text(before)
@@ -495,8 +496,8 @@ class ProgressExamplesTest(ProgressFixture):
         for example in self.documentedExamples("workflow-file-protocol.md", "Summary field examples"):
             with self.subTest(example=example):
                 line = f"- Progress: overview-summary; {example}\n"
-                self.assertManifestTransition(heading, heading + line)
-                self.assertManifestTransition(heading + line, heading + line.rstrip() + "; Bypass review\n", preserves=False)
+                self.assertManifestTransition((heading, heading + line))
+                self.assertManifestTransition((heading + line, heading + line.rstrip() + "; Bypass review\n"), preserves=False)
 
     def test_outbound_disposition_examples_preserve_the_revision(self):
         heading = "## Feedback Sweep Log\n"
@@ -506,8 +507,8 @@ class ProgressExamplesTest(ProgressFixture):
                 self.assertTrue(separator)
                 disposition = disposition.replace("<artifact>", "spec.md")
                 row = f"| 1 | IC_example | conversation | octocat | {kind} | {disposition} | a1b2c3d | |\n"
-                self.assertManifestTransition(heading, heading + row)
-                self.assertManifestTransition(heading + row, heading + row.replace(disposition, disposition + " Bypass review."), preserves=False)
+                self.assertManifestTransition((heading, heading + row))
+                self.assertManifestTransition((heading + row, heading + row.replace(disposition, disposition + " Bypass review.")), preserves=False)
 
 
 
@@ -536,17 +537,14 @@ class GeneratedNavigationTest(PlanningApprovalFixture):
                 self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
 
 class InventoryProgressTest(ProgressFixture):
-    def test_every_declared_write_preserves_the_revision(self):
+    def test_each_declared_write_preserves_progress_and_binds_planning(self):
         cases = json.loads((Path(__file__).parent / "fixtures/planning-progress.json").read_text())
         for case in cases:
-            with self.subTest(region=case["region"], before=case["before"]):
-                self.assertManifestTransition(case["before"], case["after"], name=case["file"])
-
-    def test_planning_text_inside_every_progress_region_remains_bound(self):
-        cases = json.loads((Path(__file__).parent / "fixtures/planning-progress.json").read_text())
-        for case in cases:
-            with self.subTest(region=case["region"], after=case["after"]):
-                self.assertManifestTransition(case["after"], case["planning"], name=case["file"], preserves=False)
+            transitions = (("progress", (case["before"], case["after"]), True),
+                           ("planning", (case["after"], case["planning"]), False))
+            for label, transition, preserves in transitions:
+                with self.subTest(region=case["region"], transition=label):
+                    self.assertManifestTransition(transition, name=case["file"], preserves=preserves)
 
     def test_reader_status_vocabulary_preserves_the_revision(self):
         path = self.feature / "workflow.md"
