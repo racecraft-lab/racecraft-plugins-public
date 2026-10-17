@@ -85,7 +85,7 @@ func (c *Client) Evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
 		return nil, &requestInvalidError{err}
 	}
 	if len(body) > maxRequestBody {
-		return nil, &requestInvalidError{fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state or fewer questions",
+		return nil, &requestInvalidError{fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state, fewer questions, or fewer or smaller images",
 			c.Provider.Name, len(body), maxRequestBody)}
 	}
 
