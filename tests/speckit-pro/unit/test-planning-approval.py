@@ -282,7 +282,7 @@ class AssuranceGuardTest(unittest.TestCase):
 class WorkflowFixture(PlanningApprovalFixture):
     def refreshMap(self):
         path = self.feature / "SPEC-MOC.md"
-        if path.exists():
+        if path.exists() and b"<!-- GENERATED:" in path.read_bytes():
             path.write_bytes(render_feature_spec_index(self.root, "specs/demo", path.read_bytes().decode()).encode())
 
     def assertWorkflowEdit(self, before, after, preserves=False, name="workflow.md"):
