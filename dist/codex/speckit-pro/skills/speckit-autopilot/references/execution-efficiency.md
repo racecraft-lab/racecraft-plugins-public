@@ -175,7 +175,7 @@ ownership from the caller's current workflow.
   the dispatch's worktree snapshot and its unit, and an unknown outcome then
   blocks a new dispatch only when it shares that unit (`reasons` carries
   `unknown_dispatch_blocks_unit` and `blocked_by`). Compact `blocked_by` is a
-  bounded batch with exact `blocked_by_count`; settle it and refresh the
+  bounded batch with exact `blocked_by_count`; settle it and retry the
   blocked action for the next batch, as the durable-ledger protocol below
   describes. An implementation dispatch
   without `tdd_units` is unscoped and blocks all new dispatch until settled.
@@ -493,9 +493,12 @@ class the paths show, never cycling the three values. Read
 exact IDs in bounded batches alongside `unknown_dispatch_count` and
 `blocked_by_count`. Settle the returned IDs, then refresh compact `status` or
 retry the blocked action for the next batch. A count larger than its returned
-list means unresolved IDs remain; finish reconciliation and verification for
-each batch before advancing. A corrective dispatch's
-scope is its failure family, so do not reserve one against a failure inside a
+list means unresolved IDs remain.
+Independent units may continue when the runner permits their reserve.
+If a batch stays stuck, delegate a phase-local read-only `status` request with
+`answer_format: detailed` to inspect the remaining IDs. Preserve unresolved
+outcomes; reconcile and verify each affected unit before retrying its work.
+A corrective dispatch's scope is its failure family, so do not reserve one against a failure inside a
 still-unknown unit. Never call this completion or a
 successful runtime measurement. Keep existing run status `in_progress` or
 `awaiting_review` as applicable and mirror the execution-control disposition;

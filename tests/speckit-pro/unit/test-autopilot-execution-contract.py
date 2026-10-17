@@ -148,6 +148,9 @@ class ExecutionContractTests(unittest.TestCase):
                         self.assertTrue(f"`{field}`" in text, f"{relative} missing {field}")
                     self.assertTrue("bounded batches" in text, f"{relative} missing batch contract")
                     self.assertTrue("refresh" in text, f"{relative} missing refresh instruction")
+                    for rule in ("If a batch stays stuck", "phase-local", "answer_format: detailed",
+                                 "Independent units may continue when the runner permits"):
+                        self.assertTrue(rule in text, f"{relative} missing recovery scope instruction: {rule}")
 
     def test_plan_rescope_reconciles_every_plan_artifact_before_g3_on_both_hosts(self):
         # A rescope once left research.md, quickstart.md, and the requirements

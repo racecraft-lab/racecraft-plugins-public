@@ -11,7 +11,9 @@ results, disposition, refusal reasons, authorization, clock facts and mirror
 warnings retain their existing fields. Compact answers retain complete dispatch
 IDs in bounded `unknown_dispatch_ids` and `blocked_by` batches, with exact
 `unknown_dispatch_count` and `blocked_by_count` totals whenever those lists are
-present. Each batch is bounded by its serialized size; IDs are never shortened.
+present. Checkpoint answers also bound `completed_dispatch_ids` and include
+exact `completed_dispatch_count`; detailed answers retain the full completed
+list. Each batch is bounded by its serialized size; IDs are never shortened.
 Persisted IDs obey the same nonempty, 240-character admission contract as new
 dispatches, so even a maximally escaped valid ID fits a batch. Invalid ledger
 IDs fail validation before any apply write. Detailed answers retain complete
@@ -21,6 +23,9 @@ growth cannot crowd the applied result or mirror warning out of the answer.
 Unknown dispatches block unscoped or overlapping work; implementation reserves
 for distinct `tdd_units` can continue and accumulate unknown outcomes. There is
 no fixed dispatch-count overflow threshold: serialized ID length also matters.
+If an unknown batch stays stuck, phase-local read-only detailed status exposes
+the remaining IDs. Independent units may proceed when the runner permits their
+reserve; unresolved outcomes still block overlapping or unscoped work.
 
 The cap includes serialized stdout and duplicate stderr diagnostics. Ordinary
 answers allow 16 KiB. The envelope alone selects caps: Tasks and Plan-repair

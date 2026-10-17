@@ -377,6 +377,49 @@ class CompactUnknownDispatchTests(unittest.TestCase):
         self.assertEqual(json.loads(self.ledger_path.read_text())["dispatches"]["gamma"]["outcome"], "reserved")
 
 
+class CompactCheckpointTests(unittest.TestCase):
+    setUp = CompactExecutionTests.setUp
+    call = CompactUnknownDispatchTests.call
+
+    def test_completed_history_keeps_checkpoint_result_and_warning_on_all_launchers(self):
+        execution_control(self.root, {**self.binding, "action": "complete",
+                                     "dispatch_id": "seed", "outcome": "completed"}, "apply")
+        completed_ids = ["seed"]
+        for index in range(8):
+            dispatch_id = "\U0001f680" * 236 + f"{index:04d}"
+            execution_control(self.root, {**self.binding, "action": "reserve", "dispatch_id": dispatch_id,
+                                         "kind": "implementation"}, "apply")
+            execution_control(self.root, {**self.binding, "action": "complete", "dispatch_id": dispatch_id,
+                                         "outcome": "completed"}, "apply")
+            completed_ids.append(dispatch_id)
+        for payload, state in itertools.product(CompactUnknownDispatchTests.PAYLOADS, (None, "[]")):
+            with self.subTest(payload=payload, state=state):
+                state_path = self.root / "feature/autopilot-state.json"
+                state_path.unlink(missing_ok=True)
+                if state is not None:
+                    state_path.write_text(state)
+                before = json.loads(self.ledger_path.read_text())["checkpoint_at"]
+                answer = self.call(payload, action="checkpoint")
+                persisted = json.loads(self.ledger_path.read_text())
+                self.assertGreater(persisted["checkpoint_at"], before)
+                self.assertEqual(answer["status"], "ok", answer)
+                data = answer["data"]
+                self.assertEqual(data["ledger"], {"run_id": self.binding["expected_run_id"]})
+                self.assertEqual(data["disposition"], "continue")
+                self.assertEqual(data["completed_dispatch_count"], 9)
+                ids = data["completed_dispatch_ids"]
+                self.assertTrue(ids)
+                self.assertLess(len(ids), 9)
+                self.assertEqual(ids, completed_ids[:len(ids)])
+                self.assertLessEqual(len(json.dumps(ids, separators=(",", ":")).encode()), 3072)
+                self.assertEqual([d["code"] for d in answer["diagnostics"]],
+                                 [] if state is None else ["state_mirror_not_refreshed"])
+                detailed = self.call(payload, action="checkpoint", answer_format="detailed")
+                self.assertEqual(detailed["data"]["completed_dispatch_ids"], completed_ids)
+                self.assertEqual(list(detailed["data"]["ledger"]["dispatches"]), completed_ids)
+                self.assertNotIn("completed_dispatch_count", detailed["data"])
+
+
 class CompactRecoveryIdsTests(unittest.TestCase):
     setUp = CompactExecutionTests.setUp
     PAYLOADS = CompactUnknownDispatchTests.PAYLOADS

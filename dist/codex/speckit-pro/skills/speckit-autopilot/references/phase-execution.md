@@ -3420,8 +3420,11 @@ with the class the paths show; never cycle the three values. Read
 seldom reserved. Compact answers carry exact IDs in bounded batches alongside
 `unknown_dispatch_count` and `blocked_by_count`. Settle the returned IDs, then
 refresh compact `status` or retry the blocked action to retrieve the next
-batch. A count larger than its returned list means unresolved IDs remain;
-complete reconciliation and verification for each batch before advancing.
+batch. A count larger than its returned list means unresolved IDs remain.
+Independent units may continue when the runner permits their reserve.
+If a batch stays stuck, delegate a phase-local read-only `status` request with
+`answer_format: detailed` to inspect the remaining IDs. Preserve unresolved
+outcomes; reconcile and verify each affected unit before retrying its work.
 
 A failed gate or test is not a blocked action: diagnose it through the
 consensus agents, fix it through the executor, rerun verification, and keep

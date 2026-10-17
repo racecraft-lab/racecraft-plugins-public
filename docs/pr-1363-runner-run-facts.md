@@ -174,3 +174,37 @@ response projection: no pathname, symlink, hard-link or rename operation changes
   ledger only for `helper_id == "execution-control"`. A per-helper projection
   hook would be cleaner ownership, but with one helper it would be speculative.
   Move the rule to execution-control if a second helper needs a projection.
+
+
+## Checkpoint compact-history follow-up
+
+R1363-eecf75d1: compact checkpoint answers now project `completed_dispatch_ids`
+with the existing wire-bounded batch policy and exact `completed_dispatch_count`.
+Detailed checkpoint answers and the validated ledger retain every completed ID.
+The public reserve/complete regression builds nine completed dispatches, including
+eight maximal astral IDs. Before the fix, checkpoint applied its timestamp then
+overflowed in all six source/Claude/Codex and absent/invalid mirror cases.
+The repaired answer preserves the run identity, disposition and mirror warning.
+
+R1363-06386042 and R1363-f5903a96: shared guidance and the Codex overlay describe
+phase-local read-only detailed status when a batch stays stuck, and explicitly
+allow independent units when the runner permits their reserve. A stuck unknown
+still blocks its overlapping or unscoped work; recovery never clears it merely
+to advance the compact batch.
+
+Additional review notes retained for subsequent reviews:
+
+- R1363-30bbb25d: the prior constant extraction and behavior change share one
+  commit. Changing that historical ordering requires prohibited history
+  rewriting; no runtime defect is involved. This follow-up adds one field to
+  the existing contract without a refactor.
+- R1363-e361b2df: the package-root field contract avoids an envelope import of
+  execution-control; there is no import cycle on the shipped path.
+- R1363-14a84558: `blocked_by` uses insertion order. The earlier subset assertion
+  is valid for its sorted-insertion fixture, but is not a general ordering
+  guarantee; no production result depends on that fixture ordering.
+- R1363-2ccbb033: the prior batch-advance test uses an independent native result
+  with `complete`; it proves batch advancement, not reconcile-unit verification.
+- R1363-67e6e598: extra blank lines in the existing test are cosmetic.
+- R1363-67a1ec3c: the recovery instruction now consistently says retry the blocked
+  action, matching the existing runner behavior.
