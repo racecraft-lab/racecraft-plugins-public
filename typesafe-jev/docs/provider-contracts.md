@@ -218,15 +218,24 @@ only field is `{"image": "name"}`, inside `state`, `instructions`, or
 reference. Every image must be referenced, and a `box` question must have one.
 A top-level `assets` map is rejected on input. So is any hand-written media
 part in `state`, `instructions`, or `criteria`, on every request, whether or
-not `JEV_IMAGES` is set. A media part is an object with a payload field
-(`image_url`, `input_audio`, `video_url`, `file`, or `file_data`) under a
-`type` of `image_url`, `input_audio`, `video_url`, `input_image`, `file`, or
-`input_file`, compared trimmed and case-folded. An object-valued payload field
-with no `type` at all counts too. OpenRouter's multimodal guide documents
-`image_url` for image models and `input_audio` and `video_url` for
-`cloudflare/clef-omni`, and the caller's `model` passes through, so each is
-reachable. A plain string such as an image link, or a typed object that names
-no part, is ordinary state. An unvalidated picture or clip therefore cannot
+not `JEV_IMAGES` is set. Keys and the `type` value are compared trimmed and
+case-folded. An object is a media part when any of these holds:
+
+- its `type` is `image_url`, `input_audio`, `video_url`, `input_image`,
+  `file`, or `input_file`, whatever its other fields are;
+- a payload field (`image_url`, `input_audio`, `video_url`, `file`,
+  `file_data`, `file_url`, `file_id`, `image`, or `audio`) holds a `data:`
+  URL, or an object with a `data:` URL in one of its fields, whatever the
+  `type` says;
+- it has no `type` (no non-empty string under a type key) and a payload field
+  holds an object.
+
+OpenRouter's multimodal guide documents `image_url` for image models and
+`input_audio` and `video_url` for `cloudflare/clef-omni`, and the caller's
+`model` passes through, so each is reachable. A plain string such as an image
+link, or a typed object that names no part and carries no `data:` URL, is
+ordinary state. The rule costs one false positive: an ordinary object whose
+`type` is `file` is refused. An unvalidated picture or clip therefore cannot
 skip `JEV_IMAGES` or the local checks.
 
 `JEV_IMAGES` gates images and `box`. Unset or `false` leaves both off; `true`

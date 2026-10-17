@@ -420,11 +420,63 @@ func TestRawImageURLRejectedWithoutImages(t *testing.T) {
 	}
 }
 
-// OpenRouter's multimodal Decisions guide (2026-10-17) documents image_url,
-// input_audio, and video_url parts, and the caller's model passes through, so
-// a non-Jev model such as cloudflare/clef-omni reads all three. Each shape,
-// and the spellings a lenient parser might fold, is refused in every value
-// position. Ordinary state that only looks similar still goes through.
+// testDataURL is a PNG data URL, the payload every image part carries.
+const testDataURL = "data:image/png;base64,iVBORw0KGgo="
+
+// mediaPartShapes are hand-written media parts, and the spellings a lenient
+// parser might fold. OpenRouter's multimodal Decisions guide (2026-10-17)
+// documents image_url, input_audio, and video_url parts, and the caller's
+// model passes through, so a non-Jev model such as cloudflare/clef-omni reads
+// all three.
+var mediaPartShapes = map[string]any{
+	"input_audio":       map[string]any{"type": "input_audio", "input_audio": map[string]any{"data": "UklGRiQAAABXQVZF", "format": "wav"}},
+	"video_url":         map[string]any{"type": "video_url", "video_url": map[string]any{"url": "data:video/mp4;base64,AAAAIGZ0eXA="}},
+	"case variant":      map[string]any{"type": "Image_URL", "image_url": map[string]any{"url": testDataURL}},
+	"padded type":       map[string]any{"type": " image_url ", "image_url": map[string]any{"url": testDataURL}},
+	"untyped payload":   map[string]any{"image_url": map[string]any{"url": testDataURL}},
+	"chat file part":    map[string]any{"type": "file", "file": map[string]any{"filename": "a.pdf", "file_data": "data:application/pdf;base64,JVBERi0="}},
+	"responses image":   map[string]any{"type": "input_image", "image_url": testDataURL},
+	"responses file":    map[string]any{"type": "input_file", "file_data": "data:application/pdf;base64,JVBERi0="},
+	"untyped audio":     map[string]any{"input_audio": map[string]any{"data": "UklGRiQAAABXQVZF", "format": "wav"}},
+	"untyped video_url": map[string]any{"video_url": map[string]any{"url": "data:video/mp4;base64,AAAAIGZ0eXA="}},
+	// A type that is empty, not a string, or null is no type at all.
+	"empty type":      map[string]any{"type": "", "image_url": map[string]any{"url": testDataURL}},
+	"numeric type":    map[string]any{"type": 123, "image_url": map[string]any{"url": testDataURL}},
+	"null type":       map[string]any{"type": nil, "image_url": map[string]any{"url": testDataURL}},
+	"blank type":      map[string]any{"type": "  ", "video_url": map[string]any{"url": "data:video/mp4;base64,AAAA"}},
+	"mixed-case keys": map[string]any{"Type": "image_url", "IMAGE_URL": map[string]any{"url": testDataURL}},
+	"padded payload":  map[string]any{" Image_Url ": map[string]any{"url": testDataURL}},
+	// A part type is a part whatever its payload field is called.
+	"part type, image key":   map[string]any{"type": "input_image", "image": testDataURL},
+	"part type, file_url":    map[string]any{"type": "file", "file_url": "https://example.com/a.pdf"},
+	"part type, file_id":     map[string]any{"type": "input_file", "file_id": "file-abc123"},
+	"part type, audio key":   map[string]any{"type": "input_audio", "audio": map[string]any{"data": "UklGRiQ=", "format": "wav"}},
+	"part type, no payload":  map[string]any{"type": "file", "path": "src/a.go"},
+	"untyped audio object":   map[string]any{"audio": map[string]any{"data": "UklGRiQ=", "format": "wav"}},
+	"untyped file_url":       map[string]any{"file_url": map[string]any{"url": "data:application/pdf;base64,JVBERi0="}},
+	"data URL, any type":     map[string]any{"type": "product", "image_url": testDataURL},
+	"nested data URL":        map[string]any{"type": "product", "image_url": map[string]any{"url": testDataURL}},
+	"data URL, padded":       map[string]any{"type": "product", "image": "  DATA:image/png;base64,iVBO"},
+	"data URL in file_data":  map[string]any{"type": "attachment", "file_data": "data:application/pdf;base64,JVBERi0="},
+	"data URL under audio":   map[string]any{"type": "clip", "audio": map[string]any{"src": "data:audio/wav;base64,UklGRiQ="}},
+	"data URL under file_id": map[string]any{"kind": "x", "file_id": "data:application/pdf;base64,JVBERi0="},
+}
+
+// mediaPartSites places one value in each position a reference may take.
+var mediaPartSites = map[string]func(any) evaluateIn{
+	"state": func(p any) evaluateIn {
+		return evaluateIn{State: []any{"x", p}, Questions: map[string]question{"present": {Type: typeNoul, Instructions: "i"}}}
+	},
+	"instructions": func(p any) evaluateIn {
+		return evaluateIn{State: "x", Questions: map[string]question{"present": {Type: typeNoul, Instructions: []any{"look", p}}}}
+	},
+	"criteria": func(p any) evaluateIn {
+		return evaluateIn{State: "x", Questions: map[string]question{"present": {Type: typeNoul, Instructions: "i", Criteria: map[string]any{"true": p, "false": "no"}}}}
+	},
+}
+
+// Every media part shape is refused in every value position, with JEV_IMAGES
+// off, before any request is made.
 func TestMediaPartsRejectedInEveryForm(t *testing.T) {
 	var calls atomic.Int64
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -433,32 +485,8 @@ func TestMediaPartsRejectedInEveryForm(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := testClient(providerAt("openrouter", srv.URL), srv) // JEV_IMAGES off
-	dataURL := "data:image/png;base64,iVBORw0KGgo="
-	parts := map[string]any{
-		"input_audio":       map[string]any{"type": "input_audio", "input_audio": map[string]any{"data": "UklGRiQAAABXQVZF", "format": "wav"}},
-		"video_url":         map[string]any{"type": "video_url", "video_url": map[string]any{"url": "data:video/mp4;base64,AAAAIGZ0eXA="}},
-		"case variant":      map[string]any{"type": "Image_URL", "image_url": map[string]any{"url": dataURL}},
-		"padded type":       map[string]any{"type": " image_url ", "image_url": map[string]any{"url": dataURL}},
-		"untyped payload":   map[string]any{"image_url": map[string]any{"url": dataURL}},
-		"chat file part":    map[string]any{"type": "file", "file": map[string]any{"filename": "a.pdf", "file_data": "data:application/pdf;base64,JVBERi0="}},
-		"responses image":   map[string]any{"type": "input_image", "image_url": dataURL},
-		"responses file":    map[string]any{"type": "input_file", "file_data": "data:application/pdf;base64,JVBERi0="},
-		"untyped audio":     map[string]any{"input_audio": map[string]any{"data": "UklGRiQAAABXQVZF", "format": "wav"}},
-		"untyped video_url": map[string]any{"video_url": map[string]any{"url": "data:video/mp4;base64,AAAAIGZ0eXA="}},
-	}
-	sites := map[string]func(any) evaluateIn{
-		"state": func(p any) evaluateIn {
-			return evaluateIn{State: []any{"x", p}, Questions: map[string]question{"present": {Type: typeNoul, Instructions: "i"}}}
-		},
-		"instructions": func(p any) evaluateIn {
-			return evaluateIn{State: "x", Questions: map[string]question{"present": {Type: typeNoul, Instructions: []any{"look", p}}}}
-		},
-		"criteria": func(p any) evaluateIn {
-			return evaluateIn{State: "x", Questions: map[string]question{"present": {Type: typeNoul, Instructions: "i", Criteria: map[string]any{"true": p, "false": "no"}}}}
-		},
-	}
-	for partName, part := range parts {
-		for siteName, build := range sites {
+	for partName, part := range mediaPartShapes {
+		for siteName, build := range mediaPartSites {
 			in := build(part)
 			in.Model = "cloudflare/clef-omni"
 			if _, err := runEvaluate(context.Background(), c, in); err == nil || !strings.Contains(err.Error(), "media part") {
@@ -469,13 +497,24 @@ func TestMediaPartsRejectedInEveryForm(t *testing.T) {
 	if calls.Load() != 0 {
 		t.Fatalf("a media part was sent: %d requests", calls.Load())
 	}
+}
 
+// Ordinary state that only looks like a media part still goes through: an
+// image link as a string, a typed object that names no part, and payload-named
+// fields that hold no data: URL.
+func TestMediaPartLookalikesPass(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(noulOK))
+	}))
+	defer srv.Close()
+	c := testClient(providerAt("openrouter", srv.URL), srv)
 	for name, state := range map[string]any{
-		"a file entry":       map[string]any{"type": "file", "path": "src/a.go"},
 		"an image link":      map[string]any{"image_url": "https://cdn.example.com/x.png"},
 		"a finding":          map[string]any{"file": "main.go", "line": 3},
 		"an ordinary typed":  map[string]any{"type": "bug", "title": "crash on start"},
 		"a typed image link": map[string]any{"type": "product", "image_url": map[string]any{"url": "https://cdn.example.com/x.png"}},
+		"post image details": map[string]any{"type": "post", "image": map[string]any{"alt": "a dog", "width": 640}},
+		"an audio summary":   map[string]any{"type": "episode", "audio": map[string]any{"duration_s": 1800}},
 	} {
 		in := evaluateIn{State: state, Questions: map[string]question{"present": {Type: typeNoul, Instructions: "i"}}}
 		if _, err := runEvaluate(context.Background(), c, in); err != nil {
@@ -880,18 +919,25 @@ func TestFallbackLocalRefusalReportsPrimaryFailure(t *testing.T) {
 	}
 }
 
-// Many images, or one file named many times, must be refused before their
-// bytes are all held, encoded, and marshalled only to fail the body cap.
-func TestImagesOverTheRequestCapFailBeforeEncoding(t *testing.T) {
-	img := image.NewNRGBA(image.Rect(0, 0, imageSideMax, imageSideMax))
-	// Noise, stored uncompressed: about 9.8 MB per file, under the 16 MiB
-	// file cap. Three of them base64-encode past the 32 MiB request cap.
+// noisePNG is a side-by-side square of noise, stored uncompressed, so its file
+// size is about side*side*4 bytes.
+func noisePNG(t *testing.T, side int) string {
+	t.Helper()
+	img := image.NewNRGBA(image.Rect(0, 0, side, side))
 	rand.NewChaCha8([32]byte{}).Read(img.Pix)
 	var buf bytes.Buffer
 	if err := (&png.Encoder{CompressionLevel: png.NoCompression}).Encode(&buf, img); err != nil {
 		t.Fatal(err)
 	}
-	data := b64(buf.Bytes())
+	return b64(buf.Bytes())
+}
+
+// Many images, or one file named many times, must be refused before their
+// bytes are all held, encoded, and marshalled only to fail the body cap.
+func TestImagesOverTheRequestCapFailBeforeEncoding(t *testing.T) {
+	// About 9.8 MB per file, under the 16 MiB file cap. Three of them
+	// base64-encode past the 32 MiB request cap.
+	data := noisePNG(t, imageSideMax)
 	in := evaluateIn{
 		State: []any{"a", "b", "c"},
 		Images: map[string]imageSource{
@@ -909,12 +955,6 @@ func TestImagesOverTheRequestCapFailBeforeEncoding(t *testing.T) {
 // image referenced many times can build a body far past the cap from a state
 // of a few hundred bytes. The cap counts each reference there.
 func TestOpenRouterImageCapCountsEachReference(t *testing.T) {
-	img := image.NewNRGBA(image.Rect(0, 0, 280, 280))
-	rand.NewChaCha8([32]byte{}).Read(img.Pix)
-	var buf bytes.Buffer
-	if err := (&png.Encoder{CompressionLevel: png.NoCompression}).Encode(&buf, img); err != nil {
-		t.Fatal(err)
-	}
 	// About 314 KB, so 120 references are about 50 MB of base64.
 	state := make([]any, 120)
 	for i := range state {
@@ -922,7 +962,7 @@ func TestOpenRouterImageCapCountsEachReference(t *testing.T) {
 	}
 	in := evaluateIn{
 		State:     state,
-		Images:    map[string]imageSource{"door": {DataBase64: b64(buf.Bytes())}},
+		Images:    map[string]imageSource{"door": {DataBase64: noisePNG(t, 280)}},
 		Questions: map[string]question{"q": {Type: typeNoul, Instructions: "i"}},
 	}
 	if _, _, err := encodeRequest(withImages(openrouterSpec), in); err == nil || !strings.Contains(err.Error(), "together") {

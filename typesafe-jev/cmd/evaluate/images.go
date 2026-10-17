@@ -16,6 +16,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 )
@@ -299,28 +300,70 @@ var mediaPartTypes = map[string]bool{
 	"input_image": true, "file": true, "input_file": true,
 }
 
-// mediaPayloadKeys are the fields that carry a part's bytes.
-var mediaPayloadKeys = []string{"image_url", "input_audio", "video_url", "file", "file_data"}
+// mediaPayloadKeys are the fields that carry, or point at, a part's bytes.
+var mediaPayloadKeys = map[string]bool{
+	"image_url": true, "input_audio": true, "video_url": true,
+	"file": true, "file_data": true, "file_url": true, "file_id": true,
+	"image": true, "audio": true,
+}
 
-// mediaPart reports whether m has a media part's shape: a payload field under
-// a type that names a part, compared trimmed and case-folded in case a parser
-// folds it, or an object-valued payload with no type at all. A typed object
-// that names no part, or a plain string such as an image link, is ordinary
-// state.
+// mediaPart reports whether m has a media part's shape. Every key and the type
+// value are compared trimmed and case-folded, in case a parser folds them. It
+// is a part when:
+//   - its type names a part, whatever its payload field is called;
+//   - a payload field holds a data: URL, or an object holding one, whatever
+//     the type says; or
+//   - it has no type (no non-empty string under a type key) and a payload
+//     field holds an object.
+//
+// A typed object that names no part and carries no data: URL, or a plain
+// string such as an image link, is ordinary state.
 func mediaPart(m map[string]any) bool {
-	raw, typed := m["type"]
-	typ, _ := raw.(string)
-	isPart := mediaPartTypes[strings.ToLower(strings.TrimSpace(typ))]
-	for _, key := range mediaPayloadKeys {
-		v, ok := m[key]
-		if !ok {
+	typed, isPart := partType(m)
+	if isPart {
+		return true
+	}
+	for key, v := range m {
+		if !mediaPayloadKeys[foldKey(key)] {
 			continue
 		}
-		if _, object := v.(map[string]any); isPart || (!typed && object) {
+		// An object holding a data: URL in one of its own fields, such as
+		// {"url": "data:image/png;base64,..."}, carries the bytes too.
+		obj, isObject := v.(map[string]any)
+		if dataURL(v) || (isObject && (!typed || slices.ContainsFunc(slices.Collect(maps.Values(obj)), dataURL))) {
 			return true
 		}
 	}
 	return false
+}
+
+// partType reports whether m has a type, meaning a non-empty string under any
+// spelling of the type key, and whether any such type names a media part.
+func partType(m map[string]any) (typed, isPart bool) {
+	for key, v := range m {
+		s, ok := v.(string)
+		if foldKey(key) != "type" || !ok || strings.TrimSpace(s) == "" {
+			continue
+		}
+		typed = true
+		if mediaPartTypes[foldKey(s)] {
+			return true, true
+		}
+	}
+	return typed, false
+}
+
+func foldKey(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
+
+// dataURL reports a string that starts with "data:", ignoring case and leading
+// whitespace. Only the prefix is examined, so a large payload is not copied.
+func dataURL(v any) bool {
+	s, ok := v.(string)
+	if !ok {
+		return false
+	}
+	s = strings.TrimLeft(s, " \t\r\n")
+	return len(s) >= 5 && strings.EqualFold(s[:5], "data:")
 }
 
 func imageTrees(in evaluateIn) (any, map[string]any, error) {
