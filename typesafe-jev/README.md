@@ -159,12 +159,12 @@ It gets back the raw response JSON, with each answer under the same id you gave 
 
 - **Setup that changes nothing.** `evaluate setup mcp` prints the commands and config for the clients you name. It never runs a client CLI, edits a config file, or reads your key: only the key-file *path* appears in its output, never a value.
 - **Explicit backends.** `JEV_PROVIDER` selects TypeSafe or OpenRouter, and each backend reads only its own credential. An `OPENROUTER_API_KEY` left in a shell by another tool cannot silently reroute and re-bill your setup.
-- **Answers your code can branch on.** Three question types: `noul` (probability a condition holds), `choice` (one option from a map), `score` (position on ordered levels).
+- **Answers your code can branch on.** Four question types: `noul` (probability a condition holds), `choice` (one option from a map), `score` (position on 2 to 10 ordered levels), and `box` (four edges of one target in an image; needs Jev 1.14).
 - **Both backends at full capability.** Structured instructions and criteria, and null option descriptions, work on TypeSafe and OpenRouter alike. Validation is per backend rather than a shared lowest common denominator, so neither is narrowed to suit the other, and a request a backend would reject fails locally before it costs anything.
 - **Rate limits handled honestly.** Each backend retries only the statuses it documents as transient, `Retry-After` is honoured as a minimum wait, and retry waits come out of the same timeout as the attempts. Authentication, credit, and validation failures are never replayed.
 - **Several questions, one call.** Batch independent questions over the same state; they run in parallel.
 - **Agents that use it well out of the box.** The server ships usage guidance (narrow questions, JSON state, no-match options) to the client, so the agent writes better questions without extra prompting.
-- **A single static binary.** No runtime, no Node, no Python. Redirects are refused, the request timeout defaults to 45s across all attempts, and request and response bodies are capped at 16 MiB.
+- **A single static binary.** No runtime, no Node, no Python. Redirects are refused, the request timeout defaults to 45s across all attempts, a request body is capped at 32 MiB, and a response body at 16 MiB.
 
 ## About TypeSafe
 
@@ -178,21 +178,32 @@ It gets back the raw response JSON, with each answer under the same id you gave 
 
 | Field | Required | Description |
 |---|---|---|
-| `state` | yes | Content to judge: plain text, or a JSON object/array with named fields |
-| `questions` | yes | Map of question id to `{type, instructions, criteria?}` |
+| `state` | yes | Content to judge: plain text, or a JSON object/array with named fields. A whole string equal to an image name, or `{"image":"name"}`, places that image here |
+| `questions` | yes | Map of question id to `{type, instructions, criteria?}`. `box` takes instructions and no criteria |
 | `model` | no | The call's model, then `JEV_MODEL`, then the backend default. Passed through exactly as given |
+| `images` | no | Named PNG or JPEG images: each entry is `{path}` or `{data_base64}`, plus an optional `format`. Requires `JEV_IMAGES=true` |
 
-Criteria by type: `noul` takes optional `{"true": ..., "false": ...}` descriptions; `choice` requires a map of option to description; `score` requires an ordered array of at least 2 levels.
+Criteria by type: `noul` takes optional `{"true": ..., "false": ...}` descriptions; `choice` requires a map of option to description; `score` requires an ordered array of 2 to 10 levels; `box` takes none.
 
-**Both backends accept the same values.** TypeSafe accepts a string, object, array, or null for instructions and for every criteria description. OpenRouter's Decisions schema accepts a string, object, or array for all of them, and null for choice option descriptions — the one shape it does not take is a null where this server requires a value anyway. OpenRouter typed these fields as plain strings until it republished the schema; nothing here narrows them any more. [docs/provider-contracts.md](docs/provider-contracts.md) has the field-by-field comparison with a source for each row.
+**Both backends accept the same values for instructions and criteria.** TypeSafe accepts a string, object, array, or null for instructions and for every criteria description. OpenRouter's Decisions schema accepts a string, object, or array for all of them, and null for choice option descriptions — the one shape it does not take is a null where this server requires a value anyway. OpenRouter typed these fields as plain strings until it republished the schema; nothing here narrows them any more. Images are the exception, and the next section is how they differ. [docs/provider-contracts.md](docs/provider-contracts.md) has the field-by-field comparison with a source for each row.
+
+### Images, box, and long context
+
+`images` is the only image input. Do not send a TypeSafe `assets` map or an OpenRouter `image_url` part: the server builds the wire format for the backend in use, and a TypeSafe `assets` map posted to OpenRouter is ignored while the call is still billed. A reference is a whole string equal to the name, or `{"image":"name"}`, inside `state`, `instructions`, or `criteria`.
+
+`JEV_IMAGES=true` is required before any image or `box` question is sent. Unset means off. The bytes leave the machine and are billed. Format, the 16 MiB decoded-file cap, and each backend's pixel limits are checked locally, so a picture the backend would refuse costs nothing. TypeSafe then receives `assets` plus `TypeSafe-Danger-Zone-Images: true`. OpenRouter receives `image_url` data URLs and no TypeSafe header. PNG and JPEG only; animated PNGs are rejected. EXIF orientation is not rewritten.
+
+`box` returns `{top, bottom, left, right}`, each from 0 to 1, with `left < right` and `top < bottom`. It needs Jev 1.14: `jev-preview` or `jev-1.14.0` on TypeSafe, `typesafe/jev-1.14` or `~typesafe/jev-latest` on OpenRouter. TypeSafe's `jev-latest` was still 1.13 on 2026-10-17, and a model this server knows is 1.13 is rejected locally.
+
+OpenRouter's context window is 262,144 tokens. TypeSafe's defaults are 64,000 for the request and 32,000 for the state plus the longest question. `JEV_LONG_CONTEXT=true` raises both TypeSafe budgets to 262,144 and sends `TypeSafe-Danger-Zone-Long-Context: true` on every TypeSafe request while the flag is set, including small ones. Leave it unset when requests fit the default window. The token estimate counts text only; image bytes are not part of it.
 
 ### `evaluate call`
 
 A one-shot form of the same tool, for a program rather than an agent. It reads
-one request, `{"state": ..., "questions": {...}, "model": "..."}`, from stdin
-(at most 16 MiB), runs it through the same path as the MCP tool, fallback and
+one request, `{"state": ..., "questions": {...}, "model": "...", "images": {...}}`, from stdin
+(at most 32 MiB), runs it through the same path as the MCP tool, fallback and
 both validations included, and writes the provider's JSON to stdout. Stderr
-carries a diagnostic that never includes a key or the request.
+carries a diagnostic that never includes a key, the request, or image bytes.
 
 `evaluate call --check` loads the configuration and credentials, makes no
 network call, and prints the value-free state of each credential source as
@@ -205,7 +216,7 @@ JSON: where it comes from (`explicit-file`, `default-file`, `environment`, or
 | Exit | Meaning |
 |---|---|
 | 0 | Answered, and the response passed validation |
-| 2 | Request rejected locally: its shape, the 255-option cap, or the context budget |
+| 2 | Request rejected locally: its shape, an image the backend would refuse, the option or score cap, or the context budget |
 | 3 | No credential source configured for the primary or the fallback |
 | 4 | A credential source is configured but unusable, including an explicit key-file path whose file is absent, or the configuration itself is invalid |
 | 5 | Provider or transport error, or timeout, after the client's own retries |
@@ -227,6 +238,8 @@ the primary.
 | `JEV_MAX_RETRIES` | `3` | Additional attempts, 0 to 5 |
 | `JEV_FALLBACK_PROVIDER` | unset | Opt-in second backend, used when the primary refuses its credential (401, 402, 403), is not found (404), throttles (429), fails (5xx) or cannot be reached. The session then stays on it. Never used for a request the primary rejected by shape |
 | `JEV_FALLBACK_API_KEY_FILE` | unset | The fallback's key file, by the same rules as `JEV_API_KEY_FILE` |
+| `JEV_IMAGES` | unset (off) | `true` or `1` sends images and allows `box`. `false` or `0` is off. Any other value is a startup error |
+| `JEV_LONG_CONTEXT` | unset (off) | `true` or `1` raises TypeSafe's budgets to 262,144 tokens and sends its long-context header on every TypeSafe request. OpenRouter already uses that window and takes no header |
 
 An invalid value for any of these is a startup error, not a silent fallback.
 

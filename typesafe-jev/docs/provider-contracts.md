@@ -13,9 +13,15 @@ payload rewrite.
 
 | Source | URL | Fetched | Evidence |
 |---|---|---|---|
-| OpenRouter OpenAPI | `https://openrouter.ai/openapi.json` | 2026-09-20 | sha256 `a913f294a303280cb37b3114640d94d4c0197919d88d68a0849e782fda32f3f2`, 2 153 530 bytes |
+| OpenRouter OpenAPI | `https://openrouter.ai/openapi.json` | 2026-10-17 | sha256 `e55c500ad16a9a68d2de7c251f5871fa65e3697cf4fe9363820eca4b3fffd484`, 2 694 235 bytes |
 | TypeSafe docs index | `https://docs.typesafe.ai/llms.txt` | 2026-09-20 | index of the pages below |
 | TypeSafe structure rules | `https://docs.typesafe.ai/primitives/advanced.md` | 2026-09-20 | "Where structure is allowed" table |
+| TypeSafe images | `https://docs.typesafe.ai/images.md` | 2026-10-17 | `assets`, the images header, pixel and byte limits |
+| TypeSafe box | `https://docs.typesafe.ai/primitives/box.md` | 2026-10-17 | instructions-only question; edges in 0..1 |
+| TypeSafe models and long context | `https://docs.typesafe.ai/models.md` | 2026-10-17 | 64k/32k defaults; 262,144 with the long-context header |
+| TypeSafe request rules | `https://docs.typesafe.ai/api.md` | 2026-10-17 | score cap of 10; 32 MiB body |
+| OpenRouter Jev | `https://openrouter.ai/docs/guides/community/jev` | 2026-10-17 | 262,144-token window; `box` on Jev 1.14 |
+| OpenRouter multimodal decisions | `https://openrouter.ai/docs/guides/community/multimodal-decisions` | 2026-10-17 | `image_url` data URLs; pixel and byte limits |
 | TypeSafe score semantics | `https://docs.typesafe.ai/primitives/score.md` | 2026-09-18 | level numbering and score range |
 | TypeSafe response envelope | `https://docs.typesafe.ai/sdk/python/api/types/responses.md` | 2026-09-18 | `SystemOneResponse` JSON schema |
 
@@ -33,10 +39,17 @@ expected over time; compare the Decisions schemas below before changing code.
 
 **This has already happened once.** The 2026-09-18 fetch recorded Decisions
 schemas that typed every instruction and description as a plain string. The
-2026-09-20 fetch has them as `anyOf` string, object, or array, which is what
+2026-09-20 fetch (sha256 `a913f294a303280cb37b3114640d94d4c0197919d88d68a0849e782fda32f3f2`,
+2 153 530 bytes) has them as `anyOf` string, object, or array, which is what
 TypeSafe has always documented. The request matrix below and the per-backend
 validation were both updated to match; see the note under it for what the
 change was.
+
+The 2026-10-17 fetch adds `DecisionsBoxQuestion` and `DecisionsBoxAnswer` to
+the Decisions discriminator. `DecisionsRequest` still has no top-level `images`
+or `assets` field. `DecisionsScoreQuestion.criteria` still sets `minItems: 1`
+and no `maxItems`. `DecisionsBoxAnswer` requires `type` and `box`
+(`top`, `bottom`, `left`, `right`); `confidence` is optional.
 
 ## Endpoints
 
@@ -68,7 +81,7 @@ object, or array, and additionally allow `null` for choice option descriptions.
 
 | Field | TypeSafe accepts | OpenRouter accepts |
 |---|---|---|
-| `instructions` (all three types) | string, object, array, null | string, object, array (required; no null) |
+| `instructions` (noul, choice, score, box) | string, object, array, null | string, object, array (required; no null) |
 | choice `criteria` values | string, object, array, null | string, object, array, **null** |
 | score `criteria` entries | string, object, array, null | string, object, array (`minItems: 1`; no null) |
 | noul `criteria.true` / `.false` | string, object, array, null | string, object, array; when `criteria` is present both keys are required (no null) |
@@ -91,6 +104,7 @@ Required-ness per OpenRouter's schemas:
 | `noul` | `type`, `instructions` | optional; if present, `true` and `false` both required |
 | `choice` | `type`, `instructions`, `criteria` | required |
 | `score` | `type`, `instructions`, `criteria` | required |
+| `box` | `type`, `instructions` | not accepted; the question locates one target in an image |
 
 `questions` is a map; the `type` property is the discriminator. Question ids are
 map keys and are not sent to the model.
@@ -104,7 +118,14 @@ instead of spending a request. Do not cite them as provider requirements.
 - Instruction strings and criteria description strings must be non-blank.
 - A score question needs at least two levels. OpenRouter's schema sets
   `minItems: 1`; a one-level scale is a degenerate question, not a schema error.
-- A serialized request is capped at 16 MiB.
+- A score question takes at most ten levels. TypeSafe's API page says the API
+  accepts up to 10 (fetched 2026-10-17). OpenRouter's schema sets no
+  `maxItems`. The cap is applied on both backends so a request cannot pass one
+  and fail the fallback.
+- A serialized request is capped at 32 MiB, the body limit both publishers
+  document. The response is still capped at 16 MiB. One decoded image file is
+  capped at 16 MiB, which base64 expands to about 22 MiB of JSON, so the old
+  16 MiB request cap rejected an image the backends accept.
 
 ## Response: what comes back
 
@@ -124,6 +145,7 @@ Answer shapes, with **required** properties in bold:
 | `noul` | **`noul`** | **`type`**, **`noul`** |
 | `choice` | **`choice`**, **`confidence`**, **`probabilities`** | **`type`**, **`choice`**; `confidence`, `probabilities` optional |
 | `score` | **`score`**, **`confidence`**, **`legend`**, **`probabilities`** | **`type`**, **`score`**; `confidence`, `legend`, `probabilities` optional |
+| `box` | **`box`** (`top`, `bottom`, `left`, `right`), `confidence` when sent | **`type`**, **`box`**; `confidence` optional |
 
 This asymmetry is the single most important response fact for this server:
 **OpenRouter may omit `confidence` and `probabilities` where TypeSafe always
@@ -139,6 +161,10 @@ bug, not a provider omission.
 - `confidence` is from 0 to 1. It measures how concentrated the probability
   distribution is, not whether the answer is correct.
 - `probabilities` values are from 0 to 1 and sum to approximately 1.
+- A `box` edge is a fraction of the image, from 0 to 1, measured from the
+  top-left. TypeSafe documents `left < right` and `top < bottom`. This server
+  requires all four edges and that order. OpenRouter's schema requires the
+  four edges and does not require `confidence`.
 - `score` is **not** a probability. It is a position on the level number line:
   levels are numbered from 0 by their position in the `criteria` array, so a
   three-level scale returns 0 to 2. The valid range is `0` to
@@ -181,20 +207,140 @@ document. This server sends fixed values for the OpenRouter backend only:
 the public fork URL and `Racecraft Jev MCP`. Neither is derived from a local
 filesystem path or from repository content.
 
+## Images
+
+The tool takes one backend-neutral `images` map. Each entry is a caller-chosen
+name with exactly one of an absolute `path` or standard `data_base64` (no
+`data:` prefix, no whitespace), and an optional `format` of `png`, `jpg`, or
+`jpeg`. A reference is a whole string equal to that name, or an object whose
+only field is `{"image": "name"}`, inside `state`, `instructions`, or
+`criteria`. A name that merely occurs inside a longer string is not a
+reference. Every image must be referenced, and a `box` question must have one.
+
+An `{"image": "..."}` object whose value names no provided image is ordinary
+data, such as `{"image": "hero.jpg"}` in a product record, and is sent as
+written. The trade-off: a mistyped marker is not refused on its own. It fails
+because its image is then unreferenced, and that error names the object's path
+(never its value) so the typo can be found. If the same image is also
+referenced correctly somewhere else, a mistyped marker goes through as data.
+A top-level `assets` map is rejected on input. So is any hand-written media
+part in `state`, `instructions`, or `criteria`, on every request, whether or
+not `JEV_IMAGES` is set. Keys and the `type` value are compared trimmed and
+case-folded. An object is a media part when any of these holds:
+
+- its `type` is `image_url`, `input_audio`, `video_url`, `input_image`,
+  `file`, or `input_file`, whatever its other fields are;
+- a payload field (`image_url`, `input_audio`, `video_url`, `file`,
+  `file_data`, `file_url`, `file_id`, `image`, or `audio`) holds a `data:`
+  URL, or an object with a `data:` URL in one of its fields, whatever the
+  `type` says;
+- it has no `type` (no non-empty string under a type key) and a payload field
+  holds an object.
+
+OpenRouter's multimodal guide documents `image_url` for image models and
+`input_audio` and `video_url` for `cloudflare/clef-omni`, and the caller's
+`model` passes through, so each is reachable. A plain string such as an image
+link, or a typed object that names no part and carries no `data:` URL, is
+ordinary state. The rule costs one false positive: an ordinary object whose
+`type` is `file` is refused. An unvalidated picture or clip therefore cannot
+skip `JEV_IMAGES` or the local checks.
+
+`JEV_IMAGES` gates images and `box`. Unset or `false` leaves both off; `true`
+turns both on; any other value is a startup error. The operator sets it,
+because the bytes leave the machine and are billed. While it is off, the
+server opens no image file and makes no request.
+
+The encoder in `images.go` is the only place that chooses a wire format.
+Multipart is TypeSafe's preferred upload and OpenRouter rejects it, so both
+backends get base64 JSON.
+
+| | TypeSafe | OpenRouter |
+| --- | --- | --- |
+| Where the bytes go | top-level `assets` map, `{type: "image", format, data_base64}`, keyed by a minted `jevimg-` token substituted for the caller's name | an `image_url` part, `data:image/png;base64,...` or `data:image/jpeg;base64,...`, in place of the reference |
+| Header | `TypeSafe-Danger-Zone-Images: true` on any request with an image or a `box` question | none |
+| What must not be sent | the neutral `images` map | `assets`, `images`, and any TypeSafe danger-zone header. A TypeSafe `assets` map posted here is ignored, the call still returns HTTP 200, and it is still billed |
+
+Asset keys are minted from the caller's name. TypeSafe treats a reference as
+plain text and will match a short name inside an ordinary word (`cat` inside
+`category`). The minted key is long enough that this does not happen, and it
+is re-hashed once if that token already occurs in the text.
+
+Local checks, before any request is billed. Errors name `images.<name>` only
+when the name is at most 128 characters, trimmed, and free of newlines. They
+never quote a path, base64, or file bytes.
+
+| Limit | TypeSafe | OpenRouter |
+| --- | --- | --- |
+| Formats | PNG, JPEG. Animated PNG (an `acTL` chunk before `IDAT`) rejected | PNG, JPEG. Same animated-PNG rejection. WebP is a general Decisions type, not a Jev one |
+| Decoded file | 16 MiB | 16 MiB |
+| Side length, inclusive | 280–1568 px | 256–1568 px |
+| Total pixels, inclusive | 78,400–2,458,624 | 78,400–2,458,624 |
+| Images in the request body | each file once, in `assets`, within the 32 MiB body once base64-encoded | every reference carries the whole data URL, so each use counts toward the 32 MiB body |
+| Expanded request | 32 MiB, adding the image again for each use | the same 32 MiB, for Jev behind OpenRouter |
+| Remote URLs | not accepted by this server | rejected by the provider; this server never sends one |
+
+The expanded-request row follows TypeSafe's limits table (fetched
+2026-10-17): every use of a reference adds the image again. TypeSafe counts
+each image after it processes it, which can make it larger than the file, and
+does not publish that size. The local check counts the file size, so a request
+it passes can still be refused by TypeSafe for size.
+
+EXIF orientation is not applied. TypeSafe documents that it does not apply it
+either, and rewriting pixels here would make the two backends disagree about
+which way is up.
+
+`box` needs Jev 1.14. A model this server knows is 1.13 is rejected locally:
+on TypeSafe, `jev-latest`, `jev-1.13.0`, and `jev-1.13` (as of 2026-10-17
+`jev-latest` still points at 1.13, while `jev-preview` and `jev-1.14.0` are
+1.14); on OpenRouter, `typesafe/jev-1.13`, `~typesafe/jev-1.13`,
+`typesafe/jev-1.13.0`, and `~typesafe/jev-1.13.0`. `typesafe/jev-1.14` and
+`~typesafe/jev-latest` are allowed. An id this list does not name is sent
+through, so an operator's own model string is not rewritten into a 404 they
+did not ask to see. `prepare` fills the backend default before the check, so an
+omitted model on TypeSafe fails as `jev-latest` rather than being billed.
+
+### Fallback and the per-backend gates
+
+The two backends' local gates differ: the box model default, the side minimum
+(280 on TypeSafe, 256 on OpenRouter), and the context budget (64,000 and
+32,000 on TypeSafe without `JEV_LONG_CONTEXT`, 262,144 on OpenRouter). The
+fallback never runs the caller's model, so:
+
+- A box question on the fallback runs on that backend's pinned Jev 1.14 id,
+  `jev-1.14.0` on TypeSafe (whose default, `jev-latest`, is 1.13) and
+  `~typesafe/jev-latest` on OpenRouter (`BoxModel` in `config.go`).
+- When the primary fails in a way that would move the call, the fallback
+  checks the request first. A request it would refuse locally does not move
+  the session. The caller gets the primary's failure, and its exit code, with
+  the fallback's reason added.
+- Once a session is on the fallback, a local refusal there is still exit 2,
+  since no call was made, and its message says the session is on the fallback.
+
 ## Jev context budgets
 
-Source: <https://docs.typesafe.ai/models.md>, read 2026-09-20.
+Sources: <https://docs.typesafe.ai/models.md> and
+<https://openrouter.ai/docs/guides/community/jev>, both read 2026-10-17.
+TypeSafe's long-context header raises both of its budgets. OpenRouter's window
+is already the long one, and image requests there already run in that mode on
+the far side. No header is sent to OpenRouter.
 
-| Budget | Limit |
-| --- | --- |
-| Whole request: state plus every question | 64,000 tokens |
-| State plus the single longest question | 32,000 tokens |
+| Budget | TypeSafe, default | TypeSafe, `JEV_LONG_CONTEXT=true` | OpenRouter |
+| --- | --- | --- | --- |
+| Whole request: state plus every question | 64,000 tokens | 262,144 tokens | 262,144 tokens |
+| State plus the single longest question | 32,000 tokens | 262,144 tokens | 262,144 tokens |
+| Header | none | `TypeSafe-Danger-Zone-Long-Context: true` on every TypeSafe request while the flag is set, including ones that fit the default window | none |
 
-Both are enforced locally by `validateBudget`, from an estimate of four bytes
-per token. No tokenizer ships here, and adding one for a guardrail would be a
-poor trade. The ratio under-counts dense input such as CJK or code, so the
-estimate errs toward letting a borderline request through and leaving the
-provider to judge it.
+The flag is process-wide, parsed like `JEV_IMAGES`. Leaving it unset is the
+right default: TypeSafe documents the long window as slower and less accurate.
+
+Both budgets are enforced locally by `validateBudget`, from an estimate of
+four bytes per token of the text. Image bytes live in the `images` map and
+are not part of the estimate. No tokenizer ships here, and adding one for a
+guardrail would be a poor trade. The ratio under-counts dense input such as
+CJK or code, so the estimate errs toward letting a borderline request through
+and leaving the provider to judge it. A text-small request can still be
+rejected by the provider once image tokens are counted; TypeSafe's image-token
+guidance was not published on the 2026-10-17 fetch.
 
 That direction is deliberate. The check exists to turn an opaque response into
 a useful message, not to second-guess the backend. Probed on 2026-09-18: a

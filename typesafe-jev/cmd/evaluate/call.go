@@ -74,13 +74,13 @@ func newCallCmd() *cobra.Command {
 		Long: `Run one evaluation through the same path as the MCP tool, including the
 fallback backend and both validations.
 
-stdin:  one JSON object {"state": ..., "questions": {...}, "model": "..."}
+stdin:  one JSON object {"state": ..., "questions": {...}, "model": "...", "images": {...}}
 stdout: the provider's JSON, only when the exit code is 0
-stderr: a diagnostic that never carries a key or the request
+stderr: a diagnostic that never carries a key, the request, or image bytes
 
 Exit codes:
   0  answered, and the response passed validation
-  2  request rejected locally (shape, option cap, context budget)
+  2  request rejected locally (shape, option or score cap, context budget, or an image the backend would refuse)
   3  no credential source configured for the primary or the fallback
   4  a credential source is configured but unusable
   5  provider or transport error, or timeout

@@ -26,7 +26,8 @@ func init() {
 }
 
 const instructions = `The evaluate tool runs Jev, a TypeSafe System One model that returns typed judgments and probabilities, not generated text.
-- Question types: noul (probability a yes/no condition holds), choice (one option from a criteria map), score (probability-weighted position on ordered criteria levels).
+- Question types: noul (probability a yes/no condition holds), choice (one option from a criteria map), score (probability-weighted position on 2 to 10 ordered criteria levels), box (the four edges of one target in an image; needs Jev 1.14 and an image, and takes no criteria).
+- Images go in the images map under a name you choose. Reference that name as a whole string value, or as {"image":"name"}, inside state, instructions, or criteria. The server builds the provider's wire format. Images and box are off until the operator sets JEV_IMAGES=true; when on, the bytes leave the machine and are billed.
 - Ask one narrow judgment per question. Question ids are NOT sent to the model, so instructions must carry the full meaning.
 - Put everything the judgment needs in state; prefer a JSON object with named fields, and reference nested fields with backticked paths like ` + "`ticket.messages[0].text`" + `.
 - Batch independent questions over the same state into one call; they run in parallel and cannot see each other's answers.
@@ -162,7 +163,7 @@ func newClient(cfg Config) (*Client, error) {
 		return nil, err
 	}
 	return &Client{
-		Provider:   cfg.Provider,
+		Provider:   applyOperator(cfg.Provider, cfg.AllowImages, cfg.LongContext),
 		Model:      cfg.Model,
 		APIKey:     key,
 		Timeout:    cfg.Timeout,
@@ -239,6 +240,14 @@ func backendNote(cfg Config) string {
 		note += "\nThis backend may omit confidence and probabilities from a choice or score" +
 			" answer, which the TypeSafe backend always sends. Treat an absent field as" +
 			" absent: do not substitute a default before branching on it."
+	}
+	if cfg.AllowImages {
+		note += "\nImages and box questions are enabled. Image bytes are sent to the provider and billed."
+	} else {
+		note += "\nImages and box questions are disabled until the operator sets JEV_IMAGES=true."
+	}
+	if cfg.LongContext && (cfg.Provider.Name == "typesafe" || (cfg.Fallback != nil && cfg.Fallback.Provider.Name == "typesafe")) {
+		note += "\nLong context is enabled for the TypeSafe backend: its budgets are 262144 tokens and each TypeSafe request sends the long-context header."
 	}
 	return note
 }

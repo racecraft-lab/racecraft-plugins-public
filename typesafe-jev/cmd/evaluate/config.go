@@ -21,6 +21,10 @@ type ProviderSpec struct {
 	APIKeyEnv string
 	// DefaultModel applies when neither the tool call nor JEV_MODEL names one.
 	DefaultModel string
+	// BoxModel is the Jev 1.14 id a fallback runs a box question on when its
+	// DefaultModel is one validateBoxModel knows is Jev 1.13. The fallback
+	// never runs the caller's model, so it must not depend on one.
+	BoxModel string
 	// Attribution is sent as fixed HTTP-Referer / X-OpenRouter-Title headers
 	// when set. It is a constant, never derived from local paths or content.
 	Attribution bool
@@ -39,6 +43,29 @@ type ProviderSpec struct {
 	// backend. See docs/provider-contracts.md: this is fork policy, not a
 	// provider guarantee.
 	RetryStatuses []int
+	// RequestTokens is the per-request context budget: state plus every
+	// question. QuestionTokens is state plus the single longest question.
+	// Image bytes are not part of either estimate.
+	RequestTokens  int
+	QuestionTokens int
+	// ImageLimits are the publisher's pixel bounds for one image. They differ
+	// by backend; a file that fails them is rejected before it is billed.
+	ImageLimits imageBounds
+	// AllowImages is the operator opt-in JEV_IMAGES, copied onto the spec the
+	// process actually uses. It is not a property of the backend.
+	AllowImages bool
+	// LongContext is set only for TypeSafe, and only when the operator set
+	// JEV_LONG_CONTEXT. OpenRouter's budget is already the long window and
+	// takes no header, so the flag must not leak onto that spec.
+	LongContext bool
+}
+
+// imageBounds is one backend's inclusive pixel limits for a single image.
+type imageBounds struct {
+	MinSide   int
+	MaxSide   int
+	MinPixels int
+	MaxPixels int
 }
 
 // providers is the closed set of backends. Adding a URL here is the only way
@@ -50,18 +77,33 @@ var providers = map[string]ProviderSpec{
 		EndpointURL:  "https://api.typesafe.ai/v1/systemone",
 		APIKeyEnv:    "TYPESAFE_API_KEY",
 		DefaultModel: "jev-latest",
+		// The pinned 1.14 id, not jev-preview, which moves with each preview
+		// build (https://docs.typesafe.ai/models.md, 2026-10-17).
+		BoxModel: "jev-1.14.0",
 		// TypeSafe documents string, object, array, or null for every
 		// instruction and description field.
 		StructuredEntries: true,
 		// 529 is TypeSafe's overload status, which upstream already retried.
 		RetryStatuses: []int{429, 529},
+		// Defaults from https://docs.typesafe.ai/models.md (2026-10-17).
+		// JEV_LONG_CONTEXT raises both to longContextTokens and sends the header.
+		RequestTokens:  typesafeRequestTokens,
+		QuestionTokens: typesafeQuestionTokens,
+		// https://docs.typesafe.ai/images.md (2026-10-17).
+		ImageLimits: imageBounds{
+			MinSide: typesafeSideMin, MaxSide: imageSideMax,
+			MinPixels: imagePixelsMin, MaxPixels: imagePixelsMax,
+		},
 	},
 	"openrouter": {
 		Name:         "openrouter",
 		EndpointURL:  "https://openrouter.ai/api/alpha/decisions",
 		APIKeyEnv:    "OPENROUTER_API_KEY",
 		DefaultModel: "~typesafe/jev-latest",
-		Attribution:  true,
+		// Already Jev 1.14 (https://openrouter.ai/docs/guides/community/jev,
+		// 2026-10-17), so a box question keeps the default.
+		BoxModel:    "~typesafe/jev-latest",
+		Attribution: true,
 		// Matches TypeSafe since OpenRouter republished the Decisions schemas.
 		StructuredEntries: true,
 		// All four are documented on the Decisions path and transient in
@@ -71,6 +113,17 @@ var providers = map[string]ProviderSpec{
 		// 500 and 502 are documented too but are not retried: neither is
 		// transient by nature, and a replayed inference call bills again.
 		RetryStatuses: []int{429, 503, 524, 529},
+		// https://openrouter.ai/docs/guides/community/jev (2026-10-17): 262,144
+		// tokens, with no danger-zone header. Image requests already run in
+		// TypeSafe's long-context mode on the far side of OpenRouter.
+		RequestTokens:  longContextTokens,
+		QuestionTokens: longContextTokens,
+		// Side minimum is 256, not TypeSafe's 280. Total pixels match TypeSafe.
+		// https://openrouter.ai/docs/guides/community/multimodal-decisions (2026-10-17).
+		ImageLimits: imageBounds{
+			MinSide: openrouterSideMin, MaxSide: imageSideMax,
+			MinPixels: imagePixelsMin, MaxPixels: imagePixelsMax,
+		},
 	},
 }
 
@@ -102,6 +155,12 @@ type Config struct {
 	// credential or is unavailable, or nil. It is set only by the operator
 	// (JEV_FALLBACK_PROVIDER): which keys happen to exist never creates one.
 	Fallback *FallbackConfig
+	// AllowImages is JEV_IMAGES. Box questions use the same opt-in: TypeSafe
+	// requires the images danger-zone header for either, and a box needs an image.
+	AllowImages bool
+	// LongContext is JEV_LONG_CONTEXT. It changes TypeSafe's budgets and
+	// header only. OpenRouter ignores it.
+	LongContext bool
 }
 
 // FallbackConfig names the second backend and where its key comes from, by
@@ -127,7 +186,23 @@ func (c Config) fallbackConfig() Config {
 
 		KeyFileDefaulted: c.Fallback.KeyFileDefaulted,
 		keyFileVar:       pluginFallbackFileEnv,
+		AllowImages:      c.AllowImages,
+		LongContext:      c.LongContext,
 	}
+}
+
+// applyOperator copies the process-wide image and long-context flags onto a
+// backend spec. The long-context header and the raised budgets are TypeSafe's;
+// applying them to OpenRouter would send a header that backend does not use
+// and would not change a budget it already sets to the long window.
+func applyOperator(spec ProviderSpec, allowImages, longContext bool) ProviderSpec {
+	spec.AllowImages = allowImages
+	if spec.Name == "typesafe" && longContext {
+		spec.LongContext = true
+		spec.RequestTokens = longContextTokens
+		spec.QuestionTokens = longContextTokens
+	}
+	return spec
 }
 
 // keyFileEnv names the variable that sets this Config's key file.
@@ -170,7 +245,34 @@ func resolveConfig(look lookupFunc) (Config, error) {
 	if cfg.Fallback, err = resolveFallback(look, spec); err != nil {
 		return cfg, err
 	}
+	if cfg.AllowImages, err = resolveOptIn(look, "JEV_IMAGES"); err != nil {
+		return cfg, err
+	}
+	if cfg.LongContext, err = resolveOptIn(look, "JEV_LONG_CONTEXT"); err != nil {
+		return cfg, err
+	}
 	return cfg, nil
+}
+
+// resolveOptIn reads a feature flag. Unset leaves it off. An explicit false is
+// off, an explicit true is on, and any other value is a configuration error:
+// guessing would send image bytes, or a long-context header, that the operator
+// did not ask for.
+func resolveOptIn(look lookupFunc, name string) (bool, error) {
+	raw, set := look(name)
+	if !set || raw == "" {
+		return false, nil
+	}
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "1", "true":
+		return true, nil
+	case "0", "false":
+		return false, nil
+	case "":
+		return false, fmt.Errorf("%s is whitespace only; unset it to leave the feature off", name)
+	default:
+		return false, fmt.Errorf("%s=%q must be true or false", name, raw)
+	}
 }
 
 // resolveProvider selects the backend. Selection is explicit: which API keys
