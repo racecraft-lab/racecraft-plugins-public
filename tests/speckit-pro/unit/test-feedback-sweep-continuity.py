@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import re
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -24,6 +23,7 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
         sys.path.insert(0, str(import_root))
 
 from host_skill_views import host_skill_root  # noqa: E402
+from mutation_request_case import MutationRequestCase  # noqa: E402
 from speckit_pro_runner import sweep_isolation, sweep_launcher  # noqa: E402
 from speckit_pro_runner.helpers import read_only  # noqa: E402
 from speckit_pro_runner.helpers.harm_halt import stored_halt  # noqa: E402
@@ -198,15 +198,8 @@ class GitHubStopTests(ScriptedGh):
                 self.assertNotIn(marker, str(violation))
 
 
-class CaptureReasonTests(unittest.TestCase):
+class CaptureReasonTests(MutationRequestCase):
     """The capture surface tells the orchestrator which failure it hit."""
-
-    def setUp(self) -> None:
-        temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name).resolve()
-        (self.root / ".specify").mkdir()
-
 
     def capture(self, violation: BaseException) -> tuple[dict, int]:
         inputs = {
@@ -238,20 +231,6 @@ class CaptureReasonTests(unittest.TestCase):
         payload, code = self.capture(sweep_isolation.IsolationViolation("boundary"))
         self.assertEqual((payload["reason"], code), ("isolation_boundary_unavailable", 3))
         self.assertEqual("tampering_or_forged_evidence", stored_halt(self.root)["reason"])
-
-    def test_unsupported_codex_runtime_persists_halt_before_capture(self) -> None:
-        inputs = {"named_surface": "capture", "surface": "codex", "repository": "owner/repo",
-                  "pr_number": 7, "workflow_file": "workflow.md"}
-        with patch.object(sweep_launcher, "verify_codex_boundary", side_effect=sweep_launcher.LauncherViolation("unsupported")), patch.object(
-            sweep_isolation, "capture_github_session"
-        ) as capture:
-            result = read_only.sweep_isolation_session(inputs, self.root)
-        self.assertEqual(3, result["exit_code"])
-        capture.assert_not_called()
-        record = stored_halt(self.root)
-        self.assertEqual("tampering_or_forged_evidence", record["reason"])
-        self.assertIn("capture", record["last_safe_state"])
-
 
     def test_the_closed_reason_set_is_what_the_guidance_branches_on(self) -> None:
         self.assertEqual(

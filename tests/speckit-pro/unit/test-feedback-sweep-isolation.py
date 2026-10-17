@@ -33,6 +33,7 @@ from speckit_pro_runner import sweep_isolation  # noqa: E402
 from speckit_pro_runner import sweep_broker  # noqa: E402
 from speckit_pro_runner import sweep_launcher  # noqa: E402
 from speckit_pro_runner.helpers import read_only, registry  # noqa: E402
+from speckit_pro_runner.helpers.harm_halt import stored_halt  # noqa: E402
 
 
 def issuer_secret_cases() -> tuple[str, ...]:
@@ -1439,6 +1440,9 @@ class CaptureAndHookTests(unittest.TestCase):
         self.assertEqual(3, result["exit_code"])
         self.assertIn("isolation_boundary_unavailable", result["stdout"])
         github_read.assert_not_called()
+        record = stored_halt(self.fixture.root)
+        self.assertEqual("tampering_or_forged_evidence", record["reason"])
+        self.assertIn("capture", record["last_safe_state"])
 
     def test_capture_filters_from_committed_workflow_and_validation_failure_leaves_no_session(self) -> None:
         # The working copy tries to erase the durable skip key. Capture must use
