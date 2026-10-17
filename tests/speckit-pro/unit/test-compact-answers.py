@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import sys
 import unittest
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import patch
 
@@ -143,7 +144,14 @@ class CompactExecutionProjectionTests(unittest.TestCase):
                 self.assertEqual(json.dumps(body, sort_keys=True), before)
 
 
-class CompactExecutionTests(unittest.TestCase):
+@dataclass(frozen=True)
+class MirrorFailureCase:
+    action: str
+    count: int
+    state: str
+
+
+class ExecutionFixture(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -159,7 +167,10 @@ class CompactExecutionTests(unittest.TestCase):
                                                "dispatch_id": "seed", "kind": "implementation"}, "apply")
         self.seed = reserved["ledger"]
 
-    def invoke(self, payload, action, count, state, mode="apply", answer_format="compact"):
+
+class MirrorFailureFixture(ExecutionFixture):
+    def invoke(self, payload, case, mode="apply", answer_format="compact"):
+        action, count, state = case.action, case.count, case.state
         ledger = {**self.seed, "dispatches": {f"implementation-{i}": dict(self.seed["dispatches"]["seed"])
                                              for i in range(count)}}
         self.ledger_path.write_text(json.dumps(ledger))
@@ -204,11 +215,13 @@ class CompactExecutionTests(unittest.TestCase):
         else:
             self.assertEqual(answer["diagnostics"], [])
 
+
+class CompactExecutionTests(MirrorFailureFixture):
     def check_mirror_failure_matrix(self, action):
         payloads = ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro")
         for payload, count, state in itertools.product(payloads, (109, 110, 300), ("[]", "{not json")):
             with self.subTest(action=action, payload=payload, count=count, state=state):
-                self.invoke(payload, action, count, state)
+                self.invoke(payload, MirrorFailureCase(action, count, state))
 
     def test_compact_status_retains_applied_result_when_the_state_mirror_fails(self):
         self.check_mirror_failure_matrix("status")
@@ -223,11 +236,10 @@ class CompactExecutionTests(unittest.TestCase):
                     if action == "reserve" and mode == "read_only":
                         continue  # Mutating actions intentionally reject read_only mode.
                     with self.subTest(action=action, state=state, mode=mode, answer_format=answer_format):
-                        self.invoke("speckit-pro", action, 110, state, mode, answer_format)
+                        self.invoke("speckit-pro", MirrorFailureCase(action, 110, state), mode, answer_format)
 
 
-class CompactUnknownDispatchTests(unittest.TestCase):
-    setUp = CompactExecutionTests.setUp
+class UnknownDispatchFixture(ExecutionFixture):
     PAYLOADS = ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro")
 
     def prepare_unknowns(self, count=700, padding="implementation-worker-"):
@@ -243,7 +255,8 @@ class CompactUnknownDispatchTests(unittest.TestCase):
         self.assertEqual(len(validated["unknown_dispatch_ids"]), count)
         return ledger
 
-    def call(self, payload="speckit-pro", *, mode="apply", answer_format="compact", **inputs):
+    def call(self, payload="speckit-pro", *, answer_format="compact", **inputs):
+        mode = inputs.pop("mode", "apply")
         raw = {"schema_version": "1.0", "helper_id": "execution-control", "operation": "execution-control",
                "request_id": "unknown-history", "mode": mode, "answer_format": answer_format,
                "inputs": {**self.binding, "action": "status", **inputs}}
@@ -271,6 +284,7 @@ class CompactUnknownDispatchTests(unittest.TestCase):
         return data
 
 
+class CompactUnknownMirrorTests(UnknownDispatchFixture):
     def test_unknown_status_apply_keeps_mirror_warning_on_all_launchers(self):
         for payload, state in itertools.product(self.PAYLOADS, ("[]", "{not json")):
             with self.subTest(payload=payload, state=state):
@@ -312,6 +326,8 @@ class CompactUnknownDispatchTests(unittest.TestCase):
                 self.assert_compact_result(answer, 800)
                 self.assertEqual(answer["diagnostics"], [])
 
+
+class CompactUnknownGuardTests(UnknownDispatchFixture):
     def test_unknown_guarded_actions_keep_refusal_and_exact_blocker_count(self):
         for payload, action in itertools.product(self.PAYLOADS, sorted(UNKNOWN_GUARDED_ACTIONS)):
             with self.subTest(payload=payload, action=action):
@@ -336,6 +352,8 @@ class CompactUnknownDispatchTests(unittest.TestCase):
         self.assertEqual(data["blocked_by"], ["implementation-worker-0000"])
         self.assertEqual(len(json.loads(self.ledger_path.read_text())["dispatches"]), 700)
 
+
+class CompactUnknownControlTests(UnknownDispatchFixture):
     def test_unknown_detailed_apply_and_compact_non_apply_controls(self):
         for payload, mode in itertools.product(self.PAYLOADS, ("read_only", "dry_run")):
             with self.subTest(payload=payload, mode=mode):
@@ -378,8 +396,8 @@ class CompactUnknownDispatchTests(unittest.TestCase):
 
 
 class CompactCheckpointTests(unittest.TestCase):
-    setUp = CompactExecutionTests.setUp
-    call = CompactUnknownDispatchTests.call
+    setUp = ExecutionFixture.setUp
+    call = UnknownDispatchFixture.call
 
     def test_completed_history_keeps_checkpoint_result_and_warning_on_all_launchers(self):
         execution_control(self.root, {**self.binding, "action": "complete",
@@ -392,7 +410,7 @@ class CompactCheckpointTests(unittest.TestCase):
             execution_control(self.root, {**self.binding, "action": "complete", "dispatch_id": dispatch_id,
                                          "outcome": "completed"}, "apply")
             completed_ids.append(dispatch_id)
-        for payload, state in itertools.product(CompactUnknownDispatchTests.PAYLOADS, (None, "[]")):
+        for payload, state in itertools.product(UnknownDispatchFixture.PAYLOADS, (None, "[]")):
             with self.subTest(payload=payload, state=state):
                 state_path = self.root / "feature/autopilot-state.json"
                 state_path.unlink(missing_ok=True)
@@ -422,10 +440,10 @@ class CompactCheckpointTests(unittest.TestCase):
 
 
 class CompactRecoveryIdsTests(unittest.TestCase):
-    setUp = CompactExecutionTests.setUp
-    PAYLOADS = CompactUnknownDispatchTests.PAYLOADS
-    prepare_unknowns = CompactUnknownDispatchTests.prepare_unknowns
-    call = CompactUnknownDispatchTests.call
+    setUp = ExecutionFixture.setUp
+    PAYLOADS = UnknownDispatchFixture.PAYLOADS
+    prepare_unknowns = UnknownDispatchFixture.prepare_unknowns
+    call = UnknownDispatchFixture.call
 
     def test_compact_only_root_receives_ids_to_reconcile_on_all_launchers(self):
         for payload in self.PAYLOADS:

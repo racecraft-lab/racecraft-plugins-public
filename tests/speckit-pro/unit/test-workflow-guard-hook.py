@@ -211,7 +211,7 @@ class WorkflowGuardHookTests(unittest.TestCase):
                 self.assertEqual({}, run_hook("unpushed", stop)[1])
 
 
-class PublicationEvidenceTests(unittest.TestCase):
+class PublicationFixture(unittest.TestCase):
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -244,6 +244,8 @@ class PublicationEvidenceTests(unittest.TestCase):
                 if expected == "block":
                     self.assertIn("commit(s)", out["reason"])
 
+
+class PublicationBindingTests(PublicationFixture):
     def test_checkout_without_ignored_ledger_still_checks_unpushed_commits(self) -> None:
         checkout = self.root / "checkout"
         git(self.root, "clone", "-q", "--no-hardlinks", str(self.root), str(checkout))
@@ -271,6 +273,8 @@ class PublicationEvidenceTests(unittest.TestCase):
             with self.subTest(workflow=workflow):
                 self.assert_publication_check(self.root, {**self.state, "workflow_file": workflow})
 
+
+class PublicationLedgerTests(PublicationFixture):
     def test_rejected_ledger_paths_still_check_unpushed_commits(self) -> None:
         for path in ("../outside/execution-control/run.json", str(self.ledger_path), ".git/execution-control/run.json"):
             with self.subTest(path=path):
@@ -314,19 +318,21 @@ class PublicationEvidenceTests(unittest.TestCase):
                 self.assert_publication_check(self.root, self.state)
                 self.assertEqual(content, self.ledger_path.read_bytes())
 
-    def test_non_object_plan_rows_still_check_unpushed_commits(self) -> None:
-        execution_control(self.root, {**self.binding, "action": "complete", "dispatch_id": "planner",
-                                      "outcome": "completed"}, "apply")
-        for row in (None, "bad", 42, [], {"status": []}, {"status": {}}):
-            with self.subTest(row=row):
-                self.assert_publication_check(self.root, {**self.state, "plan": [row]})
 
-    def test_invalid_plan_containers_still_check_unpushed_commits(self) -> None:
+class PublicationPlanTests(PublicationFixture):
+    def assert_invalid_plans_check_publication(self, plans) -> None:
         execution_control(self.root, {**self.binding, "action": "complete", "dispatch_id": "planner",
                                       "outcome": "completed"}, "apply")
-        for plan in (None, False, 42, "pending", {"status": "pending"}):
+        for plan in plans:
             with self.subTest(plan=plan):
                 self.assert_publication_check(self.root, {**self.state, "plan": plan})
+
+    def test_non_object_plan_rows_still_check_unpushed_commits(self) -> None:
+        self.assert_invalid_plans_check_publication(
+            [[row] for row in (None, "bad", 42, [], {"status": []}, {"status": {}})])
+
+    def test_invalid_plan_containers_still_check_unpushed_commits(self) -> None:
+        self.assert_invalid_plans_check_publication((None, False, 42, "pending", {"status": "pending"}))
 
     def test_pending_plan_rows_defer_until_settled_despite_invalid_rows_and_missing_ledger(self) -> None:
         self.ledger_path.unlink()
@@ -438,8 +444,8 @@ class RealHookManifestTests(unittest.TestCase):
 
 def build_suite() -> unittest.TestSuite:
     suite = unittest.TestSuite()
-    for case in (WorkflowGuardHookTests, PublicationEvidenceTests, PendingAgentTests,
-                 HookMatcherExemptionTests, RealHookManifestTests):
+    for case in (WorkflowGuardHookTests, PublicationBindingTests, PublicationLedgerTests, PublicationPlanTests,
+                 PendingAgentTests, HookMatcherExemptionTests, RealHookManifestTests):
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     return suite
 
