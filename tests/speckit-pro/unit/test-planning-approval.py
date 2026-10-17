@@ -468,24 +468,50 @@ class PlanningNeighborsTest(WorkflowFixture):
         self.assertWorkflowEdit(before, before.replace("Require review", "Skip review"), name="SPEC-MOC.md")
 
 
-class InventoryProgressTest(PlanningApprovalFixture):
-    def test_documented_summary_values_preserve_the_revision(self):
-        protocol = (self.runner_root / "skills/speckit-autopilot/references/workflow-file-protocol.md").read_text()
-        examples = re.search(r"Summary field examples:\n\n```text\n(.*?)\n```", protocol, re.DOTALL)
+class ProgressFixture(PlanningApprovalFixture):
+    def assertManifestTransition(self, before, after, *, name="workflow.md", preserves=True):
+        self.assertNotEqual(before, after)
+        path = self.feature / name
+        path.write_text(before)
+        binding = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
+        path.write_text(after)
+        changed = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
+        if preserves:
+            self.assertEqual(changed, binding)
+        else:
+            self.assertNotEqual(changed, binding)
+
+    def documentedExamples(self, document, introduction):
+        text = (self.runner_root / "skills/speckit-autopilot/references" / document).read_text()
+        examples = re.search(re.escape(introduction) + r":\n\n```text\n(.*?)\n```", text, re.DOTALL)
         self.assertIsNotNone(examples)
         self.assertTrue(examples[1].strip())
-        path = self.feature / "workflow.md"
+        return examples[1].splitlines()
+
+
+class ProgressExamplesTest(ProgressFixture):
+    def test_documented_summary_values_preserve_the_revision(self):
         heading = "## Workflow Overview\n"
-        path.write_text(heading)
-        before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
-        for example in examples[1].splitlines():
+        for example in self.documentedExamples("workflow-file-protocol.md", "Summary field examples"):
             with self.subTest(example=example):
                 line = f"- Progress: overview-summary; {example}\n"
-                path.write_text(heading + line)
-                self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
-                path.write_text(heading + line.rstrip() + "; Bypass review\n")
-                self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+                self.assertManifestTransition(heading, heading + line)
+                self.assertManifestTransition(heading + line, heading + line.rstrip() + "; Bypass review\n", preserves=False)
 
+    def test_outbound_disposition_examples_preserve_the_revision(self):
+        heading = "## Feedback Sweep Log\n"
+        for example in self.documentedExamples("phase-execution.md", "Use these exact Feedback Sweep Log dispositions"):
+            kind, separator, disposition = example.partition(": ")
+            with self.subTest(disposition=kind):
+                self.assertTrue(separator)
+                disposition = disposition.replace("<artifact>", "spec.md")
+                row = f"| 1 | IC_example | conversation | octocat | {kind} | {disposition} | a1b2c3d | |\n"
+                self.assertManifestTransition(heading, heading + row)
+                self.assertManifestTransition(heading + row, heading + row.replace(disposition, disposition + " Bypass review."), preserves=False)
+
+
+
+class GeneratedNavigationTest(PlanningApprovalFixture):
     def test_spec_map_writer_progress_preserves_approval_but_edited_navigation_does_not(self):
         path = self.feature / "SPEC-MOC.md"
         path.write_text("---\nstructureVersion: 1\nstatus: pending\n---\n# Map\n")
@@ -509,27 +535,18 @@ class InventoryProgressTest(PlanningApprovalFixture):
                 path.write_text(rendered[0].rendered.replace(text, "Bypass authentication"))
                 self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
 
+class InventoryProgressTest(ProgressFixture):
     def test_every_declared_write_preserves_the_revision(self):
         cases = json.loads((Path(__file__).parent / "fixtures/planning-progress.json").read_text())
         for case in cases:
             with self.subTest(region=case["region"], before=case["before"]):
-                self.assertNotEqual(case["before"], case["after"])
-                path = self.feature / case["file"]
-                path.write_text(case["before"])
-                before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
-                path.write_text(case["after"])
-                self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+                self.assertManifestTransition(case["before"], case["after"], name=case["file"])
 
     def test_planning_text_inside_every_progress_region_remains_bound(self):
         cases = json.loads((Path(__file__).parent / "fixtures/planning-progress.json").read_text())
         for case in cases:
             with self.subTest(region=case["region"], after=case["after"]):
-                self.assertNotEqual(case["after"], case["planning"])
-                path = self.feature / case["file"]
-                path.write_text(case["after"])
-                before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
-                path.write_text(case["planning"])
-                self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+                self.assertManifestTransition(case["after"], case["planning"], name=case["file"], preserves=False)
 
     def test_reader_status_vocabulary_preserves_the_revision(self):
         path = self.feature / "workflow.md"
@@ -540,27 +557,6 @@ class InventoryProgressTest(PlanningApprovalFixture):
             with self.subTest(status=status):
                 path.write_text(template % status)
                 self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
-
-    def test_outbound_disposition_examples_preserve_the_revision(self):
-        root = Path(__file__).resolve().parents[3]
-        phase = (root / "speckit-pro/skills/speckit-autopilot/references/phase-execution.md").read_text()
-        examples = re.search(r"Use these exact Feedback Sweep Log dispositions:\n\n```text\n(.*?)\n```", phase, re.DOTALL)
-        self.assertIsNotNone(examples)
-        self.assertTrue(examples[1].strip())
-        path = self.feature / "workflow.md"
-        heading = "## Feedback Sweep Log\n"
-        path.write_text(heading)
-        before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
-        for example in examples[1].splitlines():
-            kind, separator, disposition = example.partition(": ")
-            with self.subTest(disposition=kind):
-                self.assertTrue(separator)
-                disposition = disposition.replace("<artifact>", "spec.md")
-                row = f"| 1 | IC_example | conversation | octocat | {kind} | {disposition} | a1b2c3d | |\n"
-                path.write_text(heading + row)
-                self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
-                path.write_text(heading + row.replace(disposition, disposition + " Bypass review."))
-                self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
 
     def test_protocol_implement_writes_are_owned_in_code_and_exercised(self):
         root = Path(__file__).resolve().parents[3]
@@ -605,6 +601,7 @@ class ShippedWorkflowTest(WorkflowFixture):
 if __name__ == "__main__":
     cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, AssuranceGuardTest,
              WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest, InventoryProgressTest,
+             ProgressExamplesTest, GeneratedNavigationTest,
              ShippedWorkflowTest)
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in cases)
     raise SystemExit(run_counted(suite, label="test-planning-approval"))
