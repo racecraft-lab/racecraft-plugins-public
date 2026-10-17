@@ -48,6 +48,10 @@ _Avoid_: parallel group, fan-out
 A checklist domain executor's return: its gaps and proposed plain prose changes to the spec and plan. Structural or reference changes remain gaps for review; the executor never writes either artifact.
 _Avoid_: patch, remediation, fix pass
 
+**Failure-path seam**:
+The one table in the runner's execution-control module through which every corrective budget, unit allowance, operator event, replan and stage epoch, and frozen-invariant action passes. Nothing else calls those actions, so retiring them removes table rows and handlers and no caller.
+_Avoid_: corrective gateway, budget facade
+
 **Final verify round**:
 One re-verify wave of every checklist domain after consensus changed the spec or plan. Each round is claimed in the application record, and the runner allows a fixed number per apply; edits made after the last round stay applied without another wave.
 _Avoid_: verify loop, re-check pass
