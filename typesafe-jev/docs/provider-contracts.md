@@ -216,6 +216,13 @@ name with exactly one of an absolute `path` or standard `data_base64` (no
 only field is `{"image": "name"}`, inside `state`, `instructions`, or
 `criteria`. A name that merely occurs inside a longer string is not a
 reference. Every image must be referenced, and a `box` question must have one.
+
+An `{"image": "..."}` object whose value names no provided image is ordinary
+data, such as `{"image": "hero.jpg"}` in a product record, and is sent as
+written. The trade-off: a mistyped marker is not refused on its own. It fails
+because its image is then unreferenced, and that error names the object's path
+(never its value) so the typo can be found. If the same image is also
+referenced correctly somewhere else, a mistyped marker goes through as data.
 A top-level `assets` map is rejected on input. So is any hand-written media
 part in `state`, `instructions`, or `criteria`, on every request, whether or
 not `JEV_IMAGES` is set. Keys and the `type` value are compared trimmed and

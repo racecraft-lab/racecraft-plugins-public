@@ -378,11 +378,14 @@ func TestImageReferenceFormsAndLimits(t *testing.T) {
 		}
 	})
 
-	t.Run("unknown marker", func(t *testing.T) {
+	// A mistyped marker leaves its image unreferenced. That error points at
+	// the {"image": ...} object that names no provided image, so the typo is
+	// found without refusing real data of the same shape.
+	t.Run("a mistyped marker is named in the unreferenced error", func(t *testing.T) {
 		in := imageRequest(pngBytes, "")
 		in.State = map[string]any{"photo": map[string]any{"image": "missing"}}
 		err := validateRequest(spec, in)
-		if err == nil || !strings.Contains(err.Error(), "state.photo") {
+		if err == nil || !strings.Contains(err.Error(), "images.door is not referenced") || !strings.Contains(err.Error(), "state.photo") {
 			t.Fatalf("error = %v", err)
 		}
 		// The marker's value is state content. Errors name the path only.
@@ -390,6 +393,35 @@ func TestImageReferenceFormsAndLimits(t *testing.T) {
 			t.Fatalf("error quoted the state value: %v", err)
 		}
 	})
+}
+
+// Real data shaped {"image": "<string>"} that names no provided image is
+// ordinary state: it is sent unchanged, on both backends.
+func TestImageKeyedDataIsNotAMarker(t *testing.T) {
+	pngBytes := mustPNG(t, 280, 280)
+	for _, provider := range []string{"typesafe", "openrouter"} {
+		t.Run(provider, func(t *testing.T) {
+			var body map[string]any
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				json.NewDecoder(r.Body).Decode(&body)
+				w.Write([]byte(noulOK))
+			}))
+			defer srv.Close()
+			c := testClient(withImages(providerAt(provider, srv.URL)), srv)
+			in := imageRequest(pngBytes, "")
+			in.State = map[string]any{
+				"photo":   map[string]any{"image": "door"},
+				"listing": map[string]any{"image": "hero.jpg"},
+			}
+			if _, err := runEvaluate(context.Background(), c, in); err != nil {
+				t.Fatal(err)
+			}
+			listing, _ := body["state"].(map[string]any)["listing"].(map[string]any)
+			if listing["image"] != "hero.jpg" || len(listing) != 1 {
+				t.Fatalf("listing = %#v", listing)
+			}
+		})
+	}
 }
 
 // A hand-written image_url part skips JEV_IMAGES and every local check, so it

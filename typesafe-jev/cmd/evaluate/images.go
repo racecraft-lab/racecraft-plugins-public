@@ -79,8 +79,8 @@ func encodeRequest(spec ProviderSpec, in evaluateIn) ([]byte, map[string]string,
 		return nil, nil, err
 	}
 	replace := replacementFor(spec, loaded)
-	state, questions, err = rewriteImageSites(state, questions, func(path string, v any) (any, bool, error) {
-		return replaceVisit(path, v, in.Images, replace)
+	state, questions, err = rewriteImageSites(state, questions, func(_ string, v any) (any, bool, error) {
+		return replaceVisit(v, in.Images, replace)
 	})
 	if err != nil {
 		return nil, nil, err
@@ -289,17 +289,22 @@ func scanImageSites(in evaluateIn) (imageSites, error) {
 	return sites, err
 }
 
-// check refuses a marker that names no provided image, and an image nothing
-// references.
+// check refuses an image nothing references. A marker-shaped object that
+// names no provided image is ordinary data, such as {"image": "hero.jpg"} in
+// a product record, and is sent as written. A mistyped marker still fails
+// here, because it leaves its image unreferenced, and the error names that
+// object's path so the typo can be found.
 func (s imageSites) check(images map[string]imageSource) error {
-	if s.unknown != "" {
-		// The path only: the marker's value is state content.
-		return fmt.Errorf("%s names an image that was not provided", s.unknown)
-	}
 	for _, name := range sortedKeys(images) {
-		if s.uses[name] == 0 {
-			return fmt.Errorf("%s is not referenced from state, instructions, or criteria", imageLabel(name))
+		if s.uses[name] > 0 {
+			continue
 		}
+		if s.unknown != "" {
+			// The path only: the marker's value is state content.
+			return fmt.Errorf("%s is not referenced from state, instructions, or criteria; %s is an {\"image\": ...} object that names no provided image, and is sent as data",
+				imageLabel(name), s.unknown)
+		}
+		return fmt.Errorf("%s is not referenced from state, instructions, or criteria", imageLabel(name))
 	}
 	return nil
 }
@@ -616,11 +621,8 @@ func animatedPNG(data []byte) bool {
 
 func countImageUses(state any, questions map[string]any, sources map[string]imageSource) (map[string]int, error) {
 	used := map[string]int{}
-	_, _, err := rewriteImageSites(state, questions, func(path string, v any) (any, bool, error) {
-		name, hit, unknown := imageUse(v, sources)
-		if unknown {
-			return nil, false, fmt.Errorf("%s names an image that was not provided", path)
-		}
+	_, _, err := rewriteImageSites(state, questions, func(_ string, v any) (any, bool, error) {
+		name, hit, _ := imageUse(v, sources)
 		if hit {
 			used[name]++
 		}
@@ -652,11 +654,10 @@ func replacementFor(spec ProviderSpec, loaded map[string]preparedImage) func(str
 	}
 }
 
-func replaceVisit(path string, v any, sources map[string]imageSource, replace func(string) any) (any, bool, error) {
-	name, hit, unknown := imageUse(v, sources)
-	if unknown {
-		return nil, false, fmt.Errorf("%s names an image that was not provided", path)
-	}
+// replaceVisit swaps a reference for its wire form. Anything else, including a
+// marker-shaped object that names no provided image, is left as written.
+func replaceVisit(v any, sources map[string]imageSource, replace func(string) any) (any, bool, error) {
+	name, hit, _ := imageUse(v, sources)
 	if !hit {
 		return nil, false, nil
 	}
