@@ -55,6 +55,9 @@ import tempfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import release_note_policy as _release_note_policy  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_DIR = REPO_ROOT / "typesafe-jev"
 LICENSE_FILE = MODULE_DIR / "LICENSE"
@@ -256,7 +259,7 @@ def resolve(recovery_tag: str, release_tag: str, release_body: str, *, notes_onl
     body = release.get("body")
     if not isinstance(body, str) or not body.strip():
         raise ReleaseBuildError(f"release {recovery_tag} has no body")
-    if notes_only and body.startswith("## Highlights\n"):
+    if notes_only and _release_note_policy.is_composed_release_body(body):
         raise ReleaseBuildError("published release notes recovery requires the original, uncomposed body")
     return recovery_tag, body
 

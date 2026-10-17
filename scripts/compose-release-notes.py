@@ -40,7 +40,7 @@ sanitize_release_note = _release_note_policy.sanitize_release_note
 validate_release_note = _release_note_policy.validate_release_note
 COMPARE_PAGE_SIZE = 100
 APPENDIX_HEADING = "## Commit appendix"
-HIGHLIGHTS_HEADING = "## Highlights"
+HIGHLIGHTS_HEADING = _release_note_policy.HIGHLIGHTS_HEADING
 VALIDATION_FAILURE_OUTCOME = "release_note_validation_failed"
 VALIDATION_PASS_OUTCOME = "release_note_validation_passed"
 SNAPSHOT_MARKER_PREFIX = "<!-- release-note-composer-snapshot:v1 "
@@ -222,7 +222,7 @@ def load_persisted_snapshot(
     expected_source_sha256: str | None = None,
 ) -> PersistedSnapshot | None:
     """Load an existing composed body only when all immutable digests verify."""
-    if not release_body.startswith(f"{HIGHLIGHTS_HEADING}\n"):
+    if not _release_note_policy.is_composed_release_body(release_body):
         return None
     marker = f"\n\n{SNAPSHOT_MARKER_PREFIX}"
     if release_body.count(marker) != 1:
