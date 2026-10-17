@@ -38,127 +38,115 @@ runner tests continue to exercise the source and both shipped hosts.
 
 ## Declared progress follow-up
 
-R1364-089042f4 and its separator variant R1364-225d0ebf are repaired in the
-shared planning-approval owner. Tests start with the shipped workflow and spec
-map templates, record approval, make each edit separately, and require both
-the same manifest digest and successful verification of the original record.
+### Round 10 writer inventory
 
-| Declared progress | Planning input still bound |
-| --- | --- |
-| Workflow Overview status cells | Phase names, commands, notes and neighboring choices |
-| Post-Implementation Checklist status cells | Checklist requirements and evidence |
-| Formal Checkpoints result cells and canonical result-record paths | Checkpoint definitions, arbitrary evidence text and formal selection |
-| Plain Lessons Learned bullets, directly or in the template's lesson subsections | Prose, checkbox choices, fences and neighboring planning sections |
-| Feature SPEC-MOC frontmatter status | Other metadata, body text and status lookalikes outside frontmatter |
-| Blank separator before an appended Feedback Sweep Log | Preceding planning content and choices after the excluded section |
+The inventory below includes every workflow or feature-map write reached after
+approval, including Implement setup, resume, final verification, and Post.
+Locations refer to the input revision of this round; `phase-execution.md`,
+`post-implementation.md`, and `workflow-file-protocol.md` live in
+`speckit-pro/skills/speckit-autopilot/references/`. Code paths below are relative
+to `speckit-pro/speckit_pro_runner/`. The protocol was read in full; the phase
+and Post write sites were traced to their result and bookkeeping contracts.
 
-Recognized phase and map status values alone are normalized; unexpected cell
-contents stay bound. Formal checkpoint rows use the formal owner's row names
-and result paths. Their identifier-valued results, canonical result/waiver paths
-and template setup gap are progress; arbitrary evidence prose stays bound.
-The regression matrix also invokes the actual checkpoint row writer for Final
-and Post results, without claiming to run a model checker.
-Lessons normalization does not extend into arbitrary subsections or
-fenced examples. SPEC-MOC normalization applies only to the feature's own map,
-not every file sharing that basename. Trailing blank separator lines outside
-fences are normalized so creating the end-of-file sweep log preserves approval.
-The earlier checkbox-choice and assurance-claim regression matrices remain in
-the same test file. Source and both generated host payloads exercise the new
-cases through the public manifest, record and verify request seam.
+| Region | Writer | Source file:line | Progress or planning |
+| --- | --- | --- | --- |
+| Workflow Overview status | Parent after every phase, including resume | workflow-file-protocol.md:10; phase-execution.md:566,5114 | Progress; reader vocabulary owned by workflow_stage.py:85 |
+| Workflow Overview summary notes | Same parent | workflow-file-protocol.md:10; phase-execution.md:5115 | Typed result summary is progress; existing notes and arbitrary added prose are planning |
+| Basic Information Stage | Stage resolution and changed plan terminal stage | workflow-file-protocol.md:55; helpers/plan_stage_terminal.py:127 | Closed stage value is progress; any other text is planning |
+| Basic Information Draft PR | Successful draft creation, refresh or repair | workflow-file-protocol.md:84; phase-execution.md:2147,3643 | PR identity and numeric artifact-gap count are progress; other text is planning |
+| Implement Checklist Gate | Parent once before first Phase 7 dispatch | workflow-file-protocol.md:18; phase-execution.md:3888,3907 | Fixed decision and measured counts are progress; an unknown reason is an evidence reference; arbitrary decision/text changes are planning |
+| Implementation Progress | Parent after task/phase results | workflow-file-protocol.md:18; phase-execution.md:566,2280 | Completion counts and typed results are progress; task/phase definitions are planning |
+| Files Generated | Parent phase bookkeeping | phase-execution.md:5118 | Tick is progress; generated artifact path is planning |
+| Post-Implementation Checklist | Parent synthesizes each canonical Post result | workflow-file-protocol.md:18; post-implementation.md:252,350,404 | Status, result counts and evidence references are progress; requirements and action directives are planning |
+| Success Criteria / Success Criteria Summary | Parent ticks completed criteria | workflow-file-protocol.md:18 | Tick is progress; criterion text is planning, including nested criteria |
+| Prerequisites baseline results | Implement setup after feedback sweep | phase-execution.md:2343,2354 | Status and test count are progress; command, slot and authorization changes are planning |
+| Constitution Validation final result | Parent after Implement | workflow-file-protocol.md:28 | Typed final result is progress; principle, requirement and verification command are planning |
+| Quality Gates Final column | Phase 7 final verification and Post Integration Suite | phase-execution.md:4759,4769; post-implementation.md:57 | Result/count/evidence is progress; command, tool, threshold and operator answer are planning |
+| Quality Gates Hardener line | Same final verification writer | phase-execution.md:4776,4782; post-implementation.md:57 | Typed status, iterations, scores and evidence are progress; directives remain planning |
+| Formal Checkpoints | write_checkpoint, including Final/Post and waiver records | formal/evidence.py:63,71,79 | Owned verdict and canonical result path are progress; row definition and extra evidence prose are planning |
+| Lessons Learned and three template subsections | Retrospective parent | workflow-file-protocol.md:3; post-implementation.md:438; workflow-template.md:548 | Result reference is progress; lesson prose is planning-bound rather than discarded |
+| Feedback Sweep Log | Sweep bookkeeping after classification/amendment | workflow-file-protocol.md:141; phase-execution.md:3167,3200 | Fixed dispositions and metadata are progress; arbitrary disposition/extra prose is planning |
+| Consensus Resolution Log | Sweep adds linked resolution after an amendment | workflow-file-protocol.md:30,178; phase-execution.md:3177,3212 | Closed sweep metadata is progress; accepted requirements, resolutions and changed decisions are planning |
+| Phase 7 results: notes-write gaps and review follow-ups | Parent after failed notes create/append or exhausted review allowance | phase-execution.md:3973,4118,4732 | Typed outcome/evidence reference is progress; new instructions are planning |
+| Phase 7 results: fallback, deferral, interpretation, deferred_digest | Parent execution-control/finalize-run | phase-execution.md:4280,4421,4549,4557 | Outcome, digest and reference to the already approved decision are progress; a new decision is planning |
+| Phase 7 results: plugin drift | Parent after runtime refresh | phase-execution.md:4604,4634 | Version/call result evidence is progress; modified dispatch policy is planning |
+| PR Marker Plan evidence/checkpoint | Parent after each marker | workflow-file-protocol.md:241; phase-execution.md:2302 | Checkpoint SHA/status/evidence is progress; task membership, order, ownership and source fingerprint are planning |
+| Artifact Review Handoff | Plan terminal, or sweep regeneration following a planning amendment | workflow-file-protocol.md:270; phase-execution.md:1875,3296 | Planning evidence: ordinary Implement progress does not rewrite it; an amendment changes the reviewed artifact and requires renewed approval |
+| Post integration, terms lint and UAT outcome | Parent after checks and mandatory runbook attempt | post-implementation.md:570,1043,1056 | Typed counts/status/evidence is progress; any changed requirement is planning |
+| Multi-PR emission workflow evidence | Parent after each successful slice PR | post-implementation.md:832,850 | PR/head/verification/resume evidence is progress; planned slice scope/order/base remain bound |
+| Feature SPEC-MOC frontmatter status | Parent progress and status readers | helpers/read_only.py:6655,6678 | Recognized status is progress; all other metadata and unknown status prose are planning |
+| Feature SPEC-MOC generated PRS and backlinks | generate-spec-index-write at every boundary and PR emission | phase-execution.md:4853; post-implementation.md:832,847; helpers/read_only.py:4058,4257,4440 | Canonical generated navigation is progress; edited generated text and non-generated map content are planning |
+| Earlier phase results, consensus repairs, confidence/autonomy and atomicity decisions | Explicit repair or changed plan | workflow-file-protocol.md:11-17,30,37; phase-execution.md:550,1337,1531 | Planning: a new decision requires a new approval; these are not progress exemptions |
+
+### Chosen shape and seam
+
+Shape **(b)**: a single code-owned table declares the progress regions and their
+typed fields. A contract test compares the protocol's complete Implement write
+list with that table, so naming another write without implementing its contract
+fails. The public seam remains `planning_manifest` / record / verify; the
+normalizer is a deep module that leaves callers with one revision identity.
+
+The throwaway prototype compared a whole-region allowlist with a typed-value
+projection using completion, a directive, and completion followed by a
+directive. The allowlist erased both directives; the typed projection retained
+both. This rules out shape (a) under the requirement that planning text inside
+a progress region remain bound. The trade-off is an explicit progress format:
+free prose cannot deterministically be classified as execution rather than a
+new instruction. Writers retain planning prose and append typed results or
+evidence references; they do not replace planning notes with arbitrary summaries.
+Full narrative result details remain in their existing execution records.
+
+Success Criteria are explicit: **text is planning; tick state is progress**.
+Other planning-choice checkboxes retain their checked/unchecked distinction.
+Status values come from the workflow reader's owner, never a second list.
+
+The round-10 matrix covers typed progress in the code-owned table and a planning
+edit inside each region. It includes the real formal checkpoint writer and the
+real spec-index renderer, plus status values from the shared reader owner.
+The protocol contract check also rejects a newly named Implement write that has
+no code entry or behavioral case. Every positive fixture asserts that its
+before/after bytes differ, preventing a preserve test from passing on a no-op.
+
+The earlier Daybreak checkbox and assurance tests remain: ordinary planning
+choices still bind checked/unchecked state; explicit Success Criteria now bind
+text rather than completion ticks. Blank execution sections no longer suppress
+nested planning text. The new tests tighten the previously accepted Stage,
+Draft PR, lesson-bullet and whole-section limits instead of extending them.
+No new independent Daybreak verdict is claimed here.
 
 ## Known limits
 
-- Ripwire's static caller graph reports dynamically discovered unittest methods
-  as dead code. The focused suite executes them through the standard unittest
-  loader, including the shipped-host matrix. These rows are reported in the
-  hand-back rather than suppressed in the acknowledgement ledger; a zero exit
-  and zero gating rows do not establish zero advisory major rows.
-- Other post-approval edits remain bound: Overview summary notes, Post evidence
-  and newly added rows, Success Criteria checkbox choices, Constitution text,
-  and generated SPEC-MOC blocks. They may contain requirements or approved
-  decisions, so this repair does not discard them wholesale. Status spellings
-  outside the normalizer's declared vocabulary fail closed, including the
-  alternative skipped icons accepted elsewhere by the workflow reader.
-- A manually added horizontal rule before Feedback Sweep Log remains bound.
-  The no-anchor protocol appends the heading with a blank separator, not a
-  horizontal rule; no current writer requires the latter layout.
-- The formal row writer rewrites the whole workflow with LF and a final
-  newline. CRLF, missing final newlines or unusual Unicode line separators
-  may therefore change other bound bytes. A missing checkpoint row can cause
-  a new table to be appended; a row under a deeper heading stays bound. The
-  shipped template uses LF, a final newline and all four rows directly under
-  Formal Checkpoints, so none of these layouts is scaffold-produced.
-- A workflow path alias, including a symlink or a leading `./`, can give the
-  formal writer a different result-path key from the approval helper's
-  canonical path. That result path stays bound and fails closed. Scaffold
-  supplies the canonical repository-relative workflow path.
-- A blank separator inserted before a mid-file Feedback Sweep Log can remain
-  bound. The template has no Consensus Resolution Log anchor, so its sweep
-  takes the covered end-of-file path. A later agent-authored anchor and its
-  separator layout are not produced by a deterministic writer.
-- The host matrix uses the source checkpoint row writer with each packaged
-  approval helper. Both packaged writers are byte-identical to source;
-  generated-artifact validation enforces that parity. This is not a live
-  formal model-checker run on either host.
-- The assurance guard recognizes the two explicit denial forms above, rather
-  than inferring arbitrary English negation. Other denial wordings fail closed
-  and must use a recognized form or avoid the assurance term. Existing approval
-  guidance satisfies this narrow rule. This repository-only guard change does
-  not alter runtime policy or either host's generated payload.
-- Unfenced `Stage` and `Draft PR` table rows are declared execution bookkeeping
-  and excluded. A planning directive placed in these rows uses a field outside
-  its intended purpose; this accepted Low limit is unchanged.
-- Plain bullets directly under `Lessons Learned`, or under its three template
-  subsections, are dropped whatever they say. The autopilot writes lessons
-  after implementation, and no planning step writes there. A planning
-  directive placed in a lesson bullet uses the section outside its purpose,
-  like the `Stage` row limit. Accepted Low.
-- A Formal Checkpoints status cell is erased for any lowercase identifier when
-  its evidence cell is `No selected model` or the owner's result path.
-  `checkpoint_signal` reads that live text, so a text-only edit to `pass`
-  after approval can change `planning_complete` with the same digest. The
-  approval does not vouch for that edit: formal selection stays bound, the
-  gate reads the current text, and checker verdicts are not planning inputs.
-  Accepted Info; the Daybreak re-check should confirm it.
-- `Implementation Progress` and `Feedback Sweep Log`, including their nested
-  subsections, are declared execution bookkeeping and excluded. Put planning
-  decisions under ordinary planning headings. These accepted Info limits are
-  unchanged.
-- `x` and `X` both represent checked choices. Their spelling alone does not
-  change the plan. Fenced spelling and text remain verbatim planning inputs.
-  This equivalence holds only for `-` bullets; `*`, `+`, numbered and
-  blockquoted checkboxes bind the spelling, which fails closed.
-- The assurance guard splits sentences at `.`, `!` and `?` before it looks for
-  the assurance term. A term joined by one of those marks, split by an inline
-  HTML tag such as `<wbr>` or `<em>`, written as an HTML entity, or spelled
-  with a look-alike letter from another alphabet is not recognized. No scanned
-  document uses such a spelling today, so this Low limit is accepted.
-- The execution-section skip ends only at an unindented ATX heading of the same
-  or a higher level. An `Implementation Progress` heading followed by planning
-  lines under deeper headings, an indented or setext heading after it, or an
-  unclosed fence would hide later planning lines. The shipped workflow template
-  cannot produce this: `### Implementation Progress` is the last subsection of
-  `## Phase 7: Implement` and is closed by the unindented
-  `## Post-Implementation Checklist`. No code places `Feedback Sweep Log`; the
-  sweep protocol tells the agent where to write it. When the file has a
-  `Consensus Resolution Log` heading, the log is written as its sibling at the
-  same level, so the next sibling or higher heading closes it. Otherwise the
-  agent appends `## Feedback Sweep Log` at the end of the file, and no current
-  writer adds planning text after it. Accepted Low.
-- The declared-progress repair partly addresses the separate code-review
-  false-refusal finding. The cross-host review of `00f2fda7` keeps it open
-  for writes that a resume can still meet, such as the Implement Checklist
-  Gate and the Quality Gates `Hardener` line; it does not accept those writes,
-  or the alternative status icons, as limits. Prior accepted Low/Info notes
-  remain unchanged;
-  this repair does not claim a new independent Daybreak security verdict.
-- Approval assurance remains recorded, without protection against an agent with
-  the operator's file access. Interactive confirmation is covered by its JSON
-  contract, not a live UI exercise.
-- Linux VM evidence does not establish native macOS plugin CI or the two real
-  sandbox checks:
+- Prior approval digests are not migration tokens. This repair changes their
+  projection, so a record made with the older projection may need a fresh plan
+  review after upgrading. The new protocol is used for subsequent progress;
+  existing free-form notes remain bound. Silently trusting old excluded prose
+  would reintroduce the known false pass.
+- Formal checkpoint results remain live verification evidence, not approved
+  planning choices. Their statuses can change `planning_complete` while the
+  selected models and planning inputs remain unchanged. Admission must still
+  validate current formal evidence; approval never establishes that a checker
+  ran or passed.
+- The formal writer rewrites the file with LF and a final newline. CRLF,
+  unusual Unicode line endings, or a path alias can still change bound bytes
+  or the result-path key. Scaffold and the documented writer calls use LF and
+  the canonical repository-relative workflow path, so these layouts are not
+  produced by those paths.
+- Generated navigation is normalized only against the deterministic owner's
+  current output. A partially updated PR manifest/map pair may fail closed
+  until regeneration finishes. The phase and PR-emission protocols regenerate
+  before their checkpoint, so a completed writer does not commit that pair.
+- The assurance guard accepts its two explicit denial forms and does not infer
+  arbitrary English negation. Obfuscated assurance terms split by HTML,
+  entities, punctuation, or look-alike letters are outside its recognition;
+  no scanned document uses them. Its existing regression tests remain intact.
+- The approval has recorded assurance and does not defend against an agent
+  with the operator's file access. Interactive confirmation is exercised through
+  its documented JSON contract, not a live question UI in this unattended run.
+- Static caller discovery may label unittest methods `test-path-dead`; the
+  standard unittest loader executes them. Such rows are reported rather than
+  entered into an acknowledgement ledger.
+- Linux VM tests do not cover native macOS plugin CI or
   `test_gate_hardening.py::test_pr_test_code_cannot_touch_the_host_under_the_real_sandbox`
   and
   `test_gate_hardening.py::test_pr_test_code_cannot_create_or_modify_any_file_in_the_clone`.
-  Those remain orchestrator checks before merge. The widened normalization
-  still requires the separate Daybreak re-check of this repair.
+  Those require the orchestrator's macOS host run before merge.

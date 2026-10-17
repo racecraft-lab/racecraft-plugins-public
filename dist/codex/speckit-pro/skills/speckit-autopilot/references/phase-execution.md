@@ -3098,6 +3098,12 @@ repository because GitHub writes require a body file. Remove the private
 session and temporary reply file on success or failure. The run report names
 only that private cleanup completed, never its absolute path or contents.
 
+After planning approval, every workflow progress write in Phase 7 uses the
+[Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+Record narrative result details in the existing execution evidence file and
+append its typed result/reference to the workflow. Preserve planning notes,
+commands, criteria text, and decision definitions when updating progress.
+
 #### Phase 7 Setup: Record the Implement Checklist Gate
 
 Stock `$speckit-implement` stops when a domain checklist has unticked items.
@@ -3128,8 +3134,8 @@ dispatch:
 ```
 
 - **Fail closed on missing evidence.** When `checklists/` is absent or a file
-  cannot be read, write `unknown` and the reason in the Reviewer-owned items
-  cell. Never write a zero you did not count.
+  cannot be read, write the typed `implement-checklist-gate` result with `status=unknown`
+  and an `evidence` reference to the diagnostic in that cell. Never write a zero you did not count.
 
 This gate is not a stop condition and never asks the operator. The PR body
 tells the reviewer the boxes are theirs (post-implementation.md step 6).

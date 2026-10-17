@@ -22,12 +22,24 @@ Inputs always include repository-relative `feature_dir` and `workflow_file`.
 
 The runner inventories feature files, workflow, task dispatch metadata, project
 planning configuration and declared formal inputs. It normalizes task completion
-and declared workflow execution sections; runtime outputs and approval records
-are excluded. New or removed planning files change the digest. Required spec,
-plan and tasks must be readable. `data.manifest` states the versioned inventory.
-Workflow planning-choice checkbox state is bound to the revision; only `x` versus
-`X` spelling is equivalent. Fenced content is bound verbatim, including rows that
-would otherwise be execution bookkeeping.
+and the typed progress fields in the [Implement write contract](workflow-file-protocol.md#implement-write-contract);
+runtime outputs and approval records are excluded. New or removed planning files
+change the digest. Required spec, plan and tasks must be readable.
+`data.manifest` states the versioned inventory.
+
+The progress table in `helpers/planning_approval.py` owns the allowed regions and
+value shapes. Status spellings come from `workflow_stage.py`, shared with the
+readers. Known progress values, measured counts and execution-evidence references
+preserve the revision; arbitrary prose remains bound even inside a status cell,
+checklist, lesson, summary, or generated navigation block. A writer appends typed
+summaries while retaining existing planning notes. Success Criteria text is
+planning and its tick state is progress. Other workflow planning-choice
+checkboxes bind checked/unchecked state; `x` and `X` are equivalent spellings.
+Fences remain literal planning content. Canonical SPEC-MOC navigation is compared
+with its generator's output rather than discarded as a whole region.
+
+Older projection digests may require a new approval after this change. Do not
+rewrite a prior approval record to adopt the new digest.
 
 `apply` writes `data.record_path` under the feature's `plan-approvals/` directory;
 commit that file with the feature. Existing decisions cannot be overwritten.

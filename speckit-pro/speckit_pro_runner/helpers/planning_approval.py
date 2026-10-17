@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,9 @@ from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import next_fence, require_fields, require_text, unique_object
 from ..task_execution import owned_path, task_definitions
 from ..trusted_io import trusted_tree_snapshot
+from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
+from ..sweep_export import SWEEP_LOG_HEADING, sweep_is_table_rule, sweep_table_cells
+from .read_only import SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS, SPEC_INDEX_ENDS, spec_index_progress
 from .execution_requests import Refusal, run_contained_helper
 
 # Inventory roots are runner-owned, never a caller-selected subset. Feature additions
@@ -25,13 +29,6 @@ PROJECT_INPUTS = (".specify/memory", ".specify/templates", ".specify/extensions"
                   ".specify/scripts", CATALOG_PATH, "AGENTS.md")
 RUNTIME = {"artifacts", "plan-approvals", ".process", "autopilot-state.json", "task-results.json",
            "execution-control.json", "verification-record.json"}
-EXECUTION_SECTIONS = {"Implementation Progress", "Feedback Sweep Log"}
-PHASE_STATUS = r"(?:⏳ Pending|🔄 In Progress|✅ Complete|⏭️ Skipped|⚠️ Blocked|Pending|In Progress|Complete|Skipped|Blocked)"
-PROGRESS_CELLS = {
-    "Workflow Overview": r"^(\| (?:Specify|Clarify|Plan|Checklist|Tasks|Analyze|Confidence Gate|Implement|Post) \| [^|\r\n]* \| )" + PHASE_STATUS + r"(?= \|)",
-    "Post-Implementation Checklist": r"^(\| Post: [^|\r\n]+ \| )" + PHASE_STATUS + r"(?= \|)",
-}
-LESSON_HEADINGS = {"What Worked Well", "Challenges Encountered", "Patterns to Reuse"}
 
 
 def captured(root: Path, relative: str) -> bytes:
@@ -41,40 +38,190 @@ def captured(root: Path, relative: str) -> bytes:
     raise ValueError(f"planning input must be a readable file: {relative}")
 
 
-def formal_progress_line(line: str, root: Path, workflow: str) -> str:
-    match = re.fullmatch(r"(\| ([^|\r\n]+) \| )([a-z_]+)( \| )([^|\r\n]*)( \|(?:\r?\n)?)", line)
-    if match is None:
-        return line
-    checkpoint = next((key for key, label in CHECKPOINT_ROWS.items() if label == match[2]), None)
-    if checkpoint is None:
-        return line
-    # Only the owner's result/waiver destinations and the template's setup gap
-    # are bookkeeping. Arbitrary evidence text remains a planning input.
-    results = {record_path(root, workflow, checkpoint + suffix).relative_to(root).as_posix()
-               for suffix in ("", "-waiver")}
-    evidence_cell = "<result>" if match[5] in results | {"No selected model"} else match[5]
-    return match[1] + "<progress>" + match[4] + evidence_cell + match[6]
+@dataclass(frozen=True)
+class ProgressWrite:
+    """One protocol write: its locations, typed cells, and optional scaffold."""
+    scopes: tuple[tuple[str, ...], ...]
+    row: str = ""
+    cells: tuple[tuple[int, str], ...] = ()
+    width: int = 0
+    omit_row: bool = False
+    scaffold: tuple[str, ...] = ()
+    checkbox: bool = False
+    lines: tuple[str, ...] = ()
+    key_index: int = 0
 
 
-def progress_line(line: str, sections: list[tuple[int, str]], root: Path, workflow: str) -> str:
-    """Erase declared progress values, retaining labels, commands and evidence."""
-    if re.match(r"^\| \*\*(Stage|Draft PR)\*\* \|", line):
+OVERVIEW = (("Workflow Overview",),)
+BASIC = (("Specification Context", "Basic Information"), ("Basic Information",))
+IMPLEMENT = (("Phase 7: Implement", "Implementation Progress"), ("Implementation Progress",))
+POST = (("Post-Implementation Checklist",),)
+QUALITY = (("Prerequisites", "Quality Gates"), ("Quality Gates",))
+LESSONS = (("Lessons Learned",), *(("Lessons Learned", title) for title in
+           ("What Worked Well", "Challenges Encountered", "Patterns to Reuse")))
+PHASE_NAMES = (*AUTOPILOT_PLANNING_PREDICATE_PHASES, "Implement", "Post")
+FIELD_PATTERNS = {
+    "phase": "(?:" + "|".join(re.escape(value) for value in AUTOPILOT_STATUS_VALUES) + ")",
+    "count": r"[0-9]*(?:/[0-9]+)?",
+    "stage": "(?:" + "|".join(AUTOPILOT_STAGES) + ")",
+    "pr": r"\[#[0-9]+\]\(https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+\)(?: — [0-9]+ of [0-9]+ artifacts missing)?",
+    "result": r"(?:pass|fail|off|not run|n/a: no source files changed|<!-- pass / fail / n/a: no source files changed -->)?",
+    "gate:Decision": r"deferred-to-review",
+    "gate:Reviewer-owned items": r"[0-9]+ of [0-9]+ unticked across [0-9]+ checklist files",
+    "gate:[Gap] markers": r"[0-9]+ \(blocking through G4\)",
+    "comment": r"(?:IC|PRRC)_[A-Za-z0-9_=-]+",
+    "surface": r"(?:review thread|conversation|review_thread|pr_conversation)",
+    "author": r"(?:[A-Za-z0-9-]+|author unresolved)",
+    "class": r"(?:amended|answered|deferred|no action)",
+    "disposition": r"(?:Applied the accepted feedback to (?:spec|plan|tasks|research|data-model|quickstart)\.md\.|Recorded as answered; no artifact amendment was required\.|Recorded and not acted on because the requested target is outside the allowed artifact set\.|Recorded; no actionable artifact change was identified\.)",
+    "categories": r"(?:\[(?:codebase|spec-context|domain|security)\](?:, )?)+",
+    "round": r"[123](?:→[23])?",
+    "outcome": r"(?:3/3|2/3|escape-hatch|\[ROUND 3\])",
+    "resolution": r"(?:Scope deferred)?",
+    "analysts": r"(?:All|(?:codebase-analyst|spec-context-analyst|domain-researcher)(?:, (?:codebase-analyst|spec-context-analyst|domain-researcher))*)",
+    "commit": r"(?:[a-f0-9]{7,40})?",
+    "checkpoint": r"(?:Pending|`[a-f0-9]{40}`)",
+    "formal": r"(?:disabled|pending_authoring|running|pass|passed|fail|failed|stale|waived|error|timeout|unavailable|invalid_configuration)",
+}
+# One owned table for every Implement write named by the protocol. Summaries are
+# accepted only at their listed locations; typed cell rules coexist with them.
+PROGRESS_WRITES = {
+    "overview-status": ProgressWrite(OVERVIEW, "(?:" + "|".join(PHASE_NAMES) + ")", ((2, "phase"),), 4),
+    "overview-summary": ProgressWrite(OVERVIEW),
+    "stage": ProgressWrite(BASIC, r"\*\*Stage\*\*", ((1, "stage"),), 2, True),
+    "draft-pr": ProgressWrite(BASIC, r"\*\*Draft PR\*\*", ((1, "pr"),), 2, True),
+    "implement-checklist-gate": ProgressWrite((("Phase 7: Implement", "Implement Checklist Gate"),),
+        r"(?:Decision|Reviewer-owned items|\[Gap\] markers)", ((1, "gate"),), 2, True,
+        ("### Implement Checklist Gate", "| Field | Value |")),
+    "implementation-progress": ProgressWrite(IMPLEMENT, r".+", ((1, "count"), (2, "count")), 4, checkbox=True),
+    "files-generated": ProgressWrite((("Phase 7: Implement", "Files Generated"), ("Files Generated",)), checkbox=True),
+    "post-checklist": ProgressWrite(POST, r"Post: .+", ((1, "phase"), (2, "evidence")), 3),
+    "success-criteria": ProgressWrite((("Success Criteria",), ("Specification Context", "Success Criteria Summary")), checkbox=True),
+    "prerequisites-baseline": ProgressWrite((("Prerequisites",),)),
+    "constitution-final": ProgressWrite((("Prerequisites", "Constitution Validation"),)),
+    "quality-final": ProgressWrite(QUALITY, r"(?:COMPLEXITY|MUTATION|DEPENDENCY_RULES|DEPENDENCY_AUDIT)", ((6, "result"),), 7),
+    "quality-hardener": ProgressWrite(QUALITY),
+    "formal-checkpoints": ProgressWrite((("Formal Checkpoints",),), "(?:" + "|".join(CHECKPOINT_ROWS.values()) + ")",
+        ((1, "formal"), (2, "formal-evidence")), 3),
+    "lessons": ProgressWrite(LESSONS, scaffold=("-",)),
+    "feedback-sweep": ProgressWrite(((SWEEP_LOG_HEADING,),), r"[0-9]+",
+        ((1, "comment"), (2, "surface"), (3, "author"), (4, "class"), (5, "disposition"), (6, "commit"), (7, "count")), 8, True, scaffold=(
+        "## Feedback Sweep Log", "### Feedback Sweep Log", "| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |")),
+    "consensus-sweep": ProgressWrite((("Consensus Resolution Log",),), "Sweep",
+        ((0, "count"), (2, "comment"), (3, "categories"), (4, "round"), (5, "outcome"), (6, "resolution"), (7, "analysts")), 8, True,
+        ("## Consensus Resolution Log", "### Consensus Resolution Log", "| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |"), key_index=1),
+    "notes-gap": ProgressWrite(IMPLEMENT),
+    "review-followup": ProgressWrite(IMPLEMENT),
+    "fallback": ProgressWrite(IMPLEMENT),
+    "deferral": ProgressWrite(IMPLEMENT),
+    "interpretation": ProgressWrite(IMPLEMENT),
+    "plugin-drift": ProgressWrite(IMPLEMENT),
+    "marker-checkpoint": ProgressWrite((("PR Marker Plan",), ("PR Marker Plan Evidence",)), r"[0-9]+", ((4, "checkpoint"),), 5,
+        lines=(r"- Implementation checkpoint \[[a-z0-9][a-z0-9_-]*\]: `[a-f0-9]{40}`",)),
+    "post-integration": ProgressWrite(POST),
+    "terms-lint": ProgressWrite(POST),
+    "uat-outcome": ProgressWrite(POST),
+    "pr-emission": ProgressWrite(POST),
+    "spec-map-status": ProgressWrite(()),
+    "spec-map-navigation": ProgressWrite(()),
+}
+
+
+def execution_reference(value: str) -> bool:
+    """Only relative execution-output paths, never free-form evidence prose."""
+    return bool(re.fullmatch(r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*?/\.process/[A-Za-z0-9_./-]+", value)
+                and ".." not in value.split("/") and "//" not in value)
+
+
+def summary_field(field: str, value: str) -> bool:
+    if field == "status":
+        return value in {item.casefold().replace(" ", "_") for item in AUTOPILOT_STATUS_VALUES} | {
+            "pass", "fail", "unknown", "unavailable", "failed-open", "not_run", "deferred", "waived"}
+    if field == "evidence":
+        return execution_reference(value)
+    if field == "digest":
+        return bool(re.fullmatch(r"sha256:[a-f0-9]{64}", value))
+    if field in {"count", "tests", "iterations", "score", "floor"}:
+        return bool(re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", value))
+    return False
+
+
+def progress_summary(text: str, scope: tuple[str, ...]) -> str:
+    prefix, marker, value = text.strip().rpartition("Progress: ")
+    if not marker:
+        return text
+    key, *fields = value.split("; ")
+    rule = PROGRESS_WRITES.get(key)
+    parts = [field.partition("=") for field in fields]
+    if rule is None or scope not in rule.scopes or not parts:
+        return text
+    if len({part[0] for part in parts}) != len(parts) or not all(
+        separator and summary_field(field, value) for field, separator, value in parts
+    ):
+        return text
+    if prefix in ("", "- "):
         return ""
-    titles = [title for level, title in sections if level >= 2]
-    if titles and titles[0] == "Lessons Learned" and (
-        len(titles) == 1 or len(titles) == 2 and titles[1] in LESSON_HEADINGS
-    ) and re.match(r"^-(?![ \t]*\[[ xX]\])(?:[ \t]+.*)?\r?\n?$", line):
+    return prefix[:-2] if prefix.endswith("; ") else text
+
+
+def progress_cell(kind: str, cell: str, label: str, root: Path, workflow: str) -> bool:
+    if kind == "evidence":
+        return not cell or execution_reference(cell)
+    if kind == "formal-evidence":
+        checkpoint = next(key for key, value in CHECKPOINT_ROWS.items() if value == label)
+        return cell == "No selected model" or cell in {
+            record_path(root, workflow, checkpoint + suffix).relative_to(root).as_posix()
+            for suffix in ("", "-waiver")}
+    if kind == "gate":
+        return not cell or re.fullmatch(FIELD_PATTERNS["gate:" + label], cell) is not None
+    return re.fullmatch(FIELD_PATTERNS[kind], cell) is not None
+
+
+def progress_row(line: str, rule: ProgressWrite, root: Path, workflow: str) -> str:
+    cells = sweep_table_cells(line)
+    if len(cells) != rule.width or re.fullmatch(rule.row, cells[rule.key_index]) is None:
+        return line
+    values = [progress_cell(kind, cells[index], cells[0], root, workflow) for index, kind in rule.cells]
+    if rule.omit_row and all(values):
         return ""
-    if len(titles) == 1 and titles[0] in PROGRESS_CELLS:
-        line = re.sub(PROGRESS_CELLS[titles[0]], r"\1<progress>", line)
-    if titles == ["Formal Checkpoints"]:
-        line = formal_progress_line(line, root, workflow)
-    # Checked spelling is equivalent; checked and unchecked choices are not.
+    for (index, _), progress in zip(rule.cells, values, strict=True):
+        if progress:
+            cells[index] = ""
+    return "| " + " | ".join(cells) + " |"
+
+
+def progress_scaffold(line: str, rules: list[ProgressWrite]) -> bool:
+    if any(line.strip() in rule.scaffold for rule in rules):
+        return True
+    if any(re.fullmatch(pattern, line.strip()) for rule in rules for pattern in rule.lines):
+        return True
+    return any(rule.omit_row for rule in rules) and sweep_is_table_rule(sweep_table_cells(line))
+
+
+def hardener_progress(line: str, scope: tuple[str, ...]) -> str:
+    if scope not in QUALITY or not line.startswith("**Hardener:**"):
+        return line
+    value, separator, suffix = line.removeprefix("**Hardener:**").strip().partition(" <!--")
+    value = "" if value == "not run" else progress_summary(value, scope)
+    return "**Hardener:** " + value + separator + suffix
+
+
+def progress_line(line: str, scope: tuple[str, ...], root: Path, workflow: str) -> str:
+    rules = [rule for rule in PROGRESS_WRITES.values() if scope in rule.scopes]
+    if progress_scaffold(line, rules):
+        return ""
+    line = "|".join(progress_summary(cell, scope) for cell in line.split("|"))
+    line = hardener_progress(line, scope)
+    for rule in rules:
+        if rule.row and line.startswith("|"):
+            line = progress_row(line, rule, root, workflow)
+    if any(rule.checkbox for rule in rules):
+        return re.sub(r"^(\s*-\s+\[)[ xX](\])", r"\1 \2", line)
     return re.sub(r"^(\s*-\s+\[)[xX](\])", r"\1x\2", line)
 
 
 def workflow_content(content: bytes, root: Path, workflow: str) -> bytes:
-    kept: list[str] = []
+    kept: list[tuple[tuple[str, ...], str]] = []
     sections: list[tuple[int, str]] = []
     fence = None
     for line in content.decode("utf-8").splitlines(keepends=True):
@@ -84,24 +231,52 @@ def workflow_content(content: bytes, root: Path, workflow: str) -> bytes:
         if heading:
             sections = [(level, title) for level, title in sections if level < len(heading[1])]
             sections.append((len(heading[1]), heading[2]))
-        if any(title in EXECUTION_SECTIONS for _, title in sections):
+        scope = tuple(title for level, title in sections if level >= 2)
+        result = line if was_fenced or fence else progress_line(line.rstrip("\r\n"), scope, root, workflow)
+        if result.strip() or was_fenced or fence:
+            kept.append((scope, result.rstrip() if not (was_fenced or fence) else result))
+    return canonical_bytes(kept)
+
+
+def spec_map_status(match: re.Match[str]) -> str:
+    value = match[2].rstrip()
+    if normalize_status(value) == "missing-state":
+        return match[0]
+    return match[1] + '""' + match[2][len(value):] + match[3]
+
+
+def map_navigation(content: str, expected: dict[str, frozenset[str]]) -> bytes:
+    zone = None
+    fence = None
+    kept = []
+    for raw in content.splitlines(keepends=True):
+        line = raw.rstrip("\r\n")
+        was_fenced = fence is not None
+        fence = next_fence(fence, raw)
+        if was_fenced or fence:
+            kept.append(raw)
             continue
-        kept.append(line if was_fenced or fence else progress_line(line, sections, root, workflow))
-    # The no-anchor sweep writer adds a blank separator at EOF. It is not a
-    # planning input; preserve blank lines inside an unfinished code fence.
-    while kept and not fence and not kept[-1].strip():
-        kept.pop()
-    return "".join(kept).encode("utf-8")
+        starts = {value: key for source in (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS)
+                  for key, value in source.items()}
+        if line in starts:
+            if zone is not None:
+                return content.encode("utf-8")
+            zone = starts[line]
+        elif zone is not None and line == SPEC_INDEX_ENDS[zone]:
+            zone = None
+        elif line.strip() and (zone is None or line not in expected[zone]):
+            kept.append(line)
+    return content.encode("utf-8") if zone is not None else canonical_bytes(kept)
 
 
-def spec_map_content(content: bytes) -> bytes:
+def spec_map_content(content: bytes, root: Path, feature: str) -> bytes:
     text = content.decode("utf-8")
     frontmatter = re.match(r"\A---\r?\n(.*?)\r?\n---(?=\r?\n|\Z)", text, re.DOTALL)
-    if frontmatter is None:
-        return content
-    status = r"(?m)^(status:[ \t]*)(['\"]?)(?:pending|in_progress|blocked|failed|complete|archived|)\2(?=[ \t]*(?:#|$))"
-    normalized_frontmatter = re.sub(status, r'\1""', frontmatter[1])
-    return (text[:frontmatter.start(1)] + normalized_frontmatter + text[frontmatter.end(1):]).encode("utf-8")
+    if frontmatter is not None:
+        normalized_frontmatter = re.sub(r"(?m)^(status:[ \t]*)([^\r\n#]*)(.*)$", spec_map_status, frontmatter[1])
+        text = text[:frontmatter.start(1)] + normalized_frontmatter + text[frontmatter.end(1):]
+    expected = spec_index_progress(root, feature) if "<!-- GENERATED:" in text else {}
+    return map_navigation(text, expected)
 
 
 def normalized(name: str, content: bytes, workflow: str, feature: str, root: Path) -> bytes:
@@ -110,7 +285,7 @@ def normalized(name: str, content: bytes, workflow: str, feature: str, root: Pat
     if name == workflow:
         return workflow_content(content, root, workflow)
     if name == feature + "/SPEC-MOC.md":
-        return spec_map_content(content)
+        return spec_map_content(content, root, feature)
     return content
 
 

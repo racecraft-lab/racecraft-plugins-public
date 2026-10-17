@@ -2,6 +2,7 @@
 """Planning approval at the portable runner request seam."""
 import json
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,6 +15,9 @@ from test_result import run_counted
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 from speckit_pro_runner.formal.evidence import write_checkpoint
+from speckit_pro_runner.helpers import planning_approval as approval_owner
+from speckit_pro_runner.helpers.read_only import render_spec_index
+from speckit_pro_runner.workflow_stage import AUTOPILOT_STATUS_VALUES
 
 
 ASSURANCE_DOCUMENTS = (
@@ -37,6 +41,7 @@ UNRELATED_NEGATIONS = tuple((word, separator) for word in ("No", "not", "never",
 class PlanningApprovalFixture(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        subprocess.run(["git", "init", "--quiet", str(self.root)], check=True, capture_output=True)
         (self.root / ".specify").mkdir()
         self.runner_root = Path(__file__).resolve().parents[3] / "speckit-pro"
         self.feature = self.root / "specs/demo"
@@ -145,7 +150,7 @@ class PlanningMeaningTest(PlanningApprovalFixture):
         path.write_text("## Success Criteria\n- [ ] Contract changed\n")
         self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
         path.write_text("## Success Criteria\n- [x] Contract correct\n")
-        self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
+        self.assertEqual(self.call()["data"]["manifest_digest"], before)
 
     def test_prompt_fences_do_not_hide_planning_inputs(self):
         path = self.feature / "workflow.md"
@@ -307,7 +312,7 @@ class WorkflowFixture(PlanningApprovalFixture):
 class WorkflowPlanningApprovalTest(WorkflowFixture):
     def test_lowercase_planning_checkbox_state_invalidates_approval(self):
         choices = ("## Security plan\n- [x] Require review\n",
-                   "## Success Criteria\n  - [x] Require review\n",
+                   "## Security checklist\n  - [x] Require review\n",
                    "## Project Commands\n- [x] Require review\n")
         for before in choices:
             with self.subTest(workflow=before):
@@ -325,9 +330,9 @@ class WorkflowPlanningApprovalTest(WorkflowFixture):
                                 "## Deployment plan\n- [X] Require review\n", preserves=True)
 
     def test_execution_rows_preserve_approval_but_not_a_choice_flip(self):
-        rows = ((f"| **{field}** | pending |\n", "pending", "updated") for field in ("Stage", "Draft PR"))
-        sections = ((f"## {heading}\n- [ ] Work\n### Details\nPending\n", "[ ]", "[x]")
-                    for heading in ("Implementation Progress", "Feedback Sweep Log"))
+        rows = (("## Basic Information\n| **Stage** | plan |\n", "plan", "implement"),
+                ("## Basic Information\n| **Draft PR** | [#42](https://github.com/org/repo/pull/42) |\n", "42", "43"))
+        sections = (("## Implementation Progress\n- [ ] Work\n", "[ ]", "[x]"),)
         for before, old, new in (*rows, *sections):
             with self.subTest(workflow=before):
                 self.assertWorkflowEdit(before, before.replace(old, new), preserves=True)
@@ -367,7 +372,7 @@ class DeclaredProgressTest(WorkflowFixture):
 
     def test_lesson_bullet_preserves_approval(self):
         self.assertTemplateEdit("### What Worked Well\n\n-\n",
-                                "### What Worked Well\n\n-\n- Small batches worked well.\n", preserves=True)
+                                "### What Worked Well\n\n-\n- Progress: lessons; evidence=specs/demo/.process/lessons.json\n", preserves=True)
 
     def test_spec_map_status_preserves_approval(self):
         before = self.template("spec-moc-template.md")
@@ -381,7 +386,7 @@ class DeclaredProgressTest(WorkflowFixture):
         path.write_text(before)
         recorded = self.call("record", "apply", approval=self.approval())
         self.assertEqual(recorded["status"], "ok", recorded)
-        path.write_text(before + "\n## Feedback Sweep Log\n\n| Comment | Result |\n")
+        path.write_text(before + "\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n")
         self.assertEqual(self.call()["data"]["manifest_digest"], recorded["data"]["record"]["manifest_digest"])
         self.assertEqual(self.call("verify")["status"], "ok")
 
@@ -451,8 +456,93 @@ class PlanningNeighborsTest(WorkflowFixture):
         self.assertWorkflowEdit(before, before.replace("Require review", "Skip review"), name="SPEC-MOC.md")
 
 
+class InventoryProgressTest(PlanningApprovalFixture):
+    def test_spec_map_writer_progress_preserves_approval_but_edited_navigation_does_not(self):
+        path = self.feature / "SPEC-MOC.md"
+        path.write_text("---\nstructureVersion: 1\nstatus: pending\n---\n# Map\n")
+        rendered, _ = render_spec_index(self.root)
+        self.assertEqual(len(rendered), 1)
+        path.write_text(rendered[0].rendered)
+        before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
+        process = self.feature / ".process"
+        process.mkdir()
+        (process / "prs.json").write_text(json.dumps({"schemaVersion": 2, "records": [{
+            "review_order": 1, "slice_id": "us1", "pr_number": 42, "status": "open",
+            "branch": "feature/demo", "base_branch": "main", "head_sha": "a" * 40,
+            "declared_files": ["src/demo.py"], "verification_evidence": "specs/demo/.process/result.json"}]}))
+        rendered, _ = render_spec_index(self.root)
+        path.write_text(rendered[0].rendered)
+        self.assertNotEqual(rendered[0].original, rendered[0].rendered)
+        self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+        for text in ("PR#42", "[spec.md]"):
+            with self.subTest(text=text):
+                self.assertIn(text, rendered[0].rendered)
+                path.write_text(rendered[0].rendered.replace(text, "Bypass authentication"))
+                self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+
+    def test_every_declared_write_preserves_the_revision(self):
+        cases = json.loads((Path(__file__).parent / "fixtures/planning-progress.json").read_text())
+        for case in cases:
+            with self.subTest(region=case["region"], before=case["before"]):
+                self.assertNotEqual(case["before"], case["after"])
+                path = self.feature / case["file"]
+                path.write_text(case["before"])
+                before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
+                path.write_text(case["after"])
+                self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+
+    def test_planning_text_inside_every_progress_region_remains_bound(self):
+        cases = json.loads((Path(__file__).parent / "fixtures/planning-progress.json").read_text())
+        for case in cases:
+            with self.subTest(region=case["region"], after=case["after"]):
+                self.assertNotEqual(case["after"], case["planning"])
+                path = self.feature / case["file"]
+                path.write_text(case["after"])
+                before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
+                path.write_text(case["planning"])
+                self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+
+    def test_reader_status_vocabulary_preserves_the_revision(self):
+        path = self.feature / "workflow.md"
+        template = "## Workflow Overview\n| Implement | `/speckit-implement` | %s | |\n"
+        path.write_text(template % "Pending")
+        before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
+        for status in AUTOPILOT_STATUS_VALUES:
+            with self.subTest(status=status):
+                path.write_text(template % status)
+                self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+
+    def test_protocol_implement_writes_are_owned_in_code_and_exercised(self):
+        root = Path(__file__).resolve().parents[3]
+        protocol = (root / "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md").read_text()
+        # Every Implement row is checked, including an added row at any position.
+        writes = set(re.findall(r"^\| Implement \| `([^`]+)` \|", protocol, re.MULTILINE))
+        self.assertTrue(writes, "protocol must enumerate the post-approval write contract")
+        self.assertEqual(len(writes), len(re.findall(r"^\| Implement \|", protocol, re.MULTILINE)))
+        self.assertEqual(re.findall(r"^\| \*\*Implement\*\* \|.*$", protocol, re.MULTILINE),
+                         ["| **Implement** | Every write is listed in the Implement write contract below. |"])
+        owned = set(getattr(approval_owner, "PROGRESS_WRITES", {}))
+        cases = json.loads((Path(__file__).parent / "fixtures/planning-progress.json").read_text())
+        self.assertEqual(writes, owned)
+        self.assertEqual(writes, {case["region"] for case in cases})
+
+
 
 class ShippedWorkflowTest(WorkflowFixture):
+    def test_shipped_hosts_apply_the_progress_contract(self):
+        cases = json.loads((Path(__file__).parent / "fixtures/planning-progress.json").read_text())
+        for host in ("claude", "codex"):
+            self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
+            for case in cases:
+                with self.subTest(host=host, region=case["region"]):
+                    path = self.feature / case["file"]
+                    path.write_text(case["before"])
+                    before = self.call()["data"]["manifest_digest"]
+                    path.write_text(case["after"])
+                    self.assertEqual(self.call()["data"]["manifest_digest"], before)
+                    path.write_text(case["planning"])
+                    self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
+
     def test_shipped_hosts_bind_every_workflow_variant(self):
         for host in ("claude", "codex"):
             self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
@@ -464,6 +554,7 @@ class ShippedWorkflowTest(WorkflowFixture):
 
 if __name__ == "__main__":
     cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, AssuranceGuardTest,
-             WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest, ShippedWorkflowTest)
+             WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest, InventoryProgressTest,
+             ShippedWorkflowTest)
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in cases)
     raise SystemExit(run_counted(suite, label="test-planning-approval"))

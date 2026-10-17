@@ -4501,6 +4501,16 @@ def _spec_index_rebuild_map(
     return newline.join(rebuilt) + newline
 
 
+def spec_index_progress(repo_root: Path, feature: str) -> dict[str, frozenset[str]]:
+    """Canonical feature-map output lines; authored text is never a match."""
+    spec_dir = repo_root / feature
+    return {
+        "index": frozenset(),
+        "prs": frozenset(_spec_index_render_prs(spec_dir, repo_root)),
+        "backlinks": frozenset(_spec_index_render_backlinks(spec_dir, repo_root)),
+    }
+
+
 def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool]:
     """Render every in-scope map in memory; never mutate the repository."""
 

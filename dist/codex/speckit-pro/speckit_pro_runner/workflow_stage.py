@@ -79,9 +79,8 @@ def stage_args_error(message: str) -> dict[str, Any]:
     return {"stage": None, "from_phase": None, "error": message}
 
 
-# The terminal half of the closed phase-status vocabulary the shipped
-# phase-coverage validator publishes; the new unit test locks the two together so
-# neither can drift alone.
+# One closed phase-status vocabulary shared by readers, validation, and the
+# planning progress projection.
 AUTOPILOT_TERMINAL_STATUSES = frozenset({
     "Complete",
     "✅ Complete",

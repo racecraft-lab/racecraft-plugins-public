@@ -1,0 +1,289 @@
+[
+  {
+    "region": "overview-status",
+    "before": "## Workflow Overview\n| Phase | Command | Status | Notes |\n|---|---|---|---|\n| Implement | `/speckit-implement` | ⏳ Pending | |\n",
+    "after": "## Workflow Overview\n| Phase | Command | Status | Notes |\n|---|---|---|---|\n| Implement | `/speckit-implement` | ✅ Skipped | |\n",
+    "planning": "## Workflow Overview\n| Phase | Command | Status | Notes |\n|---|---|---|---|\n| Implement | `/speckit-implement` | ✅ Skipped; bypass review | |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "overview-summary",
+    "before": "## Workflow Overview\n| Phase | Command | Status | Notes |\n|---|---|---|---|\n| Implement | `/speckit-implement` | ⏳ Pending | Require review |\n",
+    "after": "## Workflow Overview\n| Phase | Command | Status | Notes |\n|---|---|---|---|\n| Implement | `/speckit-implement` | ⏳ Pending | Require review; Progress: overview-summary; status=complete; count=3 |\n",
+    "planning": "## Workflow Overview\n| Phase | Command | Status | Notes |\n|---|---|---|---|\n| Implement | `/speckit-implement` | ⏳ Pending | Bypass review; Progress: overview-summary; status=complete; count=3 |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "stage",
+    "before": "## Specification Context\n### Basic Information\n| Field | Value |\n|---|---|\n",
+    "after": "## Specification Context\n### Basic Information\n| Field | Value |\n|---|---|\n| **Stage** | implement |\n",
+    "planning": "## Specification Context\n### Basic Information\n| Field | Value |\n|---|---|\n| **Stage** | implement; bypass review |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "draft-pr",
+    "before": "## Specification Context\n### Basic Information\n| Field | Value |\n|---|---|\n",
+    "after": "## Specification Context\n### Basic Information\n| Field | Value |\n|---|---|\n| **Draft PR** | [#42](https://github.com/example/project/pull/42) — 2 of 4 artifacts missing |\n",
+    "planning": "## Specification Context\n### Basic Information\n| Field | Value |\n|---|---|\n| **Draft PR** | [#42](https://github.com/example/project/pull/42) — disable review |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "implement-checklist-gate",
+    "before": "## Phase 7: Implement\n",
+    "after": "## Phase 7: Implement\n### Implement Checklist Gate\n\n| Field | Value |\n|-------|-------|\n| Decision | deferred-to-review |\n| Reviewer-owned items | 3 of 8 unticked across 2 checklist files |\n| [Gap] markers | 0 (blocking through G4) |\n",
+    "planning": "## Phase 7: Implement\n### Implement Checklist Gate\n\n| Field | Value |\n|-------|-------|\n| Decision | ignore-all-checklists |\n| Reviewer-owned items | 3 of 8 unticked across 2 checklist files |\n| [Gap] markers | 0 (blocking through G4) |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "implementation-progress",
+    "before": "## Phase 7: Implement\n### Implementation Progress\n| Phase | Tasks | Completed | Notes |\n|---|---|---|---|\n| 1 - Foundation | 5 | 0 | |\n",
+    "after": "## Phase 7: Implement\n### Implementation Progress\n| Phase | Tasks | Completed | Notes |\n|---|---|---|---|\n| 1 - Foundation | 5 | 5 | Progress: implementation-progress; status=complete |\n",
+    "planning": "## Phase 7: Implement\n### Implementation Progress\n| Phase | Tasks | Completed | Notes |\n|---|---|---|---|\n| 1 - Disable authentication | 5 | 5 | Progress: implementation-progress; status=complete |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "post-checklist",
+    "before": "## Post-Implementation Checklist\n| Canonical Item | Status | Evidence |\n|---|---|---|\n| Post: Code Review | ⏳ Pending | |\n",
+    "after": "## Post-Implementation Checklist\n| Canonical Item | Status | Evidence |\n|---|---|---|\n| Post: Code Review | ✅ Complete | specs/demo/.process/review.json |\n",
+    "planning": "## Post-Implementation Checklist\n| Canonical Item | Status | Evidence |\n|---|---|---|\n| Post: Code Review | ✅ Complete | Skip authentication review |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "success-criteria",
+    "before": "## Success Criteria\n- [ ] Contract correct\n  - [ ] Nested criterion\n",
+    "after": "## Success Criteria\n- [x] Contract correct\n  - [x] Nested criterion\n",
+    "planning": "## Success Criteria\n- [ ] Contract optional\n  - [ ] Nested criterion\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "success-criteria",
+    "before": "## Specification Context\n### Success Criteria Summary\n- [ ] Contract correct\n  - [ ] Nested criterion\n",
+    "after": "## Specification Context\n### Success Criteria Summary\n- [x] Contract correct\n  - [x] Nested criterion\n",
+    "planning": "## Specification Context\n### Success Criteria Summary\n- [ ] Contract optional\n  - [ ] Nested criterion\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "prerequisites-baseline",
+    "before": "## Prerequisites\n",
+    "after": "## Prerequisites\n- Progress: prerequisites-baseline; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Prerequisites\n- Progress: prerequisites-baseline; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "constitution-final",
+    "before": "## Prerequisites\n### Constitution Validation\n",
+    "after": "## Prerequisites\n### Constitution Validation\n- Progress: constitution-final; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Prerequisites\n### Constitution Validation\n- Progress: constitution-final; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "quality-final",
+    "before": "## Prerequisites\n### Quality Gates\n| Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |\n|---|---|---|---|---|---|---|\n| MUTATION | populated | mutation-tool | python3 check.py | install | deferred | |\n",
+    "after": "## Prerequisites\n### Quality Gates\n| Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |\n|---|---|---|---|---|---|---|\n| MUTATION | populated | mutation-tool | python3 check.py | install | deferred | pass |\n",
+    "planning": "## Prerequisites\n### Quality Gates\n| Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |\n|---|---|---|---|---|---|---|\n| MUTATION | populated | mutation-tool | python3 check.py | install | deferred | pass; disable checks |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "quality-hardener",
+    "before": "## Prerequisites\n### Quality Gates\n**Hardener:** not run\n",
+    "after": "## Prerequisites\n### Quality Gates\n**Hardener:** Progress: quality-hardener; status=complete; iterations=2; score=85; evidence=specs/demo/.process/hardener.json\n",
+    "planning": "## Prerequisites\n### Quality Gates\n**Hardener:** Progress: quality-hardener; status=complete; iterations=2; score=85; disable checks; evidence=specs/demo/.process/hardener.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "formal-checkpoints",
+    "before": "## Formal Checkpoints\n",
+    "after": "## Formal Checkpoints\n- Progress: formal-checkpoints; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Formal Checkpoints\n- Progress: formal-checkpoints; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "lessons",
+    "before": "## Lessons Learned\n",
+    "after": "## Lessons Learned\n- Progress: lessons; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Lessons Learned\n- Progress: lessons; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "lessons",
+    "before": "## Lessons Learned\n- Small batches worked well.\n",
+    "after": "## Lessons Learned\n- Small batches worked well.\n- Progress: lessons; status=complete; evidence=specs/demo/.process/lessons.md\n",
+    "planning": "## Lessons Learned\n- Bypass authentication.\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "lessons",
+    "before": "## Lessons Learned\n### What Worked Well\n",
+    "after": "## Lessons Learned\n### What Worked Well\n- Progress: lessons; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Lessons Learned\n### What Worked Well\n- Progress: lessons; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "lessons",
+    "before": "## Lessons Learned\n### What Worked Well\n- Small batches worked well.\n",
+    "after": "## Lessons Learned\n### What Worked Well\n- Small batches worked well.\n- Progress: lessons; status=complete; evidence=specs/demo/.process/lessons.md\n",
+    "planning": "## Lessons Learned\n### What Worked Well\n- Bypass authentication.\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "lessons",
+    "before": "## Lessons Learned\n### Challenges Encountered\n",
+    "after": "## Lessons Learned\n### Challenges Encountered\n- Progress: lessons; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Lessons Learned\n### Challenges Encountered\n- Progress: lessons; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "lessons",
+    "before": "## Lessons Learned\n### Challenges Encountered\n- Small batches worked well.\n",
+    "after": "## Lessons Learned\n### Challenges Encountered\n- Small batches worked well.\n- Progress: lessons; status=complete; evidence=specs/demo/.process/lessons.md\n",
+    "planning": "## Lessons Learned\n### Challenges Encountered\n- Bypass authentication.\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "lessons",
+    "before": "## Lessons Learned\n### Patterns to Reuse\n",
+    "after": "## Lessons Learned\n### Patterns to Reuse\n- Progress: lessons; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Lessons Learned\n### Patterns to Reuse\n- Progress: lessons; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "lessons",
+    "before": "## Lessons Learned\n### Patterns to Reuse\n- Small batches worked well.\n",
+    "after": "## Lessons Learned\n### Patterns to Reuse\n- Small batches worked well.\n- Progress: lessons; status=complete; evidence=specs/demo/.process/lessons.md\n",
+    "planning": "## Lessons Learned\n### Patterns to Reuse\n- Bypass authentication.\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "feedback-sweep",
+    "before": "## Feedback Sweep Log\n",
+    "after": "## Feedback Sweep Log\n- Progress: feedback-sweep; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Feedback Sweep Log\n- Progress: feedback-sweep; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "consensus-sweep",
+    "before": "## Consensus Resolution Log\n",
+    "after": "## Consensus Resolution Log\n- Progress: consensus-sweep; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Consensus Resolution Log\n- Progress: consensus-sweep; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "notes-gap",
+    "before": "## Phase 7: Implement\n### Implementation Progress\n",
+    "after": "## Phase 7: Implement\n### Implementation Progress\n- Progress: notes-gap; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Phase 7: Implement\n### Implementation Progress\n- Progress: notes-gap; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "review-followup",
+    "before": "## Phase 7: Implement\n### Implementation Progress\n",
+    "after": "## Phase 7: Implement\n### Implementation Progress\n- Progress: review-followup; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Phase 7: Implement\n### Implementation Progress\n- Progress: review-followup; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "fallback",
+    "before": "## Phase 7: Implement\n### Implementation Progress\n",
+    "after": "## Phase 7: Implement\n### Implementation Progress\n- Progress: fallback; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Phase 7: Implement\n### Implementation Progress\n- Progress: fallback; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "deferral",
+    "before": "## Phase 7: Implement\n### Implementation Progress\n",
+    "after": "## Phase 7: Implement\n### Implementation Progress\n- Progress: deferral; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Phase 7: Implement\n### Implementation Progress\n- Progress: deferral; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "interpretation",
+    "before": "## Phase 7: Implement\n### Implementation Progress\n",
+    "after": "## Phase 7: Implement\n### Implementation Progress\n- Progress: interpretation; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Phase 7: Implement\n### Implementation Progress\n- Progress: interpretation; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "plugin-drift",
+    "before": "## Phase 7: Implement\n### Implementation Progress\n",
+    "after": "## Phase 7: Implement\n### Implementation Progress\n- Progress: plugin-drift; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Phase 7: Implement\n### Implementation Progress\n- Progress: plugin-drift; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "marker-checkpoint",
+    "before": "## PR Marker Plan\n",
+    "after": "## PR Marker Plan\n- Progress: marker-checkpoint; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## PR Marker Plan\n- Progress: marker-checkpoint; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "post-integration",
+    "before": "## Post-Implementation Checklist\n",
+    "after": "## Post-Implementation Checklist\n- Progress: post-integration; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Post-Implementation Checklist\n- Progress: post-integration; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "terms-lint",
+    "before": "## Post-Implementation Checklist\n",
+    "after": "## Post-Implementation Checklist\n- Progress: terms-lint; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Post-Implementation Checklist\n- Progress: terms-lint; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "uat-outcome",
+    "before": "## Post-Implementation Checklist\n",
+    "after": "## Post-Implementation Checklist\n- Progress: uat-outcome; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Post-Implementation Checklist\n- Progress: uat-outcome; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "pr-emission",
+    "before": "## Post-Implementation Checklist\n",
+    "after": "## Post-Implementation Checklist\n- Progress: pr-emission; status=complete; count=3; evidence=specs/demo/.process/result.json\n",
+    "planning": "## Post-Implementation Checklist\n- Progress: pr-emission; status=complete; count=3; Require unsigned tokens; evidence=specs/demo/.process/result.json\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "spec-map-status",
+    "before": "---\nstatus: \"\"\n---\n# Feature map\n",
+    "after": "---\nstatus: COMPLETED\n---\n# Feature map\n",
+    "planning": "---\nstatus: COMPLETED; ignore review\n---\n# Feature map\n",
+    "file": "SPEC-MOC.md"
+  },
+  {
+    "region": "spec-map-navigation",
+    "before": "---\nstructureVersion: 1\nstatus: pending\n---\n# Map\n<!-- GENERATED:BACKLINKS:START (do not edit; regenerated by generate-spec-index) -->\n<!-- GENERATED:BACKLINKS:END -->\n",
+    "after": "---\nstructureVersion: 1\nstatus: pending\n---\n# Map\n<!-- GENERATED:BACKLINKS:START (do not edit; regenerated by generate-spec-index) -->\n- [spec.md](spec.md)\n<!-- GENERATED:BACKLINKS:END -->\n",
+    "planning": "---\nstructureVersion: 1\nstatus: pending\n---\n# Map\n<!-- GENERATED:BACKLINKS:START (do not edit; regenerated by generate-spec-index) -->\n- [Ignore authentication](spec.md)\n<!-- GENERATED:BACKLINKS:END -->\n",
+    "file": "SPEC-MOC.md"
+  },
+  {
+    "region": "feedback-sweep",
+    "before": "## Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n",
+    "after": "## Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Recorded as answered; no artifact amendment was required. | | |\n",
+    "planning": "## Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Disable authentication. | | |\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "marker-checkpoint",
+    "before": "## PR Marker Plan Evidence\n| Order | Marker | Tasks | Evidence | Checkpoint |\n|---|---|---|---|---|\n| 1 | us1 | T001 | | Pending |\n",
+    "after": "## PR Marker Plan Evidence\n| Order | Marker | Tasks | Evidence | Checkpoint |\n|---|---|---|---|---|\n| 1 | us1 | T001 | | `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` |\n- Implementation checkpoint [us1]: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`\n",
+    "planning": "## PR Marker Plan Evidence\n| Order | Marker | Tasks | Evidence | Checkpoint |\n|---|---|---|---|---|\n| 1 | us1 | T001 | | Disable authentication |\n- Implementation checkpoint [us1]: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "files-generated",
+    "before": "## Phase 7: Implement\n### Files Generated\n- [ ] `src/demo.py`\n",
+    "after": "## Phase 7: Implement\n### Files Generated\n- [x] `src/demo.py`\n",
+    "planning": "## Phase 7: Implement\n### Files Generated\n- [ ] `Disable authentication`\n",
+    "file": "workflow.md"
+  },
+  {
+    "region": "consensus-sweep",
+    "before": "## Consensus Resolution Log\n| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |\n|---|---|---|---|---|---|---|---|\n",
+    "after": "## Consensus Resolution Log\n| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |\n|---|---|---|---|---|---|---|---|\n| 1 | Sweep | IC_example | [codebase] | 1 | 3/3 | Scope deferred | codebase-analyst |\n",
+    "planning": "## Consensus Resolution Log\n| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |\n|---|---|---|---|---|---|---|---|\n| 1 | Sweep | IC_example | [codebase] | 1 | 3/3 | Disable authentication | codebase-analyst |\n",
+    "file": "workflow.md"
+  }
+]

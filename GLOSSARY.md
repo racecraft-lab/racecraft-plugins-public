@@ -83,7 +83,7 @@ The protected mechanism that establishes a human's final plan approval and its c
 _Avoid_: signing prompt, transcript proof, repository approval flag
 
 **Planning manifest**:
-The runner-owned inventory and content digests of authoritative planning inputs. Its digest identifies a planning revision; declared execution bookkeeping does not change it.
+The runner-owned inventory and content digests of authoritative planning inputs. Its digest identifies a planning revision; typed execution bookkeeping does not change it. Criterion text and planning notes remain part of that revision even when they appear beside progress; a Success Criteria tick records completion rather than a planning choice.
 
 **Plan approval record**:
 The record of a human's explicit approval of one full planning revision after all planning findings have been fixed and checked. Its assurance is `recorded`: it holds the confirmation reference without defending against an agent with the operator's file access. It permits that revision to be built but supplies neither security consent nor proof that implementation work is complete.

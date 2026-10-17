@@ -191,6 +191,12 @@ tail (15 → 16 → 17 → 18 → 19, with the supporting rows in plan order).
 
 ## Post Rules
 
+Workflow writes use the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+Keep the full finding, action, or diagnostic in its execution evidence record;
+put the typed result and evidence reference in the workflow cell. Preserve
+existing checklist requirements and planning notes. This also applies to
+integration, hardener, terms-lint, UAT, and PR-emission summaries below.
+
 - Extension commands run in `phase-executor` with the exact `$speckit-*`
   skill sigil and SPEC context.
 - Built-in verification, git, push, PR creation, and review polling stay in the
