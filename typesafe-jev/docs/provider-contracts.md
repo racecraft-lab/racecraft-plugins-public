@@ -237,7 +237,7 @@ backends get base64 JSON.
 Asset keys are minted from the caller's name. TypeSafe treats a reference as
 plain text and will match a short name inside an ordinary word (`cat` inside
 `category`). The minted key is long enough that this does not happen, and it
-is lengthened again if that token already occurs in the text.
+is re-hashed once if that token already occurs in the text.
 
 Local checks, before any request is billed. Errors name `images.<name>` only
 when the name is at most 128 characters, trimmed, and free of newlines. They

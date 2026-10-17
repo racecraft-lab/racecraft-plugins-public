@@ -80,5 +80,15 @@ func runWithFallback(ctx context.Context, c *Client, in evaluateIn) ([]byte, err
 		fmt.Fprintf(log, "evaluate: %s refused or failed the call (%s); using the %s fallback for the rest of this session\n",
 			c.Provider.Name, reason, c.Fallback.Provider.Name)
 	}
-	return runOn(ctx, c.Fallback, onFallback)
+	body, fallbackErr := runOn(ctx, c.Fallback, onFallback)
+	// The backends' local rules are not identical: box models, image side
+	// limits, and context budgets differ. A local refusal here comes after the
+	// primary was called, so it must not read as "rejected before any network
+	// call". The primary's failure stays the error, and its class decides the
+	// exit code.
+	var local *requestInvalidError
+	if errors.As(fallbackErr, &local) {
+		return nil, fmt.Errorf("%w; the %s fallback cannot take this request: %v", err, c.Fallback.Provider.Name, local)
+	}
+	return body, fallbackErr
 }

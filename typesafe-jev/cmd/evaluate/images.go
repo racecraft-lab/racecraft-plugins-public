@@ -171,6 +171,12 @@ func requestHasBox(in evaluateIn) bool {
 // image is referenced. File bytes are checked in loadImages, after this, so a
 // request that is not allowed never opens a path.
 func validateImageUse(spec ProviderSpec, in evaluateIn) error {
+	// Every request, with or without an images map: a raw image_url part is a
+	// picture that skipped JEV_IMAGES and every local check, and OpenRouter
+	// would send it on.
+	if err := rejectRawImageParts(in); err != nil {
+		return err
+	}
 	hasBox := requestHasBox(in)
 	if len(in.Images) == 0 && !hasBox {
 		return nil
@@ -264,6 +270,24 @@ func validateImageReferences(in evaluateIn) error {
 	return nil
 }
 
+// rejectRawImageParts refuses an image_url part the caller wrote by hand. Only
+// the encoder builds one, from a file the local checks have passed.
+func rejectRawImageParts(in evaluateIn) error {
+	state, questions, err := imageTrees(in)
+	if err != nil {
+		return err
+	}
+	_, _, err = rewriteImageSites(state, questions, func(path string, v any) (any, bool, error) {
+		if m, ok := v.(map[string]any); ok {
+			if typ, _ := m["type"].(string); typ == "image_url" {
+				return nil, false, fmt.Errorf("%s is an image_url part; name the file in images and reference it from state, instructions, or criteria", path)
+			}
+		}
+		return nil, false, nil
+	})
+	return err
+}
+
 func imageTrees(in evaluateIn) (any, map[string]any, error) {
 	state, err := toTree(in.State)
 	if err != nil {
@@ -272,6 +296,11 @@ func imageTrees(in evaluateIn) (any, map[string]any, error) {
 	rawQuestions, err := toTree(in.Questions)
 	if err != nil {
 		return nil, nil, err
+	}
+	if rawQuestions == nil {
+		// A nil map marshals as null. validateRequest refuses it; here it
+		// simply has no sites to walk.
+		return state, map[string]any{}, nil
 	}
 	questions, ok := rawQuestions.(map[string]any)
 	if !ok {
@@ -301,10 +330,19 @@ func loadImages(spec ProviderSpec, sources map[string]imageSource, state any, qu
 		return nil, err
 	}
 	loaded := make(map[string]preparedImage, len(sources))
+	total := 0
 	for _, name := range sortedKeys(sources) {
 		img, err := loadOneImage(name, sources[name], spec.ImageLimits, haystack)
 		if err != nil {
 			return nil, err
+		}
+		// Every image is in the body at least once as base64, so a total that
+		// encodes past the request cap fails it anyway. Stopping here keeps
+		// many files, or one file named many times, from all being held,
+		// encoded, and marshalled first.
+		total += len(img.data)
+		if base64.StdEncoding.EncodedLen(total) > maxRequestBody {
+			return nil, fmt.Errorf("images together are over the %d byte request limit once base64-encoded; send fewer or smaller images", maxRequestBody)
 		}
 		loaded[name] = img
 	}
@@ -433,8 +471,8 @@ func canonicalFormat(s string) (string, bool) {
 }
 
 // referenceToken is the asset key written into a TypeSafe body. It is hashed
-// from the caller's name so tests and retries are stable, and it is lengthened
-// when that token already occurs in the text, which would make TypeSafe
+// from the caller's name so tests and retries are stable, and it is re-hashed
+// once when that token already occurs in the text, which would make TypeSafe
 // replace a string the caller did not mean as a reference.
 func referenceToken(name, haystack string) string {
 	sum := sha256.Sum256([]byte("jev-image-ref\x00" + name))
@@ -491,20 +529,23 @@ func countImageUses(state any, questions map[string]any, sources map[string]imag
 }
 
 func replacementFor(spec ProviderSpec, loaded map[string]preparedImage) func(string) any {
-	return func(name string) any {
-		img := loaded[name]
-		if spec.Name == "typesafe" {
-			return img.ref
-		}
+	if spec.Name == "typesafe" {
+		return func(name string) any { return loaded[name].ref }
+	}
+	// Encoded once per image, not once per reference. Every part that names
+	// the image shares the one string.
+	urls := make(map[string]string, len(loaded))
+	for name, img := range loaded {
 		media := "image/jpeg"
 		if img.format == "png" {
 			media = "image/png"
 		}
+		urls[name] = "data:" + media + ";base64," + base64.StdEncoding.EncodeToString(img.data)
+	}
+	return func(name string) any {
 		return map[string]any{
-			"type": "image_url",
-			"image_url": map[string]any{
-				"url": "data:" + media + ";base64," + base64.StdEncoding.EncodeToString(img.data),
-			},
+			"type":      "image_url",
+			"image_url": map[string]any{"url": urls[name]},
 		}
 	}
 }
@@ -521,17 +562,16 @@ func replaceVisit(path string, v any, sources map[string]imageSource, replace fu
 // string equal to a name, or an object whose only field is {"image": name}.
 // Substring matches are intentionally not references: TypeSafe would expand
 // them inside ordinary words, and OpenRouter would not see them as parts.
+// Raw image_url parts are refused earlier, by rejectRawImageParts.
 func imageUse(path string, v any, sources map[string]imageSource) (string, bool, error) {
 	switch val := v.(type) {
 	case map[string]any:
 		if name, ok := markerName(val); ok {
 			if _, exists := sources[name]; !exists {
-				return "", false, fmt.Errorf("%s names an image %q that was not provided", path, name)
+				// The path only: the marker's value is state content.
+				return "", false, fmt.Errorf("%s names an image that was not provided", path)
 			}
 			return name, true, nil
-		}
-		if typ, _ := val["type"].(string); typ == "image_url" {
-			return "", false, fmt.Errorf("%s is an image_url part; name the file in images and reference it from state, instructions, or criteria", path)
 		}
 		return "", false, nil
 	case string:
@@ -576,7 +616,11 @@ func rewriteImageSites(state any, questions map[string]any, visit func(string, a
 			}
 		}
 		if crit, ok := q["criteria"]; ok && crit != nil {
-			q["criteria"], err = rewriteValue(crit, visit, "questions."+id+".criteria")
+			// The criteria object itself is never visited: its keys are
+			// option names or true and false, so a one-option choice named
+			// "image" is an option, not an image marker. Its entries are.
+			root := "questions." + id + ".criteria"
+			q["criteria"], err = rewriteValue(crit, skipRoot(root, visit), root)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -584,6 +628,17 @@ func rewriteImageSites(state any, questions map[string]any, visit func(string, a
 		questions[id] = q
 	}
 	return state, questions, nil
+}
+
+// skipRoot wraps visit so the value at root is descended into but is never
+// itself a hit. Child paths are always longer than root.
+func skipRoot(root string, visit func(string, any) (any, bool, error)) func(string, any) (any, bool, error) {
+	return func(path string, v any) (any, bool, error) {
+		if path == root {
+			return nil, false, nil
+		}
+		return visit(path, v)
+	}
 }
 
 // rewriteValue returns the replacement when visit reports one, and otherwise

@@ -6,10 +6,12 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"hash/crc32"
 	"image"
 	"image/jpeg"
 	"image/png"
+	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -227,9 +229,12 @@ func TestImageErrorsHideBytesAndPaths(t *testing.T) {
 	err := validateRequest(spec, in)
 	if err == nil {
 		// Shape is valid; the decode failure is in the encoder, still local.
-		c := testClient(spec, httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-			t.Fatal("a bad image was posted")
-		})))
+		srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			// t.Error, not t.Fatal: a handler runs off the test goroutine.
+			t.Error("a bad image was posted")
+		}))
+		defer srv.Close()
+		c := testClient(spec, srv)
 		_, err = c.Evaluate(context.Background(), in)
 	}
 	if err == nil {
@@ -245,7 +250,9 @@ func TestImageErrorsHideBytesAndPaths(t *testing.T) {
 	if err != nil && strings.Contains(err.Error(), "not referenced") {
 		t.Fatal(err)
 	}
-	c := testClient(spec, httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer srv.Close()
+	c := testClient(spec, srv)
 	_, err = c.Evaluate(context.Background(), in)
 	if err == nil || strings.Contains(err.Error(), "SENTINEL-path-name") || strings.Contains(err.Error(), path) {
 		t.Fatalf("path leaked or request was sent: %v", err)
@@ -375,10 +382,68 @@ func TestImageReferenceFormsAndLimits(t *testing.T) {
 		in := imageRequest(pngBytes, "")
 		in.State = map[string]any{"photo": map[string]any{"image": "missing"}}
 		err := validateRequest(spec, in)
-		if err == nil || !strings.Contains(err.Error(), "missing") {
+		if err == nil || !strings.Contains(err.Error(), "state.photo") {
 			t.Fatalf("error = %v", err)
 		}
+		// The marker's value is state content. Errors name the path only.
+		if strings.Contains(err.Error(), "missing") {
+			t.Fatalf("error quoted the state value: %v", err)
+		}
 	})
+}
+
+// A hand-written image_url part skips JEV_IMAGES and every local check, so it
+// is refused whether or not the request has an images map.
+func TestRawImageURLRejectedWithoutImages(t *testing.T) {
+	var calls atomic.Int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.Write([]byte(noulOK))
+	}))
+	defer srv.Close()
+	part := map[string]any{"type": "image_url", "image_url": map[string]any{"url": "https://example.com/x.png"}}
+	for _, allow := range []bool{false, true} {
+		spec := providerAt("openrouter", srv.URL)
+		spec.AllowImages = allow
+		c := testClient(spec, srv)
+		in := evaluateIn{
+			State:     []any{part},
+			Questions: map[string]question{"present": {Type: typeNoul, Instructions: "i"}},
+		}
+		_, err := runEvaluate(context.Background(), c, in)
+		if err == nil || !strings.Contains(err.Error(), "image_url") {
+			t.Fatalf("JEV_IMAGES=%v: error = %v", allow, err)
+		}
+	}
+	if calls.Load() != 0 {
+		t.Fatalf("a raw image_url part was sent: %d requests", calls.Load())
+	}
+}
+
+// The criteria object is not a value position. A one-option choice whose
+// option is named "image" keeps its option; only the description is a site.
+func TestChoiceOptionNamedImageIsNotAMarker(t *testing.T) {
+	var body map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&body)
+		w.Write([]byte(`{"model":"m","usage":{"input_tokens":1,"output_tokens":1},"answers":{"present":{"type":"choice","choice":"image"}}}`))
+	}))
+	defer srv.Close()
+	c := testClient(withImages(providerAt("typesafe", srv.URL)), srv)
+	in := imageRequest(mustPNG(t, 280, 280), "")
+	in.Questions = map[string]question{
+		"present": {Type: typeChoice, Instructions: "which?", Criteria: map[string]any{"image": "door"}},
+	}
+	if _, err := runEvaluate(context.Background(), c, in); err != nil {
+		t.Fatal(err)
+	}
+	crit, ok := body["questions"].(map[string]any)["present"].(map[string]any)["criteria"].(map[string]any)
+	if !ok {
+		t.Fatalf("choice criteria was replaced: %#v", body["questions"])
+	}
+	if ref, _ := crit["image"].(string); !strings.HasPrefix(ref, "jevimg-") {
+		t.Fatalf("option description = %#v", crit["image"])
+	}
 }
 
 func TestImageDimensionsArePerBackend(t *testing.T) {
@@ -428,9 +493,11 @@ func TestAnimatedPNGAndFormatMismatchAreLocal(t *testing.T) {
 	pngBytes := mustPNG(t, 280, 280)
 	animated := insertPNGChunk(t, pngBytes, "acTL", []byte{0, 0, 0, 1, 0, 0, 0, 0})
 	in := imageRequest(animated, "")
-	c := testClient(spec, httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Error("animated png was posted")
-	})))
+	}))
+	defer srv.Close()
+	c := testClient(spec, srv)
 	if _, err := c.Evaluate(context.Background(), in); err == nil || !strings.Contains(err.Error(), "animated") {
 		t.Fatalf("error = %v", err)
 	}
@@ -481,9 +548,11 @@ func TestOversizedImageIsLocal(t *testing.T) {
 	in := imageRequest(nil, "")
 	in.Images = map[string]imageSource{"door": {DataBase64: strings.Repeat("A", base64.StdEncoding.EncodedLen(maxImageBytes)+4)}}
 	in.State = map[string]any{"photo": "door"}
-	c := testClient(spec, httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Error("oversized image was posted")
-	})))
+	}))
+	defer srv.Close()
+	c := testClient(spec, srv)
 	_, err := c.Evaluate(context.Background(), in)
 	if err == nil || !strings.Contains(err.Error(), "byte limit") {
 		t.Fatalf("error = %v", err)
@@ -695,6 +764,80 @@ func TestFallbackRebuildsTheOtherWireFormat(t *testing.T) {
 	}
 	if fallbackHeader.Get(headerDangerImages) != "" {
 		t.Fatal("openrouter fallback was sent the TypeSafe images header")
+	}
+}
+
+// The backends' local rules differ: TypeSafe's default model rejects box and
+// its side minimum is 280, not 256. When the fallback refuses a request the
+// primary failed on, the caller must see the primary's failure, not a local
+// rejection that claims no request was made.
+func TestFallbackLocalRefusalReportsPrimaryFailure(t *testing.T) {
+	primarySrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer primarySrv.Close()
+	var fallbackCalls atomic.Int64
+	fallbackSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fallbackCalls.Add(1)
+		w.Write([]byte(noulOK))
+	}))
+	defer fallbackSrv.Close()
+
+	box := imageRequest(mustPNG(t, 280, 280), "")
+	box.Model = "typesafe/jev-1.14"
+	box.Questions = map[string]question{"mug": {Type: typeBox, Instructions: "the mug"}}
+	narrow := imageRequest(mustPNG(t, 256, 320), "")
+
+	for name, in := range map[string]evaluateIn{"box on jev-latest": box, "256-pixel side": narrow} {
+		t.Run(name, func(t *testing.T) {
+			c := testClient(withImages(providerAt("openrouter", primarySrv.URL)), primarySrv)
+			c.MaxRetries = 0
+			c.Fallback = testClient(withImages(providerAt("typesafe", fallbackSrv.URL)), fallbackSrv)
+			c.Log = &bytes.Buffer{}
+			_, err := runEvaluate(context.Background(), c, in)
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+			var local *requestInvalidError
+			if errors.As(err, &local) {
+				t.Fatalf("a provider failure was reported as a local rejection: %v", err)
+			}
+			var status *statusErr
+			if !errors.As(err, &status) || status.Status != http.StatusServiceUnavailable {
+				t.Fatalf("the primary's failure is not in the error: %v", err)
+			}
+			if !strings.Contains(err.Error(), "fallback") {
+				t.Fatalf("the error does not say the fallback refused: %v", err)
+			}
+		})
+	}
+	if fallbackCalls.Load() != 0 {
+		t.Fatalf("the fallback was billed: %d", fallbackCalls.Load())
+	}
+}
+
+// Many images, or one file named many times, must be refused before their
+// bytes are all held, encoded, and marshalled only to fail the body cap.
+func TestImagesOverTheRequestCapFailBeforeEncoding(t *testing.T) {
+	img := image.NewNRGBA(image.Rect(0, 0, imageSideMax, imageSideMax))
+	// Noise, stored uncompressed: about 9.8 MB per file, under the 16 MiB
+	// file cap. Three of them base64-encode past the 32 MiB request cap.
+	rand.NewChaCha8([32]byte{}).Read(img.Pix)
+	var buf bytes.Buffer
+	if err := (&png.Encoder{CompressionLevel: png.NoCompression}).Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	data := b64(buf.Bytes())
+	in := evaluateIn{
+		State: []any{"a", "b", "c"},
+		Images: map[string]imageSource{
+			"a": {DataBase64: data}, "b": {DataBase64: data}, "c": {DataBase64: data},
+		},
+		Questions: map[string]question{"q": {Type: typeNoul, Instructions: "i"}},
+	}
+	_, _, err := encodeRequest(withImages(typesafeSpec), in)
+	if err == nil || !strings.Contains(err.Error(), "together") {
+		t.Fatalf("error = %v", err)
 	}
 }
 
