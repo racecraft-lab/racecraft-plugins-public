@@ -2710,7 +2710,7 @@ class FailurePathCall(NamedTuple):
     spec: Path
     workflow: Path
     now: float
-    reasons: list[str]
+    held: bool  # a clock or unknown-dispatch reason holds the run
 
 
 class _FailurePathAction(NamedTuple):
@@ -2760,12 +2760,12 @@ _ACTIONS = frozenset({"start", "status", "begin-verification", "complete", "reco
                       *FAILURE_PATH_ACTIONS})
 
 
-def run_failure_path(action: str, call: FailurePathCall, held: dict[str, Any]) -> dict[str, Any]:
-    """Run one failure-path action; `held` is the result while a clock or unknown-dispatch reason holds the run."""
+def run_failure_path(action: str, call: FailurePathCall, held_result: dict[str, Any]) -> dict[str, Any]:
+    """Run one failure-path action; `held_result` is what a held run reports instead."""
     entry = FAILURE_PATH_ACTIONS[action]
     if entry.check is not None:
         entry.check(call)
-    return held if call.reasons else entry.run(call)
+    return held_result if call.held else entry.run(call)
 
 
 class _Control(NamedTuple):
@@ -2868,7 +2868,7 @@ def _run_action(ctl: _Control, ledger: dict[str, Any], now: float, reasons: list
     if action in {"checkpoint", "pause", "resume"}:
         return checkpoint_or_wait(ledger, ctl.inputs, now), clock_reasons(ledger, now)
     if action in FAILURE_PATH_ACTIONS:
-        call = FailurePathCall(ctl.root, ledger, ctl.inputs, ctl.spec, ctl.workflow, now, reasons)
+        call = FailurePathCall(ctl.root, ledger, ctl.inputs, ctl.spec, ctl.workflow, now, bool(reasons))
         return run_failure_path(action, call, extra), reasons
     return (extra if reasons else _guarded_action(ctl, ledger, now)), reasons
 

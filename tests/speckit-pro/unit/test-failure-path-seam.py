@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ast
 import contextlib
+import copy
 import sys
 import tempfile
 import unittest
@@ -43,9 +44,9 @@ class FailurePathSeamTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root, self.ledger = self.enterContext(greenfield())
 
-    def call(self, reasons=(), **inputs):
+    def call(self, held=False, **inputs):
         return control.FailurePathCall(self.root, self.ledger, inputs, self.root / "spec.md",
-                                       self.root / "workflow.md", 1000.0, list(reasons))
+                                       self.root / "workflow.md", 1000.0, held)
 
     def test_the_table_names_exactly_the_failure_path_actions(self) -> None:
         self.assertEqual(set(control.FAILURE_PATH_ACTIONS), SEAM_ACTIONS)
@@ -54,17 +55,18 @@ class FailurePathSeamTests(unittest.TestCase):
 
     def test_a_reservation_is_made_through_the_seam(self) -> None:
         call = self.call(dispatch_id="fix-a", kind="corrective", failure_invariant="FR-001")
-        self.ledger["approved_invariants"] = ["FR-001"]
         result = control.run_failure_path("reserve", call, {})
         self.assertEqual(self.ledger["dispatches"]["fix-a"]["reservation_id"], result["reservation_id"])
         self.assertEqual(self.ledger["corrective_cycles"], 1)
 
     def test_a_held_run_skips_every_action_and_returns_the_held_result(self) -> None:
         held = {"blocked_by": ["u1"]}
-        call = self.call(("unknown_dispatch_blocks_unit",), dispatch_id="fix-a", kind="corrective",
-                         failure_invariant="FR-001")
-        self.assertIs(control.run_failure_path("reserve", call, held), held)
-        self.assertEqual(self.ledger["dispatches"], {})
+        inputs = {"dispatch_id": "fix-a", "kind": "corrective", "failure_invariant": "FR-001", "spec_file": "spec.md"}
+        for action in sorted(SEAM_ACTIONS):
+            before = copy.deepcopy(self.ledger)
+            with self.subTest(action=action):
+                self.assertIs(control.run_failure_path(action, self.call(True, **inputs), held), held)
+                self.assertEqual(self.ledger, before)
 
     def test_the_invariant_registry_is_frozen_once_and_validated_even_while_held(self) -> None:
         call = self.call(spec_file="spec.md")
@@ -73,20 +75,32 @@ class FailurePathSeamTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "already frozen"):
             control.run_failure_path("bind-invariants", call, {})
         with self.assertRaisesRegex(ValueError, "explicit spec_file"):
-            control.run_failure_path("bind-invariants", self.call(("clock_moved_backwards",)), {})
+            control.run_failure_path("bind-invariants", self.call(True), {})
 
     def test_failure_path_handlers_are_named_only_in_the_table(self) -> None:
         handlers = {"reserve", "authorize_corrective_retry", "authorize_corrective_continuation",
                     "authorize_corrective_exception", "reserve_class_correction", "begin_replan_epoch",
                     "begin_stage_epoch", "_freeze_invariants"}
-        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
-        table = next(node for node in tree.body if isinstance(node, (ast.Assign, ast.AnnAssign))
-                     and "FAILURE_PATH_ACTIONS" in ast.dump(node.targets[0] if isinstance(node, ast.Assign)
-                                                            else node.target))
-        inside = {id(node) for node in ast.walk(table)}
-        outside = sorted({node.id for node in ast.walk(tree)
-                          if isinstance(node, ast.Name) and node.id in handlers and id(node) not in inside})
+        outside = []
+        for path in sorted(SOURCE.parent.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            inside = {id(node) for stmt in tree.body if _is_table(stmt) for node in ast.walk(stmt)}
+            outside += [f"{path.name}:{node.lineno} {_name(node)}" for node in ast.walk(tree)
+                        if _name(node) in handlers and id(node) not in inside]
         self.assertEqual(outside, [])
+
+
+def _is_table(statement: ast.stmt) -> bool:
+    return isinstance(statement, ast.AnnAssign) and ast.unparse(statement.target) == "FAILURE_PATH_ACTIONS"
+
+
+def _name(node: ast.AST) -> str | None:
+    """The identifier a reference, import or attribute access names; None for any other node."""
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return node.name if isinstance(node, ast.alias) else None
 
 
 if __name__ == "__main__":
