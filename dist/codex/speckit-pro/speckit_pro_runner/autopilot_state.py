@@ -90,6 +90,6 @@ def mirror_execution_result(root: Path, workflow: str, result: dict[str, Any]) -
     state_file = str(Path(workflow).with_name("autopilot-state.json"))
     if not confined_path(root, state_file).exists():
         return
-    mirror = {key: result[key] for key in MIRROR_FIELDS}
-    mirror["run_id"] = result["ledger"]["run_id"]
-    update(root, state_file, lambda state: state.update(execution_control=mirror), workflow=workflow)
+    # Bind the result's ledger; refresh_run_facts then projects every mirror field from it.
+    binding = {"ledger_path": result["ledger_path"], "run_id": result["ledger"]["run_id"]}
+    update(root, state_file, lambda state: state.update(execution_control=binding), workflow=workflow)
