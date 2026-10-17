@@ -148,7 +148,7 @@ class ExecutionContractTests(unittest.TestCase):
                         self.assertTrue(f"`{field}`" in text, f"{relative} missing {field}")
                     self.assertTrue("bounded batches" in text, f"{relative} missing batch contract")
                     self.assertTrue("refresh" in text, f"{relative} missing refresh instruction")
-                    for rule in ("If a batch stays stuck", "phase-local", "answer_format: detailed",
+                    for rule in ("To inspect IDs outside a returned batch", "phase-local", "answer_format: detailed",
                                  "Independent units may continue when the runner permits"):
                         self.assertTrue(rule in text, f"{relative} missing recovery scope instruction: {rule}")
 

@@ -495,10 +495,11 @@ exact IDs in bounded batches alongside `unknown_dispatch_count` and
 retry the blocked action for the next batch. A count larger than its returned
 list means unresolved IDs remain.
 Independent units may continue when the runner permits their reserve.
-If a batch stays stuck, delegate a phase-local read-only `status` request with
-`answer_format: detailed` to inspect the remaining IDs. Preserve unresolved
+To inspect IDs outside a returned batch, delegate a phase-local read-only
+`status` request with `answer_format: detailed`. Preserve unresolved
 outcomes; reconcile and verify each affected unit before retrying its work.
-A corrective dispatch's scope is its failure family, so do not reserve one against a failure inside a
+A corrective dispatch's scope is its failure family, so do not reserve one
+against a failure inside a
 still-unknown unit. Never call this completion or a
 successful runtime measurement. Keep existing run status `in_progress` or
 `awaiting_review` as applicable and mirror the execution-control disposition;

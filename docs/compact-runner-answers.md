@@ -17,7 +17,8 @@ list. Each batch is bounded by its serialized size; IDs are never shortened.
 Persisted IDs obey the same nonempty, 240-character admission contract as new
 dispatches, so even a maximally escaped valid ID fits a batch. Invalid ledger
 IDs fail validation before any apply write. Detailed answers retain complete
-lists. Settle each returned batch through reconciliation and verification, then
+lists. Settle each returned unknown or blocker batch through reconciliation
+and verification, then
 refresh compact status or retry the blocked action for the next batch. History
 growth cannot crowd the applied result or mirror warning out of the answer.
 Unknown dispatches block unscoped or overlapping work; implementation reserves

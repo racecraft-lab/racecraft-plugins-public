@@ -175,7 +175,6 @@ response projection: no pathname, symlink, hard-link or rename operation changes
   hook would be cleaner ownership, but with one helper it would be speculative.
   Move the rule to execution-control if a second helper needs a projection.
 
-
 ## Checkpoint compact-history follow-up
 
 R1363-eecf75d1: compact checkpoint answers now project `completed_dispatch_ids`
@@ -197,7 +196,8 @@ Additional review notes retained for subsequent reviews:
 - R1363-30bbb25d: the prior constant extraction and behavior change share one
   commit. Changing that historical ordering requires prohibited history
   rewriting; no runtime defect is involved. This follow-up adds one field to
-  the existing contract without a refactor.
+  the existing contract; a separate behavior-preserving follow-up shares its
+  field name between producer and projection.
 - R1363-e361b2df: the package-root field contract avoids an envelope import of
   execution-control; there is no import cycle on the shipped path.
 - R1363-14a84558: `blocked_by` uses insertion order. The earlier subset assertion
@@ -208,3 +208,7 @@ Additional review notes retained for subsequent reviews:
 - R1363-67e6e598: extra blank lines in the existing test are cosmetic.
 - R1363-67a1ec3c: the recovery instruction now consistently says retry the blocked
   action, matching the existing runner behavior.
+
+- The Codex overlay uses the same recovery protocol but is not pinned by the
+  shared Markdown wording assertions. This is not a reachable defect in the
+  reviewed overlay; generated-artifact consistency checks its shipped copy.

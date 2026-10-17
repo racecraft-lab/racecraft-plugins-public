@@ -10,6 +10,7 @@ SOURCE_CONTEXT = "source_checkout"
 
 UNKNOWN_DISPATCH_IDS_FIELD = "unknown_dispatch_ids"
 BLOCKED_BY_FIELD = "blocked_by"
+COMPLETED_DISPATCH_IDS_FIELD = "completed_dispatch_ids"
 EXECUTION_HISTORY_COUNT_FIELDS = ((UNKNOWN_DISPATCH_IDS_FIELD, "unknown_dispatch_count"),
                                   (BLOCKED_BY_FIELD, "blocked_by_count"),
-                                  ("completed_dispatch_ids", "completed_dispatch_count"))
+                                  (COMPLETED_DISPATCH_IDS_FIELD, "completed_dispatch_count"))
