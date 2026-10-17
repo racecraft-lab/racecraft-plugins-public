@@ -427,26 +427,8 @@ func validateAnswer(spec ProviderSpec, id string, q question, raw json.RawMessag
 			}
 		}
 	case typeBox:
-		if a.Box == nil || a.Box.Top == nil || a.Box.Bottom == nil || a.Box.Left == nil || a.Box.Right == nil {
-			return fmt.Errorf("%s: answer %q has no box", spec.Name, id)
-		}
-		for _, edge := range []struct {
-			name string
-			v    float64
-		}{
-			{"box.top", *a.Box.Top},
-			{"box.bottom", *a.Box.Bottom},
-			{"box.left", *a.Box.Left},
-			{"box.right", *a.Box.Right},
-		} {
-			if err := inUnitRange(spec, id, edge.name, edge.v); err != nil {
-				return err
-			}
-		}
-		// TypeSafe documents left < right and top < bottom. An inverted box
-		// is not a region anyone can crop.
-		if *a.Box.Left >= *a.Box.Right || *a.Box.Top >= *a.Box.Bottom {
-			return fmt.Errorf("%s: answer %q has a box whose edges are out of order", spec.Name, id)
+		if err := validateBoxAnswer(spec, id, a.Box); err != nil {
+			return err
 		}
 	case typeScore:
 		if a.Score == nil {
@@ -483,6 +465,32 @@ type boxEdges struct {
 	Bottom *float64 `json:"bottom"`
 	Left   *float64 `json:"left"`
 	Right  *float64 `json:"right"`
+}
+
+// validateBoxAnswer requires all four edges, each in 0-1, in order.
+func validateBoxAnswer(spec ProviderSpec, id string, box *boxEdges) error {
+	if box == nil || box.Top == nil || box.Bottom == nil || box.Left == nil || box.Right == nil {
+		return fmt.Errorf("%s: answer %q has no box", spec.Name, id)
+	}
+	for _, edge := range []struct {
+		name string
+		v    float64
+	}{
+		{"box.top", *box.Top},
+		{"box.bottom", *box.Bottom},
+		{"box.left", *box.Left},
+		{"box.right", *box.Right},
+	} {
+		if err := inUnitRange(spec, id, edge.name, edge.v); err != nil {
+			return err
+		}
+	}
+	// TypeSafe documents left < right and top < bottom. An inverted box is
+	// not a region anyone can crop.
+	if *box.Left >= *box.Right || *box.Top >= *box.Bottom {
+		return fmt.Errorf("%s: answer %q has a box whose edges are out of order", spec.Name, id)
+	}
+	return nil
 }
 
 func inUnitRange(spec ProviderSpec, id, field string, v float64) error {
