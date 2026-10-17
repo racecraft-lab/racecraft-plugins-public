@@ -101,7 +101,8 @@ ORDERED_STATE_CHECKPOINTS = (
 
 TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-# The tracked state file stores decision fields only. These three patterns match
+# The tracked state file stores decision fields only. These three patterns (the
+# UUID one is imported from speckit_pro_runner.autopilot_state below) match
 # the repository privacy scan's (tests/speckit-pro/lib/privacy_patterns.py), and a
 # test holds them equal, so the state guard rejects what the scan would reject.
 STATE_HOME_PATH_PATTERN = re.compile(
@@ -109,17 +110,15 @@ STATE_HOME_PATH_PATTERN = re.compile(
     re.IGNORECASE,
 )
 STATE_HYPHENATED_HOME_PATH_PATTERN = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
-STATE_UUID_PATTERN = re.compile(
-    r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
-    re.IGNORECASE,
-)
 STATE_PRIVATE_KEYS = frozenset({"argv"})
 # The plugin root is fixed by this script's own location, never by request input.
 INSTALLED_PLUGIN_ROOT = Path(__file__).resolve().parents[3]
 # The plugin ships the runner beside its skills, so its validator is imported, not copied.
 if str(INSTALLED_PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(INSTALLED_PLUGIN_ROOT))
+from speckit_pro_runner.autopilot_state import UUID_PATTERN as STATE_UUID_PATTERN  # noqa: E402
 from speckit_pro_runner.json_schema import json_schema_failures, json_values_equal  # noqa: E402
+from speckit_pro_runner.helpers.nesting_preflight import nesting_evidence_matches  # noqa: E402
 
 _LIB_DIR = str(Path(__file__).resolve().parent / "lib")
 if _LIB_DIR not in sys.path:
@@ -3799,15 +3798,17 @@ def validate_state_status(state: dict[str, Any]) -> dict[str, list[str]]:
     The check closes the status vocabulary; it does not mandate the field, so a
     legacy state that predates ``status`` still validates. When the canonical
     schema is not readable beside this script -- which happens whenever the
-    validator is copied out of the repository -- the check is skipped rather
-    than failed, so an extracted copy cannot manufacture a false violation.
+    validator is copied out of the repository -- legacy status-only checks
+    are skipped. Present nesting evidence requires its contract and fails closed.
     """
     if not STATE_STATUS_SCHEMA_PATH.is_file():
-        return {"state_status_errors": []}
+        return {"state_status_errors": ["nesting_mode contract is missing"] if "nesting_mode" in state else []}
     schema, errors = _canonical_schema(STATE_STATUS_SCHEMA_PATH, "autopilot-state status")
     if schema is None:
         return {"state_status_errors": errors}
     errors.extend(_json_schema_errors(state, schema, schema, "autopilot_state"))
+    if not errors and "nesting_mode" in state and not nesting_evidence_matches(state["nesting_mode"]["data"]):
+        errors.append("nesting_mode.data contradicts the runner nesting policy")
     return {"state_status_errors": errors}
 
 

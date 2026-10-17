@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/atomic_write.py",
         "display": "speckit_pro_runner/atomic_write.py"
       },
-      "sha256": "4462d9cd0ff20976c5740b3a1a03613f7c0d20b66b1addf8fa9bd78ce12f2a07"
+      "sha256": "fa42b65b08d830daf2dd293b8d7d0e7147fc41d0ccfb75b33f3ef8d1fee30ea3"
     },
     {
       "path": {
@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/autopilot_state.py",
         "display": "speckit_pro_runner/autopilot_state.py"
       },
-      "sha256": "301e4b4140fabdaa8dbca00702bfdede01a2e04a49a52fce7b57a34d0419852a"
+      "sha256": "849de2c82750b9be3ebb1efe48c85646e06bee2272b2e0d434929a63990976e1"
     },
     {
       "path": {
@@ -319,7 +319,7 @@
         "value": "speckit_pro_runner/formal/lifecycle.py",
         "display": "speckit_pro_runner/formal/lifecycle.py"
       },
-      "sha256": "3bf9cf19fabb612861940417d402d7efa617da2b3f6019e5e015093f36a04cbd"
+      "sha256": "08e669b1480163364a83f4f617196d4d3f1ec3915a99363cf80e376a4770ce28"
     },
     {
       "path": {
@@ -687,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/nesting_preflight.py",
         "display": "speckit_pro_runner/helpers/nesting_preflight.py"
       },
-      "sha256": "c6151b64654dcd032d81dac4e2b043715509620944b93bf2bcededeecc32a12a"
+      "sha256": "8a9de98b0352e1bb6c2e74fcde76953f6c0af1801171b8c567b7bbf4e689d0e3"
     },
     {
       "path": {
@@ -711,7 +711,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "00a81c50e3b90079472ab3a02acebd6cf0122aba9d4442ff94515f28dd615bc3"
+      "sha256": "fadf436db877f4c61e3f3d320dee7a7eca5311bb3738c7fedce941cee9de72b9"
     },
     {
       "path": {
@@ -799,7 +799,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "da8e5a202b51566f632e7b2df4448a8977e24a99b398d3bcc7097e7e104198cc"
+      "sha256": "6f371fd53764c13adc57dbe07a1f9795ff1ec787ed90ce22d1ebb962193baf36"
     },
     {
       "path": {
