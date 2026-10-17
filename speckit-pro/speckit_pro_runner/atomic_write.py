@@ -13,7 +13,7 @@ import uuid
 import collections.abc
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 from .trusted_io import (
     is_relative_to,
@@ -408,7 +408,7 @@ def install_checked(parent_fd: int, tmp_name: str, target_name: str, expected: d
     if not swap_entries(parent_fd, tmp_name, target_name):
         raise AtomicSwapUnavailable("checked atomic swap is unavailable on this filesystem; write refused")
     try:
-        displaced_matches = write_target_matches_snapshot(snapshot_write_target_fd(parent_fd, tmp_name), expected)
+        displaced_matches = write_target_matches_snapshot(snapshot_write_target_fd(parent_fd, tmp_name, byte_limit=expected.get("byte_limit")), expected)
     except OSError:
         displaced_matches = False
     if displaced_matches:
@@ -526,7 +526,15 @@ def snapshot_write_target(target: Path, repo_root: Path) -> dict[str, Any]:
     return {**snapshot, "created_parent_dirs": created_parent_dirs}
 
 
-def snapshot_write_target_fd(parent_fd: int, target_name: str) -> dict[str, Any]:
+def snapshot_content(stream: BinaryIO, byte_limit: int | None) -> bytes:
+    """Bound a snapshot read even if a writer grows the file after it was opened."""
+    content = stream.read() if byte_limit is None else stream.read(byte_limit + 1)
+    if byte_limit is not None and len(content) > byte_limit:
+        raise WritePreconditionChanged("snapshot input exceeds its byte limit")
+    return content
+
+
+def snapshot_write_target_fd(parent_fd: int, target_name: str, *, byte_limit: int | None = None) -> dict[str, Any]:
     try:
         fd = os.open(target_name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0), dir_fd=parent_fd)
     except FileNotFoundError:
@@ -537,7 +545,7 @@ def snapshot_write_target_fd(parent_fd: int, target_name: str) -> dict[str, Any]
             raise OSError("unsafe existing target")
         with os.fdopen(fd, "rb") as stream:
             fd = -1
-            content = stream.read()
+            content = snapshot_content(stream, byte_limit)
     finally:
         if fd >= 0:
             os.close(fd)
@@ -562,7 +570,7 @@ def write_target_matches_snapshot(current: dict[str, Any], expected: dict[str, A
 
 
 def ensure_write_target_matches_snapshot_fd(parent_fd: int, target_name: str, expected: dict[str, Any]) -> None:
-    if not write_target_matches_snapshot(snapshot_write_target_fd(parent_fd, target_name), expected):
+    if not write_target_matches_snapshot(snapshot_write_target_fd(parent_fd, target_name, byte_limit=expected.get("byte_limit")), expected):
         raise WritePreconditionChanged("write target changed after snapshot capture")
 
 

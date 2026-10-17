@@ -5,14 +5,22 @@ worked. An operator may request flat mode even when nesting works; requesting ne
 never overrides a refused probe. The runner reads that request from `SPECKIT_PLAN_STAGE_MODE`
 in its own environment, so the orchestrator runs no extra command for it. A configured depth is
 recorded but never decides: Codex's `agents.max_depth` is ignored by its V2 backend. Every input answers `ok`, and anything short of valid allowed evidence means flat mode.
+Apply mode alone can refuse when it cannot write the run's existing autopilot-state.json.
 """
 
 from __future__ import annotations
 
 import os
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
-from ..envelope import response
+from .. import autopilot_state
+from ..atomic_write import AtomicWriteInterrupted
+from ..envelope import diagnostic, response
+from ..json_schema import json_values_equal
+from ..strict_input import require_text
+from ..trusted_io import resolve_repo_root
 
 SCHEMA_VERSION = "nesting-mode/v1"
 REQUEST_VARIABLE = "SPECKIT_PLAN_STAGE_MODE"
@@ -72,3 +80,48 @@ def run_nesting_preflight_helper(entry: Any, request: Any) -> dict[str, Any]:
     if "requested_mode" not in inputs and REQUEST_VARIABLE in os.environ:
         inputs["requested_mode"] = os.environ[REQUEST_VARIABLE]  # unchanged: an invalid value stays invalid
     return response("ok", request_id=request.request_id, data=nesting_mode(inputs))
+
+def nesting_evidence_matches(data: dict[str, Any]) -> bool:
+    """Accept only a result the nesting policy can actually produce.
+
+    Shape and types are checked by the state schema first. Replaying all probe
+    outcomes (including an invalid probe) keeps reason/mode/prerequisite rules
+    here with their producer, rather than copying them into the consumer.
+    """
+    inputs = {"host": data.get("host")}
+    if data.get("configured_depth") is not None:
+        inputs["configured_depth"] = data["configured_depth"]
+    if data.get("requested_mode") is not None:
+        inputs["requested_mode"] = data["requested_mode"]
+    return any(
+        json_values_equal(data, nesting_mode({**inputs, "nested_spawn": outcome}))
+        for outcome in (*SPAWN_OUTCOMES, None)
+    )
+
+
+def persist_nesting_mode(root: Path, state_file: Any, envelope: dict[str, Any]) -> None:
+    """Preserve the current state and replace only its nesting record, refusing stale writes."""
+    autopilot_state.update(root, state_file, lambda state: state.update(nesting_mode=envelope))
+
+
+def apply_nesting_preflight_helper(entry: Any, request: Any) -> dict[str, Any]:
+    """Resolve and publish the complete envelope before root response compaction."""
+    root = resolve_repo_root(request.inputs)
+    if isinstance(root, dict):
+        return response("input_error", request_id=request.request_id, data={"writes_state": False}, diagnostics=[root])
+    inputs = {key: value for key, value in request.inputs.items() if key not in {"repo_root", "state_file"}}
+    envelope = run_nesting_preflight_helper(entry, replace(request, inputs=inputs))
+    try:
+        request_id = require_text(request.request_id, "request_id")
+        if autopilot_state.UUID_PATTERN.search(request_id):
+            raise ValueError("request_id must be a public slug without a raw UUID")
+        persist_nesting_mode(root, request.inputs.get("state_file"), envelope)
+    except (ValueError, RecursionError) as error:
+        return response("input_error", request_id=request.request_id, data={"writes_state": False}, diagnostics=[diagnostic(
+            "nesting_state_invalid", str(error), remediation_summary="Correct request_id and state_file, then retry the nesting preflight.")])
+    except OSError as error:
+        return response("internal_failure", request_id=request.request_id,
+                        data={"writes_state": isinstance(error, AtomicWriteInterrupted)}, diagnostics=[diagnostic(
+                            "nesting_state_write_failed", str(error),
+                            remediation_summary="Inspect the current state and write failure before one repair attempt.")])
+    return envelope
