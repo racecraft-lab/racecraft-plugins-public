@@ -85,20 +85,11 @@ def refresh_run_facts(root: Path, workflow: str, state: dict[str, Any]) -> None:
     state["updated_at"] = datetime.now(timezone.utc).isoformat()
 
 
-def write_state(root: Path, workflow: str, state: dict[str, Any]) -> None:
-    """Publish current run facts through the guarded existing-state writer."""
-    state_file = str(Path(workflow).with_name("autopilot-state.json"))
-    update(root, state_file, lambda current: current.update(state), workflow=workflow)
-
-
 def mirror_execution_result(root: Path, workflow: str, result: dict[str, Any]) -> None:
-    """Refresh an existing status file after an applied execution-control helper call."""
-    path = confined_path(root, str(Path(workflow).with_name("autopilot-state.json")))
-    if not path.exists():
+    """Refresh only execution facts in the state captured by the guarded writer."""
+    state_file = str(Path(workflow).with_name("autopilot-state.json"))
+    if not confined_path(root, state_file).exists():
         return
-    state = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(state, dict):
-        raise ValueError("autopilot state must be a JSON object")
-    state["execution_control"] = {key: result[key] for key in MIRROR_FIELDS}
-    state["execution_control"]["run_id"] = result["ledger"]["run_id"]
-    write_state(root, workflow, state)
+    mirror = {key: result[key] for key in MIRROR_FIELDS}
+    mirror["run_id"] = result["ledger"]["run_id"]
+    update(root, state_file, lambda state: state.update(execution_control=mirror), workflow=workflow)

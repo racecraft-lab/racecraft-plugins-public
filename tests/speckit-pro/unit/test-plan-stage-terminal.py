@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 sys.path.insert(0, str(ROOT / "speckit-pro"))
 from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
 from test_result import run_counted  # noqa: E402
-from speckit_pro_runner import artifact_review, envelope, execution_control, stop_policy  # noqa: E402
+from speckit_pro_runner import autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
 
 SOURCE = ROOT / "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source"
@@ -194,6 +194,27 @@ class RunFactsTests(TerminalFixture):
                 compact = envelope.answer_response(dataclasses.replace(request, answer_format="compact"), result)
                 self.assertIn("action=status mode=apply", compact["next_action"])
                 self.assertNotIn("retry", compact["next_action"].lower())
+
+
+class RunFactsConcurrencyTests(TerminalFixture):
+    def test_execution_refresh_preserves_plan_observed_by_guarded_state_read(self) -> None:
+        observed_plan = [{"step": "Phase 3: Plan", "status": "completed"}]
+        snapshot = autopilot_state.snapshot
+
+        def observe_current_plan(root, target):
+            state = json.loads(target.read_text())
+            state["plan"] = observed_plan
+            target.write_text(json.dumps(state))
+            return snapshot(root, target)
+
+        request = envelope.RunnerRequest("clock", "execution-control", "execution-control", "apply",
+                                         {"workflow_file": WORKFLOW, "action": "start"}, "detailed")
+        with unittest.mock.patch.object(autopilot_state, "snapshot", side_effect=observe_current_plan):
+            result = registry.dispatch_helper(request)
+        self.assertEqual(result["status"], "ok", result)
+        recorded = json.loads((self.root / STATE).read_text())
+        self.assertEqual(recorded["plan"], observed_plan)
+        self.assertEqual(recorded["execution_control"]["run_id"], result["data"]["ledger"]["run_id"])
 
 
 class TerminalClockTests(TerminalFixture):
