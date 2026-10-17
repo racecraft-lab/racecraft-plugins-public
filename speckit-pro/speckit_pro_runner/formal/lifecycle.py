@@ -146,4 +146,4 @@ def mirror_formal_checkpoint(state: dict[str, Any], *, workflow: str, record: di
 
 def mirror_checkpoint(root: Path, workflow: str, value: str, record: dict[str, Any]) -> None:
     state_path(root, workflow, value)
-    autopilot_state.update(root, value, partial(mirror_formal_checkpoint, workflow=workflow, record=record))
+    autopilot_state.update(root, value, partial(mirror_formal_checkpoint, workflow=workflow, record=record), workflow=workflow)
