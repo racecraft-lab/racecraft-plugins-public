@@ -13,6 +13,8 @@ Each reason has exactly one class:
 
 from __future__ import annotations
 
+from typing import Any
+
 AUTHORITY = "authority"
 EXHAUSTED = "exhausted"
 HARM_HALT = "harm_halt"
@@ -52,3 +54,13 @@ def stop_class(reason: str) -> str:
         return STOP_REASONS[reason]
     except KeyError:
         raise ValueError(f"unknown stop reason: {reason!r}") from None
+
+
+def publication_pending(state: dict[str, Any], dispatches: dict[str, Any]) -> bool:
+    """Only evidenced pending work defers the terminal unpushed-commit check."""
+    plan = state.get("plan")
+    pending_plan = isinstance(plan, list) and any(
+        isinstance(row, dict) and row.get("status") in ("pending", "in_progress") for row in plan
+    )
+    return (pending_plan
+            or any(item.get("outcome") in {"reserved", "running", "unknown"} for item in dispatches.values()))

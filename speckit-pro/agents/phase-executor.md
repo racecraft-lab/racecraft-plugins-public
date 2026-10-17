@@ -50,6 +50,8 @@ Optional suggestions authorize no command invocation.
 
 The parent's planning brief bounds inputs and readable files (Rule 2); do not pre-read them.
 The parent gates the result: a brief neither passes nor ends the run. A null model preserves this agent's configuration.
+Leave `updated_at` and the execution-control mirror to the runner. Return phase
+results to the parent so its bound helper call refreshes those run facts.
 
 <!-- host:claude: Claude invokes a command through the Skill tool -->
 1. **Run the command exactly as specified.** Use the Skill tool for the `/speckit-*`
