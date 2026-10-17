@@ -96,6 +96,7 @@ from ..trusted_io import (
     validate_path_value,
 )
 from ..workflow_stage import (
+    normalize_status as normalize_status,
     ANALYSIS_OPEN_FINDINGS_STATUS,
     AUTOPILOT_BASIC_INFO_HEADING,
     AUTOPILOT_GATE_PHASE as AUTOPILOT_GATE_PHASE,
@@ -6674,24 +6675,6 @@ def child_status(root: Path, child_path: str) -> tuple[str, str]:
             return normalize_status(line.split(":", 1)[1]), "SPEC-MOC status"
     return "missing-state", "SPEC-MOC status"
 
-
-def normalize_status(raw: str) -> str:
-    value = raw.split("#", 1)[0].strip().strip("\"'").lower().replace("-", "_")
-    return {
-        "blocked": "blocked",
-        "failed": "failed",
-        "fail": "failed",
-        "in_progress": "in_progress",
-        "progress": "in_progress",
-        "active": "in_progress",
-        "pending": "pending",
-        "": "pending",
-        "complete": "complete",
-        "completed": "complete",
-        "done": "complete",
-        "archived": "archived",
-        "archive": "archived",
-    }.get(value, "missing-state")
 
 
 def rollup_status(statuses: list[str]) -> str:

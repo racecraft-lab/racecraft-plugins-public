@@ -46,6 +46,7 @@ VALIDATOR_SUPPORT_FILES = (
         "__init__.py", "json_schema.py", "atomic_write.py", "envelope.py", "strict_input.py", "trusted_io.py",
         "helpers/__init__.py", "helpers/nesting_preflight.py",
         "autopilot_state.py",
+        "workflow_stage.py", "sweep_export.py",
     )),
     *sorted(VALIDATOR.parent.glob("lib/*.py")),
 )

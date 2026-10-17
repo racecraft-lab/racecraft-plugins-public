@@ -767,7 +767,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "bf7bd17e701eb8e820e0a8b2ddfb81c4070e238344d7d7294540c66cbb0f4c34"
+      "sha256": "4d4c1fcb648d36ab7b475ab5332fc30c9ebb03611b3f44edf1f16b7b35a36271"
     },
     {
       "path": {
@@ -1183,7 +1183,7 @@
         "value": "speckit_pro_runner/workflow_stage.py",
         "display": "speckit_pro_runner/workflow_stage.py"
       },
-      "sha256": "46b393b080d28c31de455c15c640e42d97d9450ea6b8a2ad336fd1ee88a6ab1e"
+      "sha256": "f085c4a88c432d39cf740c92809ec54ad0778e73e0bffb66ff474c1a98a01017"
     }
   ]
 }
