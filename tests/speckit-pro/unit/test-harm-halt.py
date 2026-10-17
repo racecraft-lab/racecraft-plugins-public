@@ -59,19 +59,30 @@ class HarmHaltTests(MutationRequestCase):
                 self.assertFalse((self.root / LIST_FILE).exists())
                 self.assertEqual("*\n", (self.root / RECORD).parent.joinpath(".gitignore").read_text(encoding="utf-8"))
 
-    def test_payload_gate_cannot_rebuild_dist_while_a_halt_stands(self) -> None:
+    def test_runner_entry_refuses_each_dispatch_path_with_valid_or_unreadable_halt(self) -> None:
         sentinel = self.root / "dist" / "sentinel"
         sentinel.parent.mkdir()
         sentinel.write_text("keep", encoding="utf-8")
-        request = SimpleNamespace(schema_version="1.0", request_id="gate-attempt", helper_id="payload-gate",
-                                  operation="payload-completeness", mode="apply", inputs={"apply_dist": True})
+        routes = (
+            ("payload-gate", "payload-completeness", {"apply_dist": True},
+             "speckit_pro_runner.gates.registry.run_payload_gate"),
+            ("decisions-list", "decisions-list", {"workflow_file": WORKFLOW, "entries": [ENTRY]},
+             "speckit_pro_runner.helpers.registry.dispatch_helper"),
+        )
         self.halt("secret_exposure")
-        with patch("speckit_pro_runner.gates.registry.run_payload_gate") as payload_gate:
-            blocked = handle_request(request)
-        self.assertEqual("harm_halt_active", blocked["diagnostics"][0]["code"], blocked)
-        payload_gate.assert_not_called()
-        self.assertEqual("keep", sentinel.read_text(encoding="utf-8"))
-        self.assertEqual("refused", self.read_only_data()["resume"])
+        for unreadable in (False, True):
+            if unreadable:
+                (self.root / RECORD).write_text("{not json", encoding="utf-8")
+            for helper_id, operation, inputs, target in routes:
+                with self.subTest(unreadable=unreadable, helper_id=helper_id):
+                    request = SimpleNamespace(schema_version="1.0", request_id="attempt", helper_id=helper_id,
+                                              operation=operation, mode="apply", inputs=inputs)
+                    with patch(target) as dispatch:
+                        blocked = handle_request(request)
+                    self.assertEqual("harm_halt_active", blocked["diagnostics"][0]["code"], blocked)
+                    dispatch.assert_not_called()
+                    self.assertEqual("keep", sentinel.read_text(encoding="utf-8"))
+                    self.assertFalse((self.root / LIST_FILE).exists())
 
     def test_resume_refuses_until_the_clear_command_runs(self) -> None:
         self.halt()
