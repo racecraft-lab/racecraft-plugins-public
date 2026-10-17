@@ -238,6 +238,8 @@ class ComparePageValidationTests(unittest.TestCase):
             "missing sha": (first, {**last, "commits": [{"commit": {"message": "fix: Last (#101)"}}]}),
             "changed base": ({**first, "base_commit": {"sha": "base-a"}},
                              {**last, "base_commit": {"sha": "base-b"}}),
+            "changed merge base": ({**first, "merge_base_commit": {"sha": "merge-a"}},
+                                   {**last, "merge_base_commit": {"sha": "merge-b"}}),
         }
         for name, pages in cases.items():
             with self.subTest(msg=name):
@@ -246,6 +248,20 @@ class ComparePageValidationTests(unittest.TestCase):
                 with self.assertRaisesRegex(COMPOSER.CompositionError, "Compare API"):
                     COMPOSER.capture_release_input_snapshot(client, TAG, RAW_BODY)
                 self.assertTrue(all("/compare/" in call.args[1] for call in client.request_json.call_args_list))
+
+    @inventory_check
+    def test_capture_requests_exactly_the_pages_a_total_needs(self) -> None:
+        for total, page_count in ((0, 1), (100, 1), (200, 2)):
+            with self.subTest(total=total):
+                comparison = compare_payload(*(f"chore: Change {number}" for number in range(1, total + 1)))
+                client = mock.Mock(repository=REPOSITORY)
+                client.request_json.side_effect = [
+                    ({**comparison, "commits": comparison["commits"][offset:offset + 100]}, {})
+                    for offset in range(0, max(total, 1), 100)
+                ]
+                compare = COMPOSER.fetch_complete_compare(client, PREVIOUS_TAG, TAG)
+                self.assertEqual(compare["commits"], comparison["commits"])
+                self.assertEqual(client.request_json.call_count, page_count)
 
 
 class ComposeReleaseNotesTests(unittest.TestCase):
