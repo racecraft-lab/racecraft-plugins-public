@@ -35,7 +35,7 @@ and Git metadata paths. The hook never repairs or resets ledger evidence.
   `test_gate_hardening.py::test_pr_test_code_cannot_create_or_modify_any_file_in_the_clone`.
   The orchestrator runs those host checks before merging.
 
-## Merge review notes
+### Merge review notes
 
 The Standards and Spec re-review axes found no reachable blocking defect in
 this merge and cleanup. Their bounded review packets raised these Info notes;
@@ -68,3 +68,18 @@ The merge adds a regression through the execution-control helper: a plan seen
 by the guarded state reader survives the execution mirror refresh. It failed
 with the stale whole-state copy and passes when only execution facts are
 mutated inside the guarded update.
+
+Full Linux CI also exposed an incomplete installed-validator fixture: its
+hand-maintained support list omitted the state owner's new transitive imports.
+The fixture now copies the complete runner package, including package data,
+while excluding bytecode caches. Existing scenarios and assertions remain; the
+stderr assertion now includes the complete captured error for diagnosis. The
+three installed-validator scenarios failed consistently before this repair.
+
+The fixture re-review also found no blocking defect. The runner's tracked
+`agent_inventory.json` is inside the copied package. Copying a complete package
+intentionally verifies installed behavior rather than a minimal import list;
+missing package data still fails loudly. Local untracked package files may also
+be copied, while fresh CI worktrees contain tracked files only; this is not a
+validation bypass. Copying more files adds fixture setup cost without reducing
+scenario coverage.
