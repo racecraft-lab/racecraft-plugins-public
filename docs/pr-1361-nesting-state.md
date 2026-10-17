@@ -126,3 +126,12 @@ result on real runs.
   repository-relative path, and the one allowed retry can correct it.
 - **Commit shape.** f7481912 moves the formal and plan-stage callers onto the
   owner and adds their new refusals in one commit. History is not rewritten.
+
+### Accepted at the cross-host re-review of 8eb19392
+
+- **Test setup copies left beside `specify_workspace`.** The 8eb19392 commit
+  message calls one copy left on purpose "the hard-link test". That test is
+  `test_apply_refuses_symlinks_and_paths_outside_the_worktree`; it covers
+  symlinks and outside paths and roots its workspace under `<tmp>/repo`. The
+  competing-writer test resolves its root and creates no `.specify`, so it is
+  not an exact copy of the helper setup. History is not rewritten.
