@@ -176,6 +176,11 @@ def run_validation(*, title: str, body: str = "", labels: tuple[str, ...] = (), 
 
 class PaginatedReleaseNotesTests(unittest.TestCase):
     @inventory_check
+    def test_persisted_snapshot_accepts_four_digit_commit_counts(self) -> None:
+        body = COMPOSER.compose_release_body(RAW_BODY, [], {}, compare_commit_count=1000)
+        self.assertEqual(COMPOSER.load_persisted_snapshot(body, RAW_BODY).compare_commit_count, 1000)
+
+    @inventory_check
     def test_capture_and_replay_include_all_309_commits_across_pages(self) -> None:
         comparison = compare_payload(*(f"fix: Change {number} (#{number})" for number in range(1, 310)))
         pages = [
@@ -213,6 +218,10 @@ class PaginatedReleaseNotesTests(unittest.TestCase):
         self.assertEqual(persisted.compare_commit_count, 309)
         self.assertTrue(persisted.payload.endswith(RAW_BODY))
 
+
+
+class ComparePageValidationTests(unittest.TestCase):
+    @inventory_check
     def test_capture_rejects_short_or_inconsistent_compare_pages(self) -> None:
         comparison = compare_payload(*(f"fix: Change {number} (#{number})" for number in range(1, 102)))
         first = {**comparison, "commits": comparison["commits"][:100]}
@@ -1195,7 +1204,9 @@ class SharedReleaseNoteContractTests(unittest.TestCase):
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite(
-        loader.loadTestsFromTestCase(case) for case in (ComposeReleaseNotesTests, SharedReleaseNoteContractTests)
+        loader.loadTestsFromTestCase(case) for case in (
+            ComposeReleaseNotesTests, PaginatedReleaseNotesTests, ComparePageValidationTests, SharedReleaseNoteContractTests,
+        )
     )
 
 

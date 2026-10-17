@@ -7,12 +7,17 @@ on:
     inputs:
       typesafe_jev_tag:
         # Recovery only: rerun the typesafe-jev asset and notes chain for an
-        # existing draft release, such as one left behind when an earlier run
+        # existing release, such as a draft left behind when an earlier run
         # failed after release-please drafted it. Leave empty for a normal run.
-        description: Existing draft typesafe-jev release tag to recover (typesafe-jev-vX.Y.Z)
+        description: Existing typesafe-jev release tag to recover (typesafe-jev-vX.Y.Z)
         type: string
         required: false
         default: ""
+      typesafe_jev_notes_only:
+        description: Recompose an already published release with original notes; skip assets and publication
+        type: boolean
+        required: false
+        default: false
 
 permissions: {}
 
@@ -22,9 +27,9 @@ concurrency:
 
 jobs:
   release:
-    # A recovery dispatch works only on an existing draft, so it skips
+    # A recovery dispatch works on an existing release, so it skips
     # release-please and the release PR sync entirely.
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.typesafe_jev_tag == '' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.typesafe_jev_tag == '' && !inputs.typesafe_jev_notes_only) }}
     permissions:
       actions: write
       contents: write
@@ -263,7 +268,7 @@ jobs:
   # never strands a draft release-please already created.
   typesafe-jev-draft:
     needs: release
-    if: ${{ always() && !cancelled() && (needs.release.outputs.typesafe_jev_release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.typesafe_jev_tag != '')) }}
+    if: ${{ always() && !cancelled() && (needs.release.outputs.typesafe_jev_release_created == 'true' || (github.event_name == 'workflow_dispatch' && (inputs.typesafe_jev_tag != '' || inputs.typesafe_jev_notes_only))) }}
     permissions:
       # A draft release is visible only to a token with write access.
       contents: write
@@ -282,13 +287,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RECOVERY_TAG: ${{ inputs.typesafe_jev_tag }}
+          NOTES_ONLY: ${{ inputs.typesafe_jev_notes_only }}
           RELEASE_BODY: ${{ needs.release.outputs.typesafe_jev_body }}
           RELEASE_TAG: ${{ needs.release.outputs.typesafe_jev_tag_name }}
         run: python3 scripts/build-typesafe-jev-release.py resolve
 
   typesafe-jev-assets:
     needs: typesafe-jev-draft
-    if: ${{ always() && !cancelled() && needs.typesafe-jev-draft.result == 'success' }}
+    if: ${{ always() && !cancelled() && needs.typesafe-jev-draft.result == 'success' && !inputs.typesafe_jev_notes_only }}
     permissions:
       contents: write
       # Sign the build-provenance attestation and record it for the repository.
@@ -365,7 +371,7 @@ jobs:
 
   capture-typesafe-jev-release-note-inputs:
     needs: [typesafe-jev-draft, typesafe-jev-publish]
-    if: ${{ always() && needs.typesafe-jev-publish.result == 'success' }}
+    if: ${{ always() && !cancelled() && needs.typesafe-jev-draft.result == 'success' && (needs.typesafe-jev-publish.result == 'success' || inputs.typesafe_jev_notes_only) }}
     permissions:
       contents: read
     outputs:

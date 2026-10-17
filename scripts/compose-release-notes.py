@@ -56,7 +56,7 @@ SNAPSHOT_MARKER_RE = re.compile(
     r"\n\n<!-- release-note-composer-snapshot:v1 "
     r"source_sha256=(?P<source_sha256>[0-9a-f]{64}) "
     r"payload_sha256=(?P<payload_sha256>[0-9a-f]{64}) "
-    r"compare_commit_count=(?P<compare_commit_count>0|[1-9][0-9]{0,2}) -->\Z"
+    r"compare_commit_count=(?P<compare_commit_count>0|[1-9][0-9]*) -->\Z"
 )
 @dataclass(frozen=True)
 class PersistedSnapshot:

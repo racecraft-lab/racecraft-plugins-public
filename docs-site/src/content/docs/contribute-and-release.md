@@ -159,7 +159,9 @@ The maintainer-facing release flow is:
    Post-release gates regenerate the docs reference and fail if `main` is not
    already artifact-consistent; the workflow does not open a second sync PR.
 6. `capture-release-note-inputs` captures the release action's raw body, tag,
-   Compare API response, and referenced PR bodies and labels as canonical JSON.
+   complete Compare range, and referenced PR bodies and labels as canonical JSON.
+   Capture reads commits in pages of 100, rejecting short pages, changing totals
+   or bases, and duplicate commit SHAs before resolving PRs.
    It uploads that complete input set as a uniquely named, immutable artifact
    with a recorded SHA-256 and 90-day retention.
 7. `compose-release-notes` downloads that exact artifact by ID and rejects any
@@ -198,6 +200,15 @@ A recovery run skips release-please and the release PR sync. The tag must match
 `typesafe-jev-vX.Y.Z`, and its release must exist and still be a draft. The run
 reads the draft's body from the GitHub API, then attaches assets, publishes, and
 composes notes as a normal run does.
+
+For an already published release that still has its original release-please
+body, dispatch the updated workflow on `main` with
+`gh workflow run release.yml --ref main -f typesafe_jev_tag=typesafe-jev-v0.10.0 -F typesafe_jev_notes_only=true`.
+This mode captures and composes notes without building, uploading, or publishing
+assets. It rejects draft releases and already composed bodies; after a failed
+composition, rerun the failed jobs to reuse the captured inputs. Re-running the
+original pre-fix workflow would use its original commit, so it cannot load the
+fix. See [GitHub's rerun contract](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs).
 
 Release-please branches are generated state. Never push a product, security,
 documentation, or review fix directly to a branch whose name starts with

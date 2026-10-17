@@ -16,7 +16,9 @@ Modes, in release order:
                  release-please's RELEASE_TAG and RELEASE_BODY through. A
                  recovery run sets RECOVERY_TAG instead: the tag must be
                  typesafe-jev-vX.Y.Z, the release must exist and still be a
-                 draft, and its body is read from the GitHub API.
+                 draft, and its body is read from the GitHub API. With
+                 NOTES_ONLY=true, require a published, uncomposed release
+                 instead; the workflow skips assets and publication.
   build          Cross-compile every release target into
                  evaluate-<os>-<arch>.tar.gz (the binary plus LICENSE) and
                  write SHA256SUMS.txt beside them.
@@ -231,8 +233,10 @@ def release_files(out_dir: Path) -> list[str]:
     return [str(out_dir / name) for name in names]
 
 
-def resolve(recovery_tag: str, release_tag: str, release_body: str) -> tuple[str, str]:
-    """Return the tag and raw release-please body of the draft to release."""
+def resolve(recovery_tag: str, release_tag: str, release_body: str, *, notes_only: bool = False) -> tuple[str, str]:
+    """Return original release inputs for a draft or explicit published-notes recovery."""
+    if notes_only and not recovery_tag:
+        raise ReleaseBuildError("published release notes recovery needs RECOVERY_TAG")
     if not recovery_tag:
         version_from_tag(release_tag)
         return release_tag, release_body
@@ -246,13 +250,14 @@ def resolve(recovery_tag: str, release_tag: str, release_body: str) -> tuple[str
         raise ReleaseBuildError(f"gh release view returned invalid JSON: {error}") from error
     if not isinstance(release, dict) or release.get("tagName") != recovery_tag:
         raise ReleaseBuildError(f"gh release view did not return the release {recovery_tag}")
-    # Only a draft still carries release-please's raw body, which the notes
-    # jobs parse for the previous tag and then replace.
-    if release.get("isDraft") is not True:
-        raise ReleaseBuildError(f"release {recovery_tag} is not a draft; only an unpublished draft can be recovered")
+    if release.get("isDraft") is not (not notes_only):
+        expected = "published release" if notes_only else "draft"
+        raise ReleaseBuildError(f"release {recovery_tag} is not a {expected}")
     body = release.get("body")
     if not isinstance(body, str) or not body.strip():
-        raise ReleaseBuildError(f"draft release {recovery_tag} has no body")
+        raise ReleaseBuildError(f"release {recovery_tag} has no body")
+    if notes_only and body.startswith("## Highlights\n"):
+        raise ReleaseBuildError("published release notes recovery requires the original, uncomposed body")
     return recovery_tag, body
 
 
@@ -402,9 +407,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_path = os.environ.get("GITHUB_OUTPUT", "")
             if not output_path:
                 raise ReleaseBuildError("resolve needs GITHUB_OUTPUT")
-            tag, body = resolve(os.environ.get("RECOVERY_TAG", ""), args.tag, os.environ.get("RELEASE_BODY", ""))
+            tag, body = resolve(os.environ.get("RECOVERY_TAG", ""), args.tag, os.environ.get("RELEASE_BODY", ""), notes_only=os.environ.get("NOTES_ONLY") == "true")
             write_github_output(Path(output_path), {"tag_name": tag, "body": body})
-            print(f"resolved draft release {tag}")
+            print(f"resolved release inputs {tag}")
             return 0
         version = version_from_tag(args.tag)
         out_dir = Path(args.out_dir)
