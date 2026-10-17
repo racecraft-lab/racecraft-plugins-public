@@ -175,3 +175,42 @@ No new independent Daybreak verdict is claimed here.
   50 non-browser smoke checks and gallery catalog check pass; 38 smoke browser
   cases and 3 gallery browser cases remain host validation. No docs UI changed
   in this repair; full docs mode was selected by generated reference drift.
+
+## Generated-navigation security repair
+
+Finding `F1364-400139c5` names an **approval-binding false pass**: set membership
+discarded missing, duplicated and reordered generated navigation. The renderer's
+public progress output now preserves the complete ordered body, including blank
+and repeated lines. Approval projects a body only when its complete marker block
+matches that output. Marker bytes, placement and surrounding authored bytes stay
+bound. A nonmatching or duplicate block keeps the unprojected map (after the
+independently declared frontmatter-status normalization).
+
+All tests below live in `tests/speckit-pro/unit/test-planning-approval.py`.
+The mutation assertions exercise the public manifest function and the packaged
+runner request for both Claude and Codex, with canonical-host baselines checked
+before mutation.
+
+| Variant | Regression test |
+| --- | --- |
+| Omit PRS notice, table header, separator or either required PR row | `NavigationContentTest.test_omitted_prs_header_notice_and_each_row_change_revision` |
+| Omit any BACKLINKS row while its artifact exists | `NavigationContentTest.test_omitted_each_backlink_changes_revision` |
+| Remove PRS, BACKLINKS or both complete marker pairs and bodies | `NavigationContentTest.test_removed_marker_pairs_change_revision` |
+| Duplicate any canonical body row | `NavigationContentTest.test_duplicate_each_canonical_row_changes_revision` |
+| Duplicate either marker pair | `NavigationStructureTest.test_duplicate_and_relocated_marker_pairs_change_revision` (`duplicate`) |
+| Reorder canonical rows in either zone | `NavigationContentTest.test_reordered_canonical_rows_change_revision` |
+| Relocate either complete marker pair across authored content | `NavigationStructureTest.test_duplicate_and_relocated_marker_pairs_change_revision` (`relocated`) |
+| Missing individual markers, changed marker spelling, mixed newlines, added prose, fenced blocks and renamed link/scope targets | `NavigationStructureTest.test_noncanonical_markers_and_body_bytes_change_revision` |
+| Schema-1 PR rows, legacy markers and CRLF: omitted, duplicated and reordered bodies in both zones | `NavigationCompatibilityTest.test_schema_one_legacy_markers_and_crlf_bind_each_body_edit` |
+
+The initial unfixed run reproduced 30 false passes across every reported variant
+group (496 of 526 checks passed). The generic progress fixture now models a real
+schema-1 PR manifest transition and its complete generated body; its previous
+empty-to-partial backlink transition contradicted the canonical-output contract.
+The existing real-renderer schema-2 progress test also remains in place.
+
+This changes the shared policy seam and renderer contract, with regenerated
+payloads for both hosts. No skill, agent or overlay instruction needs a different
+rule. Existing approvals may require renewed review because marker placement and
+formerly discarded map bytes now participate in the revision. Daybreak must
+re-check the fix commits before the finding can be resolved.

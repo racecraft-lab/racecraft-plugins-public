@@ -260,28 +260,32 @@ def spec_map_status(match: re.Match[str]) -> str:
     return match[1] + '""' + match[2][len(value):] + match[3]
 
 
-def map_navigation(content: str, expected: dict[str, frozenset[str]]) -> bytes:
-    zone = None
+def map_navigation(content: str, expected: dict[str, tuple[str, ...]]) -> bytes:
+    """Project exact generated bodies; preserve marker identity and placement."""
+    starts = {value: key for source in (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS)
+              for key, value in source.items()}
+    raw_lines = content.splitlines(keepends=True)
+    seen = set()
     fence = None
     kept = []
-    for raw in content.splitlines(keepends=True):
-        line = raw.rstrip("\r\n")
+    index = 0
+    while index < len(raw_lines):
+        raw = raw_lines[index]
         was_fenced = fence is not None
         fence = next_fence(fence, raw)
-        if was_fenced or fence:
+        zone = starts.get(raw.rstrip("\r\n"))
+        if zone is None or was_fenced or fence:
             kept.append(raw)
+            index += 1
             continue
-        starts = {value: key for source in (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS)
-                  for key, value in source.items()}
-        if line in starts:
-            if zone is not None:
-                return content.encode("utf-8")
-            zone = starts[line]
-        elif zone is not None and line == SPEC_INDEX_ENDS[zone]:
-            zone = None
-        elif line.strip() and (zone is None or line not in expected[zone]):
-            kept.append(line)
-    return content.encode("utf-8") if zone is not None else canonical_bytes(kept)
+        newline = "\r\n" if raw.endswith("\r\n") else "\n"
+        block = [raw, *(line + newline for line in expected[zone]), SPEC_INDEX_ENDS[zone] + newline]
+        if zone in seen or raw_lines[index:index + len(block)] != block:
+            return content.encode("utf-8")
+        seen.add(zone)
+        kept.extend((raw, block[-1]))
+        index += len(block)
+    return "".join(kept).encode("utf-8")
 
 
 def spec_map_content(content: bytes, root: Path, feature: str) -> bytes:

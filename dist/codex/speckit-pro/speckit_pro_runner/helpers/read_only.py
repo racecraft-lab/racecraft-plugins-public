@@ -4501,13 +4501,13 @@ def _spec_index_rebuild_map(
     return newline.join(rebuilt) + newline
 
 
-def spec_index_progress(repo_root: Path, feature: str) -> dict[str, frozenset[str]]:
-    """Canonical feature-map output lines; authored text is never a match."""
+def spec_index_progress(repo_root: Path, feature: str) -> dict[str, tuple[str, ...]]:
+    """Complete ordered feature-map bodies, including repeated and blank lines."""
     spec_dir = repo_root / feature
     return {
-        "index": frozenset(),
-        "prs": frozenset(_spec_index_render_prs(spec_dir, repo_root)),
-        "backlinks": frozenset(_spec_index_render_backlinks(spec_dir, repo_root)),
+        "index": (),
+        "prs": tuple(_spec_index_render_prs(spec_dir, repo_root)),
+        "backlinks": tuple(_spec_index_render_backlinks(spec_dir, repo_root)),
     }
 
 

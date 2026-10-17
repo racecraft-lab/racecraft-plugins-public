@@ -79,6 +79,13 @@ class PlanningApprovalFixture(unittest.TestCase):
         self.assertEqual(reply["status"], "input_error", reply)
         self.assertIn(reason, reply["diagnostics"][0]["message"])
 
+    def writeProgressCase(self, case, stage):
+        for name, text in case.get("runtime", {}).get(stage, {}).items():
+            path = self.feature / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+        (self.feature / case["file"]).write_text(case[stage])
+
 
 
 class PlanningApprovalTest(PlanningApprovalFixture):
@@ -512,6 +519,129 @@ class ProgressExamplesTest(ProgressFixture):
 
 
 
+class NavigationFixture(PlanningApprovalFixture):
+    def setUp(self):
+        super().setUp()
+        self.map_path = self.feature / "SPEC-MOC.md"
+        self.map_path.write_text("---\nstructureVersion: 1\nstatus: pending\n---\n# Map\n")
+        process = self.feature / ".process"
+        process.mkdir()
+        (process / "prs.json").write_text(json.dumps({"schemaVersion": 2, "records": [
+            {"review_order": number, "slice_id": f"us{number}", "pr_number": 40 + number,
+             "status": "open", "branch": f"feature/demo{number}", "base_branch": "main",
+             "head_sha": "a" * 40, "declared_files": ["src/demo.py"],
+             "verification_evidence": "specs/demo/.process/result.json"}
+            for number in (1, 2)]}))
+        rendered, _ = render_spec_index(self.root)
+        self.map_path.write_text(rendered[0].rendered + "\n## Authored boundary\nKeep authentication.\n")
+        self.captureNavigation()
+
+    def captureNavigation(self):
+        self.original = self.map_path.read_bytes().decode()
+        self.binding = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
+        for host in ("claude", "codex"):
+            with self.subTest(canonical_host=host):
+                self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
+                reply = self.call()
+                self.assertEqual(reply["status"], "ok", reply)
+                self.assertEqual(reply["data"]["manifest_digest"], self.binding["manifest_digest"])
+        self.blocks = {zone: block for block, zone in re.findall(
+            r"(<!-- GENERATED:(PRS|BACKLINKS):START[^\n]*\n.*?<!-- GENERATED:\2:END -->\r?\n)",
+            self.original, re.DOTALL)}
+
+    def assertNavigationBound(self, mutated):
+        self.assertNotEqual(mutated, self.original)
+        self.map_path.write_text(mutated)
+        self.assertNotEqual(approval_owner.planning_manifest(
+            self.root, "specs/demo", "specs/demo/workflow.md"), self.binding)
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
+                reply = self.call()
+                self.assertEqual(reply["status"], "ok", reply)
+                self.assertNotEqual(reply["data"]["manifest_digest"], self.binding["manifest_digest"])
+
+
+
+class NavigationContentTest(NavigationFixture):
+    def test_omitted_prs_header_notice_and_each_row_change_revision(self):
+        for line in self.blocks["PRS"].splitlines(keepends=True)[1:-1]:
+            with self.subTest(omitted=line):
+                self.assertNavigationBound(self.original.replace(
+                    self.blocks["PRS"], self.blocks["PRS"].replace(line, "", 1)))
+
+    def test_omitted_each_backlink_changes_revision(self):
+        for line in self.blocks["BACKLINKS"].splitlines(keepends=True)[1:-1]:
+            with self.subTest(omitted=line):
+                self.assertNavigationBound(self.original.replace(line, "", 1))
+
+    def test_removed_marker_pairs_change_revision(self):
+        for zone, block in self.blocks.items():
+            with self.subTest(zone=zone):
+                self.assertNavigationBound(self.original.replace(block, ""))
+        self.assertNavigationBound(self.original.replace(self.blocks["PRS"], "").replace(self.blocks["BACKLINKS"], ""))
+
+    def test_duplicate_each_canonical_row_changes_revision(self):
+        for zone, block in self.blocks.items():
+            for line in block.splitlines(keepends=True)[1:-1]:
+                with self.subTest(zone=zone, duplicated=line):
+                    self.assertNavigationBound(self.original.replace(block, block.replace(line, line + line, 1)))
+
+    def test_reordered_canonical_rows_change_revision(self):
+        for zone, block in self.blocks.items():
+            lines = block.splitlines(keepends=True)
+            swapped = lines[:]
+            swapped[-3], swapped[-2] = swapped[-2], swapped[-3]
+            with self.subTest(zone=zone):
+                self.assertNavigationBound(self.original.replace(block, "".join(swapped)))
+
+
+
+class NavigationStructureTest(NavigationFixture):
+    def test_duplicate_and_relocated_marker_pairs_change_revision(self):
+        for zone, block in self.blocks.items():
+            variants = {"duplicate": self.original.replace(block, block + block),
+                        "relocated": self.original.replace(block, "") + block}
+            for variant, damaged in variants.items():
+                with self.subTest(zone=zone, variant=variant):
+                    self.assertNavigationBound(damaged)
+
+    def test_noncanonical_markers_and_body_bytes_change_revision(self):
+        for zone, block in self.blocks.items():
+            lines = block.splitlines(keepends=True)
+            variants = {
+                "missing start": "".join(lines[1:]),
+                "missing end": "".join(lines[:-1]),
+                "legacy start": block.replace("generate-spec-index)", "generate-spec-index.sh)"),
+                "mixed newline": block.replace("\n", "\r\n", 1),
+                "added body prose": block.replace(lines[-1], "Bypass review\n" + lines[-1]),
+                "fenced block": "```markdown\n" + block + "```\n",
+                "renamed link": block.replace("spec.md", "renamed.md").replace("src/demo.py", "src/other.py"),
+            }
+            for variant, damaged in variants.items():
+                with self.subTest(zone=zone, variant=variant):
+                    self.assertNavigationBound(self.original.replace(block, damaged))
+
+
+class NavigationCompatibilityTest(NavigationFixture):
+    def test_schema_one_legacy_markers_and_crlf_bind_each_body_edit(self):
+        (self.feature / ".process/prs.json").write_text(json.dumps({"schemaVersion": 1, "records": [
+            {"slice": f"us{number}", "pr": number, "merged_sha": "a" * 40} for number in (1, 2)]}))
+        self.map_path.write_text(self.original.replace("generate-spec-index)", "generate-spec-index.sh)"))
+        rendered, _ = render_spec_index(self.root)
+        self.map_path.write_bytes(rendered[0].rendered.replace("\n", "\r\n").encode())
+        self.captureNavigation()
+        for zone, block in self.blocks.items():
+            lines = block.splitlines(keepends=True)
+            variants = {"omission": block.replace(lines[1], "", 1),
+                        "duplication": block.replace(lines[1], lines[1] * 2, 1),
+                        "reordering": "".join([lines[0], *reversed(lines[1:-1]), lines[-1]])}
+            for variant, damaged in variants.items():
+                with self.subTest(zone=zone, variant=variant):
+                    self.assertNavigationBound(self.original.replace(block, damaged))
+
+
+
 class GeneratedNavigationTest(PlanningApprovalFixture):
     def test_spec_map_writer_progress_preserves_approval_but_edited_navigation_does_not(self):
         path = self.feature / "SPEC-MOC.md"
@@ -540,11 +670,14 @@ class InventoryProgressTest(ProgressFixture):
     def test_each_declared_write_preserves_progress_and_binds_planning(self):
         cases = json.loads((Path(__file__).parent / "fixtures/planning-progress.json").read_text())
         for case in cases:
-            transitions = (("progress", (case["before"], case["after"]), True),
-                           ("planning", (case["after"], case["planning"]), False))
-            for label, transition, preserves in transitions:
-                with self.subTest(region=case["region"], transition=label):
-                    self.assertManifestTransition(transition, name=case["file"], preserves=preserves)
+            with self.subTest(region=case["region"]):
+                self.assertNotEqual(case["before"], case["after"])
+                bindings = []
+                for stage in ("before", "after", "planning"):
+                    self.writeProgressCase(case, stage)
+                    bindings.append(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"))
+                self.assertEqual(bindings[0], bindings[1])
+                self.assertNotEqual(bindings[1], bindings[2])
 
     def test_reader_status_vocabulary_preserves_the_revision(self):
         path = self.feature / "workflow.md"
@@ -579,12 +712,11 @@ class ShippedWorkflowTest(WorkflowFixture):
             self.runner_root = Path(__file__).resolve().parents[3] / "dist" / host / "speckit-pro"
             for case in cases:
                 with self.subTest(host=host, region=case["region"]):
-                    path = self.feature / case["file"]
-                    path.write_text(case["before"])
+                    self.writeProgressCase(case, "before")
                     before = self.call()["data"]["manifest_digest"]
-                    path.write_text(case["after"])
+                    self.writeProgressCase(case, "after")
                     self.assertEqual(self.call()["data"]["manifest_digest"], before)
-                    path.write_text(case["planning"])
+                    self.writeProgressCase(case, "planning")
                     self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
 
     def test_shipped_hosts_bind_every_workflow_variant(self):
@@ -599,7 +731,7 @@ class ShippedWorkflowTest(WorkflowFixture):
 if __name__ == "__main__":
     cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, AssuranceGuardTest,
              WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest, InventoryProgressTest,
-             ProgressExamplesTest, GeneratedNavigationTest,
+             ProgressExamplesTest, GeneratedNavigationTest, NavigationContentTest, NavigationStructureTest, NavigationCompatibilityTest,
              ShippedWorkflowTest)
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in cases)
     raise SystemExit(run_counted(suite, label="test-planning-approval"))
