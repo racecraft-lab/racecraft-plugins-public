@@ -155,6 +155,10 @@ No new independent Daybreak verdict is claimed here.
   current output. A partially updated PR manifest/map pair may fail closed
   until regeneration finishes. The phase and PR-emission protocols regenerate
   before their checkpoint, so a completed writer does not commit that pair.
+- Hand-authored maps with generated markers but no `structureVersion: 1`
+  can be refused by record preflight while the repository regeneration writer
+  skips them. Native scaffolding sets this field. Set the structure version
+  before regenerating such a map; this input is not produced by native writers.
 - The assurance guard accepts its two explicit denial forms and does not infer
   arbitrary English negation. Obfuscated assurance terms split by HTML,
   entities, punctuation, or look-alike letters are outside its recognition;
