@@ -160,7 +160,8 @@ def progress_summary(text: str, scope: tuple[str, ...]) -> str:
     ):
         return text
     if prefix in ("", "- "):
-        return ""
+        # Keep an empty Markdown cell distinct from the table's outer pipes.
+        return " "
     return prefix[:-2] if prefix.endswith("; ") else text
 
 
