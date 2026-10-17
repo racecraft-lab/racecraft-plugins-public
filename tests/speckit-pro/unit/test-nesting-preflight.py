@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 import itertools
 import ast
 import inspect
@@ -74,6 +76,14 @@ def assert_refused_state_file(
     if diagnostic_code is not None:
         test_case.assertEqual(diagnostic_code, envelope["diagnostics"][0]["code"])
     test_case.assertEqual(content, target.read_text(encoding="utf-8"))
+
+
+@contextmanager
+def state_target_workspace() -> Iterator[Path]:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / ".specify").mkdir()
+        yield root
 
 
 class StateEvidenceTests(unittest.TestCase):
@@ -200,9 +210,7 @@ class StatePersistenceTests(unittest.TestCase):
 
 class StateTargetRefusalTests(unittest.TestCase):
     def test_apply_refuses_an_oversized_state_without_replacing_it(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / ".specify").mkdir()
+        with state_target_workspace() as root:
             target = root / "autopilot-state.json"
             content = json.dumps({"notes": "x" * 1_048_576})
             target.write_text(content, encoding="utf-8")
@@ -257,9 +265,7 @@ class StateInvalidDataTests(unittest.TestCase):
 
 class StateTargetAllowlistTests(unittest.TestCase):
     def test_apply_writes_only_an_autopilot_state_file(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / ".specify").mkdir()
+        with state_target_workspace() as root:
             other = root / "package.json"
             other.write_text('{"name": "x"}', encoding="utf-8")
             assert_refused_state_file(
