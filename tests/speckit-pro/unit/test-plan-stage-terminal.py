@@ -128,6 +128,22 @@ class TerminalFixture(unittest.TestCase):
 
 
 class OneCallSequenceTests(TerminalFixture):
+    def test_canonical_absolute_workflow_completes_and_publishes_bookkeeping(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                result = self.finish(host=host, workflow_file=str((self.root / WORKFLOW).resolve()),
+                                     execution_mode="headless")
+                self.assertEqual(result["status"], "ok", result)
+                self.assertEqual(result["data"]["outcome"], "completed")
+                self.assertEqual(len(self.cli.calls("create")), 1)
+                self.assertEqual(len(self.subjects()), 3)
+                self.assertEqual(self.subjects()[0], "chore(ART-007): record the draft pull request")
+                self.assertEqual(json.loads((self.root / STATE).read_text())["status"], "completed")
+                self.assertIn(f"| **Draft PR** | [#7]({URL}) |", (self.root / WORKFLOW).read_text())
+                self.assertEqual(self.git("rev-parse", "HEAD"), git_stdout(self.remote, "rev-parse", "art-007-draft-pr-emission"))
+                self.assertEqual(self.git("status", "--porcelain"), "")
+
     def test_one_call_completes_the_sequence_and_returns_the_stop_label(self) -> None:
         result = self.finish(execution_mode="headless")
         self.assertEqual(result["status"], "ok", result)

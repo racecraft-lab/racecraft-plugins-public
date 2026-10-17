@@ -847,8 +847,9 @@ one child agent that replies ok, then reply NESTED_SPAWN=allowed if it
 answered, or NESTED_SPAWN=refused if the spawn was refused or no spawn tool
 was available.` Set `nested_spawn` from that reply (`allowed`, `refused`, or
 `not_run` when the probe never returned), then request
-`helper_id=resolve-nesting-mode operation=resolve-nesting-mode mode=read_only`
-with inputs `host`, `nested_spawn` and optional `configured_depth`:
+`helper_id=resolve-nesting-mode operation=resolve-nesting-mode mode=apply`
+with a nonempty `request_id` (a run-specific slug), `state_file` set to the repository-relative path of this run's existing
+`autopilot-state.json`, plus `host`, `nested_spawn` and optional `configured_depth`:
 `host=codex`; pass `configured_depth` only when its effective integer value is
 known from the caller, otherwise omit it. Do not infer it from config files
 that may be overridden by the invocation.
@@ -859,9 +860,14 @@ See [Nesting prerequisite](./references/prerequisites.md#nesting-prerequisite)
 for the operator setting and runner-owned precedence. Consume only the
 returned `data.mode`; neither a successful probe nor a depth setting selects
 the dispatch path outside the helper.
-Persist the complete response as
-`nesting_mode` in `autopilot-state.json` and the workflow Notes; the canary
-receipt's `mode` is `data.mode`. When `data.mode` is `flat`, log
+The runner writes the complete response as `nesting_mode` in that state file,
+preserving the other fields. Proceed only after the apply request succeeds;
+on a state-write refusal, repair the state path or file and retry the helper.
+Make at most one repair-and-retry attempt. If persistence still fails, report
+the state-write diagnostic and return before Step 2; a storage failure is
+independent of the observed nesting depth.
+Record `data.mode` and `data.reason` in the workflow Notes; the canary reads
+`nesting_mode.data.mode` from the runner-written state. When `data.mode` is `flat`, log
 `data.prerequisite` once as a note and continue: the root dispatches each
 phase's executors directly under the compact-answer contract. Depth never
 stops, defers or fails the run, and this step has no stop label. A `nested`
