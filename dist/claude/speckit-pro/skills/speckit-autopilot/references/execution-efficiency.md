@@ -496,7 +496,9 @@ retry the blocked action for the next batch. A count larger than its returned
 list means unresolved IDs remain.
 Independent units may continue when the runner permits their reserve.
 To inspect IDs outside a returned batch, delegate a phase-local read-only
-`status` request with `answer_format: detailed`. Preserve unresolved
+`status` request with `answer_format: detailed` that parses the JSON answer
+and returns only `data.unknown_dispatch_ids`: the full ledger precedes that
+list, so a truncated tool output can drop it. Preserve unresolved
 outcomes; reconcile and verify each affected unit before retrying its work.
 A corrective dispatch's scope is its failure family, so do not reserve one
 against a failure inside a

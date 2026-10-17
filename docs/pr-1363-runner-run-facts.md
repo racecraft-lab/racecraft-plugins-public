@@ -196,8 +196,10 @@ Additional review notes retained for subsequent reviews:
 - R1363-30bbb25d: the prior constant extraction and behavior change share one
   commit. Changing that historical ordering requires prohibited history
   rewriting; no runtime defect is involved. This follow-up adds one field to
-  the existing contract; a separate behavior-preserving follow-up shares its
-  field name between producer and projection.
+  the existing contract. The later commit 05a2bba0 shares its field name
+  between producer and projection, but it also rewords recovery guidance,
+  reorders the Codex overlay prompt and extends a contract assertion, so it
+  is not purely behavior-preserving. Splitting it would rewrite pushed history.
 - R1363-e361b2df: the package-root field contract avoids an envelope import of
   execution-control; there is no import cycle on the shipped path.
 - R1363-14a84558: `blocked_by` uses insertion order. The earlier subset assertion
@@ -212,3 +214,17 @@ Additional review notes retained for subsequent reviews:
 - The Codex overlay uses the same recovery protocol but is not pinned by the
   shared Markdown wording assertions. This is not a reachable defect in the
   reviewed overlay; generated-artifact consistency checks its shipped copy.
+
+## Review follow-up at 05a2bba0
+
+- Detailed `status` answers are uncapped and serialize the full `ledger` before
+  `unknown_dispatch_ids`, so host output truncation could drop the IDs a
+  phase-local inspection was meant to expose. The recovery guidance now has the
+  phase-local request parse the answer and return only `data.unknown_dispatch_ids`;
+  the contract test pins that wording on both hosts. The runner output is unchanged.
+- The checkpoint regression asserts the history cap through
+  `COMPACT_EXECUTION_HISTORY_LIMIT_BYTES` instead of a literal.
+- Info, accepted: the recovery paragraph is copied into `SKILL.md`,
+  `execution-efficiency.md` and `phase-execution.md` (existing pattern; the
+  contract test pins all three). Compact checkpoint always returns the same
+  insertion-order prefix; no guidance consumes `completed_dispatch_ids`.

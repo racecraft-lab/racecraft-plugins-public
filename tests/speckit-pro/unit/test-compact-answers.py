@@ -15,7 +15,7 @@ from unittest.mock import patch
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "speckit-pro"))
 sys.path.insert(0, str(REPO / "tests/speckit-pro/lib"))
-from speckit_pro_runner.envelope import parse_request, response  # noqa: E402
+from speckit_pro_runner.envelope import COMPACT_EXECUTION_HISTORY_LIMIT_BYTES, parse_request, response  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
 from speckit_pro_runner.execution_control import execution_control, UNKNOWN_GUARDED_ACTIONS  # noqa: E402
 from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noqa: E402
@@ -411,7 +411,8 @@ class CompactCheckpointTests(unittest.TestCase):
                 self.assertTrue(ids)
                 self.assertLess(len(ids), 9)
                 self.assertEqual(ids, completed_ids[:len(ids)])
-                self.assertLessEqual(len(json.dumps(ids, separators=(",", ":")).encode()), 3072)
+                self.assertLessEqual(len(json.dumps(ids, separators=(",", ":")).encode()),
+                                     COMPACT_EXECUTION_HISTORY_LIMIT_BYTES)
                 self.assertEqual([d["code"] for d in answer["diagnostics"]],
                                  [] if state is None else ["state_mirror_not_refreshed"])
                 detailed = self.call(payload, action="checkpoint", answer_format="detailed")

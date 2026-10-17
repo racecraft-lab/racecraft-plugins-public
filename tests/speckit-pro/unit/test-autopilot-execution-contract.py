@@ -149,7 +149,8 @@ class ExecutionContractTests(unittest.TestCase):
                     self.assertTrue("bounded batches" in text, f"{relative} missing batch contract")
                     self.assertTrue("refresh" in text, f"{relative} missing refresh instruction")
                     for rule in ("To inspect IDs outside a returned batch", "phase-local", "answer_format: detailed",
-                                 "Independent units may continue when the runner permits"):
+                                 "Independent units may continue when the runner permits",
+                                 "returns only `data.unknown_dispatch_ids`"):
                         self.assertTrue(rule in text, f"{relative} missing recovery scope instruction: {rule}")
 
     def test_plan_rescope_reconciles_every_plan_artifact_before_g3_on_both_hosts(self):
