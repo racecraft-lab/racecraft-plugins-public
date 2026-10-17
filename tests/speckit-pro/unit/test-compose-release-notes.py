@@ -174,6 +174,71 @@ def run_validation(*, title: str, body: str = "", labels: tuple[str, ...] = (), 
     )
 
 
+class PaginatedReleaseNotesTests(unittest.TestCase):
+    @inventory_check
+    def test_capture_and_replay_include_all_309_commits_across_pages(self) -> None:
+        comparison = compare_payload(*(f"fix: Change {number} (#{number})" for number in range(1, 310)))
+        pages = [
+            ({**comparison, "commits": comparison["commits"][offset:offset + 100]},
+             {"Link": '<https://api.github.test/page>; rel="next"' if offset < 300
+              else '<https://api.github.test/page>; rel="prev"'})
+            for offset in range(0, 309, 100)
+        ]
+        client = mock.Mock(repository=REPOSITORY)
+        client.request_json.side_effect = pages + [
+            (pull("ignored title", f"```release-note\nCaptured change {number}.\n```"), {})
+            for number in range(1, 310)
+        ]
+        snapshot = COMPOSER.capture_release_input_snapshot(client, TAG, RAW_BODY)
+        self.assertEqual(snapshot["compare"]["commits"], comparison["commits"])
+        self.assertEqual(
+            client.request_json.call_args_list[:4],
+            [mock.call("GET", f"/repos/{REPOSITORY}/compare/{PREVIOUS_TAG}...{TAG}?per_page=100&page={page}")
+             for page in range(1, 5)],
+        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "snapshot.json"
+            encoded = canonical_snapshot_bytes(snapshot)
+            path.write_bytes(encoded)
+            loaded = COMPOSER.load_release_input_snapshot(
+                str(path), expected_sha256=hashlib.sha256(encoded).hexdigest(),
+            )
+            body = COMPOSER.compose_release_body(
+                loaded.raw_body, loaded.commits, loaded.pulls,
+                compare_commit_count=loaded.commit_count, source_sha256=loaded.sha256,
+            )
+        for number in range(1, 310):
+            self.assertIn(f"Captured change {number}.", body)
+        persisted = COMPOSER.load_persisted_snapshot(body, RAW_BODY, expected_source_sha256=loaded.sha256)
+        self.assertEqual(persisted.compare_commit_count, 309)
+        self.assertTrue(persisted.payload.endswith(RAW_BODY))
+
+    def test_capture_rejects_short_or_inconsistent_compare_pages(self) -> None:
+        comparison = compare_payload(*(f"fix: Change {number} (#{number})" for number in range(1, 102)))
+        first = {**comparison, "commits": comparison["commits"][:100]}
+        last = {**comparison, "commits": comparison["commits"][100:]}
+        cases = {
+            "short first page": ({**first, "commits": first["commits"][:-1]}, last),
+            "short final page": (first, {**last, "commits": []}),
+            "extra final commit": (first, {**last, "commits": last["commits"] * 2}),
+            "changed total": (first, {**last, "total_commits": 102}),
+            "invalid total": ({**first, "total_commits": True}, last),
+            "negative total": ({**first, "total_commits": -1}, last),
+            "missing commits": (first, {**last, "commits": None}),
+            "repeated commit": (first, {**last, "commits": first["commits"][:1]}),
+            "missing sha": (first, {**last, "commits": [{"commit": {"message": "fix: Last (#101)"}}]}),
+            "changed base": ({**first, "base_commit": {"sha": "base-a"}},
+                             {**last, "base_commit": {"sha": "base-b"}}),
+        }
+        for name, pages in cases.items():
+            with self.subTest(msg=name):
+                client = mock.Mock(repository=REPOSITORY)
+                client.request_json.side_effect = [(page, {}) for page in pages]
+                with self.assertRaisesRegex(COMPOSER.CompositionError, "Compare API"):
+                    COMPOSER.capture_release_input_snapshot(client, TAG, RAW_BODY)
+                self.assertTrue(all("/compare/" in call.args[1] for call in client.request_json.call_args_list))
+
+
 class ComposeReleaseNotesTests(unittest.TestCase):
     @inventory_check
     def test_previous_tag_and_compare_discovery(self) -> None:
@@ -692,14 +757,13 @@ class ComposeReleaseNotesTests(unittest.TestCase):
                 self.assertEqual(completed.stdout, "")
 
     @inventory_check
-    def test_compare_api_accepts_250_commits_and_rejects_251(self) -> None:
+    def test_complete_compare_accepts_250_and_251_commits_but_rejects_truncation(self) -> None:
         subjects_250 = tuple(f"docs: Commit {number} (#{number})" for number in range(1, 251))
         commits = COMPOSER.discover_commits(compare_payload(*subjects_250), {})
         self.assertEqual(len(commits), 250)
 
         subjects_251 = subjects_250 + ("docs: Commit 251 (#251)",)
-        with self.assertRaisesRegex(COMPOSER.CompositionError, "250"):
-            COMPOSER.discover_commits(compare_payload(*subjects_251), {})
+        self.assertEqual(len(COMPOSER.discover_commits(compare_payload(*subjects_251), {})), 251)
 
         with self.assertRaisesRegex(COMPOSER.CompositionError, "truncated"):
             COMPOSER.discover_commits(

@@ -1063,7 +1063,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             capture_function = _python_function_block(composer_content, 'capture_release_input_snapshot')
             canonical_function = _python_function_block(composer_content, 'canonical_snapshot_bytes')
             loader_function = _python_function_block(composer_content, 'load_release_input_snapshot')
-            self.assertTrue(_contains_all(capture_function + canonical_function + loader_function, ('f"/repos/{client.repository}/compare/{base}...{head}"', 'f"/repos/{client.repository}/pulls/{commit.pr_number}"', '"body": body', '"labels": sorted(label_names(pr))', '"release_body": raw_body', '"compare": compare', '"pulls": pulls', 'raw != canonical_snapshot_bytes(value)', 'digest != expected_sha256', 'set(pulls_value) != expected_pull_keys')))
+            self.assertTrue(_contains_all(capture_function + canonical_function + loader_function, ('fetch_complete_compare(client, base, head)', 'f"/repos/{client.repository}/pulls/{commit.pr_number}"', '"body": body', '"labels": sorted(label_names(pr))', '"release_body": raw_body', '"compare": compare', '"pulls": pulls', 'raw != canonical_snapshot_bytes(value)', 'digest != expected_sha256', 'set(pulls_value) != expected_pull_keys')))
         with self.subTest(msg='composer audits all non-cancelled post-publication capture outcomes'):
             self.assertIn('compose-release-notes:', composer_job)
             self.assertEqual(['[release, capture-release-note-inputs]'], _scalar_values(composer_job, 'needs', 4))
@@ -1095,13 +1095,15 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertTrue(_contains_all(opening_function + closing_function + extraction_function, ('FENCE_RE.fullmatch(rest)', '_strip_quote_prefix(line, opening.quote_depth)', 're.escape(opening.character)', 'opening.length', '_is_closing_fence(candidate, opening)', 'if opening.info == "release-note":', 'An unclosed enclosing fence owns the remainder of the document', 'index = close_index + 1', 'malformed or len(matches) != 1')))
         with self.subTest(msg='capture owns Compare and PR reads while compose does not refetch'):
             request_methods = re.findall('client\\.request_json\\(\\s*"(?P<method>GET|PATCH|POST|PUT|DELETE)"', composer_content)
-            self.assertEqual(['GET', 'GET', 'GET', 'PATCH'], request_methods)
+            self.assertEqual(['GET', 'GET', 'GET', 'GET', 'PATCH'], request_methods)
             capture_function = _python_function_block(composer_content, 'capture_release_input_snapshot')
             resolve_release_function = _python_function_block(composer_content, '_resolve_release')
             run_function = _python_function_block(composer_content, 'run')
             self.assertIn('if not args.snapshot:', run_function)
             live_composition = run_function.split('if not args.snapshot:', 1)[1]
-            self.assertTrue(_contains_all(capture_function, ('f"/repos/{client.repository}/compare/{base}...{head}"', 'f"/repos/{client.repository}/pulls/{commit.pr_number}"')))
+            compare_function = _python_function_block(composer_content, 'fetch_complete_compare')
+            self.assertIn('f"/repos/{client.repository}/compare/{base}...{head}?per_page={COMPARE_PAGE_SIZE}"', compare_function)
+            self.assertTrue(_contains_all(capture_function, ('fetch_complete_compare(client, base, head)', 'f"/repos/{client.repository}/pulls/{commit.pr_number}"')))
             self.assertTrue(_contains_all(resolve_release_function + live_composition, ('load_release_input_snapshot(', '_resolve_release(client, args.tag)', 'f"/repos/{client.repository}/releases/tags/{quoted_tag}"', 'f"/repos/{client.repository}/releases/{release_id}"', '{"body": composed}')))
             self.assertNotIn('/compare/', live_composition)
             self.assertNotIn('/pulls/', live_composition)
