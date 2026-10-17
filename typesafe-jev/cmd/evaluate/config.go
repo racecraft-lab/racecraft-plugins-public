@@ -21,6 +21,10 @@ type ProviderSpec struct {
 	APIKeyEnv string
 	// DefaultModel applies when neither the tool call nor JEV_MODEL names one.
 	DefaultModel string
+	// BoxModel is the Jev 1.14 id a fallback runs a box question on when its
+	// DefaultModel is one validateBoxModel knows is Jev 1.13. The fallback
+	// never runs the caller's model, so it must not depend on one.
+	BoxModel string
 	// Attribution is sent as fixed HTTP-Referer / X-OpenRouter-Title headers
 	// when set. It is a constant, never derived from local paths or content.
 	Attribution bool
@@ -73,6 +77,9 @@ var providers = map[string]ProviderSpec{
 		EndpointURL:  "https://api.typesafe.ai/v1/systemone",
 		APIKeyEnv:    "TYPESAFE_API_KEY",
 		DefaultModel: "jev-latest",
+		// The pinned 1.14 id, not jev-preview, which moves with each preview
+		// build (https://docs.typesafe.ai/models.md, 2026-10-17).
+		BoxModel: "jev-1.14.0",
 		// TypeSafe documents string, object, array, or null for every
 		// instruction and description field.
 		StructuredEntries: true,
@@ -93,7 +100,10 @@ var providers = map[string]ProviderSpec{
 		EndpointURL:  "https://openrouter.ai/api/alpha/decisions",
 		APIKeyEnv:    "OPENROUTER_API_KEY",
 		DefaultModel: "~typesafe/jev-latest",
-		Attribution:  true,
+		// Already Jev 1.14 (https://openrouter.ai/docs/guides/community/jev,
+		// 2026-10-17), so a box question keeps the default.
+		BoxModel:    "~typesafe/jev-latest",
+		Attribution: true,
 		// Matches TypeSafe since OpenRouter republished the Decisions schemas.
 		StructuredEntries: true,
 		// All four are documented on the Decisions path and transient in

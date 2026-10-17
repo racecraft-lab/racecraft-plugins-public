@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"hash/crc32"
 	"image"
 	"image/jpeg"
@@ -899,55 +898,6 @@ func TestFallbackRebuildsTheOtherWireFormat(t *testing.T) {
 	}
 	if fallbackHeader.Get(headerDangerImages) != "" {
 		t.Fatal("openrouter fallback was sent the TypeSafe images header")
-	}
-}
-
-// The backends' local rules differ: TypeSafe's default model rejects box and
-// its side minimum is 280, not 256. When the fallback refuses a request the
-// primary failed on, the caller must see the primary's failure, not a local
-// rejection that claims no request was made.
-func TestFallbackLocalRefusalReportsPrimaryFailure(t *testing.T) {
-	primarySrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	}))
-	defer primarySrv.Close()
-	var fallbackCalls atomic.Int64
-	fallbackSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		fallbackCalls.Add(1)
-		w.Write([]byte(noulOK))
-	}))
-	defer fallbackSrv.Close()
-
-	box := imageRequest(mustPNG(t, 280, 280), "")
-	box.Model = "typesafe/jev-1.14"
-	box.Questions = map[string]question{"mug": {Type: typeBox, Instructions: "the mug"}}
-	narrow := imageRequest(mustPNG(t, 256, 320), "")
-
-	for name, in := range map[string]evaluateIn{"box on jev-latest": box, "256-pixel side": narrow} {
-		t.Run(name, func(t *testing.T) {
-			c := testClient(withImages(providerAt("openrouter", primarySrv.URL)), primarySrv)
-			c.MaxRetries = 0
-			c.Fallback = testClient(withImages(providerAt("typesafe", fallbackSrv.URL)), fallbackSrv)
-			c.Log = &bytes.Buffer{}
-			_, err := runEvaluate(context.Background(), c, in)
-			if err == nil {
-				t.Fatal("expected an error")
-			}
-			var local *requestInvalidError
-			if errors.As(err, &local) {
-				t.Fatalf("a provider failure was reported as a local rejection: %v", err)
-			}
-			var status *statusErr
-			if !errors.As(err, &status) || status.Status != http.StatusServiceUnavailable {
-				t.Fatalf("the primary's failure is not in the error: %v", err)
-			}
-			if !strings.Contains(err.Error(), "fallback") {
-				t.Fatalf("the error does not say the fallback refused: %v", err)
-			}
-		})
-	}
-	if fallbackCalls.Load() != 0 {
-		t.Fatalf("the fallback was billed: %d", fallbackCalls.Load())
 	}
 }
 

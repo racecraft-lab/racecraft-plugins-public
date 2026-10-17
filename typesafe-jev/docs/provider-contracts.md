@@ -299,6 +299,23 @@ through, so an operator's own model string is not rewritten into a 404 they
 did not ask to see. `prepare` fills the backend default before the check, so an
 omitted model on TypeSafe fails as `jev-latest` rather than being billed.
 
+### Fallback and the per-backend gates
+
+The two backends' local gates differ: the box model default, the side minimum
+(280 on TypeSafe, 256 on OpenRouter), and the context budget (64,000 and
+32,000 on TypeSafe without `JEV_LONG_CONTEXT`, 262,144 on OpenRouter). The
+fallback never runs the caller's model, so:
+
+- A box question on the fallback runs on that backend's pinned Jev 1.14 id,
+  `jev-1.14.0` on TypeSafe (whose default, `jev-latest`, is 1.13) and
+  `~typesafe/jev-latest` on OpenRouter (`BoxModel` in `config.go`).
+- When the primary fails in a way that would move the call, the fallback
+  checks the request first. A request it would refuse locally does not move
+  the session. The caller gets the primary's failure, and its exit code, with
+  the fallback's reason added.
+- Once a session is on the fallback, a local refusal there is still exit 2,
+  since no call was made, and its message says the session is on the fallback.
+
 ## Jev context budgets
 
 Sources: <https://docs.typesafe.ai/models.md> and

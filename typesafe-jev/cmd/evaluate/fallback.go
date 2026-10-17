@@ -19,7 +19,8 @@ import (
 // sent again to the fallback, and every later call in the session stays there,
 // so one session never alternates between two accounts. A request the primary
 // rejected by shape (400, 413, 422) or that failed local validation fails the
-// same way anywhere, so it never moves.
+// same way anywhere, so it never moves. Neither does a request the fallback
+// would refuse locally: the backends' image limits and context budgets differ.
 
 // fallbackStatus reports whether a primary's HTTP status means the backend is
 // not serving this credential now: a dead or unfunded key (401, 402, 403), a
@@ -53,16 +54,13 @@ func fallbackReason(err error) (string, bool) {
 // the session has switched. Both share one deadline, the primary's timeout:
 // a client that aborts a tool call after a fixed time would otherwise kill a
 // fallback that was given a fresh budget of its own.
-//
-// The request's model names the primary's id, which differs per backend, so
-// the fallback runs its own default instead.
 func runWithFallback(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
 	defer cancel()
-	onFallback := in
-	onFallback.Model = ""
+	onFallback := fallbackRequest(c.Fallback, in)
 	if c.switched.Load() {
-		return runOn(ctx, c.Fallback, onFallback)
+		body, err := runOn(ctx, c.Fallback, onFallback)
+		return body, onTheFallback(c, err)
 	}
 	body, err := runOn(ctx, c, in)
 	if err == nil || ctx.Err() != nil {
@@ -72,23 +70,54 @@ func runWithFallback(ctx context.Context, c *Client, in evaluateIn) ([]byte, err
 	if !ok {
 		return nil, err
 	}
-	if c.switched.CompareAndSwap(false, true) {
-		log := c.Log
-		if log == nil {
-			log = os.Stderr
-		}
-		fmt.Fprintf(log, "evaluate: %s refused or failed the call (%s); using the %s fallback for the rest of this session\n",
-			c.Provider.Name, reason, c.Fallback.Provider.Name)
-	}
-	body, fallbackErr := runOn(ctx, c.Fallback, onFallback)
-	// The backends' local rules are not identical: box models, image side
-	// limits, and context budgets differ. A local refusal here comes after the
-	// primary was called, so it must not read as "rejected before any network
-	// call". The primary's failure stays the error, and its class decides the
-	// exit code.
-	var local *requestInvalidError
-	if errors.As(fallbackErr, &local) {
+	// The backends' local gates differ: image side limits and context budgets
+	// are per backend. The fallback checks the request before the session
+	// moves. One it cannot take leaves the session on the primary, and the
+	// caller sees the primary's failure, whose class decides the exit code,
+	// rather than a local rejection after a network call was made.
+	p, local := prepare(c.Fallback, onFallback)
+	if local != nil {
 		return nil, fmt.Errorf("%w; the %s fallback cannot take this request: %v", err, c.Fallback.Provider.Name, local)
 	}
-	return body, fallbackErr
+	c.switchToFallback(reason)
+	return send(ctx, c.Fallback, p)
+}
+
+// fallbackRequest is the request as the fallback runs it. Its model names a
+// primary id, which differs per backend, so the fallback runs its own default.
+// A box question runs on the fallback's BoxModel when that default is one
+// validateBoxModel would refuse, so the fallback never fails a box question
+// on a model the agent cannot change.
+func fallbackRequest(fb *Client, in evaluateIn) evaluateIn {
+	in.Model = ""
+	if requestHasBox(in) && knownBoxReject(fb.Provider.Name, fb.Model) {
+		in.Model = fb.Provider.BoxModel
+	}
+	return in
+}
+
+// switchToFallback moves the session to the fallback, once, with one line on
+// the log.
+func (c *Client) switchToFallback(reason string) {
+	if !c.switched.CompareAndSwap(false, true) {
+		return
+	}
+	log := c.Log
+	if log == nil {
+		log = os.Stderr
+	}
+	fmt.Fprintf(log, "evaluate: %s refused or failed the call (%s); using the %s fallback for the rest of this session\n",
+		c.Provider.Name, reason, c.Fallback.Provider.Name)
+}
+
+// onTheFallback marks a local rejection from the fallback this session moved
+// to. It stays a local rejection, because no call was made, and it says which
+// backend refused, since the primary may not have that limit.
+func onTheFallback(c *Client, err error) error {
+	var local *requestInvalidError
+	if !errors.As(err, &local) {
+		return err
+	}
+	return &requestInvalidError{fmt.Errorf("this session is on the %s fallback since %s failed; %w",
+		c.Fallback.Provider.Name, c.Provider.Name, local.err)}
 }
