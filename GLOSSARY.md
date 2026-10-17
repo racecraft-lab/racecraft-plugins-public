@@ -71,6 +71,10 @@ _Avoid_: confirmed live output
 The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must clear it before resume.
 _Avoid_: integrity failure, hard stop
 
+**Terminal state**:
+Where a run may end without a harm halt: planning ready for review, or ready for UAT. The runner owns the closed list and answers "may this run end now?" from it.
+_Avoid_: stop reason, finish
+
 **Host**:
 A coding-agent product that runs the plugin: Claude Code or Codex.
 

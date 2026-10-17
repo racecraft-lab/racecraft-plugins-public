@@ -270,8 +270,28 @@ class RerunTests(TerminalFixture):
         text = page.read_text(encoding="utf-8")
         page.write_text(re.sub(r"(<!-- FILL:[a-z0-9-]+:START -->)", r"\1<script>alert(1)</script>", text, count=1), encoding="utf-8")
         result = self.finish(execution_mode="headless")
-        self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure")
+        self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence")
         self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+    def test_artifact_binding_drift_is_a_registered_harm_halt_that_blocks_the_next_write(self) -> None:
+        page = self.root / FEATURE / "artifacts" / f"{self.finish(until='pages')['data']['pages']['generated'][0]}.html"
+        page.write_text(page.read_text(encoding="utf-8") + "<!-- drift -->", encoding="utf-8")
+        label = self.finish(execution_mode="headless")["data"]["stop_label"]
+        self.assertEqual(stop_policy.stop_class(label.removeprefix("stop_reason:")), "harm_halt")
+        record = json.loads((self.root / ".specify/harm-halt/halt.json").read_text(encoding="utf-8"))
+        self.assertEqual(record["reason"], label.removeprefix("stop_reason:"))
+        blocked = self.finish(execution_mode="headless")
+        self.assertEqual(blocked["diagnostics"][0]["code"], "harm_halt_active", blocked)
+        self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+    def test_stale_planning_inputs_stop_with_a_registered_reason_and_no_halt(self) -> None:
+        self.finish(until="pages")
+        tasks = self.root / PLANNING["tasks_file"]
+        tasks.write_bytes(tasks.read_bytes() + b"\nA late task.\n")
+        result = self.finish(execution_mode="headless")
+        self.assertEqual(result["data"]["stop_label"], LABEL, result)
+        self.assertFalse((self.root / ".specify/harm-halt/halt.json").exists())
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
 
 
 class ContentEvidenceTests(TerminalFixture):
@@ -326,7 +346,7 @@ class PageRefusalFixture(TerminalFixture):
                 self.assertEqual(count, 1, "the attack must rewrite a generated field")
                 page.write_text(altered, encoding="utf-8")
                 result = self.finish(host=host, execution_mode="headless")
-                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence", result)
                 self.assertIn("planning markup", result["diagnostics"][0]["message"], result)
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
                 self.assertEqual(json.loads((self.root / STATE).read_text())["status"], "in_progress")
@@ -629,7 +649,7 @@ class PublicationOwnershipTests(TerminalFixture):
                 else:
                     entry.write_text("retained private content", encoding="utf-8")
                 result = self.finish(host=host, execution_mode="headless")
-                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence", result)
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
                 self.assertEqual(git(self.remote, "show-ref", check=False).returncode, 1)
                 self.assertNotIn(name, self.git("ls-files", "--", f"{FEATURE}/artifacts"))
@@ -666,7 +686,7 @@ class UnexpectedArtifactEntryTests(TerminalFixture):
                     entry.symlink_to("missing-target")
                 else:
                     entry.write_text("private content")
-                self.assertEqual(self.finish(execution_mode="headless")["data"]["stop_label"], "stop_reason:integrity_failure")
+                self.assertEqual(self.finish(execution_mode="headless")["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence")
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
 
 
@@ -687,7 +707,8 @@ class PublicationTransactionFixture(TerminalFixture):
             action = functools.partial(stage_unowned_entry, entry=entry, content=content, commit_subject=subject)
             self.cli = after_cli_call(self.cli, prefix, occurrence, action)
             result = self.finish(execution_mode="headless")
-            self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+            expected = "identity_mismatch" if scenario == "sibling" else "tampering_or_forged_evidence"
+            self.assertEqual(result["data"]["stop_label"], f"stop_reason:{expected}", result)
             if subject is None:
                 self.assertEqual(self.subjects(), [])
             self.assertEqual(git(self.remote, "show-ref", check=False).returncode, 1)
@@ -718,7 +739,7 @@ class StagedArtifactPublicationTests(PublicationTransactionFixture):
                 action = functools.partial(stage_unowned_entry, entry=entry, content="private staged content")
                 self.cli = after_cli_call(self.cli, ("git", "add", "--"), window, action)
                 result = self.finish(host=host, execution_mode="headless")
-                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence", result)
                 local = self.git("ls-tree", "-r", "HEAD", "--", f"{FEATURE}/artifacts")
                 self.assertNotIn("unowned.html", local)
                 remote = git(self.remote, "ls-tree", "-r", "art-007-draft-pr-emission", check=False)
@@ -763,7 +784,7 @@ class ArtifactSubstitutionTests(TerminalFixture):
 
                     self.cli = swap
                     result = self.finish(host=host, execution_mode="headless")
-                    self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                    self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence", result)
                     self.assertEqual(self.subjects(), [])
                     self.assertEqual(external.read_text(), "private external sentinel")
 

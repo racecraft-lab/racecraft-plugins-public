@@ -23,7 +23,7 @@ from ..envelope import RunnerRequest, diagnostic, response
 from ..execution_control import contained_workflow_file
 from ..trusted_io import resolve_repo_root, trusted_bytes
 from ..workflow_stage import AUTOPILOT_BASIC_INFO_HEADING, HTML_COMMENT_RE, workflow_stage_signals, workflow_table_rows
-from . import artifact_fill, artifact_publication, artifact_selection
+from . import artifact_fill, artifact_publication, artifact_selection, harm_halt
 from .read_only import confidence_gate_inputs, corroborate_draft_pr, observation_pull_requests, workflow_draft_pr_row
 from .readiness_record import preview_surface
 
@@ -34,6 +34,8 @@ PLANNING = ("plan_file", "spec_file", "tasks_file")
 INPUTS = frozenset({"repo_root", "host", "workflow_file", "execution_mode", "until", "base_branch",
                     "unratified_defaults", *PLANNING})
 RESUME = {"claude": "/speckit-pro:speckit-autopilot", "codex": "$speckit-pro:speckit-autopilot"}
+# Artifact bytes that fail their recorded hash or provenance are a harm halt (ADR 0010).
+TAMPERED = "tampering_or_forged_evidence"
 TITLE = re.compile(r"<title>(.*?)</title>", re.DOTALL)
 SECTION = re.compile(r"(?ms)^## Artifact Review Handoff\n.*?(?=^## |\Z)")
 # One git or gh command in the repository; tests replace this name with a fake.
@@ -193,7 +195,7 @@ def discard(run: Run, names: list[str]) -> None:
     try:
         artifact_publication.remove_pages(run.root, Path(run.feature), names)
     except OSError as error:
-        raise Stop("integrity_failure", "artifact cleanup refused an unsafe directory or page") from error
+        raise Stop(TAMPERED, "artifact cleanup refused an unsafe directory or page") from error
 
 
 def recorded_pages_current(run: Run) -> bool:
@@ -218,7 +220,7 @@ def fill_page(run: Run, page_id: str, directory: Path) -> str | None:
             return str(filled["diagnostics"][0]["message"])
     content = trusted_bytes(path, run.root)
     if content is None or path.stat().st_nlink != 1:
-        raise Stop("integrity_failure", f"the page {page_id} is not a confined regular file")
+        raise Stop(TAMPERED, f"the page {page_id} is not a confined regular file")
     if is_sample(page_id, content):
         discard(run, [path.name])
         return "the page is still the sample template"
@@ -230,9 +232,9 @@ def fill_pages(run: Run, fresh: bool) -> dict[str, Any]:
     selection = call(run, "select-artifact-pages", "read_only",
                      {name: path for name, path in run.planning.items() if name in artifact_publication.SELECTION_INPUTS})
     if selection["status"] != "ok":
-        raise Stop("integrity_failure", str(selection["diagnostics"][0]["message"]))
+        raise Stop(TAMPERED, str(selection["diagnostics"][0]["message"]))
     if not fresh and artifact_review.record_from_workflow(workflow_text(run)) is not None and not recorded_pages_current(run):
-        raise Stop("integrity_failure", "planning inputs changed; regenerate the pages before finishing the stage")
+        raise Stop("plan_stage_boundary", "planning inputs changed; regenerate the pages before finishing the stage")
     selected = selection["data"]["selected_pages"]
     directory = run.root / run.feature / "artifacts"
     if fresh and artifact_review.record_from_workflow(workflow_text(run)) is not None and not recorded_pages_current(run) and directory.exists():
@@ -248,7 +250,7 @@ def fill_pages(run: Run, fresh: bool) -> dict[str, Any]:
     try:
         artifact_publication.publication_files(run.root, Path(run.feature), [f"{page_id}.html" for page_id in owned])
     except OSError as error:
-        raise Stop("integrity_failure", str(error)) from error
+        raise Stop(TAMPERED, str(error)) from error
     return {"generated": owned, "gaps": gaps, "selected": selected}
 
 
@@ -258,14 +260,14 @@ def page_entry(run: Run, page_id: str) -> dict[str, Any]:
     html = text_of(run.root, path)
     filled = call(run, "fill-artifact-page", "dry_run", {**run.planning, "entry_id": page_id})
     if filled["status"] != "ok":
-        raise Stop("integrity_failure", f"the planning evidence for {page_id} could not be rendered")
+        raise Stop(TAMPERED, f"the planning evidence for {page_id} could not be rendered")
     prose_slots = [slot["slot"] for slot in filled["data"]["narrative_slots"]]
     if artifact_fill.planning_markup(html, prose_slots) != filled["data"]["planning_markup"]:
-        raise Stop("integrity_failure", f"the page {page_id} does not match its planning markup")
+        raise Stop(TAMPERED, f"the page {page_id} does not match its planning markup")
     title, body = (filled["data"][key] for key in ("expected_title", "expected_content"))
     found = TITLE.search(html)
     if not body or found is None or artifact_fill.html_text(found[1]) != title or body not in artifact_fill.html_text(html):
-        raise Stop("integrity_failure", f"the page {page_id} does not match its planning title and feature content")
+        raise Stop(TAMPERED, f"the page {page_id} does not match its planning title and feature content")
     return {"id": page_id, "generation": "generated", "path": path, "sha256": sha256(run.root, path),
             "expected_title": title, "expected_content": body,
             "preview": {"status": "pending", "blocker": "Not observed yet", "observation": None}}
@@ -422,16 +424,16 @@ def bind_artifacts(run: Run, pages: dict[str, Any]) -> None:
         contents = artifact_publication.publication_files(run.root, Path(run.feature),
                                                         [f"{page_id}.html" for page_id in pages["generated"]])
     except OSError as error:
-        raise Stop("integrity_failure", str(error)) from error
+        raise Stop(TAMPERED, str(error)) from error
     record = artifact_review.record_from_workflow(workflow_text(run))
     recorded = {entry["path"]: entry["sha256"] for entry in record["pages"] if entry["generation"] == "generated"} if record else {}
     algorithm = command(run, ["git", "rev-parse", "--show-object-format"], "the Git object format could not be read")
     if algorithm not in {"sha1", "sha256"}:
-        raise Stop("integrity_failure", "unsupported Git object format")
+        raise Stop("tool_unavailable", "unsupported Git object format")
     for name, content in contents.items():
         path = f"{run.feature}/artifacts/{name}"
         if recorded.get(path) != hashlib.sha256(content).hexdigest():
-            raise Stop("integrity_failure", "an artifact changed after its handoff validation")
+            raise Stop(TAMPERED, "an artifact changed after its handoff validation")
         run.artifacts[path] = hashlib.new(algorithm, f"blob {len(content)}\0".encode() + content).hexdigest()
 
 
@@ -442,7 +444,7 @@ def check_git_artifacts(run: Run, *, committed: bool) -> None:
     changed = command(run, ["git", "diff", *revisions, "--name-only", "-z", "--", "specs/"],
                       "the changed artifact paths could not be read")
     if any("/artifacts/" in path and not path.startswith(prefix + "/") for path in changed.split("\0")):
-        raise Stop("integrity_failure", "changed artifacts from another feature are not owned by this run")
+        raise Stop("identity_mismatch", "changed artifacts from another feature are not owned by this run")
     argv = (["git", "ls-tree", "-r", "-z", "HEAD", "--", prefix] if committed else
             ["git", "ls-files", "--stage", "-z", "--", prefix])
     result = command(run, argv, "the Git artifact entries could not be read")
@@ -450,7 +452,7 @@ def check_git_artifacts(run: Run, *, committed: bool) -> None:
                 for path, oid in run.artifacts.items()]
     actual = result.removesuffix("\0").split("\0") if result else []
     if sorted(actual) != sorted(expected):
-        raise Stop("integrity_failure", "Git contains unowned or changed artifacts; nothing further will be committed or pushed")
+        raise Stop(TAMPERED, "Git contains unowned or changed artifacts; nothing further will be committed or pushed")
 
 
 def terminal_sequence(run: Run, pages: dict[str, Any]) -> dict[str, Any]:
@@ -459,7 +461,7 @@ def terminal_sequence(run: Run, pages: dict[str, Any]) -> dict[str, Any]:
     try:
         artifact_review.review_handoff(workflow_text(run), run.root, trusted_bytes, surface)
     except ValueError as error:
-        raise Stop("integrity_failure", f"a generated page failed its fill check: {error}") from error
+        raise Stop(TAMPERED, f"a generated page failed its fill check: {error}") from error
     bind_artifacts(run, pages)
     commit(run, [run.feature, run.workflow, run.state], f"chore({run.info['spec id']}): {BOUNDARY}")
     packet = build_packet(run, pages)
@@ -507,11 +509,14 @@ def run_plan_stage_terminal_helper(entry: Any, request: Any, dispatch: Dispatch)
     root = resolve_repo_root(request.inputs)
     if isinstance(root, dict):
         return response("input_error", request_id=request.request_id, diagnostics=[root])
+    run = Run(root, request.inputs, dispatch, request)
     try:
         check_inputs(request.inputs)
-        data = finish(Run(root, request.inputs, dispatch, request), request.mode == "apply")
+        data = finish(run, request.mode == "apply")
     except Stop as stop:
         label = stop_label(stop.reason)
+        if stop_policy.stop_class(stop.reason) == stop_policy.HARM_HALT and request.mode == "apply":
+            harm_halt.record_halt(root, stop.reason, stop.report, f"HEAD {run.initial_head or 'unknown'} before the plan stage")
         return response("expected_failure", request_id=request.request_id, data={
             "helper_id": entry.helper_id, "outcome": "stopped", "stop_label": label, "report": stop.report,
             "next_action": f"Print the stop report, then {label} as the last line, and stop."},

@@ -22,6 +22,7 @@ from .execution_requests import run_execution_helper
 from .git_write_probe import run_git_write_probe_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .g0_setup import run_g0_setup_helper
+from .harm_halt import apply_refusal as harm_halt_refusal, run_harm_halt_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
 from .plan_stage_terminal import run_plan_stage_terminal_helper
 from .quality_gates_proposal import run_quality_gates_proposal_helper
@@ -725,6 +726,16 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         mutation_authoritative_request("decisions-list"),
         rollback="Appends are all-or-nothing; a refused batch writes nothing, so rerun it corrected.",
     ),
+    "harm-halt": MutationEntry(
+        "harm-halt",
+        "harm-halt",
+        ("read_only", "dry_run", "apply"),
+        None,
+        "golden_only",
+        "golden_fixture",
+        mutation_authoritative_request("harm-halt"),
+        rollback="Clear the halt with action clear and the recorded reason; a refused request writes nothing.",
+    ),
     "checklist-edits": MutationEntry(
         "checklist-edits",
         "checklist-edits",
@@ -932,6 +943,13 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id in {"execution-control", "execute-verification", "task-results"}:
         return run_execution_helper(entry, request)
+
+    halted = harm_halt_refusal(entry, request)
+    if halted is not None:
+        return halted
+
+    if entry.helper_id == "harm-halt":
+        return run_harm_halt_helper(entry, request)
 
     if entry.helper_id == "decisions-list":
         return run_decisions_list_helper(entry, request)

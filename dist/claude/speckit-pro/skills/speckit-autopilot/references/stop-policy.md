@@ -15,7 +15,8 @@ A run involves a human for two reasons only:
 1. The next step needs authority agents do not have.
 2. A problem has failed every escalation tier.
 
-A run also halts at once for a harm halt, described below.
+A run also halts at once for a harm halt, described below. The runner decides when
+a run may end (`may_end` in `stop_policy.py`): only in a run end below, or on a harm halt.
 
 Attended and unattended runs behave the same. Autopilot never pauses to ask. A
 present user may interrupt or steer at any time.
@@ -27,6 +28,16 @@ every independent unit, and put every human item into one end-of-run request.
 The ledger `defer` disposition is that park.
 
 The run halts at once only for a harm halt: continuing could compound harm.
+
+## Harm halts
+
+A harm halt fires when the next action could cause damage a later review cannot
+undo. On a harm halt the runner stops all dispatch: no commit, push, PR edit or
+publish follows the trigger, because a PR edit could spread a leaked secret. It
+writes a local halt record (reason, redacted evidence, last safe state) and
+prints it. Resume refuses until a human clears the record with the `harm-halt`
+helper (`action` `clear`). On resume, run `harm-halt` in `read_only` mode first;
+a `halted` answer ends the run with the recorded reason's marker.
 
 ## Escalation tiers
 
@@ -71,10 +82,18 @@ Mark the stack ready for review with a "Decisions for you" section listing each
 deferred item and its evidence. Keep it draft only while a required gate is red.
 Deferred decisions and human UAT never hold a PR in draft. Never merge.
 
-The `--stage plan` boundary stays: a plan-stage run stops after the plan for
-human review (`stop_reason:plan_stage_boundary`). Opt-in `--strict` also stays:
-below the confidence threshold it stops before Phase 7
-(`stop_reason:strict_confidence_opt_in`). Neither applies to a default run.
+A default planning run ends at the plan boundary: artifacts and the draft PR are
+ready for review (`planning_ready_for_review`, marker `stop_reason:plan_stage_boundary`).
+Opt-in `--strict` also stays: below the confidence threshold it stops before Phase 7
+(`stop_reason:strict_confidence_opt_in`). `--strict` does not apply to a default run.
+
+## Run ends
+
+| State | Kind | Meaning |
+| ----- | ---- | ------- |
+| `planning_ready_for_review` | terminal | Planning artifacts and the draft PR are ready for review. |
+| `ready_for_uat` | terminal | Implementation is done and only human UAT remains. |
+| `security_interrupt` | interrupt | A permitted security question is open (ADR 0011). |
 
 ## Stop reasons
 
@@ -103,9 +122,10 @@ item does not end the run and prints no marker.
 | `stop_reason:speckit_cli_older` | authority | An answers-file scaffold found a SpecKit CLI older than the plugin pin. Upgrading the CLI is an operator action, and the answers file has no key for it. |
 | `stop_reason:all_tiers_failed` | exhausted | All three escalation tiers failed. |
 | `stop_reason:tier3_cap_reached` | exhausted | The per-run tier 3 cap is spent. |
-| `stop_reason:tampering_or_forged_evidence` | harm_halt | Tampering or forged evidence. |
+| `stop_reason:tampering_or_forged_evidence` | harm_halt | Evidence or the ledger fails its hash or provenance check. |
 | `stop_reason:secret_exposure` | harm_halt | A secret was exposed. |
-| `stop_reason:integrity_failure` | harm_halt | An integrity failure. |
+| `stop_reason:identity_mismatch` | harm_halt | The run would write to the wrong repo, branch or worktree, or its workflow binding is ambiguous or unmatched. |
+| `stop_reason:concurrent_writer` | harm_halt | Another live owner holds the run's ledger lock. |
 
 Authority and exhausted reasons defer, except the operator-chosen boundaries,
 `scaffold_complete`, `plan_stage_boundary` and `strict_confidence_opt_in`, which

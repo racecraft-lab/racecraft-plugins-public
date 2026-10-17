@@ -660,6 +660,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/harm_halt.py",
+        "display": "speckit_pro_runner/helpers/harm_halt.py"
+      },
+      "sha256": "f08ffd8556913aba3c71b51acf5d684f03a43cccd5d576970ff0b6bafd465f14"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
@@ -711,7 +719,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "8357c44555f52b1353e4193e2b72c4846029ad5f4bf67b128aead771a4a60c0d"
+      "sha256": "7bdc0024c4fe1a0696dc562d510fac46c0d84935df826449bf4e3b677f315617"
     },
     {
       "path": {
@@ -799,7 +807,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "6f371fd53764c13adc57dbe07a1f9795ff1ec787ed90ce22d1ebb962193baf36"
+      "sha256": "b712ddde081f84dd31ea50dab20734a8e06676e8f0b58b063168d80e15c29896"
     },
     {
       "path": {
@@ -1007,7 +1015,7 @@
         "value": "speckit_pro_runner/stop_policy.py",
         "display": "speckit_pro_runner/stop_policy.py"
       },
-      "sha256": "81fda70991e7079ba6036264aec7b13270f9d091dbbb2a559e00e4843376e885"
+      "sha256": "06be635196b77758fea727b8a41b79fe84d6780c982abfe03cbb1e2ae3c7ed91"
     },
     {
       "path": {

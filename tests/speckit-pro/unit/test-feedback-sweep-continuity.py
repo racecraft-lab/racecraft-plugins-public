@@ -251,7 +251,7 @@ GUIDANCE_PINS = {
             "their committed diff is the only amendment text it can see",
             "List every amended comment in the final report",
             "Keep the isolation-unavailable stop",
-            "`stop_reason:integrity_failure`",
+            "`stop_reason:tampering_or_forged_evidence`",
             "Invalidate the private sweep session",
         ),
         "absent": (
@@ -311,7 +311,7 @@ class HostGuidanceTests(unittest.TestCase):
             with self.subTest(host=host):
                 named = set(marker.findall(phase)) | set(marker.findall(skill))
                 self.assertLessEqual(
-                    {"integrity_failure", "tool_unavailable", "ambiguous_pr_record", "reopen_closed_pr"}, named
+                    {"tampering_or_forged_evidence", "tool_unavailable", "ambiguous_pr_record", "reopen_closed_pr"}, named
                 )
                 self.assertLessEqual(named, set(STOP_REASONS))
         for reason in ("tool_unavailable", "ambiguous_pr_record"):
