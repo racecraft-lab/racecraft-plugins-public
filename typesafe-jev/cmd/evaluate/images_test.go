@@ -420,6 +420,70 @@ func TestRawImageURLRejectedWithoutImages(t *testing.T) {
 	}
 }
 
+// OpenRouter's multimodal Decisions guide (2026-10-17) documents image_url,
+// input_audio, and video_url parts, and the caller's model passes through, so
+// a non-Jev model such as cloudflare/clef-omni reads all three. Each shape,
+// and the spellings a lenient parser might fold, is refused in every value
+// position. Ordinary state that only looks similar still goes through.
+func TestMediaPartsRejectedInEveryForm(t *testing.T) {
+	var calls atomic.Int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.Write([]byte(noulOK))
+	}))
+	defer srv.Close()
+	c := testClient(providerAt("openrouter", srv.URL), srv) // JEV_IMAGES off
+	dataURL := "data:image/png;base64,iVBORw0KGgo="
+	parts := map[string]any{
+		"input_audio":       map[string]any{"type": "input_audio", "input_audio": map[string]any{"data": "UklGRiQAAABXQVZF", "format": "wav"}},
+		"video_url":         map[string]any{"type": "video_url", "video_url": map[string]any{"url": "data:video/mp4;base64,AAAAIGZ0eXA="}},
+		"case variant":      map[string]any{"type": "Image_URL", "image_url": map[string]any{"url": dataURL}},
+		"padded type":       map[string]any{"type": " image_url ", "image_url": map[string]any{"url": dataURL}},
+		"untyped payload":   map[string]any{"image_url": map[string]any{"url": dataURL}},
+		"chat file part":    map[string]any{"type": "file", "file": map[string]any{"filename": "a.pdf", "file_data": "data:application/pdf;base64,JVBERi0="}},
+		"responses image":   map[string]any{"type": "input_image", "image_url": dataURL},
+		"responses file":    map[string]any{"type": "input_file", "file_data": "data:application/pdf;base64,JVBERi0="},
+		"untyped audio":     map[string]any{"input_audio": map[string]any{"data": "UklGRiQAAABXQVZF", "format": "wav"}},
+		"untyped video_url": map[string]any{"video_url": map[string]any{"url": "data:video/mp4;base64,AAAAIGZ0eXA="}},
+	}
+	sites := map[string]func(any) evaluateIn{
+		"state": func(p any) evaluateIn {
+			return evaluateIn{State: []any{"x", p}, Questions: map[string]question{"present": {Type: typeNoul, Instructions: "i"}}}
+		},
+		"instructions": func(p any) evaluateIn {
+			return evaluateIn{State: "x", Questions: map[string]question{"present": {Type: typeNoul, Instructions: []any{"look", p}}}}
+		},
+		"criteria": func(p any) evaluateIn {
+			return evaluateIn{State: "x", Questions: map[string]question{"present": {Type: typeNoul, Instructions: "i", Criteria: map[string]any{"true": p, "false": "no"}}}}
+		},
+	}
+	for partName, part := range parts {
+		for siteName, build := range sites {
+			in := build(part)
+			in.Model = "cloudflare/clef-omni"
+			if _, err := runEvaluate(context.Background(), c, in); err == nil || !strings.Contains(err.Error(), "media part") {
+				t.Errorf("%s in %s: error = %v", partName, siteName, err)
+			}
+		}
+	}
+	if calls.Load() != 0 {
+		t.Fatalf("a media part was sent: %d requests", calls.Load())
+	}
+
+	for name, state := range map[string]any{
+		"a file entry":       map[string]any{"type": "file", "path": "src/a.go"},
+		"an image link":      map[string]any{"image_url": "https://cdn.example.com/x.png"},
+		"a finding":          map[string]any{"file": "main.go", "line": 3},
+		"an ordinary typed":  map[string]any{"type": "bug", "title": "crash on start"},
+		"a typed image link": map[string]any{"type": "product", "image_url": map[string]any{"url": "https://cdn.example.com/x.png"}},
+	} {
+		in := evaluateIn{State: state, Questions: map[string]question{"present": {Type: typeNoul, Instructions: "i"}}}
+		if _, err := runEvaluate(context.Background(), c, in); err != nil {
+			t.Errorf("%s was refused: %v", name, err)
+		}
+	}
+}
+
 // The criteria object is not a value position. A one-option choice whose
 // option is named "image" keeps its option; only the description is a site.
 func TestChoiceOptionNamedImageIsNotAMarker(t *testing.T) {

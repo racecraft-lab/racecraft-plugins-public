@@ -216,8 +216,18 @@ name with exactly one of an absolute `path` or standard `data_base64` (no
 only field is `{"image": "name"}`, inside `state`, `instructions`, or
 `criteria`. A name that merely occurs inside a longer string is not a
 reference. Every image must be referenced, and a `box` question must have one.
-Raw `image_url` parts and a top-level `assets` map are rejected on input, so
-an unvalidated picture cannot skip the local checks.
+A top-level `assets` map is rejected on input. So is any hand-written media
+part in `state`, `instructions`, or `criteria`, on every request, whether or
+not `JEV_IMAGES` is set. A media part is an object with a payload field
+(`image_url`, `input_audio`, `video_url`, `file`, or `file_data`) under a
+`type` of `image_url`, `input_audio`, `video_url`, `input_image`, `file`, or
+`input_file`, compared trimmed and case-folded. An object-valued payload field
+with no `type` at all counts too. OpenRouter's multimodal guide documents
+`image_url` for image models and `input_audio` and `video_url` for
+`cloudflare/clef-omni`, and the caller's `model` passes through, so each is
+reachable. A plain string such as an image link, or a typed object that names
+no part, is ordinary state. An unvalidated picture or clip therefore cannot
+skip `JEV_IMAGES` or the local checks.
 
 `JEV_IMAGES` gates images and `box`. Unset or `false` leaves both off; `true`
 turns both on; any other value is a startup error. The operator sets it,

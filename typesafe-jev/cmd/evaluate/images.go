@@ -271,22 +271,56 @@ func validateImageReferences(in evaluateIn) error {
 	return nil
 }
 
-// rejectRawImageParts refuses an image_url part the caller wrote by hand. Only
-// the encoder builds one, from a file the local checks have passed.
+// rejectRawImageParts refuses a media part the caller wrote by hand. Only the
+// encoder builds one, from a file the local checks have passed.
 func rejectRawImageParts(in evaluateIn) error {
 	state, questions, err := imageTrees(in)
 	if err != nil {
 		return err
 	}
 	_, _, err = rewriteImageSites(state, questions, func(path string, v any) (any, bool, error) {
-		if m, ok := v.(map[string]any); ok {
-			if typ, _ := m["type"].(string); typ == "image_url" {
-				return nil, false, fmt.Errorf("%s is an image_url part; name the file in images and reference it from state, instructions, or criteria", path)
-			}
+		if m, ok := v.(map[string]any); ok && mediaPart(m) {
+			return nil, false, fmt.Errorf("%s is a provider media part (image_url, input_audio, video_url, or file); name a PNG or JPEG in images and reference it from state, instructions, or criteria", path)
 		}
 		return nil, false, nil
 	})
 	return err
+}
+
+// mediaPartTypes are the content-part types a provider may read as media.
+// OpenRouter's multimodal Decisions guide (2026-10-17) documents image_url for
+// every image model, and input_audio and video_url for cloudflare/clef-omni;
+// the caller's model passes through, so all three are reachable. input_image,
+// file, and input_file are the Responses and Chat Completions shapes. The
+// guide says input_image is not read today; it is refused so a provider that
+// starts reading it does not become a way around JEV_IMAGES.
+var mediaPartTypes = map[string]bool{
+	"image_url": true, "input_audio": true, "video_url": true,
+	"input_image": true, "file": true, "input_file": true,
+}
+
+// mediaPayloadKeys are the fields that carry a part's bytes.
+var mediaPayloadKeys = []string{"image_url", "input_audio", "video_url", "file", "file_data"}
+
+// mediaPart reports whether m has a media part's shape: a payload field under
+// a type that names a part, compared trimmed and case-folded in case a parser
+// folds it, or an object-valued payload with no type at all. A typed object
+// that names no part, or a plain string such as an image link, is ordinary
+// state.
+func mediaPart(m map[string]any) bool {
+	raw, typed := m["type"]
+	typ, _ := raw.(string)
+	isPart := mediaPartTypes[strings.ToLower(strings.TrimSpace(typ))]
+	for _, key := range mediaPayloadKeys {
+		v, ok := m[key]
+		if !ok {
+			continue
+		}
+		if _, object := v.(map[string]any); isPart || (!typed && object) {
+			return true
+		}
+	}
+	return false
 }
 
 func imageTrees(in evaluateIn) (any, map[string]any, error) {
