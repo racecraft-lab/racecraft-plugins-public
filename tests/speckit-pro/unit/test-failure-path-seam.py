@@ -10,6 +10,7 @@ through `FAILURE_PATH_ACTIONS` and `run_failure_path`, so deleting the machinery
 from __future__ import annotations
 
 import ast
+import contextlib
 import sys
 import tempfile
 import unittest
@@ -27,18 +28,20 @@ SEAM_ACTIONS = {"bind-invariants", "reserve", "authorize-corrective-retry", "aut
 SOURCE = Path(control.__file__)
 
 
-def greenfield_ledger(root: Path) -> dict:
-    """A ledger started before its spec exists, then the two-invariant spec the tests bind."""
-    (root / "workflow.md").write_text("# Workflow\n")
-    ledger = control.initial_ledger(root / "spec.md", 1000.0)
-    (root / "spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
-    return ledger
+@contextlib.contextmanager
+def greenfield():
+    """A temporary root and a ledger started before its spec exists, then the two-invariant spec the tests bind."""
+    with tempfile.TemporaryDirectory() as name:
+        root = Path(name).resolve()
+        (root / "workflow.md").write_text("# Workflow\n")
+        ledger = control.initial_ledger(root / "spec.md", 1000.0)
+        (root / "spec.md").write_text("- FR-001: preserve data\n- FR-002: no secrets\n")
+        yield root, ledger
 
 
 class FailurePathSeamTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
-        self.ledger = greenfield_ledger(self.root)
+        self.root, self.ledger = self.enterContext(greenfield())
 
     def call(self, reasons=(), **inputs):
         return control.FailurePathCall(self.root, self.ledger, inputs, self.root / "spec.md",
