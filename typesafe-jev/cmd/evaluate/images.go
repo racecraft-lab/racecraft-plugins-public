@@ -428,34 +428,60 @@ func loadImages(spec ProviderSpec, sources map[string]imageSource, state any, qu
 	if err != nil {
 		return nil, err
 	}
-	// Every image is in the body as base64: once on TypeSafe, in assets, and
-	// once per reference on OpenRouter, where each image_url part carries the
-	// whole data URL. A total past the request cap fails it anyway. Stopping
-	// here keeps the bytes from all being held, encoded, and marshalled first.
-	uses := map[string]int{}
-	if spec.Name != "typesafe" {
-		if uses, err = countImageUses(state, questions, sources); err != nil {
-			return nil, err
-		}
+	// Checked as each image loads, so a request past either limit stops
+	// before every byte is held, encoded, and marshalled.
+	uses, err := countImageUses(state, questions, sources)
+	if err != nil {
+		return nil, err
 	}
-	rawLimit := base64.StdEncoding.DecodedLen(maxRequestBody)
+	var budget imageBudget
 	loaded := make(map[string]preparedImage, len(sources))
-	total := 0
 	for _, name := range sortedKeys(sources) {
 		img, err := loadOneImage(name, sources[name], spec.ImageLimits, haystack)
 		if err != nil {
 			return nil, err
 		}
-		copies := max(uses[name], 1)
-		// Divided rather than multiplied, so a huge reference count cannot
-		// overflow, and total never passes rawLimit.
-		if len(img.data) > (rawLimit-total)/copies {
-			return nil, fmt.Errorf("images together are over the %d byte request limit once base64-encoded; send fewer or smaller images, or reference each one fewer times", maxRequestBody)
+		n := max(uses[name], 1)
+		inBody := n
+		if spec.Name == "typesafe" {
+			// TypeSafe carries each file once, in assets.
+			inBody = 1
 		}
-		total += copies * len(img.data)
+		if err := budget.add(len(img.data), inBody, n); err != nil {
+			return nil, err
+		}
 		loaded[name] = img
 	}
 	return loaded, nil
+}
+
+// maxExpandedRequest is TypeSafe's expanded-request limit: the text,
+// questions, structure, and images after every reference is replaced by its
+// image, where each use adds the image again (docs.typesafe.ai/images.md,
+// Limits, 2026-10-17). OpenRouter's Jev guide states the same limit for Jev
+// behind it. TypeSafe counts each image after processing, which can make it
+// larger than the file; the file size is the floor counted here.
+const maxExpandedRequest = 32 << 20
+
+// imageBudget is how much of the two request limits the images use so far,
+// in decoded bytes.
+type imageBudget struct{ body, expanded int }
+
+// add counts one image of size bytes that appears inBody times in the wire
+// body and is used uses times. The body is capped at maxRequestBody once
+// base64-encoded; the expanded request at maxExpandedRequest. Divided rather
+// than multiplied, so a huge use count cannot overflow, and neither total
+// passes its limit.
+func (b *imageBudget) add(size, inBody, uses int) error {
+	if size > (base64.StdEncoding.DecodedLen(maxRequestBody)-b.body)/inBody {
+		return fmt.Errorf("images together are over the %d byte request limit once base64-encoded; send fewer or smaller images, or reference each one fewer times", maxRequestBody)
+	}
+	if size > (maxExpandedRequest-b.expanded)/uses {
+		return fmt.Errorf("images together are over the %d byte expanded request limit, which adds an image again for each use; send fewer or smaller images, or reference each one fewer times", maxExpandedRequest)
+	}
+	b.body += inBody * size
+	b.expanded += uses * size
+	return nil
 }
 
 func referenceHaystack(state any, questions map[string]any) (string, error) {

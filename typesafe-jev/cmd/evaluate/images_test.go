@@ -983,26 +983,34 @@ func TestImagesOverTheRequestCapFailBeforeEncoding(t *testing.T) {
 	}
 }
 
-// OpenRouter carries the whole data URL in every image_url part, so one small
-// image referenced many times can build a body far past the cap from a state
-// of a few hundred bytes. The cap counts each reference there.
-func TestOpenRouterImageCapCountsEachReference(t *testing.T) {
-	// About 314 KB, so 120 references are about 50 MB of base64.
-	state := make([]any, 120)
-	for i := range state {
-		state[i] = "door"
+// Every use of an image counts. OpenRouter carries the whole data URL in each
+// image_url part, so the body grows with every reference. TypeSafe sends the
+// file once, in assets, but its documented 32 MiB expanded-request limit adds
+// the image again for each use (docs.typesafe.ai/images.md, Limits).
+func TestImageCapCountsEachUse(t *testing.T) {
+	data := noisePNG(t, 280) // about 314 KB
+	uses := func(n int) evaluateIn {
+		state := make([]any, n)
+		for i := range state {
+			state[i] = "door"
+		}
+		return evaluateIn{
+			State:     state,
+			Images:    map[string]imageSource{"door": {DataBase64: data}},
+			Questions: map[string]question{"q": {Type: typeNoul, Instructions: "i"}},
+		}
 	}
-	in := evaluateIn{
-		State:     state,
-		Images:    map[string]imageSource{"door": {DataBase64: noisePNG(t, 280)}},
-		Questions: map[string]question{"q": {Type: typeNoul, Instructions: "i"}},
+	// 90 uses: about 28 MB expanded, under TypeSafe's limit, and about 38 MB
+	// of base64 in an OpenRouter body, over its cap.
+	if _, _, err := encodeRequest(withImages(typesafeSpec), uses(90)); err != nil {
+		t.Fatalf("typesafe, 90 uses: %v", err)
 	}
-	if _, _, err := encodeRequest(withImages(openrouterSpec), in); err == nil || !strings.Contains(err.Error(), "together") {
-		t.Fatalf("openrouter: error = %v", err)
+	if _, _, err := encodeRequest(withImages(openrouterSpec), uses(90)); err == nil || !strings.Contains(err.Error(), "together") {
+		t.Fatalf("openrouter, 90 uses: error = %v", err)
 	}
-	// TypeSafe sends each image once, in assets, however often it is named.
-	if _, _, err := encodeRequest(withImages(typesafeSpec), in); err != nil {
-		t.Fatalf("typesafe: %v", err)
+	// 120 uses: about 38 MB expanded, over TypeSafe's limit as well.
+	if _, _, err := encodeRequest(withImages(typesafeSpec), uses(120)); err == nil || !strings.Contains(err.Error(), "expanded") {
+		t.Fatalf("typesafe, 120 uses: error = %v", err)
 	}
 }
 

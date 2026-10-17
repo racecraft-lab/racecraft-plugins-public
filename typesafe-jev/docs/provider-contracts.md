@@ -275,7 +275,15 @@ never quote a path, base64, or file bytes.
 | Decoded file | 16 MiB | 16 MiB |
 | Side length, inclusive | 280–1568 px | 256–1568 px |
 | Total pixels, inclusive | 78,400–2,458,624 | 78,400–2,458,624 |
+| Images in the request body | each file once, in `assets`, within the 32 MiB body once base64-encoded | every reference carries the whole data URL, so each use counts toward the 32 MiB body |
+| Expanded request | 32 MiB, adding the image again for each use | the same 32 MiB, for Jev behind OpenRouter |
 | Remote URLs | not accepted by this server | rejected by the provider; this server never sends one |
+
+The expanded-request row follows TypeSafe's limits table (fetched
+2026-10-17): every use of a reference adds the image again. TypeSafe counts
+each image after it processes it, which can make it larger than the file, and
+does not publish that size. The local check counts the file size, so a request
+it passes can still be refused by TypeSafe for size.
 
 EXIF orientation is not applied. TypeSafe documents that it does not apply it
 either, and rewriting pixels here would make the two backends disagree about
