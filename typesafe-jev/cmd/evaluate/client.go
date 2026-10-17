@@ -75,20 +75,25 @@ func newHTTPClient() *http.Client {
 	}
 }
 
-// Evaluate posts a request and returns the raw response JSON, including any
-// fields this server does not recognize.
-func (c *Client) Evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
+// encode builds this backend's wire body and headers. It trusts the request:
+// prepare validates before it encodes. Every error is a
+// *requestInvalidError: a bad image or a body over the cap never leaves the
+// machine, and call maps that type to exit 2.
+func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
 	body, headers, err := encodeRequest(c.Provider, in)
 	if err != nil {
-		// A bad image or a wire-format refusal never left the machine. call
-		// maps this type to exit 2, the same as the other local rejections.
-		return nil, &requestInvalidError{err}
+		return nil, nil, &requestInvalidError{err}
 	}
 	if len(body) > maxRequestBody {
-		return nil, &requestInvalidError{fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state, fewer questions, or fewer or smaller images",
+		return nil, nil, &requestInvalidError{fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state, fewer questions, or fewer or smaller images",
 			c.Provider.Name, len(body), maxRequestBody)}
 	}
+	return body, headers, nil
+}
 
+// post sends one encoded body with this backend's retry policy, inside a
+// single c.Timeout budget.
+func (c *Client) post(ctx context.Context, body []byte, headers map[string]string) ([]byte, error) {
 	// One deadline for the whole evaluation. Retry waits are spent from the
 	// same budget, so a caller's timeout means what it says.
 	ctx, cancel := context.WithTimeout(ctx, c.Timeout)

@@ -281,7 +281,7 @@ on TypeSafe, `jev-latest`, `jev-1.13.0`, and `jev-1.13` (as of 2026-10-17
 `typesafe/jev-1.13.0`, and `~typesafe/jev-1.13.0`. `typesafe/jev-1.14` and
 `~typesafe/jev-latest` are allowed. An id this list does not name is sent
 through, so an operator's own model string is not rewritten into a 404 they
-did not ask to see. `runOn` fills the backend default before the check, so an
+did not ask to see. `prepare` fills the backend default before the check, so an
 omitted model on TypeSafe fails as `jev-latest` rather than being billed.
 
 ## Jev context budgets

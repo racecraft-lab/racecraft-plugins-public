@@ -10,6 +10,16 @@ import (
 	"time"
 )
 
+// Evaluate encodes and posts without validating, for tests about the encoder
+// and the transport. The server always goes through prepare and send.
+func (c *Client) Evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
+	body, headers, err := c.encode(in)
+	if err != nil {
+		return nil, err
+	}
+	return c.post(ctx, body, headers)
+}
+
 // simpleIn is the smallest valid call, for tests about transport rather than
 // about validation.
 func simpleIn() evaluateIn {

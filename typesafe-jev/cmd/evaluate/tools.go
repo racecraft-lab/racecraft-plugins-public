@@ -65,6 +65,24 @@ func runEvaluate(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) 
 
 // runOn is one evaluation on one backend.
 func runOn(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
+	p, err := prepare(c, in)
+	if err != nil {
+		return nil, err
+	}
+	return send(ctx, c, p)
+}
+
+// preparedCall is one request that passed every local check for one backend,
+// encoded for it.
+type preparedCall struct {
+	in      evaluateIn
+	body    []byte
+	headers map[string]string
+}
+
+// prepare resolves the model, validates, and encodes. It makes no network
+// call, and every error it returns is a *requestInvalidError.
+func prepare(c *Client, in evaluateIn) (preparedCall, error) {
 	// Precedence: the tool call's model, then JEV_MODEL, then the backend
 	// default. c.Model already holds the resolved second and third of those.
 	//
@@ -75,13 +93,22 @@ func runOn(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
 		in.Model = c.Model
 	}
 	if err := validateRequest(c.Provider, in); err != nil {
-		return nil, &requestInvalidError{err}
+		return preparedCall{}, &requestInvalidError{err}
 	}
-	body, err := c.Evaluate(ctx, in)
+	body, headers, err := c.encode(in)
+	if err != nil {
+		return preparedCall{}, err
+	}
+	return preparedCall{in: in, body: body, headers: headers}, nil
+}
+
+// send posts a prepared call and validates the reply.
+func send(ctx context.Context, c *Client, p preparedCall) ([]byte, error) {
+	body, err := c.post(ctx, p.body, p.headers)
 	if err != nil {
 		return nil, err
 	}
-	if err := validateResponse(c.Provider, in, body); err != nil {
+	if err := validateResponse(c.Provider, p.in, body); err != nil {
 		return nil, &responseInvalidError{err}
 	}
 	// The provider's own bytes, unknown fields and all. Rebuilding a narrower

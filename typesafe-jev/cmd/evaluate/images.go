@@ -52,21 +52,19 @@ type preparedImage struct {
 	ref    string
 }
 
-// encodeRequest builds the body and the extra headers for one backend.
+// encodeRequest builds the body and the extra headers for one backend. It
+// trusts a request validateRequest has passed: the opt-in, the entry shapes,
+// the media-part guard, and the references are checked there, once per call.
 // A request with no images is marshalled as it always was, so the bytes on
 // the wire do not change for existing callers. Headers are still applied:
 // long context is a property of the process, not of the payload.
 func encodeRequest(spec ProviderSpec, in evaluateIn) ([]byte, map[string]string, error) {
-	if err := validateImageUse(spec, in); err != nil {
-		return nil, nil, err
-	}
 	headers := dangerHeaders(spec, in)
 	if len(in.Images) == 0 {
+		// evaluateIn has no assets field and omits an empty images map, so
+		// this body cannot carry either.
 		body, err := json.Marshal(in)
 		if err != nil {
-			return nil, nil, err
-		}
-		if err := rejectForeignImageFields(spec, body, false); err != nil {
 			return nil, nil, err
 		}
 		return body, headers, nil
@@ -107,12 +105,12 @@ func encodeRequest(spec ProviderSpec, in evaluateIn) ([]byte, map[string]string,
 		}
 		payload["assets"] = assets
 	}
+	if err := rejectForeignImageFields(spec, payload); err != nil {
+		return nil, nil, err
+	}
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, nil, err
-	}
-	if err := rejectForeignImageFields(spec, body, true); err != nil {
 		return nil, nil, err
 	}
 	return body, headers, nil
@@ -138,22 +136,20 @@ func dangerHeaders(spec ProviderSpec, in evaluateIn) map[string]string {
 	return headers
 }
 
-// rejectForeignImageFields fails closed on a body that would ship the wrong
-// top-level image field. OpenRouter ignores a top-level assets map and still
-// bills the call, which is the failure this check exists to make impossible.
-func rejectForeignImageFields(spec ProviderSpec, body []byte, withImages bool) error {
-	var top map[string]json.RawMessage
-	if err := json.Unmarshal(body, &top); err != nil {
-		return err
-	}
-	if _, ok := top["images"]; ok {
+// rejectForeignImageFields fails closed on an image payload that would ship
+// the wrong top-level image field. OpenRouter ignores a top-level assets map
+// and still bills the call, which is the failure this check exists to make
+// impossible. It reads the payload map the body is marshalled from, so the
+// body is never parsed back.
+func rejectForeignImageFields(spec ProviderSpec, payload map[string]any) error {
+	if _, ok := payload["images"]; ok {
 		return errors.New("internal: the wire request still carries the images map")
 	}
-	_, assets := top["assets"]
+	_, assets := payload["assets"]
 	if spec.Name == "openrouter" && assets {
 		return errors.New("internal: refused to put an assets map on an openrouter request")
 	}
-	if spec.Name == "typesafe" && withImages && !assets {
+	if spec.Name == "typesafe" && !assets {
 		return errors.New("internal: a typesafe image request has no assets map")
 	}
 	return nil
@@ -169,14 +165,16 @@ func requestHasBox(in evaluateIn) bool {
 }
 
 // validateImageUse checks everything about images and box that does not need
-// the file bytes: the opt-in, the entry shape, the model, and that every
-// image is referenced. File bytes are checked in loadImages, after this, so a
-// request that is not allowed never opens a path.
+// the file bytes: the media-part guard, the opt-in, the entry shape, the
+// model, and that every image is referenced. validateRequest is its only
+// caller, so it runs once per call. File bytes are checked in loadImages,
+// after this, so a request that is not allowed never opens a path.
 func validateImageUse(spec ProviderSpec, in evaluateIn) error {
-	// Every request, with or without an images map: a raw image_url part is a
-	// picture that skipped JEV_IMAGES and every local check, and OpenRouter
-	// would send it on.
-	if err := rejectRawImageParts(in); err != nil {
+	// Every request, with or without an images map: a hand-written media part
+	// skipped JEV_IMAGES and every local check, and OpenRouter would send it
+	// on. The same walk counts references.
+	sites, err := scanImageSites(in)
+	if err != nil {
 		return err
 	}
 	hasBox := requestHasBox(in)
@@ -200,7 +198,7 @@ func validateImageUse(spec ProviderSpec, in evaluateIn) error {
 	if len(in.Images) == 0 {
 		return nil
 	}
-	return validateImageReferences(in)
+	return sites.check(in.Images)
 }
 
 func validateImageEntries(images map[string]imageSource) error {
@@ -230,7 +228,7 @@ func validateImageEntries(images map[string]imageSource) error {
 // validateBoxModel rejects a model this process knows is Jev 1.13. Anything
 // else is sent through: an unlisted id is the operator's, and rewriting it
 // would hide the 404 they asked to see. The resolved model is what counts;
-// runOn fills the backend default before this runs, so TypeSafe's jev-latest
+// prepare fills the backend default before this runs, so TypeSafe's jev-latest
 // (still 1.13 as of 2026-10-17) fails here instead of being billed.
 func validateBoxModel(spec ProviderSpec, model string) error {
 	if !knownBoxReject(spec.Name, model) {
@@ -255,37 +253,55 @@ func knownBoxReject(provider, model string) bool {
 	return false
 }
 
-func validateImageReferences(in evaluateIn) error {
-	state, questions, err := imageTrees(in)
-	if err != nil {
-		return err
-	}
-	used, err := countImageUses(state, questions, in.Images)
-	if err != nil {
-		return err
-	}
-	for _, name := range sortedKeys(in.Images) {
-		if used[name] == 0 {
-			return fmt.Errorf("%s is not referenced from state, instructions, or criteria", imageLabel(name))
-		}
-	}
-	return nil
+// imageSites is what one walk of a request's value positions found.
+type imageSites struct {
+	// uses counts the references to each provided image.
+	uses map[string]int
+	// unknown is the path of the first {"image": ...} marker that names no
+	// provided image, or "".
+	unknown string
 }
 
-// rejectRawImageParts refuses a media part the caller wrote by hand. Only the
-// encoder builds one, from a file the local checks have passed.
-func rejectRawImageParts(in evaluateIn) error {
+// scanImageSites walks state, instructions, and criteria once. It refuses a
+// media part the caller wrote by hand, on every request: only the encoder
+// builds one, from a file the local checks have passed. When the request
+// names images, the same walk counts their references.
+func scanImageSites(in evaluateIn) (imageSites, error) {
+	sites := imageSites{uses: map[string]int{}}
 	state, questions, err := imageTrees(in)
 	if err != nil {
-		return err
+		return sites, err
 	}
 	_, _, err = rewriteImageSites(state, questions, func(path string, v any) (any, bool, error) {
 		if m, ok := v.(map[string]any); ok && mediaPart(m) {
 			return nil, false, fmt.Errorf("%s is a provider media part (image_url, input_audio, video_url, or file); name a PNG or JPEG in images and reference it from state, instructions, or criteria", path)
 		}
-		return nil, false, nil
+		name, hit, unknown := imageUse(v, in.Images)
+		if unknown && sites.unknown == "" {
+			sites.unknown = path
+		}
+		if hit {
+			sites.uses[name]++
+		}
+		// A hit is a leaf. Descending would also count the marker's own string.
+		return nil, hit, nil
 	})
-	return err
+	return sites, err
+}
+
+// check refuses a marker that names no provided image, and an image nothing
+// references.
+func (s imageSites) check(images map[string]imageSource) error {
+	if s.unknown != "" {
+		// The path only: the marker's value is state content.
+		return fmt.Errorf("%s names an image that was not provided", s.unknown)
+	}
+	for _, name := range sortedKeys(images) {
+		if s.uses[name] == 0 {
+			return fmt.Errorf("%s is not referenced from state, instructions, or criteria", imageLabel(name))
+		}
+	}
+	return nil
 }
 
 // mediaPartTypes are the content-part types a provider may read as media.
@@ -477,21 +493,17 @@ func loadOneImage(name string, src imageSource, limits imageBounds, haystack str
 	return preparedImage{format: format, data: data, ref: referenceToken(name, haystack)}, nil
 }
 
+// imageBytes reads one image from its single source. validateImageEntries is
+// the one home for the source rules: exactly one of path and data_base64, and
+// an absolute path.
 func imageBytes(label string, src imageSource) ([]byte, error) {
-	switch {
-	case src.Path != "" && src.DataBase64 != "":
-		return nil, fmt.Errorf("%s: set path or data_base64, not both", label)
-	case src.Path == "":
+	if src.Path == "" {
 		return decodeImageBase64(label, src.DataBase64)
-	default:
-		return readImageFile(label, src.Path)
 	}
+	return readImageFile(label, src.Path)
 }
 
 func readImageFile(label, path string) ([]byte, error) {
-	if !filepath.IsAbs(path) {
-		return nil, fmt.Errorf("%s: path must be absolute", label)
-	}
 	// O_NONBLOCK: os.Open on a named pipe waits for a writer before any check
 	// below can refuse it, and would hang the server with no message.
 	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
@@ -605,13 +617,15 @@ func animatedPNG(data []byte) bool {
 func countImageUses(state any, questions map[string]any, sources map[string]imageSource) (map[string]int, error) {
 	used := map[string]int{}
 	_, _, err := rewriteImageSites(state, questions, func(path string, v any) (any, bool, error) {
-		name, ok, err := imageUse(path, v, sources)
-		if err != nil || !ok {
-			return nil, ok, err
+		name, hit, unknown := imageUse(v, sources)
+		if unknown {
+			return nil, false, fmt.Errorf("%s names an image that was not provided", path)
 		}
-		used[name]++
+		if hit {
+			used[name]++
+		}
 		// A hit is a leaf. Descending would also count the marker's own string.
-		return nil, true, nil
+		return nil, hit, nil
 	})
 	return used, err
 }
@@ -639,9 +653,12 @@ func replacementFor(spec ProviderSpec, loaded map[string]preparedImage) func(str
 }
 
 func replaceVisit(path string, v any, sources map[string]imageSource, replace func(string) any) (any, bool, error) {
-	name, ok, err := imageUse(path, v, sources)
-	if err != nil || !ok {
-		return nil, ok, err
+	name, hit, unknown := imageUse(v, sources)
+	if unknown {
+		return nil, false, fmt.Errorf("%s names an image that was not provided", path)
+	}
+	if !hit {
+		return nil, false, nil
 	}
 	return replace(name), true, nil
 }
@@ -650,25 +667,22 @@ func replaceVisit(path string, v any, sources map[string]imageSource, replace fu
 // string equal to a name, or an object whose only field is {"image": name}.
 // Substring matches are intentionally not references: TypeSafe would expand
 // them inside ordinary words, and OpenRouter would not see them as parts.
-// Raw image_url parts are refused earlier, by rejectRawImageParts.
-func imageUse(path string, v any, sources map[string]imageSource) (string, bool, error) {
+// unknown reports a marker-shaped object whose name is not in sources.
+// Hand-written media parts are refused earlier, by scanImageSites.
+func imageUse(v any, sources map[string]imageSource) (name string, hit, unknown bool) {
 	switch val := v.(type) {
 	case map[string]any:
-		if name, ok := markerName(val); ok {
-			if _, exists := sources[name]; !exists {
-				// The path only: the marker's value is state content.
-				return "", false, fmt.Errorf("%s names an image that was not provided", path)
-			}
-			return name, true, nil
+		marker, ok := markerName(val)
+		if !ok {
+			return "", false, false
 		}
-		return "", false, nil
+		_, exists := sources[marker]
+		return marker, exists, !exists
 	case string:
-		if _, exists := sources[val]; exists {
-			return val, true, nil
-		}
-		return "", false, nil
+		_, exists := sources[val]
+		return val, exists, false
 	default:
-		return "", false, nil
+		return "", false, false
 	}
 }
 
