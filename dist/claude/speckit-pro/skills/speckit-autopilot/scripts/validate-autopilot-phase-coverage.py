@@ -118,11 +118,14 @@ if str(INSTALLED_PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(INSTALLED_PLUGIN_ROOT))
 from speckit_pro_runner.autopilot_state import UUID_PATTERN as STATE_UUID_PATTERN  # noqa: E402
 from speckit_pro_runner.workflow_stage import (  # noqa: E402
+    AUTOPILOT_OPEN_STATUSES,
     AUTOPILOT_TERMINAL_STATUSES as WORKFLOW_TERMINAL_STATUSES,
     AUTOPILOT_STATUS_VALUES as WORKFLOW_STATUS_VALUES,
 )
 from speckit_pro_runner.json_schema import json_schema_failures, json_values_equal  # noqa: E402
 from speckit_pro_runner.helpers.nesting_preflight import nesting_evidence_matches  # noqa: E402
+
+WORKFLOW_OPEN_STATUSES = AUTOPILOT_OPEN_STATUSES
 
 _LIB_DIR = str(Path(__file__).resolve().parent / "lib")
 if _LIB_DIR not in sys.path:

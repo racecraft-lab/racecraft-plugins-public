@@ -1706,8 +1706,10 @@ once, after the feedback sweep below and before the first task is dispatched.
    Read `data.baseline.implement_entry`: the helper applies recorded commands
    before selecting and ordering runnable slots, including slots absent from
    detection. Each row's `command` is ready to run.
-3. Run each row's `command` in order. Append a typed
-   `prerequisites-baseline` result under the workflow's Prerequisites heading,
+3. Run each row's `command` in order. Insert a typed
+   `prerequisites-baseline` result directly after the workflow's Prerequisites
+   heading and before its first child heading (`### Constitution Validation`
+   in the shipped template),
    with status, test counts and its `.process/` evidence reference, following
    the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
    Preserve existing table rows and commands; full per-slot output goes in the

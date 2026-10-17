@@ -2351,8 +2351,10 @@ once, after the feedback sweep below and before the first task is dispatched.
    Read `data.baseline.implement_entry`: the helper applies recorded commands
    before selecting and ordering runnable slots, including slots absent from
    detection. Each row's `command` is ready to run.
-3. Run each row's `command` in order. Append a typed
-   `prerequisites-baseline` result under the workflow's Prerequisites heading,
+3. Run each row's `command` in order. Insert a typed
+   `prerequisites-baseline` result directly after the workflow's Prerequisites
+   heading and before its first child heading (`### Constitution Validation`
+   in the shipped template),
    with status, test counts and its `.process/` evidence reference, following
    the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
    Preserve existing table rows and commands; full per-slot output goes in the
@@ -4790,6 +4792,9 @@ good, else run it on the primary
 model; stop at the floor or the shared corrective ceiling; record the outcome on the
 Quality Gates table's `Hardener` line using `Progress: quality-hardener` with
 its typed status, iterations, score, floor and `.process/` evidence reference.
+Use the canonical status forms and Hardener example in the
+[Implement write contract](./workflow-file-protocol.md#implement-write-contract);
+detailed hardener outcomes stay in the referenced evidence.
 Retain the line's template comment. Only after the hardener records its
 ending does a still-failing MUTATION block. MUTATION fails on its exit
 status: `cr-rate --fail-over` for cosmic-ray, and the chained

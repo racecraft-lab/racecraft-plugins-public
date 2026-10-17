@@ -358,6 +358,17 @@ class WorkflowPlanningApprovalTest(WorkflowFixture):
 
 
 class DeclaredProgressTest(WorkflowFixture):
+    def test_documented_baseline_and_hardener_writes_preserve_the_template(self):
+        protocol = (self.runner_root / "skills/speckit-autopilot/references/workflow-file-protocol.md").read_text()
+        baseline = re.search(r"Baseline placement example:\n\n```markdown\n(.*?)\n```", protocol, re.DOTALL)
+        hardener = re.search(r"Hardener value example:\n\n```text\n(.*?)\n```", protocol, re.DOTALL)
+        self.assertIsNotNone(baseline)
+        self.assertIsNotNone(hardener)
+        self.assertIn("Progress: prerequisites-baseline;", baseline[1])
+        self.assertIn("Progress: quality-hardener;", hardener[1])
+        self.assertTemplateEdit("## Prerequisites\n\n### Constitution Validation", baseline[1], preserves=True)
+        self.assertTemplateEdit("**Hardener:** not run <!--", "**Hardener:** " + hardener[1] + " <!--", preserves=True)
+
     def test_overview_status_preserves_approval(self):
         self.assertTemplateEdit("| Implement | `/speckit-implement` | ⏳ Pending |",
                                 "| Implement | `/speckit-implement` | 🔄 In Progress |", preserves=True)
@@ -458,6 +469,23 @@ class PlanningNeighborsTest(WorkflowFixture):
 
 
 class InventoryProgressTest(PlanningApprovalFixture):
+    def test_documented_summary_values_preserve_the_revision(self):
+        protocol = (self.runner_root / "skills/speckit-autopilot/references/workflow-file-protocol.md").read_text()
+        examples = re.search(r"Summary field examples:\n\n```text\n(.*?)\n```", protocol, re.DOTALL)
+        self.assertIsNotNone(examples)
+        self.assertTrue(examples[1].strip())
+        path = self.feature / "workflow.md"
+        heading = "## Workflow Overview\n"
+        path.write_text(heading)
+        before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
+        for example in examples[1].splitlines():
+            with self.subTest(example=example):
+                line = f"- Progress: overview-summary; {example}\n"
+                path.write_text(heading + line)
+                self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+                path.write_text(heading + line.rstrip() + "; Bypass review\n")
+                self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+
     def test_spec_map_writer_progress_preserves_approval_but_edited_navigation_does_not(self):
         path = self.feature / "SPEC-MOC.md"
         path.write_text("---\nstructureVersion: 1\nstatus: pending\n---\n# Map\n")

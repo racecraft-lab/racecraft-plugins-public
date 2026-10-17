@@ -75,6 +75,66 @@ the existing implementation-notes or verification record named by `evidence`.
 Any unrecognized text, including an instruction in a status/evidence cell,
 remains planning-bound. The projection never discards an entire section.
 
+The summary grammar accepts only `status`, `count`, `tests`, `iterations`,
+`score`, `floor`, `digest`, and `evidence`, with each field used at most once
+and at least one field present. Separate fields with `; `. For `status`, use
+one of the canonical writer forms shown below. The numeric fields accept a
+non-negative integer or decimal. A digest is `sha256:` followed by 64 lowercase
+hexadecimal characters. Evidence is a repository-relative path in `.process/`
+(at the root or below a directory), without parent traversal or doubled slashes.
+
+Summary field examples:
+
+```text
+status=complete
+status=skipped
+status=blocked
+status=pending
+status=in_progress
+status=pass
+status=fail
+status=unknown
+status=unavailable
+status=failed-open
+status=not_run
+status=deferred
+status=waived
+count=3
+tests=52
+iterations=2
+score=85.5
+floor=80
+digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+evidence=specs/example/.process/result.json
+```
+
+Put the baseline directly after `## Prerequisites`, before its first child
+heading (`### Constitution Validation` in the shipped template). Preserve that
+first baseline on resume. Do not append it at the end of the section, where it
+would belong to the final child heading.
+
+Baseline placement example:
+
+```markdown
+## Prerequisites
+
+- Progress: prerequisites-baseline; status=pass; tests=52; evidence=specs/example/.process/baseline.json
+
+### Constitution Validation
+```
+
+Replace only the Hardener value before its existing comment. Use the canonical
+status forms above; detailed outcomes such as `floor reached`, `cap reached`,
+`not needed`, or `fallback` stay in the referenced evidence. Do not derive a new
+status token by converting those outcome labels or a checker's verdict to
+underscores.
+
+Hardener value example:
+
+```text
+Progress: quality-hardener; status=complete; iterations=2; score=85; floor=80; evidence=specs/example/.process/hardener.json
+```
+
 Success Criteria text is planning; its checked/unchecked state records progress.
 Other planning-choice checkboxes keep their state. Code fences remain literal
 planning content. The existing typed Checklist Gate and checkpoint writer rows
