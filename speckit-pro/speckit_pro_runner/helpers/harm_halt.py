@@ -41,6 +41,7 @@ WITHHELD = "withheld: the evidence may hold the secret"
 SECRET_SHAPES = re.compile(r"(?i)\b(?:token|secret|password|passwd|api[_-]?key)\b\s*[:=]\s*\S+|[A-Za-z0-9_+/=-]{32,}")
 DIGEST_FIELD = "clear_token_sha256"
 RECORD_FIELDS = {"schema_version", "reason", "evidence", "last_safe_state", DIGEST_FIELD}
+SHA256_HEX = re.compile(r"[0-9a-f]{64}")
 # A terminal name as `ps` prints it: ttys001 on macOS, pts/3 on Linux; anything else is no terminal.
 TERMINAL_NAME = re.compile(r"(?:tty[A-Za-z0-9]+|pts/[0-9]+)")
 MAX_ANCESTORS = 64
@@ -79,7 +80,7 @@ def parsed_record(path: Path) -> dict[str, Any]:
     except (ValueError, OSError) as error:
         raise SelectionError(f"the harm-halt record is unreadable; a human must inspect it: {error}") from error
     if (record["schema_version"] != SCHEMA_VERSION or STOP_REASONS.get(record["reason"]) != HARM_HALT
-            or not isinstance(record[DIGEST_FIELD], str)):
+            or not isinstance(record[DIGEST_FIELD], str) or not SHA256_HEX.fullmatch(record[DIGEST_FIELD])):
         raise SelectionError("the harm-halt record is malformed; a human must inspect it")
     return record
 

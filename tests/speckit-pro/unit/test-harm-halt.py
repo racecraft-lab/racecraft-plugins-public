@@ -309,13 +309,19 @@ class HaltClearTokenTests(QuietTerminal):
                 self.assertEqual(before, (self.root / RECORD).read_bytes())
         self.assertEqual("ok", self.clear(token=token)["status"], "a dry run does not spend the token")
 
-    def test_a_record_without_a_token_digest_refuses_every_clear(self) -> None:
-        self.halt()
-        record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
-        record.pop("clear_token_sha256")
-        (self.root / RECORD).write_text(json.dumps(record), encoding="utf-8")
-        self.assertEqual("input_error", self.clear(token="anything")["status"])
-        self.assertTrue((self.root / RECORD).exists())
+    def test_a_record_without_a_valid_token_digest_refuses_every_clear(self) -> None:
+        for stored in (None, "", "\u00e9" * 64, "A" * 64, 7):
+            with self.subTest(stored=stored):
+                self.setUp()
+                self.halt()
+                record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
+                record.pop("clear_token_sha256")
+                if stored is not None:
+                    record["clear_token_sha256"] = stored
+                (self.root / RECORD).write_text(json.dumps(record), encoding="utf-8")
+                for mode in ("dry_run", "apply"):
+                    self.assertEqual("input_error", self.clear(mode, token="anything")["status"])
+                self.assertTrue((self.root / RECORD).exists())
 
     def run_runner(self, request: dict[str, Any]) -> str:
         stdout, stderr = io.StringIO(), io.StringIO()
@@ -396,20 +402,17 @@ class OwnerTerminalTests(unittest.TestCase):
         self.assertIn(b"tok-123", self.drained(outer))
         self.assertNotIn(b"tok-123", self.drained(inner))
 
-    def test_a_terminal_the_runner_streams_use_is_never_written(self) -> None:
-        outer, outer_path = self.terminal()
-        rows = {os.getpid(): (10, outer_path.removeprefix("/dev/")), 10: (1, "??")}
-        with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value={os.stat(outer_path).st_rdev}):
-            self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
-        self.assertNotIn(b"tok-123", self.drained(outer))
-
-    def test_the_suite_switch_withholds_the_token(self) -> None:
-        outer, outer_path = self.terminal()
-        os.environ[harm_halt.TERMINAL_SWITCH] = "off"
-        rows = {os.getpid(): (10, "??"), 10: (1, outer_path.removeprefix("/dev/"))}
-        with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=set()):
-            self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
-        self.assertNotIn(b"tok-123", self.drained(outer))
+    def test_a_terminal_the_runner_uses_or_the_suite_switch_withholds_the_token(self) -> None:
+        for case in ("runner_stream", "suite_switch"):
+            with self.subTest(case=case):
+                outer, outer_path = self.terminal()
+                own = {os.stat(outer_path).st_rdev} if case == "runner_stream" else set()
+                if case == "suite_switch":
+                    os.environ[harm_halt.TERMINAL_SWITCH] = "off"
+                rows = {os.getpid(): (10, outer_path.removeprefix("/dev/")), 10: (1, "??")}
+                with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=own):
+                    self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
+                self.assertNotIn(b"tok-123", self.drained(outer))
 
     def test_no_terminal_or_an_unreadable_process_table_delivers_nothing(self) -> None:
         for rows in ({os.getpid(): (1, "??")}, {}, {os.getpid(): (10, "../etc/passwd"), 10: (1, "??")}):
