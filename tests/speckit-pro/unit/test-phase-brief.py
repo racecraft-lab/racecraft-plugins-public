@@ -25,6 +25,7 @@ from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 from isolated_child import run_python  # noqa: E402
+from script_loader import load_script  # noqa: E402
 
 
 def with_tasks_fixture_evidence(inputs):
@@ -1463,17 +1464,32 @@ class PhaseBriefModelTests(InProjectCase):
 
 
 class PhaseBriefWaitTests(InProjectCase):
+    # Codex wait_agent (rust-v0.160.0 through rust-v0.163.0): default 30,000 ms, floor 10,000 ms, ceiling
+    # 3,600,000 ms; a value above the ceiling is an error, not a clamp. It returns on any mailbox activity, and a
+    # child's final status (completed, errored or shut down) always posts one, so a long bound adds no latency.
+    CODEX_WAIT_CEILING_MS = 3_600_000
+
     def test_every_brief_names_the_codex_wait_timeout_and_claude_polls_nothing(self):
-        # Codex wait_agent (rust-v0.160.0): default 30,000 ms, floor 10,000 ms, ceiling 3,600,000 ms, and it
-        # returns early on any mailbox update, so a long bound adds no latency to results. The profile's 10,000 ms
-        # polls timed out 74% of the time (issue 1286).
         for phase in phase_brief.PHASES:
             with self.subTest(phase=phase):
                 brief = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})["data"]
                 self.assertEqual(set(brief["wait"]), {"codex"})
                 timeout = brief["wait"]["codex"]["timeout_ms"]
                 self.assertIsInstance(timeout, int)
-                self.assertTrue(30_000 <= timeout <= 3_600_000, timeout)
+                self.assertLessEqual(timeout, self.CODEX_WAIT_CEILING_MS)
+
+    def test_no_codex_wait_times_out_inside_the_plan_stage_wall_target(self):
+        # Each timed-out wait is one more root response at the root's full context. Canary round 4 (issue 1317)
+        # spent 25 of 109 root responses on 60 s timeouts, the status nudges they prompted and the replies.
+        # The bound covers the whole stage's wall target, so a phase inside budget wakes the root only with news.
+        receipt = load_script("canary_receipt_limits", REPO / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py")
+        wall_ms = receipt.PLAN_TARGET_LIMITS["wall_seconds"] * 1000
+        for phase in phase_brief.PHASES:
+            for mode in phase_brief.MODES:
+                with self.subTest(phase=phase, mode=mode):
+                    brief = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md",
+                                            "feature_dir": "specs/example", "mode": mode})["data"]
+                    self.assertGreaterEqual(brief["wait"]["codex"]["timeout_ms"], wall_ms)
 
     def test_the_wait_is_the_same_on_both_payload_hosts(self):
         inputs = {"phase": "Checklist", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
