@@ -253,10 +253,15 @@ class SupersessionTest(PlanningApprovalFixture):
         self.assertRefused(self.call("verify"), "subsequent supersession")
 
     def test_recorded_case_variant_reference_revokes_the_previous_revision(self):
-        # A case variant is a valid reference only where the filesystem folds case; skip on case-sensitive ones.
+        # A case variant names the record only where the filesystem folds case.
         (self.root / "CaseProbe.tmp").write_text("")
         if not (self.root / "caseprobe.tmp").exists():
-            self.skipTest("case-sensitive filesystem: a case-variant reference does not name the record")
+            approval = self.approval()
+            first = self.call("record", "apply", approval=approval)["data"]
+            approval["supersedes"] = self.case_variant(first["record_path"])
+            self.assertEqual(self.call("record", "apply", approval=approval)["status"], "input_error")
+            self.assertEqual(self.call("verify")["status"], "ok")
+            return
         self.record_superseding(self.case_variant)
         self.assertRefused(self.call("verify"), "subsequent supersession")
 
