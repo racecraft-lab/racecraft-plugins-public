@@ -1488,6 +1488,8 @@ SpecKit Pro validation layers and test-only files.
 - tests/speckit-pro/unit/test-plain-ci-entry-points.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/unit/test-plain-ci-entry-points.py`.
 - tests/speckit-pro/unit/test-plan-stage-terminal.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/unit/test-plan-stage-terminal.py`.
 - tests/speckit-pro/unit/test-plan-terminal-step-requests.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/unit/test-plan-terminal-step-requests.py`.
+- tests/speckit-pro/unit/test-planning-approval-preflight.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/unit/test-planning-approval-preflight.py`.
+- tests/speckit-pro/unit/test-planning-approval.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/unit/test-planning-approval.py`.
 - tests/speckit-pro/unit/test-post-implementation-reference.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/unit/test-post-implementation-reference.py`.
 - tests/speckit-pro/unit/test-pr-body-deferred-section.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/unit/test-pr-body-deferred-section.py`.
 - tests/speckit-pro/unit/test-pr-checks-helpers.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/unit/test-pr-checks-helpers.py`.
@@ -1708,6 +1710,8 @@ SpecKit Pro validation layers and test-only files.
 - [tests/speckit-pro/unit/test-plain-ci-entry-points.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/unit/test-plain-ci-entry-points.py)
 - [tests/speckit-pro/unit/test-plan-stage-terminal.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/unit/test-plan-stage-terminal.py)
 - [tests/speckit-pro/unit/test-plan-terminal-step-requests.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/unit/test-plan-terminal-step-requests.py)
+- [tests/speckit-pro/unit/test-planning-approval-preflight.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/unit/test-planning-approval-preflight.py)
+- [tests/speckit-pro/unit/test-planning-approval.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/unit/test-planning-approval.py)
 - [tests/speckit-pro/unit/test-post-implementation-reference.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/unit/test-post-implementation-reference.py)
 - [tests/speckit-pro/unit/test-pr-body-deferred-section.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/unit/test-pr-body-deferred-section.py)
 - [tests/speckit-pro/unit/test-pr-checks-helpers.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/unit/test-pr-checks-helpers.py)
