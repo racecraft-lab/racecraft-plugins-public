@@ -26,6 +26,7 @@ from speckit_pro_runner.agent_materialization import digest
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, trusted_bytes
 from guide_text import guide_text, host_source
 from readiness_case import current_plugin_revision
+from admission_stub import stub_admission
 from test_result import run_counted
 
 
@@ -54,6 +55,7 @@ class _ReviewFixture(unittest.TestCase):
         cls.coverage = runpy.run_path(str(path))
 
     def setUp(self) -> None:
+        self.enterContext(stub_admission())
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
@@ -419,7 +421,7 @@ class ArtifactReviewTests(_ReviewFixture):
                     self.assertEqual(result["pages"][index]["blocker"], "No preview capability")
                     self.assertEqual(result["pages"][index]["path"], self.record["pages"][index]["path"])
                 data = json.loads(self.resolve()["stdout"])
-                self.assertEqual(data["stage"], "implement")
+                self.assertEqual(data["stage"], "plan")
                 self.assertTrue(data["planning_complete"])
                 self.assertEqual(data["artifact_review"]["resume_action"], "none")
 
@@ -671,11 +673,11 @@ class ArtifactReviewTests(_ReviewFixture):
         self.assertEqual(data["stage"], "implement")
         self.assertEqual(data["artifact_review"]["status"], "pending")
 
-    def test_finished_previews_resume_implementation(self) -> None:
+    def test_finished_previews_end_at_plan_review_not_implementation(self) -> None:
         self.verify(0)
         self.verify(1)
         data = json.loads(self.resolve()["stdout"])
-        self.assertEqual(data["stage"], "implement")
+        self.assertEqual(data["stage"], "plan")
 
     def test_legacy_plan_draft_is_unverified_but_started_implementation_keeps_routing(self) -> None:
         data = json.loads(self.resolve(text=self.workflow())["stdout"])

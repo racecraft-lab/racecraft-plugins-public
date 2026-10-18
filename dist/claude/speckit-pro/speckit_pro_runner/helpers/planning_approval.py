@@ -14,8 +14,10 @@ from urllib.parse import unquote
 
 from ..atomic_write import snapshot_write_target, write_bytes_atomic
 from ..canonical_json import canonical_bytes
+from ..cli_probe import probe
 from ..formal.evidence import CHECKPOINT_ROWS, read_checkpoint, record_path
 from ..formal.primitives import CATALOG_PATH
+from ..github_remote import remote_urls
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import next_fence, require_fields, require_text, unique_object
 from ..task_execution import owned_path, path_key, task_definitions
@@ -52,7 +54,7 @@ class ProgressWrite:
     width: int = 0
     omit_row: bool = False
     scaffold: tuple[str, ...] = ()
-    checkbox: bool = False
+    checkbox: str = ""
     lines: tuple[str, ...] = ()
     key_index: int = 0
 
@@ -97,10 +99,12 @@ PROGRESS_WRITES = {
     "implement-checklist-gate": ProgressWrite((("Phase 7: Implement", "Implement Checklist Gate"),),
         r"(?:Decision|Reviewer-owned items|\[Gap\] markers)", ((1, "gate"),), 2, True,
         ("### Implement Checklist Gate", "| Field | Value |")),
-    "implementation-progress": ProgressWrite(IMPLEMENT, r".+", ((1, "count"), (2, "count")), 4, checkbox=True),
-    "files-generated": ProgressWrite((("Phase 7: Implement", "Files Generated"), ("Files Generated",)), checkbox=True),
+    "implementation-progress": ProgressWrite(IMPLEMENT, r".+", ((1, "count"), (2, "count")), 4),
+    "files-generated": ProgressWrite((("Phase 7: Implement", "Files Generated"), ("Files Generated",)),
+        checkbox=r"\s*-\s+\[[ xX]\]\s+`[A-Za-z0-9_./-]+`\s*"),
     "post-checklist": ProgressWrite(POST, r"Post: .+", ((1, "phase"), (2, "evidence")), 3),
-    "success-criteria": ProgressWrite((("Success Criteria",), ("Specification Context", "Success Criteria Summary")), checkbox=True),
+    "success-criteria": ProgressWrite((("Success Criteria",), ("Specification Context", "Success Criteria Summary")),
+        checkbox=r"\s*-\s+\[[ xX]\].*"),
     "prerequisites-baseline": ProgressWrite((("Prerequisites",),)),
     "constitution-final": ProgressWrite((("Prerequisites", "Constitution Validation"),)),
     "quality-final": ProgressWrite(QUALITY, r"(?:COMPLEXITY|MUTATION|DEPENDENCY_RULES|DEPENDENCY_AUDIT)", ((6, "result"),), 7),
@@ -249,7 +253,7 @@ def progress_line(line: str, scope: tuple[str, ...], root: Path, workflow: str,
     for rule in rules:
         if rule.row and line.startswith("|"):
             line = progress_row(line, rule, root, workflow)
-    if any(rule.checkbox for rule in rules):
+    if any(rule.checkbox and re.fullmatch(rule.checkbox, line) for rule in rules):
         return re.sub(r"^(\s*-\s+\[)[ xX](\])", r"\1 \2", line)
     return re.sub(r"^(\s*-\s+\[)[xX](\])", r"\1x\2", line)
 
@@ -429,7 +433,8 @@ def approval_record(root: Path, feature: str, approval: Any, binding: dict[str, 
     if supplied != {k: v for k, v in confirmation.items() if k != "reference"}:
         raise ValueError("confirmation reference does not match the recorded decision")
     refs = record["reviewed_evidence"]
-    if not isinstance(refs, list) or not refs or len(set(refs)) != len(refs):
+    if (not isinstance(refs, list) or not refs or not all(isinstance(ref, str) for ref in refs)
+            or len(set(refs)) != len(refs)):
         raise ValueError("reviewed_evidence requires unique repository-relative references")
     reviewed = [evidence(root, ref) for ref in refs]
     reviewed.append(evidence(root, confirmation["reference"]))
@@ -487,28 +492,90 @@ def write_approval(root: Path, target: Path, record: dict[str, Any], snapshot: d
             raise ValueError("approval record was written; map refresh failed; regenerate navigation before verification") from error
 
 
+def refused(field: str, reason: str) -> ValueError:
+    return ValueError(f"planning approval field {field}: {reason}; return to plan review")
+
+
+def admit_repository(root: Path, repository: Any) -> None:
+    """Bind the portable owner/name identity to this checkout's origin without network access."""
+    origin = probe(root, ["git", "remote", "get-url", "origin"], allowed=("git",), timeout=10)
+    if origin["exit_status"] != 0 or origin["stdout_tail"] not in remote_urls(repository):
+        raise refused("repository", "the approval does not identify this checkout's origin")
+
+
+def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, Any]:
+    """Admit implement only for a valid record bound to the current manifest, else name the failing field."""
+    directory = root / feature / "plan-approvals"
+    path = f"{feature}/plan-approvals/{binding['manifest_digest']}.json"
+    if not (root / path).is_file():
+        if any(directory.glob("*.json")):
+            raise refused("manifest_digest", "planning inputs changed since the recorded approval")
+        raise refused("record", "no plan approval record exists for this feature")
+    try:
+        stored = json.loads(captured(root, path), object_pairs_hook=unique_object)
+    except ValueError as error:
+        raise refused("record", f"the record is not valid JSON ({error})") from error
+    if not isinstance(stored, dict):
+        raise refused("record", "the record is not a JSON object")
+    admit_repository(root, stored.get("repository"))
+    for field, reason in (("canary_issued", "a canary-issued record never admits production"),
+                          ("withdrawn_by", "the approval was withdrawn"),
+                          ("superseded_by", "a later approval supersedes this record")):
+        if stored.get(field) not in (False, None):
+            raise refused(field, reason)
+    try:
+        refuse_superseded(root, path)
+    except ValueError as error:
+        raise refused("superseded_by", "a later approval supersedes this record") from error
+    computed = {"manifest", "manifest_digest", "schema_version", "assurance", "feature_dir", "evidence"}
+    try:
+        record = approval_record(root, feature, {k: v for k, v in stored.items() if k not in computed}, binding)
+    except ValueError as error:
+        # Finding checks word their refusal "<finding id>: ..."; other refusals carry no such prefix.
+        identity, _, _ = str(error).partition(": ")
+        findings = stored.get("findings")
+        named = isinstance(findings, dict) and identity in findings
+        raise refused("findings." + identity if named else "record", str(error)) from error
+    if record != stored:
+        raise refused("reviewed_evidence", "record bindings or reviewed evidence changed")
+    return {"admitted": True, "manifest_digest": binding["manifest_digest"], "record_path": path}
+
+
+def admit_implement(root: Path, feature_dir: Any, workflow_file: str) -> dict[str, Any]:
+    """The one implement-entry check; the stage resolver calls it for every implement entry."""
+    if not isinstance(feature_dir, str) or not feature_dir:
+        raise refused("feature_dir", "the request must name the feature directory to admit")
+    feature = owned_path(feature_dir, root)
+    return admission(root, feature, planning_manifest(root, feature, workflow_file))
+
+
+def verified_record(root: Path, feature: str, path: str, binding: dict[str, Any]) -> dict[str, Any]:
+    refuse_superseded(root, path)
+    stored = json.loads(captured(root, path), object_pairs_hook=unique_object)
+    computed = {"manifest", "manifest_digest", "schema_version", "assurance", "feature_dir", "evidence"}
+    record = approval_record(root, feature, {k: v for k, v in stored.items() if k not in computed}, binding)
+    if record != stored:
+        raise ValueError("record bindings or reviewed evidence changed; return to plan review")
+    return record
+
+
 def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     action = inputs.get("action")
     required = {"feature_dir", "workflow_file", "action"} | ({"approval"} if action == "record" else set())
     fields = require_fields({k: v for k, v in inputs.items() if k != "repo_root"}, required, "planning approval inputs")
     feature = owned_path(fields["feature_dir"], root)
     binding = planning_manifest(root, feature, fields["workflow_file"])
-    if action == "manifest" and mode == "read_only":
-        return {**binding, "writes_state": False}
+    if mode == "read_only" and action in ("manifest", "admit"):
+        return {**(binding if action == "manifest" else admission(root, feature, binding)), "writes_state": False}
     path = feature + "/plan-approvals/" + binding["manifest_digest"] + ".json"
     target = root / path
     snapshot = snapshot_write_target(target, root)
     if action == "verify" and mode == "read_only":
-        refuse_superseded(root, path)
-        stored = json.loads(captured(root, path), object_pairs_hook=unique_object)
-        computed = {"manifest", "manifest_digest", "schema_version", "assurance", "feature_dir", "evidence"}
-        candidate = {k: v for k, v in stored.items() if k not in computed}
-        record = approval_record(root, feature, candidate, binding)
-        if record != stored:
-            raise ValueError("record bindings or reviewed evidence changed; return to plan review")
+        record = verified_record(root, feature, path, binding)
     elif action == "record" and mode in {"dry_run", "apply"}:
         map_state = approval_map_snapshot(root, feature)
         record = approval_record(root, feature, fields["approval"], binding)
+        admit_repository(root, record["repository"])  # never record what admission always refuses
         if target.exists() and json.loads(captured(root, path)) != record:
             raise ValueError("approval already exists; preserve the original decision")
         if mode == "apply":

@@ -2,12 +2,15 @@
 """Planning approval at the portable runner request seam."""
 import json
 import re
+import shutil
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from git_fixture import git
 from planning_helper_support import PlanningHelperFixture
 from test_result import run_counted
 
@@ -39,9 +42,23 @@ UNRELATED_NEGATIONS = tuple((word, separator) for word in ("No", "not", "never",
 class PlanningApprovalFixture(PlanningHelperFixture):
     workflow_text = "## Project Commands\nTest: python3 check.py\n"
 
+    def setUp(self):
+        super().setUp()
+        git(self.root, "remote", "add", "origin", "https://github.com/example/project.git")
+        # Record and admit read origin through the runner's trusted CLI probe, which skips a whole PATH
+        # directory when any entry in it cannot be authenticated, as on hosted CI runners. A private
+        # directory holding only a link to git keeps the check off the host's other PATH entries.
+        self.git_directory = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        (self.git_directory / "git").symlink_to(shutil.which("git"))
+
+    def runner_environment(self):
+        return {**super().runner_environment(), "PATH": str(self.git_directory)}
+
+    def helper(self, helper_id, mode="read_only", **inputs):
+        return self.run_helper(helper_id, {**self.helper_inputs(), **inputs}, mode=mode)
+
     def call(self, action="manifest", mode="read_only", **extra):
-        inputs = self.helper_inputs(action=action, **extra)
-        return self.run_helper("planning-approval", inputs, mode=mode)
+        return self.helper("planning-approval", mode, action=action, **extra)
 
     def approval(self):
         (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"]}))
@@ -385,8 +402,7 @@ class WorkflowPlanningApprovalTest(WorkflowFixture):
     def test_execution_rows_preserve_approval_but_not_a_choice_flip(self):
         rows = (("## Basic Information\n| **Stage** | plan |\n", "plan", "implement"),
                 ("## Basic Information\n| **Draft PR** | [#42](https://github.com/org/repo/pull/42) |\n", "42", "43"))
-        sections = (("## Implementation Progress\n- [ ] Work\n", "[ ]", "[x]"),)
-        for before, old, new in (*rows, *sections):
+        for before, old, new in rows:
             with self.subTest(workflow=before):
                 self.assertWorkflowEdit(before, before.replace(old, new), preserves=True)
 

@@ -130,7 +130,8 @@ Two consequences follow directly:
 - **A non-terminal `Confidence Gate` row makes the planning stage re-enter at
   the confidence gate**, because that row is inside the plan stage's range and
   is the first non-terminal row in it.
-- **Crossing that boundary requires an explicit `--stage implement`.** A bare
+- **Crossing that boundary requires an explicit `--stage implement`** and a valid plan
+  approval record, which the runner checks on every implement entry, resume included. A bare
   invocation re-resolves `plan` (the row is in the planning-complete predicate),
   and the crossing is reported rather than silent.
 
