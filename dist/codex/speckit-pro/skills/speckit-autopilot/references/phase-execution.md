@@ -37,7 +37,7 @@ result.
      or `analyze-executor`), then the consensus agents, as its
      `agent`, `slices` and `waves` say, and follow `skills/speckit-autopilot/references/phase-execution.md` and
      `skills/speckit-autopilot/references/consensus-protocol.md` for answers, edits and repair.
-   Dispatch with `spawn_agent`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
+   Dispatch with `spawn_agent` and `fork_turns="none"`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
    Run the phase's gate with `validate-gate`, repair within the shared reservation, and record
    the phase results in the workflow file.
    Finish with one `phase-envelope/v1` JSON object and nothing else, under 2,048 bytes:
@@ -286,7 +286,7 @@ for phase in PHASES starting from first_pending:
        Other phases: for EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
-       b. spawn_agent the resolved <executor>:
+       b. spawn_agent the resolved <executor> with fork_turns="none":
           "Run $speckit-<phase> with: <prompt>"
        c. Loop bounded wait_agent calls (timeout_ms=brief.wait.codex.timeout_ms) until this
           executor's actual summary is delivered; a status update or timeout alone is not the result. Record
@@ -1356,7 +1356,7 @@ the generated pages with short plain text, through the same helper. The agent
 answers with one outcome per listed page:
 
 ```text
-spawn_agent("artifact-author", prompt="""
+spawn_agent("artifact-author", fork_turns="none", prompt="""
   WORKFLOW_ROOT: <canonical absolute worktree root>
   Use WORKFLOW_ROOT as the workdir for every shell call and as the base for
   every filesystem path. Write and return paths only inside WORKFLOW_ROOT.

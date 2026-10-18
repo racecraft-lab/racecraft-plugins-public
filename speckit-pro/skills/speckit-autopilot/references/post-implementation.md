@@ -528,7 +528,7 @@ Agent(
 <!-- /host -->
 <!-- host:codex: Codex dispatches the installed agent with spawn_agent and waits with wait_agent -->
 ```text
-spawn_agent("implement-executor", prompt="""
+spawn_agent("implement-executor", fork_turns="none", prompt="""
   The implementation phase did not create integration
   tests for SPEC-XXX. G7 cannot pass until they exist.
 
@@ -1091,7 +1091,7 @@ Agent(
 <!-- /host -->
 <!-- host:codex: Codex dispatches the installed agent with spawn_agent and waits with wait_agent -->
 ```text
-spawn_agent("uat-runbook-author", prompt="""
+spawn_agent("uat-runbook-author", fork_turns="none", prompt="""
   Rewrite the committed source-derived UAT runbook in place so a non-engineer can follow
   it. Edit ONLY this file: <feature-dir>/.process/uat-runbook.md
 

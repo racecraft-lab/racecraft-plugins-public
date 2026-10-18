@@ -43,7 +43,7 @@ result.
    Dispatch with the `Agent` tool, foreground, as that reference's template shows.
 <!-- /host -->
 <!-- host:codex: Codex dispatches children with spawn_agent and wait_agent -->
-   Dispatch with `spawn_agent`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
+   Dispatch with `spawn_agent` and `fork_turns="none"`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
 <!-- /host -->
    Run the phase's gate with `validate-gate`, repair within the shared reservation, and record
    the phase results in the workflow file.
@@ -455,7 +455,7 @@ for phase in PHASES starting from first_pending:
        Other phases: for EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
-       b. spawn_agent the resolved <executor>:
+       b. spawn_agent the resolved <executor> with fork_turns="none":
           "Run $speckit-<phase> with: <prompt>"
        c. Loop bounded wait_agent calls (timeout_ms=brief.wait.codex.timeout_ms) until this
           executor's actual summary is delivered; a status update or timeout alone is not the result. Record
@@ -1970,7 +1970,7 @@ Agent(
 <!-- /host -->
 <!-- host:codex: Codex dispatches the installed agent with spawn_agent and bounded wait_agent polls -->
 ```text
-spawn_agent("artifact-author", prompt="""
+spawn_agent("artifact-author", fork_turns="none", prompt="""
   WORKFLOW_ROOT: <canonical absolute worktree root>
   Use WORKFLOW_ROOT as the workdir for every shell call and as the base for
   every filesystem path. Write and return paths only inside WORKFLOW_ROOT.

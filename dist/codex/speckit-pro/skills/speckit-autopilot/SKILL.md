@@ -126,6 +126,10 @@ Bind the workflow to actual Codex primitives:
   `agent_type="<installed-agent-name>"` to `spawn_agent`. Never omit
   `agent_type` or accept a `default` or general-purpose worker as equivalent to
   the installed role.
+- Every `spawn_agent` call passes `fork_turns="none"`. Codex treats an omitted
+  `fork_turns` as `"all"` and copies the caller's whole history into the child,
+  so each dispatch would re-pay the caller's context. The message is the
+  child's complete task.
 - When `close_agent` is exposed, call it promptly after consuming the result.
   Cleanup policy is best-effort: if the surface reports the agent already gone,
   log it and continue without retry-looping. When `close_agent` is absent,
