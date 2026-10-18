@@ -31,6 +31,23 @@ rendering seam for recorded planning approval on both hosts.
 - The reference's phrase "typed Implement write" includes feedback and
   consensus sweep scaffolds processed by the same runtime projection.
 
+Cross-host review notes (head `f44bef3d`), recorded as non-blocking:
+
+- `test-planning-approval.py` keeps five pre-existing copies of the dist
+  runner path (lines 556, 572, 695, 826 and 838); `HOST_RUNNERS` in the new
+  file is a sixth. All are fixed test inputs, not a runtime path.
+- The "regenerate navigation before approval" guidance has no code gate. It
+  cannot fail open: `map_navigation` binds a block that differs from the
+  generator's output, so a skipped regeneration forces a new approval.
+- `_progress_table_scaffold` holds its own `-{3,}` delimiter check beside
+  `sweep_export`. The stricter rule is deliberate: it refuses alignment
+  colons, which the shared table-rule predicate accepts.
+- The `neighbors` parameter defaults are unused; `workflow_content` is the
+  only caller and always passes both neighbors.
+- An owned table indented one to three spaces stays bound, because the pair
+  check reads the raw neighbor line. This fails closed: the edit needs a new
+  approval. Real writers emit unindented tables.
+
 ## Verification interpretation
 
 The original progress fixtures remain unchanged: complete canonical Implement
