@@ -1874,6 +1874,11 @@ An informational `attest_claude` check instead reports
 gap and keep the sweep unavailable; capture and launch still enforce their
 boundaries before any worker runs.
 
+A request that does not fit its surface (a missing or extra field, a malformed
+`session_id`, or an unknown surface, stage or perspective) returns
+`{"status": "invalid_request"}` with exit 2. It records no halt and changes
+nothing. Correct the request and send it again.
+
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool
 was absent, the tool was unauthenticated, the tool was rate-limited, or the tool

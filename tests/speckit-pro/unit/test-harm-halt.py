@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -19,6 +20,7 @@ from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from speckit_pro_runner.helpers import harm_halt  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
 from speckit_pro_runner.sweep_isolation import RECEIPT_PREFIX  # noqa: E402
+from git_fixture import commit_baseline  # noqa: E402
 from mutation_request_case import MutationRequestCase  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -27,6 +29,7 @@ WORKFLOW = "specs/001-feature/.process/workflow.md"
 LIST_FILE = "specs/001-feature/.process/decisions-list/decisions.json"
 RECORD = ".specify/harm-halt/halt.json"
 SAFE_STATE = "HEAD 0123abc before the plan stage"
+UAT_OUTPUT = "specs/001-feature/.process/uat-runbook.md"
 SECRET = "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"
 ENTRY = {"kind": "scope_answer", "option_chosen": "a", "rejected_alternative": "b", "evidence": "c", "affected_unit": "d"}
 
@@ -187,6 +190,59 @@ class HaltDispatchTests(MutationRequestCase):
         gate.assert_not_called()
 
 
+class UnresolvedRootTests(MutationRequestCase):
+    """A repo_root input the runner cannot resolve never moves the halt check off the invocation root."""
+
+    helper_id = harm_halt.HELPER_ID
+    files = {WORKFLOW: "# Workflow\n",
+             "specs/001-feature/spec.md": "# Spec\n\n### User Story 1 - Do it (Priority: P1)\n\nText.\n"}
+    unresolvable = (17, "/outside/the/checkout")
+
+    def halt_here(self) -> None:
+        harm_halt.record_halt(self.root, "secret_exposure", "withheld", SAFE_STATE)
+
+    def test_an_unresolvable_repo_root_cannot_write_past_a_standing_halt(self) -> None:
+        # generate-uat-skeleton finds its root from the cwd and never reads repo_root,
+        # so before the fix this request wrote its runbook while the halt stood.
+        commit_baseline(self.root)
+        self.halt_here()
+        for repo_root in self.unresolvable:
+            with self.subTest(repo_root=repo_root):
+                request = SimpleNamespace(schema_version="1.0", request_id="unresolved", helper_id="generate-uat-skeleton",
+                                          operation="generate-uat-skeleton", mode="apply",
+                                          inputs={"spec_path": "specs/001-feature/spec.md", "output_path": UAT_OUTPUT,
+                                                  "repo_root": repo_root})
+                blocked = handle_request(request)
+                self.assertEqual("harm_halt_active", blocked["diagnostics"][0]["code"], blocked)
+                self.assertFalse((self.root / UAT_OUTPUT).exists())
+
+    def test_without_a_halt_the_helper_still_judges_the_repo_root_itself(self) -> None:
+        for repo_root in self.unresolvable:
+            with self.subTest(repo_root=repo_root):
+                request = SimpleNamespace(schema_version="1.0", request_id="no-halt", helper_id="decisions-list",
+                                          operation="decisions-list", mode="apply",
+                                          inputs={"workflow_file": WORKFLOW, "entries": [ENTRY], "repo_root": repo_root})
+                result = handle_request(request)
+                self.assertEqual("input_error", result["status"], result)
+                self.assertNotEqual("harm_halt_active", result["diagnostics"][0]["code"], result)
+
+    def test_an_audited_read_with_an_unresolvable_repo_root_still_dispatches(self) -> None:
+        self.halt_here()
+        request = SimpleNamespace(schema_version="1.0", request_id="read", helper_id="count-markers",
+                                  operation="count-markers", mode="read_only", inputs={"repo_root": 17})
+        self.assertIsNone(harm_halt.apply_refusal(request, request))
+
+    def test_no_trusted_root_means_no_halt_can_stand(self) -> None:
+        # A record lives under a .specify directory, which find_repo_root would find,
+        # so a cwd with no trusted marker above it has nowhere a halt could stand.
+        rootless = tempfile.TemporaryDirectory()
+        self.addCleanup(rootless.cleanup)
+        request = SimpleNamespace(schema_version="1.0", request_id="rootless", helper_id="decisions-list",
+                                  operation="decisions-list", mode="apply", inputs={"workflow_file": WORKFLOW, "repo_root": 17})
+        with patch.object(Path, "cwd", return_value=Path(rootless.name).resolve()):
+            self.assertIsNone(harm_halt.apply_refusal(request, request))
+
+
 class HaltConcurrencyTests(MutationRequestCase):
     helper_id = harm_halt.HELPER_ID
     files = {WORKFLOW: "# Workflow\n"}
@@ -298,7 +354,8 @@ class HaltPublicationFailureTests(MutationRequestCase):
 
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                              for case in (HarmHaltTests, HarmHaltRecordTests, HaltDispatchTests, HaltConcurrencyTests, HaltPublicationFailureTests))
+                              for case in (HarmHaltTests, HarmHaltRecordTests, HaltDispatchTests, UnresolvedRootTests,
+                                                                       HaltConcurrencyTests, HaltPublicationFailureTests))
 
 
 if __name__ == "__main__":
