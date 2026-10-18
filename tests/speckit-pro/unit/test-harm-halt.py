@@ -655,6 +655,19 @@ class OwnerTerminalGuardTests(OwnerTerminalCase):
 
         self.assertEqual("off", child_environment(REPO)[harm_halt.TERMINAL_SWITCH])
 
+    def test_a_test_file_run_on_its_own_withholds_the_token(self) -> None:
+        from test_result import run_counted
+
+        seen: list[str | None] = []
+
+        class Probe(unittest.TestCase):
+            def test_switch(self) -> None:
+                seen.append(os.environ.get(harm_halt.TERMINAL_SWITCH))
+
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(Probe)
+        self.assertEqual(0, run_counted(suite, label="probe", stream=io.StringIO(), allow_live_specs=True))
+        self.assertEqual(["off"], seen)
+
 
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)

@@ -284,12 +284,17 @@ def run_counted(
     passed, ``1`` otherwise.
 
     Installs the live-``specs/`` read guard first, because every test in this
-    repository funnels through here and one install covers all of them. Pass
+    repository funnels through here and one install covers all of them. It also
+    withholds harm-halt clear tokens from the developer's terminal, so a test file
+    run on its own behaves like one the suite started. Pass
     ``allow_live_specs=True`` only when walking the live tree is the suite's
     actual job; see ``install_specs_read_guard``.
     """
     import sys
 
+    from suite_child_env import withhold_harm_halt_tokens
+
+    withhold_harm_halt_tokens()
     if not allow_live_specs:
         install_specs_read_guard()
     out = sys.stdout if stream is None else stream
