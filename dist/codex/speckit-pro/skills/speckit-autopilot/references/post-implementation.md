@@ -180,7 +180,7 @@ parallel `spawn_agent` pattern below:
   three results sequentially (shared test fixtures); the parent validates
   native proof and executes only checks without reusable evidence
 
-Dispatch the 3 tracks via `spawn_agent`, then loop bounded `wait_agent` calls
+Dispatch the 3 tracks via `spawn_agent` with `fork_turns="none"`, then loop bounded `wait_agent` calls
 until each track's actual result is consumed. A terminal status corroborates
 completion but cannot replace the result. Record each result and call
 `close_agent` only when the current surface exposes it. If derived

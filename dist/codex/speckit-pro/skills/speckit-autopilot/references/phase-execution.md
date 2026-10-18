@@ -8,7 +8,7 @@ artifact edits, and logging remain authoritative. On Codex, every shared
 consensus-synthesizer step dispatches the installed
 `consensus-synthesizer`, awaits its actual result, and validates that result
 before the parent applies any edit. The parent never performs synthesis as a
-fallback. Dispatch means calling `spawn_agent` with the installed
+fallback. Dispatch means calling `spawn_agent` with `fork_turns="none"` and the installed
 `consensus-synthesizer` role, then `wait_agent` and consuming that returned
 result.
 
@@ -1185,7 +1185,7 @@ and keeps executing independent work.
           lowest-scoring criterion (lowest numeric value among the
           5 keys).
        b. If iteration_count < 3:
-            - spawn_agent on the appropriate analyst for that target
+            - spawn_agent with fork_turns="none" on the appropriate analyst for that target
               (e.g., "task_understanding" lowest → clarify-executor
               re-pass on spec.md; "completeness" → verify artifact
               presence).
@@ -1642,7 +1642,7 @@ original parent start result independently of the worker-owned journal. Pass
 it as `expected_partition_sha256` on every later start, inspect, or record;
 never reconstruct it from the journal's current plan. On resume, use `action=inspect` and
 reconcile retained complete/unfinished results rather than renumbering batches.
-Dispatch one `spawn_agent` per implementation or research batch; verification
+Dispatch one `spawn_agent` (`fork_turns="none"`) per implementation or research batch; verification
 routes stay orchestrator-direct with no agent. A task routes to verification
 by its leading verb: `verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`. Supply TDD only to implementation
 and project agents, up to four adjacent assigned tasks sequentially, with shared
