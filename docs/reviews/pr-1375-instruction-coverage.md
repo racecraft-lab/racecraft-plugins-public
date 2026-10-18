@@ -1,77 +1,92 @@
 # PR 1375: dispatch gate coverage
 
-`tests/speckit-pro/unit/test-codex-spawn-fork-turns.py` derives both of its rules
-from the files it scans. No reviewed-content fixture and no content pins remain,
-so a wording edit to a Codex skill or agent needs no fixture change.
+Security finding **F1375-0784f4ad**, class **false-pass gate on unmarked
+instructions**, remains open until Daybreak re-checks the fix commits.
 
-## Rules
+## Rules and the review seam
 
-- **Calls.** Every `spawn_agent(` call in a scanned file passes exactly one
-  literal `fork_turns="none"`. The gate tokenizes each whole balanced call, so
-  argument order and line wrapping do not matter. A `*` or `**` expansion, a second
-  `fork_turns`, a dynamic value, or a marker inside another argument or a
-  comment fails.
-- **Files.** Every scanned skill file that names `spawn_agent` states the
-  rule: `fork_turns` then `=` or `:` then `"none"` or `'none'`. Every agent
-  TOML that names `spawn_agent` states it in `developer_instructions`. A new
-  or renamed file that names `spawn_agent` without the rule fails.
-- **Fail closed.** A file that is not strict UTF-8, an agent TOML that does
-  not parse, an unterminated or untokenizable call, and a symlink in the skill
-  tree each fail the gate. Both rules also run on the shipped `dist/codex`
-  payload.
+The balanced-call parser independently requires exactly one literal
+`fork_turns="none"` on every scanned `spawn_agent(` example. It rejects dynamic
+arguments, expansions, duplicates, and markers borrowed from another argument,
+call, or comment. File statements remain an additional structural check.
 
-## Scope
+Keyword matching cannot decide whether arbitrary natural-language instructions
+contradict the dispatch rule. The gate therefore also compares the complete
+rendered Codex skill tree and complete generated agent TOMLs against an explicit
+review inventory. It binds every file's exact UTF-8 bytes to its relative path.
+There is no keyword filter, paragraph window, call-argument masking, extension
+exemption, or metadata exemption in this inventory. New paths, renames,
+deletions, changed whitespace, comments, and line endings require review.
+Symlinks, missing roots, unreadable text, and missing or malformed inventories
+fail closed. Source rendering and the shipped Codex payload use the same check.
 
-The gate scans the rendered Codex skill tree and every generated Codex agent
-TOML. It skips only the file kinds that cannot dispatch a Codex child agent:
+The inventory is repository proof data; it is not shipped plugin policy.
+Regenerate it from source after reviewing the instruction changes:
 
-- Python files under a `scripts/` directory;
-- JSON schemas (`*.schema.json`);
-- lockfiles (`*-lock.json`, `*-lock.yaml`, `*.lock`);
-- the two verbatim upstream Quint trees, `speckit-coach/references/quint/quint-lang`
-  and `quint-modeling`, pinned by path (`test-quint-reference-attribution.py`
-  owns their provenance). An `UPSTREAM-NOTICE.md` elsewhere exempts nothing.
+```text
+python3 scripts/refresh-release-artifacts.py
+python3 tests/speckit-pro/unit/test-codex-spawn-fork-turns.py --write-review-inventory
+```
 
-Every other file kind stays in scope, including unknown extensions, so a
-renamed reference cannot leave the scan.
+Commit the generated inventory with its source changes. Normal tests never
+refresh it, and release-artifact regeneration never refreshes it implicitly.
+Reviewers must assess source edits and the inventory diff together; refreshing
+hashes is not evidence that a contradictory instruction is correct.
+
+## Why retain complete content
+
+The earlier whole-file pins were removed after review because they were
+hand-maintained, included unrelated files, and made benign edits fail. That
+removal reopened the security finding. Restricting inventory by dispatch
+keywords, paragraph, extension, metadata field, or existing filename repeats
+the same false-pass class: a new instruction can have none of those markers.
+This version deliberately retains complete content, with a deterministic
+regeneration command and exact path-set comparison. Benign wording changes
+still require review and regeneration. That maintenance cost is the explicit
+trade-off for rejecting unmarked instructions without claiming to understand
+natural language. No redundant reviewed-excerpt mechanism remains.
+
+The structural call scan still excludes upstream Quint trees, package lockfiles,
+Python scripts under `scripts/`, and JSON schemas. The content inventory has
+**no exclusions**, including those file kinds: scripts and schema descriptions
+can emit text, and a renamed reference must not escape review.
+
+## Regression evidence
+
+The focused fault tests copy the actual rendered skills or generated agents,
+verify an unmodified control passes, then inject contributor-controlled text.
+The red run before the inventory change accepted 47 injected cases, including
+all reported categories. Disabling the inventory check after the fix produces
+124 failing checks out of 202, including every reported category; restoring it
+makes the focused gate green. The call-parser fault tests continue to exercise the parser
+alone so inventory rejection cannot substitute for call-argument validation.
+
+Coverage includes existing skill paragraphs, every generated agent's developer
+instructions and scalar metadata, valid-call messages, comments, explicit
+conflicting values, new and renamed keyword-free files, HTML or unrelated
+markers, unsupported fields, split/concatenated/nested/formatted message text,
+script output, schema descriptions, path-set changes, symlinks, and missing or
+malformed review evidence. The shipped Codex skill and agent copies are tested
+too. See the security-fix PR comment for the exact variant-to-test mapping and
+commit SHAs.
 
 ## Known limits
 
-- **Natural-language intent is not checked.** A file that already states the
-  rule can still carry contradictory prose, such as "for any child you launch,
-  inherit the complete parent conversation", in a paragraph, a call's
-  `message`, a comment, or agent metadata. Static checks cannot infer that
-  intent. Whole-file content pins closed those keyword-free variants of
-  security finding F1375-0784f4ad at `4429ffb6`. This fix round removed the
-  pins, as review crc1375 asked, so the variants are accepted limits again.
-  - **Why review still covers it:** the text reaches a shipped skill only
-    through a pull request, and CODEOWNERS (`* @racecraft-lab/maintainers`)
-    reviews that diff. A pin bump got exactly the same review, so the pins
-    added friction but no independent check.
-  - **What it needs:** a Daybreak re-check of the head that removes the pins.
-- **Prose values other than "none" are not flagged.** Text such as
-  ``use `fork_turns="all"` for the next child`` in a file that states the rule
-  passes. One scanned skill rightly says "never use `fork_turns: "all"`", so a
-  value scan would need a prose heuristic. The same review control applies.
-- **Unsupported call fields.** The `prompt`, `context`, and `options` call
-  examples cannot dispatch through the current hosted tool: its schema has no
-  such fields. These are the Low and Info variants in the
-  [source Daybreak review](https://github.com/racecraft-lab/racecraft-plugins-public/pull/1375#issuecomment-6244445195).
-- **The file rule is per file, not per instruction.** A file that states the
-  rule once can carry another dispatch sentence without it. Removing the
-  argument from one of several statements in, say, `post-implementation.md`
-  passes. A per-paragraph rule would need a prose heuristic; the autopilot
-  `SKILL.md` states the rule for every call, and review covers the rest. A
-  file with a single statement, such as `phase-driver.md`, is fully guarded.
-- **Skipped kinds can still print text.** A Python script under `scripts/` or
-  a schema `description` reaches an agent as text but is not scanned. Today
-  none names `spawn_agent`; review covers a new one.
-- **Prose that looks like a call fails closed.** Text such as
-  `spawn_agent (the dispatcher)` is parsed as a call and fails. Write the name
-  without a following parenthesis.
-- **Outside the gate.** Hook-emitted context, plugin-manifest text, and later
-  user prompts are not scanned. The gate does not measure the canary token
-  target.
-- **Linux validation.** It does not cover macOS plugin CI or the two
-  real-sandbox `test_gate_hardening.py` cases. The orchestrator runs those
-  before merging.
+- The inventory detects unreviewed changes; it does not infer natural-language
+  intent or independently approve an inventory refresh. Maintainers review both
+  source changes and regenerated proof data. Arbitrary edits to the gate itself
+  remain subject to repository code review.
+- `prompt`, `context`, and `options` are not fields in the hosted `spawn_agent`
+  contract supplied to this session. Those call forms cannot dispatch here;
+  their instruction text is nevertheless covered by the inventory tests.
+- Comments do not execute as call arguments, and agent descriptions guide the
+  parent rather than becoming the child's developer instruction. Both remain
+  covered because an agent reading them can act on their text.
+- Hook-emitted context, plugin-manifest text, and later user prompts are outside
+  the skill/agent instruction seam. No changed code introduces a path from
+  those surfaces into this inventory. This gate does not measure canary tokens.
+- Linux validation does not cover macOS plugin CI or
+  `test_gate_hardening.py::test_pr_test_code_cannot_touch_the_host_under_the_real_sandbox`
+  and `test_gate_hardening.py::test_pr_test_code_cannot_create_or_modify_any_file_in_the_clone`.
+  The orchestrator runs those before merge. Interactive question steps were not
+  exercised live.
