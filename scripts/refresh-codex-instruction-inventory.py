@@ -9,6 +9,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
@@ -19,7 +20,10 @@ from speckit_pro_runner.host_skills import render_host_skills  # noqa: E402
 from speckit_pro_runner.trusted_io import trusted_open_directory  # noqa: E402
 
 
-def write_inventory(inventory: dict[str, dict[str, str]]) -> None:
+SKILL_CHUNK_SIZE = 50
+
+
+def write_inventory(inventory: dict[str, Any]) -> None:
     """Replace only the inventory entry, relative to a held, unlinked parent.
 
     Never truncate an existing inode: even a hard link must leave its other
@@ -44,8 +48,12 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as temporary:
         skills = Path(temporary) / "skills"
         render_host_skills(REPO_ROOT / "speckit-pro", "codex", skills)
+        skill_entries = sorted(instruction_inventory(skills).items())
         inventory = {
-            "skills": instruction_inventory(skills),
+            "skills": [
+                dict(skill_entries[index:index + SKILL_CHUNK_SIZE])
+                for index in range(0, len(skill_entries), SKILL_CHUNK_SIZE)
+            ],
             "agents": instruction_inventory(REPO_ROOT / "speckit-pro/codex-agents"),
         }
     write_inventory(inventory)

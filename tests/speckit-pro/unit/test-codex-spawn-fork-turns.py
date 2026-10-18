@@ -146,11 +146,8 @@ def reviewed_instruction_inventory() -> dict[str, dict[str, str]]:
         if not isinstance(agents, dict) or not isinstance(parts, list) or not parts:
             raise ValueError("invalid inventory fixture manifest")
         skills = {}
-        for name in parts:
-            if not isinstance(name, str) or Path(name).name != name:
-                raise ValueError("invalid inventory fixture part")
-            part = json.loads(read_surface(REVIEW_INVENTORY.with_name(name)))
-            if not isinstance(part, dict) or skills.keys() & part.keys():
+        for part in parts:
+            if not isinstance(part, dict) or not part or skills.keys() & part.keys():
                 raise ValueError("invalid or repeated inventory fixture entries")
             skills.update(part)
         if not skills:
@@ -161,7 +158,7 @@ def reviewed_instruction_inventory() -> dict[str, dict[str, str]]:
 
 
 def reviewed_inventory_bytes() -> bytes:
-    return (json.dumps(reviewed_instruction_inventory(), indent=2, sort_keys=True) + "\n").encode("utf-8")
+    return REVIEW_INVENTORY.read_bytes()
 
 
 def assert_instruction_inventory(case: unittest.TestCase, kind: str, root: Path) -> None:
@@ -441,12 +438,28 @@ class CodexSpawnInventoryTests(unittest.TestCase):
     def test_unreadable_review_inventory_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             inventory = Path(temporary) / "inventory.json"
-            for content in (None, b"\xff", b"{", b"{}", b"[]", b'null'):
+            for content in (
+                None, b"\xff", b"{", b"{}", b"[]", b'null',
+                b'{"agents": {}, "skills": []}',
+                b'{"agents": {}, "skills": [{}]}',
+                b'{"agents": {}, "skills": [null]}',
+                b'{"agents": {}, "skills": [{"one": "hash"}, {"one": "hash"}]}',
+            ):
                 with self.subTest(content=content), patch(__name__ + ".REVIEW_INVENTORY", inventory):
                     if content is not None:
                         inventory.write_bytes(content)
                     with self.assertRaises(AssertionError):
                         assert_instruction_inventory(self, "skills", host_skill_root("codex"))
+
+    def test_review_inventory_with_a_missing_chunk_entry_fails_closed(self) -> None:
+        manifest = json.loads(REVIEW_INVENTORY.read_text(encoding="utf-8"))
+        manifest["skills"][0].pop(next(iter(manifest["skills"][0])))
+        with tempfile.TemporaryDirectory() as temporary:
+            inventory = Path(temporary) / "inventory.json"
+            inventory.write_text(json.dumps(manifest), encoding="utf-8")
+            with patch(__name__ + ".REVIEW_INVENTORY", inventory):
+                with self.assertRaises(AssertionError):
+                    assert_instruction_inventory(self, "skills", host_skill_root("codex"))
 
 
 class CodexSpawnGateCoverageTests(unittest.TestCase):
