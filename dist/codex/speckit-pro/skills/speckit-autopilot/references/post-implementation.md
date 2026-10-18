@@ -46,7 +46,7 @@ in order; do not collapse or defer.
 | 11 | Verify Implementation | verify ext | `$speckit-verify` |
 | 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-verify-tasks` |
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
-| 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command, then every populated quality-gate slot (`COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`) with `{paths}` (space-separated) and `{paths_csv}` (comma-separated) = changed source files in `origin/main...HEAD` (when that list is empty, skip `COMPLEXITY` and `MUTATION` and record `n/a: no source files changed`); when `MUTATION` is populated, run the hardener once per spec between its run and its block decision per [Hardener Delegation](./hardener-delegation.md) (delegation gateway on `route: "auto"` when `delegate_health` is good, else the primary model; tests-only writes; stop at floor or cap; record the `Hardener` line); a populated slot that still fails blocks; record each result in the Quality Gates table |
+| 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command, then every populated quality-gate slot (`COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`) with `{paths}` (space-separated) and `{paths_csv}` (comma-separated) = changed source files in `origin/main...HEAD` (when that list is empty, skip `COMPLEXITY` and `MUTATION` and record `n/a: no source files changed`); when `MUTATION` is populated, run the hardener once per spec between its run and its block decision per [Hardener Delegation](./hardener-delegation.md) (delegation gateway on `route: "auto"` when `delegate_health` is good, else the primary model; tests-only writes; stop at floor or cap; record the `Hardener` line); a populated slot that still fails blocks; record each result using the `quality-final` and `quality-hardener` contracts in the Quality Gates table |
 | 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence, or hold PR side effects and regenerate the committed reviewability evidence |
 | 16 | PR Packet/Body Generation | final backstop proceeded | emit or refresh current `specs/<feature>/.process/pr-packets/<packet-id>.json` with `pr-packet-output` `dry_run` then `apply`; on failure, regenerate the packet from the diagnostics and revalidate |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
@@ -180,16 +180,23 @@ parallel `spawn_agent` pattern below:
   three results sequentially (shared test fixtures); the parent validates
   native proof and executes only checks without reusable evidence
 
-Dispatch the 3 tracks via `spawn_agent`, then loop bounded `wait_agent` calls
+Dispatch the 3 tracks via `spawn_agent` with `fork_turns="none"`, then loop bounded `wait_agent` calls
 until each track's actual result is consumed. A terminal status corroborates
 completion but cannot replace the result. Record each result and call
 `close_agent` only when the current surface exposes it. If derived
 `subagent_slots` is lower, dispatch in cap-bounded waves rather than all at
 once. The Lead synthesizes findings
-into the workflow file's Post-Implementation Checklist, then continues the serial
+into the workflow file's existing canonical Post-Implementation Checklist rows,
+using typed `post-checklist` results and `.process/` evidence references, then continues the serial
 tail (15 → 16 → 17 → 18 → 19, with the supporting rows in plan order).
 
 ## Post Rules
+
+Workflow writes use the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+Keep the full finding, action, or diagnostic in its execution evidence record;
+put the typed result and evidence reference in the workflow cell. Preserve
+existing checklist requirements and planning notes. This also applies to
+integration, hardener, terms-lint, UAT, and PR-emission summaries below.
 
 - Extension commands run in `phase-executor` with the exact `$speckit-*`
   skill sigil and SPEC context.
@@ -264,7 +271,7 @@ If no spec-specific tests exist, the implement-executor failed to
 create them. Spawn it again to fix:
 
 ```text
-spawn_agent("implement-executor", prompt="""
+spawn_agent("implement-executor", fork_turns="none", prompt="""
   The implementation phase did not create integration
   tests for SPEC-XXX. G7 cannot pass until they exist.
 
@@ -655,7 +662,7 @@ rewrite it in place** so the runbook reads in plain English and a non-engineer
 can actually execute it:
 
 ```text
-spawn_agent("uat-runbook-author", prompt="""
+spawn_agent("uat-runbook-author", fork_turns="none", prompt="""
   Rewrite the committed source-derived UAT runbook in place so a non-engineer can follow
   it. Edit ONLY this file: <feature-dir>/.process/uat-runbook.md
 
