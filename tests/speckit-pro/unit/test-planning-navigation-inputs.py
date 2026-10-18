@@ -69,10 +69,13 @@ class NavigationInjectionTest(NavigationInputsFixture):
 
 
     def test_schema_one_merged_sha_trailing_spaces_cannot_create_a_hard_break(self):
+        self.recordNavigationApproval()
         manifest = self.feature / ".process/prs.json"
         manifest.write_text(json.dumps({"schemaVersion": 1, "records": [
             {"slice": "us1", "pr": 41, "merged_sha": "abc  "}]}))
-        self.assertIn("\nus1 · PR#41 · abc\n", render_spec_index(self.root)[0][0].rendered)
+        text = render_spec_index(self.root)[0][0].rendered
+        self.assertIn("\nus1 · PR#41 · abc\n", text)
+        self.assertVerifiedNavigation(text)
 
 
     def test_scoped_package_paths_remain_literal_metadata(self):

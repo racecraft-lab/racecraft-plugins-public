@@ -49,6 +49,17 @@ Cross-host review notes (head `f44bef3d`), recorded as non-blocking:
   check reads the raw neighbor line. This fails closed: the edit needs a new
   approval. Real writers emit unindented tables.
 
+Cross-host review notes (head `28d4c153`), recorded as non-blocking:
+
+- The email guard `[\w.+-]+@[\w.-]*\w` also refuses a value with no dot
+  after the at sign, such as `pkg@1`. This over-refuses and fails closed; no
+  test pins the wider scope.
+- `injectedPrFields` restores the manifest after its loop, not in a
+  `finally`. Every caller wraps its body in `subTest`, which absorbs
+  assertion failures, so the loop always finishes.
+- The refusal payloads build the at sign with `chr(64)`. This is a test
+  spelling choice with no runtime effect.
+
 ## Verification interpretation
 
 The original progress fixtures remain unchanged: complete canonical Implement
