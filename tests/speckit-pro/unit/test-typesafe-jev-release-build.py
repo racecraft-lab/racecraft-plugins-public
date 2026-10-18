@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import io
+import json
 import subprocess
 import sys
 import tarfile
@@ -172,6 +173,25 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
             with self.subTest(message=message), unittest.mock.patch.object(BUILD.subprocess, "run", return_value=result):
                 with self.assertRaisesRegex(BUILD.ReleaseBuildError, message):
                     BUILD.resolve("typesafe-jev-v0.9.0", "", "")
+
+    def test_published_release_notes_can_be_recovered_without_rebuilding_assets(self) -> None:
+        body = "## [0.10.0](compare)\n"
+        view = json.dumps({"isDraft": False, "tagName": "typesafe-jev-v0.10.0", "body": body})
+        with unittest.mock.patch.object(BUILD.subprocess, "run", return_value=completed(["gh"], stdout=view)) as run:
+            self.assertEqual(
+                ("typesafe-jev-v0.10.0", body),
+                BUILD.resolve("typesafe-jev-v0.10.0", "", "", notes_only=True),
+            )
+        self.assertEqual("view", run.call_args.args[0][2])
+        self.assertEqual(1, run.call_count)
+
+    def test_notes_recovery_requires_a_published_uncomposed_release(self) -> None:
+        for is_draft, body in ((True, "raw"), (False, "## Highlights\n\ncomposed"), (False, "")):
+            with self.subTest(is_draft=is_draft, body=body):
+                view = json.dumps({"isDraft": is_draft, "tagName": "typesafe-jev-v0.10.0", "body": body})
+                with unittest.mock.patch.object(BUILD.subprocess, "run", return_value=completed(["gh"], stdout=view)):
+                    with self.assertRaises(BUILD.ReleaseBuildError):
+                        BUILD.resolve("typesafe-jev-v0.10.0", "", "", notes_only=True)
 
     def test_github_output_keeps_a_multiline_body_intact(self) -> None:
         body = "## [0.9.0](compare)\n\n### Features\n\n* one\nname=value\n"

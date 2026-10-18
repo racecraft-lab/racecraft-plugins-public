@@ -270,6 +270,7 @@ class FormalCheckerTests(unittest.TestCase):
         self.assertFalse(record_path(self.root, "workflow.md", "plan-waiver").exists())
         result = self.request("apply", waiver=waiver, state_file=state.name)
         self.assertEqual("waived", result["data"]["verdict"])
+        self.assertIsNotNone(json.loads(state.read_text()).get("updated_at"))
         self.assertFalse(record_path(self.root, "workflow.md", "plan").exists())
         current = helper.current_checkpoint(self.root, "workflow.md")
         self.assertEqual("waived", current["verdict"])

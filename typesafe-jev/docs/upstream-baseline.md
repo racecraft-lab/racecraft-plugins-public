@@ -163,12 +163,15 @@ for the OpenRouter integration to work.
 ## What was deliberately not changed
 
 - The single tool named `evaluate`, its argument names, and its annotations.
-- Go, Cobra, the MCP Go SDK v1.7.0, and stdio transport.
+- Go, Cobra, and stdio transport. Upstream 0.4.0 pinned the MCP Go SDK at
+  v1.7.0. This tree's `go.mod` requires v1.8.0; that later pin is not what
+  0.4.0 shipped.
 - TypeSafe's accepted input shapes. Structured instructions and null criteria
   descriptions still work, and now work on the OpenRouter backend too, which
   republished its Decisions schemas to accept them.
 - Upstream's tool guidance about question ids, batching, and what confidence
   means.
 - `setup pi` and `cmd/evaluate/pi.ts`.
-- The `go.mod` toolchain directive and pinned dependency versions.
+- The `go.mod` toolchain directive. Dependency versions are the ones `go.mod`
+  records, including the MCP Go SDK at v1.8.0.
 - Upstream attribution, the LICENSE, and the historical changelog.

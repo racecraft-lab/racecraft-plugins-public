@@ -7,3 +7,10 @@ CONTRACT_VERSION = "1.0"
 RUNNER_VERSION = "0.1.0"
 PYTHON_MINIMUM = (3, 11)
 SOURCE_CONTEXT = "source_checkout"
+
+UNKNOWN_DISPATCH_IDS_FIELD = "unknown_dispatch_ids"
+BLOCKED_BY_FIELD = "blocked_by"
+COMPLETED_DISPATCH_IDS_FIELD = "completed_dispatch_ids"
+EXECUTION_HISTORY_COUNT_FIELDS = ((UNKNOWN_DISPATCH_IDS_FIELD, "unknown_dispatch_count"),
+                                  (BLOCKED_BY_FIELD, "blocked_by_count"),
+                                  (COMPLETED_DISPATCH_IDS_FIELD, "completed_dispatch_count"))

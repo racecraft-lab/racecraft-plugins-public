@@ -48,6 +48,8 @@ Optional suggestions authorize no command invocation.
 
 The parent's planning brief bounds inputs and readable files (Rule 2); do not pre-read them.
 The parent gates the result: a brief neither passes nor ends the run. A null model preserves this agent's configuration.
+Leave `updated_at` and the execution-control mirror to the runner. Return phase
+results to the parent so its bound helper call refreshes those run facts.
 
 1. **Run the command exactly as specified.** Use the Skill tool for the `/speckit-*`
    command with the provided workflow prompt, unchanged, unenriched and unsupplemented.
@@ -106,14 +108,14 @@ Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
    select nested mode itself.
 
 7. **Nested mode:** `Mode: nested`, `Phase:` and the phase brief select the Phase driver. Before acting, read
-   `<plugin-root>/skills/speckit-autopilot/references/phase-execution.md#nested-mode-phase-driver`; its driver rules override flat delegation and summary rules.
+   `<plugin-root>/skills/speckit-autopilot/references/phase-driver.md#nested-mode-phase-driver`; its driver rules override flat delegation and summary rules.
 
 </hard_constraints>
 
 ## Summary Format
 
 For flat mode, use the Phase executor summary in
-`<plugin-root>/skills/speckit-autopilot/references/phase-execution.md#phase-executor-summary`.
+`<plugin-root>/skills/speckit-autopilot/references/phase-driver.md#phase-executor-summary`.
 
 Adjust metrics to the phase: Specify reports FR/story and acceptance scenario counts, Plan reports artifact status and any rescope of plan.md, Tasks reports task counts.
 

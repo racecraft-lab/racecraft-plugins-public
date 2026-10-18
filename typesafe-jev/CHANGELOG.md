@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.9.2...typesafe-jev-v0.10.0) (2026-10-17)
+
+
+### Features
+
+* **typesafe-jev:** add images, box questions, and long context ([#1365](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1365)) ([b85eb47](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b85eb474625c61dd1ced15271fd7033a212f214c))
+
 ## [0.9.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.9.1...typesafe-jev-v0.9.2) (2026-09-25)
 
 

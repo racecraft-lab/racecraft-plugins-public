@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -36,18 +37,27 @@ func newRecordingBackend(t *testing.T, status int, reply string) *recordingBacke
 	return b
 }
 
+// fallbackPair builds a primary on primaryName answering primaryStatus and a
+// fallback on the other backend answering 200 with reply, and returns the
+// primary.
+func fallbackPair(t *testing.T, primaryName string, primaryStatus int, reply string) (*Client, *recordingBackend, *recordingBackend, *strings.Builder) {
+	t.Helper()
+	fallbackName := map[string]string{"typesafe": "openrouter", "openrouter": "typesafe"}[primaryName]
+	primary := newRecordingBackend(t, primaryStatus, `{"error":{"message":"no"}}`)
+	fallback := newRecordingBackend(t, http.StatusOK, reply)
+	c := testClient(providerAt(primaryName, primary.srv.URL), primary.srv)
+	c.MaxRetries = 0
+	c.Fallback = testClient(providerAt(fallbackName, fallback.srv.URL), fallback.srv)
+	log := &strings.Builder{}
+	c.Log = log
+	return c, primary, fallback, log
+}
+
 // withFallback builds a TypeSafe primary answering primaryStatus and an
 // OpenRouter fallback answering 200, and returns the primary.
 func withFallback(t *testing.T, primaryStatus int) (*Client, *recordingBackend, *recordingBackend, *strings.Builder) {
 	t.Helper()
-	primary := newRecordingBackend(t, primaryStatus, `{"error":{"message":"no"}}`)
-	fallback := newRecordingBackend(t, http.StatusOK, noulReply)
-	c := testClient(providerAt("typesafe", primary.srv.URL), primary.srv)
-	c.MaxRetries = 0
-	c.Fallback = testClient(providerAt("openrouter", fallback.srv.URL), fallback.srv)
-	log := &strings.Builder{}
-	c.Log = log
-	return c, primary, fallback, log
+	return fallbackPair(t, "typesafe", primaryStatus, noulReply)
 }
 
 // FB-01: unset means no fallback. A refused key fails the call exactly as it
@@ -244,5 +254,90 @@ func TestInstructionsNameTheFallback(t *testing.T) {
 		if !strings.Contains(note, want) {
 			t.Errorf("note missing %q:\n%s", want, note)
 		}
+	}
+}
+
+// openRouterFirst builds an OpenRouter primary answering primaryStatus and a
+// TypeSafe fallback answering reply, both with images on. The backends' local
+// gates differ in this direction: TypeSafe's default model rejects box, its
+// side minimum is 280 rather than 256, and its default budget is 64k tokens.
+func openRouterFirst(t *testing.T, primaryStatus int, reply string) (*Client, *recordingBackend, *recordingBackend) {
+	t.Helper()
+	c, primary, fallback, _ := fallbackPair(t, "openrouter", primaryStatus, reply)
+	c.Provider.AllowImages = true
+	c.Fallback.Provider.AllowImages = true
+	return c, primary, fallback
+}
+
+const boxReply = `{"model":"jev-1.14.0","usage":{"input_tokens":1,"output_tokens":1},"answers":{"mug":{"type":"box","box":{"top":0.1,"bottom":0.4,"left":0.2,"right":0.8}}}}`
+
+// FB-07: the fallback runs its own default model, and TypeSafe's, jev-latest,
+// is Jev 1.13, which rejects box. A box call on a TypeSafe fallback runs on
+// its pinned 1.14 model instead, on the switching call and after it, so the
+// agent is never told to pick a model the fallback would clear.
+func TestFallbackRunsBoxOnABoxCapableModel(t *testing.T) {
+	c, _, fallback := openRouterFirst(t, http.StatusServiceUnavailable, boxReply)
+	in := imageRequest(mustPNG(t, 280, 280), "")
+	in.Model = "typesafe/jev-1.14"
+	in.Questions = map[string]question{"mug": {Type: typeBox, Instructions: "the mug"}}
+	for call := range 2 {
+		if _, err := runEvaluate(context.Background(), c, in); err != nil {
+			t.Fatalf("call %d: %v", call, err)
+		}
+		if got := <-fallback.models; got != "jev-1.14.0" {
+			t.Fatalf("call %d: fallback model %q, want jev-1.14.0", call, got)
+		}
+	}
+}
+
+// FB-08: a request the fallback would refuse locally does not move the
+// session there. The caller sees the primary's failure, with the fallback's
+// reason, and the next call still goes to the primary.
+func TestFallbackLocalRefusalKeepsThePrimary(t *testing.T) {
+	cases := map[string]struct {
+		in   evaluateIn
+		want string
+	}{
+		"256-pixel side": {imageRequest(mustPNG(t, 256, 320), ""), "280-1568"},
+		"100k tokens":    {evaluateIn{State: budgetText(100_000), Questions: map[string]question{"q": budgetNoul("short")}}, "JEV_LONG_CONTEXT"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			c, primary, fallback := openRouterFirst(t, http.StatusServiceUnavailable, noulOK)
+			for call := range 2 {
+				_, err := runEvaluate(context.Background(), c, tc.in)
+				var local *requestInvalidError
+				var status *statusErr
+				if errors.As(err, &local) || !errors.As(err, &status) || status.Status != http.StatusServiceUnavailable {
+					t.Fatalf("call %d: want the primary's 503, not a local rejection: %v", call, err)
+				}
+				if !strings.Contains(err.Error(), "fallback cannot take this request") || !strings.Contains(err.Error(), tc.want) {
+					t.Fatalf("call %d: error = %v", call, err)
+				}
+			}
+			if c.switched.Load() || fallback.calls.Load() != 0 || primary.calls.Load() != 2 {
+				t.Fatalf("switched=%v; calls primary %d, fallback %d; want false, 2, 0",
+					c.switched.Load(), primary.calls.Load(), fallback.calls.Load())
+			}
+		})
+	}
+}
+
+// FB-09: once the session is on the fallback, a local refusal there is still
+// a local rejection (no call was made), and it says the session is on the
+// fallback, so a limit the primary does not have is not a mystery.
+func TestLocalRefusalAfterTheSwitchNamesTheFallback(t *testing.T) {
+	c, primary, fallback := openRouterFirst(t, http.StatusServiceUnavailable, noulOK)
+	c.switched.Store(true)
+	_, err := runEvaluate(context.Background(), c, imageRequest(mustPNG(t, 256, 320), ""))
+	var local *requestInvalidError
+	if !errors.As(err, &local) {
+		t.Fatalf("want a local rejection: %v", err)
+	}
+	if !strings.Contains(err.Error(), "typesafe fallback") || !strings.Contains(err.Error(), "280-1568") {
+		t.Fatalf("error = %v", err)
+	}
+	if primary.calls.Load() != 0 || fallback.calls.Load() != 0 {
+		t.Fatalf("calls primary %d, fallback %d", primary.calls.Load(), fallback.calls.Load())
 	}
 }

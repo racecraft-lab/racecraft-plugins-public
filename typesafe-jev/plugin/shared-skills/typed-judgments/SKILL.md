@@ -7,13 +7,13 @@ description: >
   which of several options or owners fits, how severe or risky something is,
   whether a test failure is real or flaky, whether a result satisfies a
   constraint that was stated earlier, or classifying many items the same way.
-  Covers the noul, choice and score primitives, how to batch questions, and how
-  to read the numbers. Do NOT use for writing code or prose, for a lookup or
+  Covers the noul, choice, score, and box primitives, how to batch questions,
+  and how to read the numbers. Do NOT use for writing code or prose, for a lookup or
   search, or for any question whose possible answers cannot be listed up front.
 license: MIT
 metadata:
   author: Racecraft Lab
-  version: 0.9.2 # x-release-please-version
+  version: 0.10.0 # x-release-please-version
   mcp-server: jev
 ---
 
@@ -52,7 +52,7 @@ Use it **before** asserting the judgment, not to confirm one already given.
   is `{"true": "...", "false": "..."}`.
 - **`choice`** — one option from a required `criteria` map of option to
   description.
-- **`score`** — a position on an ordered array of at least two level
+- **`score`** — a position on an ordered array of 2 to 10 level
   descriptions. The answer is probability-weighted, so `2.13` means mostly
   level 2 with some weight on 3. That fraction is the signal; do not round it
   away.
@@ -75,6 +75,7 @@ the whole site.
 | An answer whose confidence is low, or what to do about it | [Confidence](https://docs.typesafe.ai/confidence.md), [Confidence-gated routing](https://docs.typesafe.ai/patterns/confidence-routing.md) |
 | A judgment too big for one question | [Composite scoring](https://docs.typesafe.ai/patterns/composite-scoring.md), [Speculative fan-out](https://docs.typesafe.ai/patterns/fan-out.md) |
 | A large state, and whether accuracy holds | [Models](https://docs.typesafe.ai/models.md), [Jev 1.13 jaggedness](https://docs.typesafe.ai/model-jaggedness/jev-1.13.md) |
+| A picture, or a region inside one | [Images](https://docs.typesafe.ai/images.md), [Box](https://docs.typesafe.ai/primitives/box.md) |
 | Anything else | the [documentation index](https://docs.typesafe.ai/llms.txt) |
 
 One caution specific to using the tool rather than writing code: the SDK pages
@@ -93,13 +94,16 @@ inventing a detail that depends on a version you cannot see.
 in parallel and cannot see each other's answers. Eight questions cost barely
 more than one, so ask everything you want to know at once.
 
-**Mind the context budget.** The model takes about 64,000 tokens per request in
-total, and about 32,000 for the state plus the single longest question. The
-tool estimates both before sending and refuses a request that cannot fit,
-naming which budget was exceeded, so an oversized state costs nothing. Split
-the state or judge it in parts rather than trimming a question down to nothing.
-Accuracy also shifts as the state grows, which the jaggedness page above
-covers.
+**Mind the context budget.** OpenRouter accepts about 262,144 tokens.
+TypeSafe's default is about 64,000 tokens per request and about 32,000 for the
+state plus the single longest question; the operator raises both to 262,144
+with `JEV_LONG_CONTEXT=true`. The tool estimates text before sending and
+refuses a request that cannot fit, naming which budget was exceeded, so an
+oversized state costs nothing. Image bytes are not part of that estimate.
+Split the state or judge it in parts rather than trimming a question down to
+nothing. Accuracy also shifts as the state grows, which the jaggedness page
+above covers, and TypeSafe documents the long window as slower and less
+accurate.
 
 **The id carries no meaning.** Question ids are never sent to the model.
 `"is_regression"` tells it nothing; the full sentence in `instructions` does.
@@ -153,11 +157,29 @@ Report the number, not a paraphrase of it. "Merge readiness 1 of 3, and
 `has_unresolved_feedback` 0.95" is the finding; "it looks about ready" throws
 away what you paid for.
 
+## Images, box, and long context
+
+Images and `box` stay off until the operator sets `JEV_IMAGES=true`. Name each
+PNG or JPEG in an `images` map (`path` or `data_base64`) and reference that
+name as a whole string, or as `{"image":"name"}`, inside `state`,
+`instructions`, or `criteria`. Do not paste an `assets` map or an `image_url`
+part. The server builds the wire format, and an `assets` map sent to
+OpenRouter is ignored and still billed. The bytes leave the machine and are
+billed. Do not put a secret in an image.
+
+`box` locates one target. It takes instructions and no criteria, and it needs
+Jev 1.14: `jev-preview` or `jev-1.14.0` on TypeSafe, `typesafe/jev-1.14` or
+`~typesafe/jev-latest` on OpenRouter. TypeSafe's `jev-latest` is still 1.13
+and is refused locally. The answer is `top`, `bottom`, `left`, and `right`,
+each from 0 to 1, with the left edge before the right and the top before the
+bottom.
+
 ## Cost and privacy
 
-Each call sends the state and questions to the configured provider and is
-billed there. The read-only annotation means it changes nothing on this
-machine, not that it is free or private. Do not put a secret in `state`.
+Each call sends the state, questions, and any images to the configured
+provider and is billed there. The read-only annotation means it changes
+nothing on this machine, not that it is free or private. Do not put a secret
+in `state` or in an image.
 
 Which backend is used is fixed by the operator's `JEV_PROVIDER` setting, not by
 anything you pass.
