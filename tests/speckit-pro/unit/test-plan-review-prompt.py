@@ -39,7 +39,7 @@ class PlanReviewPromptTest(unittest.TestCase):
                            "tasks.md": "- [ ] T001 Build a thing", "workflow.md": "## Project Commands\n"}.items():
             (feature / name).write_text(text)
 
-    def call(self, **extra):
+    def call(self, drop=(), **extra):
         manifest_request = dict(schema_version="1.0", helper_id="planning-approval", operation="planning-approval",
                                 mode="read_only", inputs=dict(action="manifest", feature_dir="specs/demo",
                                                               workflow_file="specs/demo/workflow.md"))
@@ -47,6 +47,8 @@ class PlanReviewPromptTest(unittest.TestCase):
         inputs = dict(feature_dir="specs/demo", workflow_file="specs/demo/workflow.md", findings=copy.deepcopy(FINDINGS),
                       reviewed_revision=manifest["data"]["manifest_digest"], requests=copy.deepcopy(REQUESTS), withdrawals=[])
         inputs.update(extra)
+        for key in drop:
+            inputs.pop(key)
         request = dict(schema_version="1.0", helper_id="plan-review-prompt", operation="plan-review-prompt",
                        mode="read_only", inputs=inputs)
         _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
@@ -129,6 +131,12 @@ class PlanReviewPromptTest(unittest.TestCase):
         before = self.call()["data"]["revision"]
         (self.root / "specs/demo/plan.md").write_text("A changed plan")
         self.assertRefused(self.call(reviewed_revision=before), "reviewed revision changed")
+
+    def test_prompt_refuses_a_missing_or_malformed_reviewed_revision(self):
+        self.assertEqual(self.call(drop=("reviewed_revision",))["status"], "input_error")
+        for value in ("", "  ", None, 7, []):
+            with self.subTest(value=value):
+                self.assertEqual(self.call(reviewed_revision=value)["status"], "input_error")
 
     def test_summary_newlines_cannot_forge_active_remedies(self):
         findings = copy.deepcopy(FINDINGS)

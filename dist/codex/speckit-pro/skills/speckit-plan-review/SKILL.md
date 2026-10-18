@@ -53,8 +53,9 @@ short id. If any source is missing, say which and what it would have shown.
 ### 2. Explain, then ask
 
 Open with the revision, the count of findings and the decisions list in plain words.
-Walk through each decision and check the user's understanding of its impact and
-alternatives, one question at a time. Then ask for the user's own change requests,
+Walk through each decision, one question at a time: give its impact, the recommended choice,
+one real alternative and room for a custom instruction, and check the user understands it.
+A change the user wants becomes their own request. Then ask for the user's own change requests,
 even when there are no reported findings. Wait for those answers.
 Then take the findings one at a time: every blocked gate, every strict low-confidence
 finding, and each request the user raises themselves (give those the id `USER-1`, `USER-2`).
@@ -86,7 +87,9 @@ Call `helper_id=plan-review-prompt operation=plan-review-prompt mode=read_only` 
 `findings` (`id`, `summary`), `requests` (all of them, in order,
 withdrawn ones included) and `withdrawals` (`request`, `finding`, `instruction`; an empty list when none).
 
-If the runner refuses, read its message, fix the named field with the user and call again.
+If the runner says the reviewed revision changed, the plan moved during the review:
+restart at step 1 with the new revision and repeat the interview. For any other refusal,
+read its message, fix the named field with the user and call again.
 On success, show `data.prompt` in a fenced text block and tell the user:
 
 - Copy it into their current Claude Code or Codex session. Preparing it sent nothing.

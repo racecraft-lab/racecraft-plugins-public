@@ -1399,6 +1399,15 @@ class ValidatePlanReviewSkill(unittest.TestCase):
                 self.assertIn("Walk through each decision", text)
                 self.assertIn("ask for the user's own change requests", text)
                 self.assertIn("After those answers, if there are no findings or requests", text)
+                self.assertIn("give its impact, the recommended choice,", text)
+                self.assertIn("one real alternative and room for a custom instruction", text)
+
+    def test_changed_revision_restarts_the_review(self) -> None:
+        for host, view in self.hosts():
+            text = _read(view / PLAN_REVIEW_SKILL / "SKILL.md")
+            with self.subTest(host=host):
+                self.assertIn("If the runner says the reviewed revision changed", text)
+                self.assertIn("restart at step 1", text)
 
     def test_codex_policy_is_explicit_invocation_only(self) -> None:
         sidecar = PLUGIN_ROOT / 'codex-skills' / PLAN_REVIEW_SKILL / 'agents' / 'openai.yaml'
