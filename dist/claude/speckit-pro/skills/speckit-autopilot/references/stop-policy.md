@@ -35,11 +35,25 @@ A harm halt fires when the next action could cause damage a later review cannot
 undo. On a harm halt the runner stops all dispatch: no commit, push, PR edit or
 publish follows the trigger, because a PR edit could spread a leaked secret. It
 writes a local halt record (reason, redacted evidence, last safe state) and
-prints it. Resume refuses while the record stands. The `harm-halt` helper
-refuses agent `clear` requests: the existing operator-event fields do not
-authenticate a human halt-clear decision. A human must inspect the record
-outside the agent runner. On resume, run `harm-halt` in `read_only` mode first;
-a `halted` answer ends the run with the recorded reason's marker.
+prints it. Resume refuses while the record stands. On resume, run `harm-halt`
+in `read_only` mode first; a `halted` answer ends the run with the recorded
+reason's marker.
+
+Only a human clears a halt. Recording it mints a one-time clear token that the
+runner writes only to the owner's terminal, never to a file, log or helper
+answer. The `harm-halt` `clear` action succeeds only with that token; a wrong,
+used or missing token, or a held publication lock, is refused and the halt
+stands. A `dry_run` clear checks the record, the token and the publication
+lock, reports `would_clear`, and changes nothing. Never ask for, guess or relay the token, and never send a
+`clear` request yourself: the human runs it.
+
+Every answer that records a halt carries `clear_token`: the `harm-halt` `halt`
+action, a plan-stage stop with `halt_record_status: recorded`, and a sweep
+isolation failure with reason `isolation_boundary_unavailable` and no
+`halt_record_status`. When it says `not_delivered`, nobody holds the token, and
+a human recovers the halt by hand outside the agent runner. A plan-stage
+`halt_record_status: blocked` or a sweep `halt_record_status: unavailable`
+recorded no halt and minted no token, so it carries no `clear_token`.
 
 While halted, the runner permits the halt helper, runtime information, and the
 pure readers explicitly listed in `helpers/harm_halt.py`. A `read_only` or

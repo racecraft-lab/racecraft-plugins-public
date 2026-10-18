@@ -129,6 +129,9 @@ restored to a directory after inspection. Agents leave this recovery to the huma
 - A sequential duplicate trigger also retains its acquired lock when it finds
   an existing record. This conservative refusal preserves first evidence;
   human recovery removes the record and any retained lock together.
+  Superseded by #1378 (`docs/pr-1378-harm-halt-clear.md`): a trigger refused
+  because a readable halt already stands now releases its lock, so the owner's
+  clear token still works.
 - The public halt helper repeats the evidence text check before calling the
   publisher, which validates all record fields. Both use the same
   `strict_input.require_text` primitive, so no validation policy differs;

@@ -180,8 +180,9 @@ def sweep_isolation_failure(violation: Exception, repo_root: Path, named_surface
     payload = {"status": "blocked", "reason": reason}
     if reason == "isolation_boundary_unavailable":
         try:
-            record_halt(repo_root, "tampering_or_forged_evidence", "Feedback sweep isolation boundary unavailable",
-                        f"Before sweep isolation surface {named_surface}; no further runner writes permitted")
+            recorded = record_halt(repo_root, "tampering_or_forged_evidence", "Feedback sweep isolation boundary unavailable",
+                                   f"Before sweep isolation surface {named_surface}; no further runner writes permitted")
+            payload["clear_token"] = recorded["clear_token"]
         except ValueError:
             # Keep the closed boundary failure when a prior record needs human
             # inspection or another trigger already owns its publication lock.
