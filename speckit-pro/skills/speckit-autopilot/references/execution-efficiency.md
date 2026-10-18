@@ -539,7 +539,8 @@ Use the helper's result, never recreate its dependency/ownership scheduler.
 Dispatch up to four adjacent tasks of one phase, routed agent, and capability
 group per batch, sequentially inside that worker. Parallelize only the
 helper's disjoint, dependency-ready batches within the host ceiling. Native
-Agent/spawn_agent remains the dispatcher. Supply shared instructions,
+Agent/spawn_agent remains the dispatcher, and each Codex `spawn_agent` call
+passes `fork_turns="none"`. Supply shared instructions,
 PROJECT_COMMANDS, TDD protocol, completed-work evidence, and reservation once
 per batch, followed by exact task descriptions and metadata. A TDD unit is a
 closed behavior: keep its test/implementation checkboxes together, preserve

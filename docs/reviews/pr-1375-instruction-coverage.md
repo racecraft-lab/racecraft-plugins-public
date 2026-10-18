@@ -1,31 +1,67 @@
-# PR 1375: complete instruction review coverage
+# PR 1375: dispatch gate coverage
 
-The dispatch gate binds each rendered Codex skill file and each complete agent TOML
-file (including descriptions and other metadata) to its reviewed bytes before examining calls
-or excerpts. The inventory includes surfaces with no dispatch keywords.
-Adding, renaming, editing, emptying, reordering, or changing whitespace in an
-instruction surface requires explicit review of its content pin. Existing
-readable excerpts remain available alongside the complete-surface SHA-256 pins. Files are decoded strictly without newline
-normalization before pin comparison.
+`tests/speckit-pro/unit/test-codex-spawn-fork-turns.py` derives both of its rules
+from the files it scans. No reviewed-content fixture and no content pins remain,
+so a wording edit to a Codex skill or agent needs no fixture change.
 
-The pins freeze the skill and agent file content at the previously reviewed head
-`826dcf3f2421e63800555cd608229d771c246295`. They are not automatically refreshed
-by artifact generation. Review source changes before changing a pin; inspect
-the complete source file when adding a new inventory entry.
+## Rules
+
+- **Calls.** Every `spawn_agent(` call in a scanned file passes exactly one
+  literal `fork_turns="none"`. The gate tokenizes each whole balanced call, so
+  argument order and line wrapping do not matter. A `**` expansion, a second
+  `fork_turns`, a dynamic value, or a marker inside another argument or a
+  comment fails.
+- **Files.** Every scanned skill file that names `spawn_agent` states
+  `fork_turns="none"` (or `fork_turns: "none"`). Every agent TOML that names
+  `spawn_agent` states `fork_turns="none"` in `developer_instructions`. A new
+  or renamed file that names `spawn_agent` without the rule fails.
+- **Fail closed.** A file that is not strict UTF-8, an agent TOML that does
+  not parse, an unterminated or untokenizable call, and a symlink in the skill
+  tree each fail the gate. Both rules also run on the shipped `dist/codex`
+  payload.
+
+## Scope
+
+The gate scans the rendered Codex skill tree and every generated Codex agent
+TOML. It skips only the file kinds that cannot dispatch a Codex child agent:
+
+- files under a `scripts/` directory;
+- JSON schemas (`*.schema.json`);
+- lockfiles (`*-lock.json`, `*-lock.yaml`, `*.lock`);
+- vendored upstream trees, meaning any directory that holds an
+  `UPSTREAM-NOTICE.md` (today, the Quint references in `speckit-coach`).
+
+Every other file kind stays in scope, including unknown extensions, so a
+renamed reference cannot leave the scan.
 
 ## Known limits
 
-- The `prompt`, `context`, and `options` call examples cannot dispatch through
-  the current hosted tool: its schema has no such fields. These are the Low
-  and Info variants in the [source Daybreak review](https://github.com/racecraft-lab/racecraft-plugins-public/pull/1375#issuecomment-6244445195),
-  rather than reachable tool invocations. Regression subtests still require
-  review of their text, so example syntax cannot hide instructions.
-- Content pins prove that text matches reviewed evidence; they do not infer
-  natural-language intent or approve an inventory edit. Inventory edits require
-  review just as the existing literal excerpt inventory did.
-- Coverage is the rendered Codex skill tree and generated Codex agent TOML
-  files. Hook-emitted context, plugin-manifest text, and later user prompts
-  are outside this gate. None of those surfaces changes in this follow-up.
-  The gate also does not measure the canary token target.
-- Linux validation does not cover macOS plugin CI or the two real-sandbox
-  `test_gate_hardening.py` cases. The orchestrator runs those before merging.
+- **Natural-language intent is not checked.** A file that already states the
+  rule can still carry contradictory prose, such as "for any child you launch,
+  inherit the complete parent conversation", in a paragraph, a call's
+  `message`, a comment, or agent metadata. Static checks cannot infer that
+  intent. Whole-file content pins closed those keyword-free variants of
+  security finding F1375-0784f4ad at `4429ffb6`. This fix round removed the
+  pins, as review crc1375 asked, so the variants are accepted limits again.
+  - **Why review still covers it:** the text reaches a shipped skill only
+    through a pull request, and CODEOWNERS (`* @racecraft-lab/maintainers`)
+    reviews that diff. A pin bump got exactly the same review, so the pins
+    added friction but no independent check.
+  - **What it needs:** a Daybreak re-check of the head that removes the pins.
+- **Prose values other than "none" are not flagged.** Text such as
+  ``use `fork_turns="all"` for the next child`` in a file that states the rule
+  passes. One scanned skill rightly says "never use `fork_turns: "all"`", so a
+  value scan would need a prose heuristic. The same review control applies.
+- **Unsupported call fields.** The `prompt`, `context`, and `options` call
+  examples cannot dispatch through the current hosted tool: its schema has no
+  such fields. These are the Low and Info variants in the
+  [source Daybreak review](https://github.com/racecraft-lab/racecraft-plugins-public/pull/1375#issuecomment-6244445195).
+- **Vendored marker.** A contributor could add an `UPSTREAM-NOTICE.md` to hide
+  a directory from the scan. That file is itself a reviewed diff, and
+  `test-quint-reference-attribution.py` owns the one vendored tree today.
+- **Outside the gate.** Hook-emitted context, plugin-manifest text, and later
+  user prompts are not scanned. The gate does not measure the canary token
+  target.
+- **Linux validation.** It does not cover macOS plugin CI or the two
+  real-sandbox `test_gate_hardening.py` cases. The orchestrator runs those
+  before merging.
