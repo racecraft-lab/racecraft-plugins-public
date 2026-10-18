@@ -19,8 +19,8 @@ from ..task_execution import owned_path, task_definitions
 from ..trusted_io import trusted_tree_snapshot
 from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
 from ..sweep_export import SWEEP_LOG_HEADING, sweep_is_table_rule, sweep_table_cells
-from .read_only import (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS, SPEC_INDEX_ENDS, SPEC_INDEX_PRS_NOTICE,
-                        SPEC_INDEX_SEPARATOR, SpecIndexRenderError, render_feature_spec_index, spec_index_is_gated,
+from .read_only import (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS, SPEC_INDEX_ENDS,
+                        SpecIndexRenderError, render_feature_spec_index, spec_index_is_gated,
                         spec_index_progress)
 from .execution_requests import Refusal, run_contained_helper
 
@@ -262,28 +262,17 @@ def spec_map_status(match: re.Match[str]) -> str:
     return match[1] + '""' + match[2][len(value):] + match[3]
 
 
-# Generated rows echo runtime inputs the inventory excludes (.process/prs.json and
-# runtime file names). A row is progress only when each value is a bounded token:
-# no whitespace, active Markdown or HTML syntax, URL scheme, address, or www. autolink.
-# Underscores are literal only inside ASCII words; punctuation-adjacent runs
-# can delimit GFM emphasis, including inside a backlink's label.
+# Only BACKLINKS may omit bounded runtime filenames. PRS is free-form data:
+# even a list of individually plain tokens can assemble unreviewed instructions.
+# Bind the entire PRS block instead of inferring trust from rendered Markdown.
+# Underscores are literal only inside ASCII words in backlink labels.
 NAVIGATION_COMPONENT = r"(?:[A-Za-z0-9.+-]|(?<=[A-Za-z0-9])_+(?=[A-Za-z0-9]))+"
 NAVIGATION_TOKEN = rf"(?:PR#-?[0-9]+|{NAVIGATION_COMPONENT}(?:/{NAVIGATION_COMPONENT})*)"
-NAVIGATION_ROWS = (
-    # PRS v2: seven scalar columns, a Scope list, and scalar Verification.
-    rf"\|(?: {NAVIGATION_TOKEN} \|){{7}} "
-    rf"(?:{NAVIGATION_TOKEN}(?:, {NAVIGATION_TOKEN})*)? \| {NAVIGATION_TOKEN} \|",
-    r"\|(?:-+\|){9}",  # PRS v2 table rule
-    rf"{NAVIGATION_TOKEN} {SPEC_INDEX_SEPARATOR} {NAVIGATION_TOKEN} {SPEC_INDEX_SEPARATOR} {NAVIGATION_TOKEN}",  # PRS v1
-    rf"- \[({NAVIGATION_TOKEN})\]\(\1\)",  # BACKLINKS
-)
 
 
-def navigation_progress(line: str) -> bool:
-    """A generated line that carries only typed runtime values; anything else stays bound."""
-    if line in ("", SPEC_INDEX_PRS_NOTICE):
-        return True
-    return "www." not in line.casefold() and any(re.fullmatch(row, line) for row in NAVIGATION_ROWS)
+def navigation_progress(line: str, zone: str) -> bool:
+    """A bounded generated backlink; all other generated content stays bound."""
+    return zone == "backlinks" and "www." not in line.casefold() and re.fullmatch(rf"- \[({NAVIGATION_TOKEN})\]\(\1\)", line) is not None
 
 
 def map_navigation(content: str, expected: dict[str, tuple[str, ...]]) -> bytes:
@@ -311,7 +300,7 @@ def map_navigation(content: str, expected: dict[str, tuple[str, ...]]) -> bytes:
         if zone in seen or raw_lines[index:index + len(block)] != block:
             return canonical_bytes({"raw": content})
         seen.add(zone)
-        kept.extend((raw, *(line for line in block[1:-1] if not navigation_progress(line.rstrip("\r\n"))), block[-1]))
+        kept.extend((raw, *(line for line in block[1:-1] if not navigation_progress(line.rstrip("\r\n"), zone)), block[-1]))
         index += len(block)
     return canonical_bytes({"projected": kept})
 

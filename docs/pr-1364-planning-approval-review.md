@@ -75,7 +75,7 @@ and Post write sites were traced to their result and bookkeeping contracts.
 | Post integration, terms lint and UAT outcome | Parent after checks and mandatory runbook attempt | post-implementation.md:570,1043,1056 | Typed counts/status/evidence is progress; any changed requirement is planning |
 | Multi-PR emission workflow evidence | Parent after each successful slice PR | post-implementation.md:832,850 | PR/head/verification/resume evidence is progress; planned slice scope/order/base remain bound |
 | Feature SPEC-MOC frontmatter status | Parent progress and status readers | helpers/read_only.py:6655,6678 | Recognized status is progress; all other metadata and unknown status prose are planning |
-| Feature SPEC-MOC generated PRS and backlinks | generate-spec-index-write at every boundary and PR emission | phase-execution.md:4853; post-implementation.md:832,847; helpers/read_only.py:4058,4257,4440 | Canonical generated navigation is progress; edited generated text and non-generated map content are planning |
+| Feature SPEC-MOC generated PRS and backlinks | generate-spec-index-write at every boundary and PR emission | phase-execution.md:4853; post-implementation.md:832,847; helpers/read_only.py:4058,4257,4440 | Canonical bounded BACKLINKS are progress; the complete PRS block, edited generated text and non-generated map content are planning (PR #1373 security repair) |
 | Earlier phase results, consensus repairs, confidence/autonomy and atomicity decisions | Explicit repair or changed plan | workflow-file-protocol.md:11-17,30,37; phase-execution.md:550,1337,1531 | Planning: a new decision requires a new approval; these are not progress exemptions |
 
 ### Chosen shape and seam
