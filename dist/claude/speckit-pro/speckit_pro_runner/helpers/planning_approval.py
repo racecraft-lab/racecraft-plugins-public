@@ -20,7 +20,7 @@ from ..trusted_io import trusted_tree_snapshot
 from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
 from ..sweep_export import SWEEP_LOG_HEADING, sweep_is_table_rule, sweep_table_cells
 from .read_only import (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS, SPEC_INDEX_ENDS,
-                        SpecIndexRenderError, render_feature_spec_index, spec_index_progress)
+                        SpecIndexRenderError, render_feature_spec_index, spec_index_is_gated, spec_index_progress)
 from .execution_requests import Refusal, run_contained_helper
 
 # Inventory roots are runner-owned, never a caller-selected subset. Feature additions
@@ -416,10 +416,12 @@ def approval_map_snapshot(root: Path, feature: str) -> tuple[Path, dict[str, Any
     map_path = root / feature / "SPEC-MOC.md"
     map_snapshot = snapshot_write_target(map_path, root)
     original = map_snapshot["content"]
-    if not isinstance(original, bytes) or b"<!-- GENERATED:" not in original:
+    if not isinstance(original, bytes):
+        return None
+    text = original.decode("utf-8")
+    if not spec_index_is_gated(text) and "<!-- GENERATED:" not in text:
         return None
     message = "regenerate navigation after creating evidence and confirmation files; rebuild and confirm the manifest before recording"
-    text = original.decode("utf-8")
     try:
         rendered = render_feature_spec_index(root, feature, text).encode("utf-8")
     except SpecIndexRenderError as error:

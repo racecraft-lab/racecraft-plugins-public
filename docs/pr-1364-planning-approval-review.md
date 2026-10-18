@@ -159,6 +159,12 @@ No new independent Daybreak verdict is claimed here.
   can be refused by record preflight while the repository regeneration writer
   skips them. Native scaffolding sets this field. Set the structure version
   before regenerating such a map; this input is not produced by native writers.
+- Partial generated-zone layouts remain renderer-supported and change the
+  manifest when edited. An absent SPEC-MOC remains optional. Markerless legacy
+  maps without a recognized structure version remain authored inputs because
+  repository regeneration skips them. The preflight repair below tests the
+  boundary from partial or absent navigation to an existing gated markerless
+  map; these controls are not exemptions for that versioned map.
 - The assurance guard accepts its two explicit denial forms and does not infer
   arbitrary English negation. Obfuscated assurance terms split by HTML,
   entities, punctuation, or look-alike letters are outside its recognition;
@@ -251,3 +257,55 @@ payloads for both hosts. No skill, agent or overlay instruction needs a differen
 rule. Existing approvals may require renewed review because marker placement and
 formerly discarded map bytes now participate in the revision. Daybreak must
 re-check the fix commits before the finding can be resolved.
+
+## Canonical-navigation preflight repair
+
+Finding `F1364-14440e55` names a **canonical navigation preflight false pass**:
+marker presence was used to decide whether to validate the map. Removing or
+altering all sentinels disabled that validation even though regeneration would
+restore navigation. Preflight now uses the renderer owner's structure-version
+predicate, exposed as `spec_index_is_gated`, as well as the existing legacy
+marker path. The predicate's exposure is a separate behavior-preserving
+refactor; its four renderer callers and the map lint validator use that same
+owner. There is no second structure-version parser.
+
+All tests below are in `tests/speckit-pro/unit/test-planning-approval-preflight.py`,
+class `NavigationPreflightTest`. They exercise the runner request seam on source,
+Claude and Codex, with fresh confirmation evidence for the edited manifest.
+Both `dry_run` and `apply` refuse noncanonical maps before any writes.
+
+| Variant | Regression test |
+| --- | --- |
+| Remove every generated pair, including INDEX, PRS and BACKLINKS | `test_record_refuses_removing_all_generated_pairs` |
+| Change every GENERATED sentinel to GENRATED | `test_record_refuses_altering_every_generated_sentinel` |
+| Change every sentinel to lowercase or add whitespace before its colon | `test_record_refuses_lowercase_generated_sentinels`; `test_record_refuses_spaced_generated_sentinels` |
+| Delete marker lines while leaving their bodies | `test_record_refuses_missing_marker_lines_with_retained_bodies` |
+| Info: removing only PRS or only BACKLINKS changes the digest but preserves a canonical partial layout | `test_partial_layout_binds_removal_then_refuses_last_pair_removal`: fresh partial-map approval round-trips on all three runners; subsequently removing every remaining pair is refused |
+| Info: absent SPEC-MOC follows the optional-map path | `test_missing_map_is_optional_but_recreated_markerless_map_is_checked`: absent-map approval round-trips on all three runners; recreating a versioned markerless map is refused |
+
+Each reported variant test failed before the fix. The Info controls already
+passed; their adjacent missing-navigation assertions exposed the false pass.
+The focused preflight file passes 75/75 checks after the shared policy fix and
+payload regeneration.
+The focused file reuses the existing navigation fixture and is registered in
+the suite manifest rather than duplicating the fixture or the full approval
+suite. The earlier ordered-body, renamed link/scope, duplicate and relocated
+pair regressions remain in `test-planning-approval.py`.
+
+The focused adversarial inventory covered both preflight modes, fresh evidence,
+all three zone names, whole-block and marker-only deletion, sentinel spelling,
+case and whitespace, partial layouts, absence and recreation, and source and
+both shipped hosts. The remaining marker-presence optimization in
+`spec_map_content` only avoids calculating unused expected bodies; it still
+binds every authored byte and does not admit a record. `write_approval` consumes
+the preflighted map snapshot; no caller-supplied host or path bypass was added.
+Existing descriptor-based snapshot checks continue to reject map symlinks and
+unsafe parent paths. Renaming SPEC-MOC away means no feature map exists at the
+canonical path; any remaining authored file stays bound by the manifest.
+
+Markerless legacy maps without a renderer-recognized structure version keep
+their existing authored-map behavior: repository regeneration does not manage
+them. This is outside the reported versioned-map class. No guidance, agent or
+Codex overlay policy changes are needed; both hosts receive the same runner
+fix. Daybreak must account for every variant and include the fix commits in a
+later receipt before resolving the finding.
