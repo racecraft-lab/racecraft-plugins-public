@@ -241,7 +241,9 @@ class SupersessionTest(PlanningApprovalFixture):
             approval = self.approval()
             first = self.call("record", "apply", approval=approval)["data"]
             approval["supersedes"] = self.case_variant(first["record_path"])
-            self.assertEqual(self.call("record", "apply", approval=approval)["status"], "input_error")
+            self.assertRefused(
+                self.call("record", "apply", approval=approval), "No such file or directory"
+            )
             self.assertEqual(self.call("verify")["status"], "ok")
             return
         self.record_superseding(self.case_variant)
