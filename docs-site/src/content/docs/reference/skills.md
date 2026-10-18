@@ -11,7 +11,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Public path:** `/racecraft-plugins-public/reference/skills/`
 - **Generated output:** `docs-site/src/content/docs/reference/skills.md`
-- **Records:** 12
+- **Records:** 13
 
 ## Navigation Summary
 
@@ -21,6 +21,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - Speckit Autopilot
 - Speckit Coach
 - Speckit Install
+- Speckit Plan Review
 - Speckit Prd
 - Speckit Resolve Pr
 - Speckit Scaffold Spec
@@ -242,6 +243,41 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `dist/claude/speckit-pro/skills/speckit-install/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-install/SKILL.md`
+
+### Speckit Plan Review
+
+- **Purpose:** Review a finished SpecKit plan with the user before implementation.
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro speckit-plan-review skill
+- **Claude Code:** /speckit-pro:speckit-plan-review
+- **Codex:** $speckit-pro:speckit-plan-review
+- **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
+
+#### Command Or Skill Reference
+
+- **Claude Code invocation:** `/speckit-pro:speckit-plan-review`
+- **Codex invocation:** `$speckit-pro:speckit-plan-review`
+- **Purpose:** Review a finished SpecKit plan with the user before implementation.
+- **Expected output artifact:** A copyable planning-repair prompt that carries every requested finding and remedy; nothing is sent.
+
+**Prerequisites**
+
+- SpecKit Pro is installed for the selected runtime.
+- The linked SKILL.md file defines the active scope and guardrails.
+
+#### Source Facts
+
+- speckit-plan-review has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-plan-review/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-plan-review/SKILL.md`.
+
+#### Sources
+
+- [dist/claude/speckit-pro/skills/speckit-plan-review/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-plan-review/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-plan-review/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-plan-review/SKILL.md)
+
+#### Inferred Notes
+
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+  - Based on: `dist/claude/speckit-pro/skills/speckit-plan-review/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-plan-review/SKILL.md`
 
 ### Speckit Prd
 

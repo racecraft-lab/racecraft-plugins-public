@@ -624,7 +624,7 @@ class ValidateCodexSkills(unittest.TestCase):
             policy_value = values[0]
             if skill == 'speckit-scaffold-spec':
                 self.assertEqual('true', policy_value, 'scaffold skill must have allow_implicit_invocation: true for Codex discovery')
-            elif skill in ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-resolve-pr', 'install', 'speckit-install', 'speckit-upgrade', 'grill-me', 'speckit-prd', 'ubiquitous-language'):
+            elif skill in ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-resolve-pr', 'install', 'speckit-install', 'speckit-upgrade', 'grill-me', 'speckit-prd', 'ubiquitous-language', 'speckit-plan-review'):
                 self.assertEqual('false', policy_value, 'mutation-heavy skill must have allow_implicit_invocation: false')
             elif skill in ('speckit-coach', 'speckit-status'):
                 self.assertEqual('true', policy_value, 'read-only skill must have allow_implicit_invocation: true')
@@ -1349,6 +1349,61 @@ class CompactRootGuidanceTests(unittest.TestCase):
         self.assertEqual([], self.root_reads(
             "The runner re-reads spec.md and plan.md. "
             "The phase executor consumes data.files text from read-tasks-inputs."))
+
+PLAN_REVIEW_SKILL = 'speckit-plan-review'
+PLAN_REVIEW_OPERATIONS = frozenset({'planning-approval', 'decisions-list', 'plan-review-prompt'})
+NEGATION_RE = re.compile(r"\b(no|not|never|nothing|without|sends nothing|starts no|do not|does not)\b", re.IGNORECASE)
+STARTS_WORK_RE = re.compile(r"\b(start|starts|launch|launches|begin|begins|run|runs|invoke|invokes)\b[^.]*\b(planning|implement|implementation|autopilot|repair)\b", re.IGNORECASE)
+
+class ValidatePlanReviewSkill(unittest.TestCase):
+    """The plan-review skill exists on both hosts, calls only runner operations and never starts work."""
+
+    def hosts(self):
+        return (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW))
+
+    def test_skill_exists_on_both_hosts(self) -> None:
+        for host, view in self.hosts():
+            with self.subTest(host=host):
+                self.assertTrue((view / PLAN_REVIEW_SKILL / 'SKILL.md').is_file())
+        sidecar = PLUGIN_ROOT / 'codex-skills' / PLAN_REVIEW_SKILL / 'agents' / 'openai.yaml'
+        self.assertTrue(sidecar.is_file())
+
+    def test_skill_dispatches_only_registered_runner_operations(self) -> None:
+        for host, view in self.hosts():
+            text = _read(view / PLAN_REVIEW_SKILL / 'SKILL.md')
+            with self.subTest(host=host):
+                calls = re.findall(r'helper_id=([a-z0-9-]+) operation=([a-z0-9-]+)', text)
+                self.assertTrue(calls, 'the skill must name its runner calls')
+                for helper_id, operation in calls:
+                    self.assertIn(helper_id, PLAN_REVIEW_OPERATIONS)
+                    self.assertEqual(helper_id, operation)
+                    self.assertIn(helper_id, MUTATION_HELPERS)
+                self.assertEqual(PLAN_REVIEW_OPERATIONS, {helper for helper, _ in calls})
+                self.assertNotRegex(text, r'```(?:bash|sh|shell|zsh)')
+                self.assertNotRegex(text, r'(?m)^\s*(?:\$ )?(?:git|gh|jq|bash|sh)\s')
+
+    def test_skill_never_claims_to_start_planning_or_implementation(self) -> None:
+        for host, view in self.hosts():
+            body = _body(_read(view / PLAN_REVIEW_SKILL / 'SKILL.md').splitlines())
+            with self.subTest(host=host):
+                for sentence in re.split(r'(?<=[.!?])\s+|\n+', body):
+                    if STARTS_WORK_RE.search(sentence):
+                        self.assertRegex(sentence, NEGATION_RE, f'unqualified start-of-work claim: {sentence!r}')
+                self.assertIn('sends nothing', body)
+                self.assertIn('starts no planning', body)
+
+    def test_clean_plan_still_interviews_the_reviewer(self) -> None:
+        for host, view in self.hosts():
+            text = _read(view / PLAN_REVIEW_SKILL / "SKILL.md")
+            with self.subTest(host=host):
+                self.assertIn("Walk through each decision", text)
+                self.assertIn("ask for the user's own change requests", text)
+                self.assertIn("After those answers, if there are no findings or requests", text)
+
+    def test_codex_policy_is_explicit_invocation_only(self) -> None:
+        sidecar = PLUGIN_ROOT / 'codex-skills' / PLAN_REVIEW_SKILL / 'agents' / 'openai.yaml'
+        self.assertEqual(['false'], _allow_implicit_values(sidecar.read_text(encoding='utf-8')))
+        self.assertIn('disable-model-invocation: true', _read(CLAUDE_VIEW / PLAN_REVIEW_SKILL / 'SKILL.md'))
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])

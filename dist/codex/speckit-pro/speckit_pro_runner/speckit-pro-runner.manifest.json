@@ -716,6 +716,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/plan_review_prompt.py",
+        "display": "speckit_pro_runner/helpers/plan_review_prompt.py"
+      },
+      "sha256": "880b54c65b920d27178bc342c7295e8da379a0fcb328c1bf4e0cc08f028ca2a2"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
@@ -815,7 +823,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "8fea184012b59b09eb4c75cbff2a5ca0e8af90d6d2e74a5c6d750198af6f6fee"
+      "sha256": "67780631b868cab1d9112936babc4b4293876cca514372993d4ab4731e25d691"
     },
     {
       "path": {
