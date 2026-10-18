@@ -15,7 +15,8 @@ canonical PRS block in the approval digest, for both schema versions. No PRS
 column, row, list item, separator or notice is inferred to be trusted progress
 from its rendered shape. This closes both comma-separated words inside a
 single Scope item and instructions assembled from separate Scope items.
-Adding, removing or changing a PRS row requires re-approval, including ordinary
+Scope-word lists and v1 trailing carriage returns no longer have a projection
+exemption. Adding, removing or changing a PRS row requires re-approval, including ordinary
 PR numbers, SHAs, branches and statuses. Existing approvals can require renewal;
 never rewrite an old record to adopt the new digest.
 
