@@ -33,12 +33,15 @@ PHASES = {
 # Specify and Tasks follow a written spec and also run Sonnet on Claude Code. Other phases use their agent's inventory row.
 SPEC_DRIVEN_MODEL = {"claude": {"model": "sonnet", "effort": "high"}, "codex": {"model": "gpt-6-sol", "effort": "medium"}}
 PHASE_MODEL_OVERRIDES = {"Specify": SPEC_DRIVEN_MODEL, "Tasks": SPEC_DRIVEN_MODEL, "Plan": {"codex": {"model": "gpt-6-sol", "effort": "high"}}}
-# Codex wait_agent returns early on any mailbox update, final-status notices included, so its timeout_ms only bounds
-# an idle poll and a longer bound adds no latency to a result. The tool's default is 30,000 ms and its floor 10,000 ms;
-# the first plan-stage profile (issue 1198, follow-up 1286) saw 10,000 ms on every call of its second run, and 74% of
-# those polls timed out.
-# https://github.com/openai/codex/blob/rust-v0.160.0/codex-rs/core/src/tools/handlers/multi_agents_v2/wait.rs
-CODEX_WAIT_TIMEOUT_MS = 60_000
+# Codex wait_agent returns early on any mailbox update, and a child's final status (completed, errored or shut down)
+# always posts one, so timeout_ms only bounds an idle poll and a longer bound adds no latency to a result. Each idle
+# poll that times out costs the waiting thread one more turn at its full context: canary round 4 (issue 1317) spent
+# 25 of 109 root turns on 60,000 ms timeouts, the status nudges they prompted and the replies. The bound is therefore
+# the whole plan stage's wall target (1,800 s, ADR 0023), under the tool's default ceiling of 3,600,000 ms; a value
+# above a configured ceiling is an error, not a clamp. Default 30,000 ms, floor 10,000 ms.
+# https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/tools/handlers/multi_agents_v2/wait.rs
+# https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/agent/control.rs (completion watcher)
+CODEX_WAIT_TIMEOUT_MS = 1_800_000
 REFERENCES = Path(__file__).resolve().parents[2] / "skills" / "speckit-autopilot" / "references"
 EXECUTOR_SLICES = (
     ("capability-discovery.md", ("Capability Categories", "Discovery Step", "Research Broker Rule", "Selection Rule", "Capability Boundaries by Role",

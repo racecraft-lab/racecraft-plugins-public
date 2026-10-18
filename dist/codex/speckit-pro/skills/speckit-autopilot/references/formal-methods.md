@@ -45,7 +45,7 @@ is enabled. The phase executor retains its single-command contract. The parent:
    prompt also carries a `Reference dir: <plugin_root>/skills/speckit-autopilot/references/` line
    (prerequisites.md Step 0.0b). Claude uses its
    installed `speckit-pro:formal-model-author` agent; Codex uses the installed
-   custom `formal-model-author` role with `spawn_agent`. Wait for its completed
+   custom `formal-model-author` role with `spawn_agent` and `fork_turns="none"`. Wait for its completed
    result, then call `mcp__plugin_speckit-pro_author-broker__close_session`
    with the capability. If either broker tool or agent is unavailable, stop and
    repair the installation.

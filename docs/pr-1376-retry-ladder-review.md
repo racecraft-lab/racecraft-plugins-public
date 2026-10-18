@@ -25,9 +25,11 @@
   directly, so it adds nothing beyond this limit, and the six-per-check bound
   holds. The pin test covers only the path without `reconcile`.
 - Same-timestamp replay (Low): `_fails_again` keeps check evidence recorded
-  at or before a rung's `reserved_at`. If a passing verification were recorded
-  at exactly the same clock reading as a later reservation, a reload would treat
-  it as earlier evidence and reject a ledger the live path wrote. Not reachable
+  at or before a rung's `reserved_at`. If a rung were reserved and a passing
+  verification were then recorded at exactly the same clock reading, a reload
+  would treat that later pass as earlier evidence and reject a ledger the live
+  path wrote. (In the other order the live reservation sees the pass too and
+  refuses, so live and reload agree.) Not reachable
   in practice: the two requests run in separate, lock-serialized invocations
   with fsync writes between them, so they cannot read the same `time.time()`
   float. A clock coarse enough to repeat a reading (Windows on Python below

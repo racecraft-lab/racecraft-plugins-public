@@ -399,7 +399,7 @@ parallel `spawn_agent` pattern below:
   three results sequentially (shared test fixtures); the parent validates
   native proof and executes only checks without reusable evidence
 
-Dispatch the 3 tracks via `spawn_agent`, then loop bounded `wait_agent` calls
+Dispatch the 3 tracks via `spawn_agent` with `fork_turns="none"`, then loop bounded `wait_agent` calls
 until each track's actual result is consumed. A terminal status corroborates
 completion but cannot replace the result. Record each result and call
 `close_agent` only when the current surface exposes it. If derived
@@ -539,7 +539,7 @@ Agent(
 <!-- /host -->
 <!-- host:codex: Codex dispatches the installed agent with spawn_agent and waits with wait_agent -->
 ```text
-spawn_agent("implement-executor", prompt="""
+spawn_agent("implement-executor", fork_turns="none", prompt="""
   The implementation phase did not create integration
   tests for SPEC-XXX. G7 cannot pass until they exist.
 
@@ -1102,7 +1102,7 @@ Agent(
 <!-- /host -->
 <!-- host:codex: Codex dispatches the installed agent with spawn_agent and waits with wait_agent -->
 ```text
-spawn_agent("uat-runbook-author", prompt="""
+spawn_agent("uat-runbook-author", fork_turns="none", prompt="""
   Rewrite the committed source-derived UAT runbook in place so a non-engineer can follow
   it. Edit ONLY this file: <feature-dir>/.process/uat-runbook.md
 

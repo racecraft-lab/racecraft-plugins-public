@@ -501,7 +501,8 @@ The restart is needed because Codex builds its list of custom agents (names,
 descriptions, and file paths) once, when the session starts, so an agent file
 added after that is unknown to the session. The contents of a file already on
 that list are read again at each spawn, so an in-place refresh of a registered
-agent takes effect at the next `spawn_agent` with no restart. Source: openai/codex
+agent takes effect at the next `spawn_agent` with no restart. That call still passes
+`fork_turns="none"`, so the refreshed role starts with only its task message. Source: openai/codex
 `rust-v0.158.0-alpha.15.3`, `codex-rs/core/src/config/mod.rs` lines 3792-3793
 (`load_agent_roles` at session config load) and
 `codex-rs/core/src/agent/role.rs` lines 51-67 and 143 (`apply_role_to_config`
