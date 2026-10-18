@@ -3815,8 +3815,8 @@ class AgentContinuationApprovalTests(_AgentApprovalFixture, unittest.TestCase):
         assert_guides_say(self, UnknownDispatchGuidanceTests.GUIDANCE, ("agent_authorized",))
 
 
-class RetryLadderTests(_EscalationFixture, unittest.TestCase):
-    """A failing check climbs one ladder of three attempts for the whole run (ADR 0004)."""
+class _RetryLadderFixture(_EscalationFixture):
+    """Shared fixture for the retry-ladder tests: one failing check and the ladder helpers."""
 
     ARGV = ("python3", "gate.py")
     check = property(lambda self: digest(list(self.ARGV)))
@@ -3834,14 +3834,30 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
         self.now += 10
         return self.invoke("complete", **{"dispatch_id": dispatch_id, "outcome": "failed", "interrupted": True, **inputs})
 
-    def ledger_bytes(self):
-        return (self.root / self.invoke("status", mode="read_only")["ledger_path"]).read_bytes()
+    def refusal(self, dispatch_id):
+        """The reasons the ladder gives for a rung it refuses."""
+        return self.climb(dispatch_id)["reasons"]
 
-    def test_a_v1_ledger_is_refused_with_a_stage_restart_message(self):
-        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
-        path.write_text(json.dumps({**json.loads(path.read_text()), "schema_version": "execution-control/v1"}))
-        with self.assertRaisesRegex(ValueError, "execution-control/v1.*Restart the stage"):
-            self.invoke("status", mode="read_only")
+    def refail(self, dispatch_id):
+        """Settle a rung as failed, then fail its check again so the next rung is admitted."""
+        self.settle(dispatch_id)
+        self.verify_red(self.ARGV)
+
+    def interrupted_rerun(self, first, again):
+        """Climb a rung, interrupt it, and return the admission of its rerun."""
+        self.climb(first)
+        self.interrupt(first)
+        return self.climb(again)
+
+    def ledger_path(self):
+        return self.root / self.invoke("status", mode="read_only")["ledger_path"]
+
+    def ledger_bytes(self):
+        return self.ledger_path().read_bytes()
+
+
+class RetryLadderAdmissionTests(_RetryLadderFixture, unittest.TestCase):
+    """A failing check climbs one ladder of three attempts for the whole run (ADR 0004)."""
 
     def test_a_check_gets_exactly_three_attempts_and_each_follows_a_fresh_failure(self):
         for rung in (1, 2, 3):
@@ -3867,26 +3883,57 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
 
     def test_one_dispatch_runs_at_a_time_and_a_dispatch_id_is_never_reused(self):
         self.climb("rung-1")
-        self.assertEqual(self.climb("rung-1-parallel")["reasons"], ["retry_ladder_dispatch_open"])
+        self.assertEqual(self.refusal("rung-1-parallel"), ["retry_ladder_dispatch_open"])
+        self.refail("rung-1")
+        self.assertEqual(self.refusal("rung-1"), ["dispatch_already_reserved_no_relaunch"])
+
+    def test_a_new_epoch_does_not_reset_a_checks_count(self):
+        self.climb("rung-1")
         self.settle("rung-1")
+        self.open_stage_epoch()
         self.verify_red(self.ARGV)
+        self.assertEqual(self.climb("rung-2")["retry_rung"], 2)
         self.assertEqual(self.climb("rung-1")["reasons"], ["dispatch_already_reserved_no_relaunch"])
 
+    def test_each_rung_reports_the_model_and_effort_its_host_runs_it_with(self):
+        expected = {"claude": [(None, None), ("opus", "xhigh"), ("opus", "max")],
+                    "codex": [(None, None), ("gpt-6-sol", "xhigh"), ("gpt-6-sol", "max")]}
+        for host, rungs in expected.items():
+            argv = ("python3", f"{host}.py")
+            check = self.verify_red(argv)
+            for rung, settings in enumerate(rungs, 1):
+                admitted = self.climb(f"{host}-{rung}", host, check)
+                self.assertEqual((admitted["retry_rung"], admitted["model"], admitted["effort"]), (rung, *settings))
+                self.settle(f"{host}-{rung}")
+                self.verify_red(argv)
+        with self.assertRaisesRegex(ValueError, "host"):
+            self.climb("elsewhere", "gemini")
+
+    def test_rung_two_is_the_shipped_implement_executor_on_each_host(self):
+        import tomllib
+
+        from speckit_pro_runner.retry_ladder import HOST_RUNGS
+
+        claude = dict(line.split(": ", 1) for line in (PLUGIN_ROOT / "agents/implement-executor.md").read_text().splitlines()
+                      if line.startswith(("model: ", "effort: ")))
+        codex = tomllib.loads((PLUGIN_ROOT / "codex-agents/implement-executor.toml").read_text())
+        self.assertEqual(HOST_RUNGS["claude"][1][1:], (claude["model"], claude["effort"]))
+        self.assertEqual(HOST_RUNGS["codex"][1][1:], (codex["model"], codex["model_reasoning_effort"]))
+
+
+class RetryLadderInterruptionTests(_RetryLadderFixture, unittest.TestCase):
+    """An interrupted ladder dispatch spends no rung once, and a lost result stays bounded."""
+
     def test_an_interrupted_dispatch_spends_no_rung_but_a_second_interruption_does(self):
-        self.climb("try-1")
-        self.interrupt("try-1")
-        rerun = self.climb("try-1-again")
+        rerun = self.interrupted_rerun("try-1", "try-1-again")
         self.assertEqual(rerun["retry_rung"], 1)
         self.assert_schema_valid(rerun["ledger"])
         self.interrupt("try-1-again")
         self.assertEqual(self.climb("try-2")["retry_rung"], 2)
 
     def test_an_interrupted_dispatch_that_then_finishes_is_an_ordinary_attempt(self):
-        self.climb("try-1")
-        self.interrupt("try-1")
-        self.climb("try-1-again")
-        self.settle("try-1-again")
-        self.verify_red(self.ARGV)
+        self.interrupted_rerun("try-1", "try-1-again")
+        self.refail("try-1-again")
         self.assertEqual(self.climb("try-2")["retry_rung"], 2)
 
     def test_an_unknown_dispatch_blocks_only_its_own_check_until_its_result_is_bound(self):
@@ -3927,10 +3974,28 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
         self.assertEqual(self.interrupt("lost")["reasons"], ["missing_independent_native_result"])
         self.assertEqual(json.loads(self.ledger_bytes())["dispatches"], before)
 
+    def test_only_a_failed_ladder_dispatch_is_reported_interrupted(self):
+        self.climb("rung-1")
+        self.invoke("reserve", dispatch_id="plain", kind="implementation")
+        before = self.ledger_bytes()
+        for dispatch_id, outcome in (("rung-1", "completed"), ("plain", "failed")):
+            with self.subTest(dispatch=dispatch_id), self.assertRaisesRegex(ValueError, "interrupted marks"):
+                self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome, interrupted=True)
+        self.assertEqual(self.ledger_bytes(), before)
+
+
+class RetryLadderForgeryTests(_RetryLadderFixture, unittest.TestCase):
+    """A ledger that claims an attempt the ladder would not have admitted is refused."""
+
+    def test_a_v1_ledger_is_refused_with_a_stage_restart_message(self):
+        path = self.ledger_path()
+        path.write_text(json.dumps({**json.loads(path.read_text()), "schema_version": "execution-control/v1"}))
+        with self.assertRaisesRegex(ValueError, "execution-control/v1.*Restart the stage"):
+            self.invoke("status", mode="read_only")
+
     def test_a_rung_before_its_first_failure_is_refused(self):
         self.climb("rung-1")
-        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
-        self.assert_tampers_rejected(path, self.ledger_bytes(), {
+        self.assert_tampers_rejected(self.ledger_path(), self.ledger_bytes(), {
             "before the failure": lambda ledger: ledger["dispatches"]["rung-1"].update(reserved_at=1001)})
 
     def test_a_later_rung_without_a_fresh_failure_is_refused_in_every_epoch(self):
@@ -3941,60 +4006,17 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
             with self.subTest(archived=archived):
                 if archived:
                     self.open_stage_epoch()
-                path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+                path = self.ledger_path()
                 valid = self.ledger_bytes()
                 self.assert_tampers_rejected(path, valid, {"no fresh failure": lambda ledger: ledger["dispatches"].update(
                     forged={**first, "reserved_at": self.now + 1, "completed_at": self.now + 2,
                             "retry_ladder": {"command_sha256": self.check, "rung": 2}})})
                 path.write_bytes(valid)
 
-    def test_only_a_failed_ladder_dispatch_is_reported_interrupted(self):
-        self.climb("rung-1")
-        self.invoke("reserve", dispatch_id="plain", kind="implementation")
-        before = self.ledger_bytes()
-        for dispatch_id, outcome in (("rung-1", "completed"), ("plain", "failed")):
-            with self.subTest(dispatch=dispatch_id), self.assertRaisesRegex(ValueError, "interrupted marks"):
-                self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome, interrupted=True)
-        self.assertEqual(self.ledger_bytes(), before)
-
-    def test_a_new_epoch_does_not_reset_a_checks_count(self):
-        self.climb("rung-1")
-        self.settle("rung-1")
-        self.open_stage_epoch()
-        self.verify_red(self.ARGV)
-        self.assertEqual(self.climb("rung-2")["retry_rung"], 2)
-        self.assertEqual(self.climb("rung-1")["reasons"], ["dispatch_already_reserved_no_relaunch"])
-
-    def test_each_rung_reports_the_model_and_effort_its_host_runs_it_with(self):
-        expected = {"claude": [(None, None), ("opus", "xhigh"), ("opus", "max")],
-                    "codex": [(None, None), ("gpt-6-sol", "xhigh"), ("gpt-6-sol", "max")]}
-        for host, rungs in expected.items():
-            argv = ("python3", f"{host}.py")
-            check = self.verify_red(argv)
-            for rung, settings in enumerate(rungs, 1):
-                admitted = self.climb(f"{host}-{rung}", host, check)
-                self.assertEqual((admitted["retry_rung"], admitted["model"], admitted["effort"]), (rung, *settings))
-                self.settle(f"{host}-{rung}")
-                self.verify_red(argv)
-        with self.assertRaisesRegex(ValueError, "host"):
-            self.climb("elsewhere", "gemini")
-
-    def test_rung_two_is_the_shipped_implement_executor_on_each_host(self):
-        import tomllib
-
-        from speckit_pro_runner.retry_ladder import HOST_RUNGS
-
-        claude = dict(line.split(": ", 1) for line in (PLUGIN_ROOT / "agents/implement-executor.md").read_text().splitlines()
-                      if line.startswith(("model: ", "effort: ")))
-        codex = tomllib.loads((PLUGIN_ROOT / "codex-agents/implement-executor.toml").read_text())
-        self.assertEqual(HOST_RUNGS["claude"][1][1:], (claude["model"], claude["effort"]))
-        self.assertEqual(HOST_RUNGS["codex"][1][1:], (codex["model"], codex["model_reasoning_effort"]))
-
     def test_a_forged_ladder_record_fails_closed(self):
         self.climb("rung-1")
         self.settle("rung-1")
         valid = self.ledger_bytes()
-        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
 
         def dispatch(ledger):
             return ledger["dispatches"]["rung-1"]
@@ -4012,7 +4034,7 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
             "a third dispatch on a rung": lambda ledger: ledger["dispatches"].update(
                 extra={**dispatch(ledger), "reserved_at": self.now + 1}),
         }
-        self.assert_forgeries_fail_closed(path, valid, tampers)
+        self.assert_forgeries_fail_closed(self.ledger_path(), valid, tampers)
 
 
 class BlockedWorkTests(_EscalationFixture, unittest.TestCase):

@@ -41,6 +41,7 @@ propose the fixes in one agent, and you write no planning artifact. Do the work 
 thread. Use `spawn_agent` only for a large, independent piece of
 research that can run in parallel with your own, and never to
 re-check your fixes: the verify run in rule 4 and the parent's G4 gate do that.
+Every `spawn_agent` call passes `fork_turns="none"`.
 
 <hard_constraints>
 

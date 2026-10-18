@@ -180,7 +180,7 @@ For each (file_path, threads) in PARTITIONS:
 ```
 <!-- /host -->
 <!-- host:codex: Codex has no general-purpose role; it spawns the built-in default role and waits on each handle -->
-For each partition, call `spawn_agent` to start one built-in `default` subagent
+For each partition, call `spawn_agent` with `fork_turns="none"` to start one built-in `default` subagent
 without a model or reasoning-effort override, all in ONE tool turn, with the
 worker prompt below as its task. Then `wait_agent` on every handle until each
 delivers its result; a status update or a timed-out wait is not the result.

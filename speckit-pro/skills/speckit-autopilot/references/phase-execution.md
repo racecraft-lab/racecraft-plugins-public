@@ -9,69 +9,10 @@ artifact edits, and logging remain authoritative. On Codex, every shared
 consensus-synthesizer step dispatches the installed
 `consensus-synthesizer`, awaits its actual result, and validates that result
 before the parent applies any edit. The parent never performs synthesis as a
-fallback. Dispatch means calling `spawn_agent` with the installed
+fallback. Dispatch (with `fork_turns="none"`) means calling `spawn_agent` with the installed
 `consensus-synthesizer` role, then `wait_agent` and consuming that returned
 result.
 <!-- /host -->
-
-## Nested-mode phase driver
-
-7. **Drive a phase in nested mode.** When the parent's prompt carries `Mode: nested`, a
-   `Phase:` line and the phase brief, you are the Phase driver. The phase runs in your fresh
-   context and the parent keeps only your envelope. This overrides the opening paragraph's
-   limits on delegation, for the executors named below only; never dispatch `phase-executor`.
-   - **Specify, Plan, Tasks** (`inner_agent` null): run the skill under rules 1 and 2 yourself.
-     Plan then runs the formal-model-author and formal-check sequence of `formal-methods.md`
-     before G3. Tasks then calls `publish-tasks-output` with `brief.inputs.tasks_output`, runs
-     mandatory after_tasks hooks and every `brief.after_tasks_hooks.run` hook through
-     `read-tasks-output` with the unchanged publisher `tasks_binding`, as §Phase 5's
-     bound-consumer handoff specifies. A pathname consumer also requires `live_path`.
-     Run each selected optional hook once; skip every `brief.after_tasks_hooks.skip`
-     entry. Record each run as `optional_hook_run` and each unconfirmed skip as
-     `authority_action_skipped` through `decisions-list`, with the exact extension,
-     command, event and confirmation or its absence. No workflow-level approval
-     replaces a runner-selected run entry. Stop on a hook or binding failure and
-     return a failed or blocked envelope. Then run G5 with that same `tasks_binding`.
-     Report successful optional runs and skips in envelope `counts.optional_hooks_run`
-     and `counts.optional_hooks_skipped`. Leave other phases' optional hooks to the parent.
-   - **Clarify, Checklist, Analyze**: request `phase-brief` again with `mode=flat` and the
-     wave inputs your phase needs. Dispatch `inner_agent` (`clarify-executor`, `checklist-executor`
-     or `analyze-executor`), then the consensus agents, as its
-     `agent`, `slices` and `waves` say, and follow `skills/speckit-autopilot/references/phase-execution.md` and
-     `skills/speckit-autopilot/references/consensus-protocol.md` for answers, edits and repair.
-<!-- host:claude: Claude dispatches children with the Agent tool -->
-   Dispatch with the `Agent` tool, foreground, as that reference's template shows.
-<!-- /host -->
-<!-- host:codex: Codex dispatches children with spawn_agent and wait_agent -->
-   Dispatch with `spawn_agent`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
-<!-- /host -->
-   Run the phase's gate with `validate-gate`, repair within the shared reservation, and record
-   the phase results in the workflow file.
-   Finish with one `phase-envelope/v1` JSON object and nothing else, under 2,048 bytes:
-   `schema_version`, `phase` (the parent's `Phase:`), `status` (`pass` only when every gate you ran passed; else `fail`
-   or `blocked`), `next_action`, repo-relative `artifacts`, `gates` (the phase gate and any
-   other you ran, each `pass` or `fail`), `counts` (`markers` and `task_count` as the gate
-   reports them), a `blocker` of at most 240 characters, and your `usage` counters. The runner
-   re-verifies the envelope from disk and a claim never passes a gate. If your turn budget is
-   nearly spent, return `status` `blocked` and name what remains in `blocker`.
-
-## Phase executor summary
-
-```text
-## Phase Result
-
-**Files created/modified:**
-- path/to/file.md (created/modified)
-
-**Metrics:**
-- Relevant phase metrics and counts
-
-**Markers found:**
-- [NEEDS CLARIFICATION]: N; [Gap]: N; [CRITICAL]: N (or "None" if clean)
-
-**Errors:** None (or describe any errors)
-```
-
 
 ## Contents
 
@@ -455,7 +396,7 @@ for phase in PHASES starting from first_pending:
        Other phases: for EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
-       b. spawn_agent the resolved <executor>:
+       b. spawn_agent the resolved <executor> with fork_turns="none":
           "Run $speckit-<phase> with: <prompt>"
        c. Loop bounded wait_agent calls (timeout_ms=brief.wait.codex.timeout_ms) until this
           executor's actual summary is delivered; a status update or timeout alone is not the result. Record
@@ -1738,7 +1679,7 @@ and keeps executing independent work.
               only; no Artifact Edit).
 <!-- /host -->
 <!-- host:codex: Codex dispatches the analyst and the installed synthesizer with spawn_agent and consumes each result -->
-            - spawn_agent on the appropriate analyst for that target
+            - spawn_agent with fork_turns="none" on the appropriate analyst for that target
               (e.g., "task_understanding" lowest → clarify-executor
               re-pass on spec.md; "completeness" → verify artifact
               presence).
@@ -1970,7 +1911,7 @@ Agent(
 <!-- /host -->
 <!-- host:codex: Codex dispatches the installed agent with spawn_agent and bounded wait_agent polls -->
 ```text
-spawn_agent("artifact-author", prompt="""
+spawn_agent("artifact-author", fork_turns="none", prompt="""
   WORKFLOW_ROOT: <canonical absolute worktree root>
   Use WORKFLOW_ROOT as the workdir for every shell call and as the base for
   every filesystem path. Write and return paths only inside WORKFLOW_ROOT.
@@ -2016,7 +1957,7 @@ runner-filled page keeps its lifted prose. Say `narrative not written` in the st
 report and send the finishing call anyway. The helper treats the files on disk as
 the truth, never the agent's report: it deletes a page that is still its template,
 carries a sample banner, or has no recorded owner, reports it as a gap, and stops
-with `stop_reason:integrity_failure` when a page carries active content or an
+with `stop_reason:tampering_or_forged_evidence` when a page carries active content or an
 invalid file cannot be removed. The author never touches `artifacts/` with a
 native tool.
 
@@ -2133,7 +2074,7 @@ append any text after its final line.
 | The recorded pull request is closed or merged | Print `stop_reason:reopen_closed_pr` |
 | The recorded pull request is missing, or several open pull requests match | Print `stop_reason:ambiguous_pr_record` |
 | The PR tool is absent or unauthenticated | Print `stop_reason:tool_unavailable` |
-| An artifact-integrity failure | Print `stop_reason:integrity_failure` |
+| An artifact-integrity failure | Print `stop_reason:tampering_or_forged_evidence` |
 | A push requires protected-branch authority | Print `stop_reason:protected_push` |
 
 Any other reason that ends the run takes its marker from the stop-policy table.
@@ -2270,7 +2211,7 @@ original parent start result independently of the worker-owned journal. Pass
 it as `expected_partition_sha256` on every later start, inspect, or record;
 never reconstruct it from the journal's current plan. On resume, use `action=inspect` and
 reconcile retained complete/unfinished results rather than renumbering batches.
-Dispatch one `spawn_agent` per implementation or research batch; verification
+Dispatch one `spawn_agent` (`fork_turns="none"`) per implementation or research batch; verification
 routes stay orchestrator-direct with no agent. A task routes to verification
 by its leading verb: `verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`. Supply TDD only to implementation
 and project agents, up to four adjacent assigned tasks sequentially, with shared
@@ -2351,9 +2292,14 @@ once, after the feedback sweep below and before the first task is dispatched.
    Read `data.baseline.implement_entry`: the helper applies recorded commands
    before selecting and ordering runnable slots, including slots absent from
    detection. Each row's `command` is ready to run.
-3. Run each row's `command` in order. Record each pass or fail in the
-   workflow file's Prerequisites table, with the test count for the
-   `UNIT_TEST` and `INTEGRATION_TEST` rows (a diagnostic; see
+3. Run each row's `command` in order. Insert a typed
+   `prerequisites-baseline` result directly after the workflow's Prerequisites
+   heading and before its first child heading (`### Constitution Validation`
+   in the shipped template),
+   with status, test counts and its `.process/` evidence reference, following
+   the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+   Preserve existing table rows and commands; full per-slot output goes in the
+   evidence record. Test counts remain diagnostic (see
    [Gate Validation §G7](./gate-validation.md#g7--after-implement)).
 4. If a check fails, route the failing check to the implement-executor, which
    repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
@@ -2534,7 +2480,7 @@ receipt, or capability reaches it. **List every amended comment in the final
 report** by comment id, class, artifact, and amending commit. **Keep the
 isolation-unavailable stop**: when the isolation boundary cannot be
 established, or the private session cannot be invalidated, stop with
-`stop_reason:integrity_failure` before any regeneration. A later resumed run
+`stop_reason:tampering_or_forged_evidence` before any regeneration. A later resumed run
 still repairs pages a failed regeneration left stale, because the durable
 sweep row excludes the handled comment and the freshness join reads the same
 `amended` rows.
@@ -2842,10 +2788,41 @@ runner runs `gh auth status` instead. **Branch on the `reason` the capture
 surface returns** in its `{"status": "blocked", "reason": ...}` envelope (exit
 3). `gh_unavailable` and `gh_not_authenticated` stop with
 `stop_reason:tool_unavailable`. `rate_limited`, `malformed_output`, and
-`observation_failed` do not stop the run: they end this run's sweep, so
+`observation_failed`, `sweep_process_failed`, and `sweep_session_expired` do not stop the run: they end this run's sweep, so
 proceed into task work and report the reason as the `skipped` outcome above
 does. `isolation_boundary_unavailable` is the isolation stop and names
-`stop_reason:integrity_failure`.
+`stop_reason:tampering_or_forged_evidence`. The runner persists the harm-halt
+record before returning that isolation failure. Read and print the halt record
+with `harm-halt` in `read_only` mode before emitting the stop marker: include
+its reason, redacted evidence, and last safe state. Resume and state-changing
+requests remain refused while that record stands. Never send a `clear`
+request: only the human holding the one-time token clears the halt (see the
+stop-policy reference).
+
+An informational `attest_claude` check instead reports
+`isolation_preflight_unavailable` without creating a halt. Record that readiness
+gap and keep the sweep unavailable; capture and launch still enforce their
+boundaries before any worker runs.
+
+A request that does not fit its surface (a missing or extra field, a malformed
+`session_id`, or an unknown surface, stage or perspective) returns
+`{"status": "invalid_request"}` with exit 2. It records no halt and changes
+nothing. Correct the request and send it again.
+
+A well-formed request can still name a session that no longer exists, or a
+launch comment the session never captured. Each returns the blocked envelope
+(exit 3) and records no halt:
+
+- `sweep_session_missing`: the session is closed, mistyped, or was never made.
+  After `close`, it means the session is already gone and nothing is left to
+  close. Anywhere else, end this run's sweep as `sweep_session_expired` does.
+- `sweep_comment_unknown`: the `comment_id` is not in the capture metadata.
+  Launch only the comment ids that capture returned.
+
+A replayed or cross-session receipt sent to a live session is not one of these
+cases: it still returns `isolation_boundary_unavailable` and records the halt.
+The session check comes first, so any `accept` that names a gone session gets
+`sweep_session_missing`; no receipt can be accepted from it.
 
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool
@@ -3372,7 +3349,7 @@ commits, and nothing else. Model-produced amendment text reaches it only as
 committed bytes, never as comment text, classifier reason, session state, or
 receipt, and it never runs while a private session is live. A worker that
 cannot be launched inside that boundary is the isolation-unavailable stop,
-`stop_reason:integrity_failure`.
+`stop_reason:tampering_or_forged_evidence`.
 
 **Re-selection reads the shipped gallery manifest against the amended
 record**, never the page list the previous run happened to produce. A run that
@@ -3885,6 +3862,12 @@ repository because GitHub writes require a body file. Remove the private
 session and temporary reply file on success or failure. The run report names
 only that private cleanup completed, never its absolute path or contents.
 
+After planning approval, every workflow progress write in Phase 7 uses the
+[Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+Record narrative result details in the existing execution evidence file and
+append its typed result/reference to the workflow. Preserve planning notes,
+commands, criteria text, and decision definitions when updating progress.
+
 #### Phase 7 Setup: Record the Implement Checklist Gate
 
 <!-- host:claude: Claude invokes the SpecKit skill as /speckit-implement -->
@@ -3920,8 +3903,8 @@ dispatch:
 ```
 
 - **Fail closed on missing evidence.** When `checklists/` is absent or a file
-  cannot be read, write `unknown` and the reason in the Reviewer-owned items
-  cell. Never write a zero you did not count.
+  cannot be read, write the typed `implement-checklist-gate` result with `status=unknown`
+  and an `evidence` reference to the diagnostic in that cell. Never write a zero you did not count.
 
 This gate is not a stop condition and never asks the operator. The PR body
 tells the reviewer the boxes are theirs (post-implementation.md step 6).
@@ -4776,8 +4759,8 @@ Then every populated quality-gate slot on the whole diff:
     = changed source files, origin/main...HEAD;
     when that list is empty, skip COMPLEXITY and MUTATION and
     record `n/a: no source files changed`
-  Any failure blocks. Record each result in the Quality Gates table
-  next to its G0 baseline.
+  Any failure blocks. Record the result in the Quality Gates Final cell
+  using the quality-final contract; keep its command and G0 baseline unchanged.
 Then Command(DEPENDENCY_AUDIT) only when populated, which requires
   `.specify/quality-gates.json` to list it in `enforce`; a failure
   blocks. Otherwise it is `off` and never runs.
@@ -4789,7 +4772,12 @@ MUTATION run and its block decision, per
 loop to the delegation gateway on `route: "auto"` when `delegate_health` is
 good, else run it on the primary
 model; stop at the floor or the shared corrective ceiling; record the outcome on the
-Quality Gates table's `Hardener` line. Only after the hardener records its
+Quality Gates table's `Hardener` line using `Progress: quality-hardener` with
+its typed status, iterations, score, floor and `.process/` evidence reference.
+Use the canonical status forms and Hardener example in the
+[Implement write contract](./workflow-file-protocol.md#implement-write-contract);
+detailed hardener outcomes stay in the referenced evidence.
+Retain the line's template comment. Only after the hardener records its
 ending does a still-failing MUTATION block. MUTATION fails on its exit
 status: `cr-rate --fail-over` for cosmic-ray, and the chained
 `mutation-score.py` floor check for StrykerJS.
@@ -5122,7 +5110,8 @@ which is authoritative.
 After each phase completes, update the workflow file with:
 
 1. **Status table**: Change phase status from
-   `⏳ Pending` to `✅ Complete` with summary notes
+   `⏳ Pending` to `✅ Complete`; after planning approval append an
+   `overview-summary` typed result to Notes, retaining its planning text
 2. **Phase-specific results table**: Fill in metrics
    and outcomes
 3. **Files Generated checkboxes**: Check off produced

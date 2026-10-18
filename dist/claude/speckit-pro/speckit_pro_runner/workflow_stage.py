@@ -79,9 +79,8 @@ def stage_args_error(message: str) -> dict[str, Any]:
     return {"stage": None, "from_phase": None, "error": message}
 
 
-# The terminal half of the closed phase-status vocabulary the shipped
-# phase-coverage validator publishes; the new unit test locks the two together so
-# neither can drift alone.
+# One closed phase-status vocabulary shared by readers, validation, and the
+# planning progress projection.
 AUTOPILOT_TERMINAL_STATUSES = frozenset({
     "Complete",
     "✅ Complete",
@@ -91,6 +90,38 @@ AUTOPILOT_TERMINAL_STATUSES = frozenset({
     "⏭ Skipped",
     "⏭️ Skipped",
 })
+AUTOPILOT_OPEN_STATUSES = frozenset({
+    "Pending",
+    "⏳ Pending",
+    "In Progress",
+    "\U0001f504 In Progress",
+    "Blocked",
+    # U+26A0 with and without the U+FE0F variation selector; both render alike.
+    "⚠ Blocked",
+    "⚠️ Blocked",
+})
+AUTOPILOT_STATUS_VALUES = AUTOPILOT_TERMINAL_STATUSES | AUTOPILOT_OPEN_STATUSES
+
+
+def normalize_status(raw: str) -> str:
+    value = raw.split("#", 1)[0].strip().strip("\"'").lower().replace("-", "_")
+    return {
+        "blocked": "blocked",
+        "failed": "failed",
+        "fail": "failed",
+        "in_progress": "in_progress",
+        "progress": "in_progress",
+        "active": "in_progress",
+        "pending": "pending",
+        "": "pending",
+        "complete": "complete",
+        "completed": "complete",
+        "done": "complete",
+        "archived": "archived",
+        "archive": "archived",
+    }.get(value, "missing-state")
+
+
 # Planning is complete only when every one of these rows is terminal. The
 # `Confidence Gate` row is deliberately included: the validator excludes it from
 # the ORDERING rule because the phase loop does not drive it, and that exclusion

@@ -20,6 +20,18 @@ description: >
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
+## Recorded planning approval
+
+The shared runner helper `planning-approval` exposes the record foundation for
+explicit plan review. It does not start implementation or supply security consent.
+Send `helper_id` and `operation` as `planning-approval`, with `inputs` containing
+`feature_dir`, `workflow_file`, and `action`. Use `manifest` or `verify` with
+`mode=read_only`; use `record` with `mode=dry_run` or `apply` and an `approval`
+object; see [record inputs](./references/planning-approval.md). The runner owns the inventory, normalization and refusal rules.
+Both hosts consume the same `data.manifest_digest`, `data.record_path` and
+record. Approval assurance is `recorded`; preserve the original confirmation
+reference. Never invent a human confirmation or write the record directly.
+
 ## Installed Runtime Contract
 
 Before the first runner call, resolve `<plugin-root>` and keep the caller's
@@ -126,6 +138,10 @@ Bind the workflow to actual Codex primitives:
   `agent_type="<installed-agent-name>"` to `spawn_agent`. Never omit
   `agent_type` or accept a `default` or general-purpose worker as equivalent to
   the installed role.
+- Every `spawn_agent` call passes `fork_turns="none"`. Codex treats an omitted
+  `fork_turns` as `"all"` and copies the caller's whole history into the child,
+  so each dispatch would re-pay the caller's context. The message is the
+  child's complete task.
 - When `close_agent` is exposed, call it promptly after consuming the result.
   Cleanup policy is best-effort: if the surface reports the agent already gone,
   log it and continue without retry-looping. When `close_agent` is absent,
@@ -319,8 +335,8 @@ Concrete Codex mapping:
   plugin_payload` (prerequisites.md Step 0.10) and defer that phase. Mid-run,
   follow §Plugin Update Mid-Run: Record, Re-resolve, Continue instead
 - Build the phase prompt in the parent session
-- Call `spawn_agent` with `agent_type="<installed-agent-name>"` plus the
-  workflow prompt
+- Call `spawn_agent` with `agent_type="<installed-agent-name>"`,
+  `fork_turns="none"` and the workflow prompt
 - Call `wait_agent` for completion
 - Persist the returned summary into the workflow file and `autopilot-state.json`
 
@@ -409,7 +425,7 @@ or malformed synthesizer result. Such a result authorizes no edit and cannot
 mark consensus complete. Append the Consensus Resolution Log only from a valid
 consumed result.
 Follow the mandatory Codex dispatch form `spawn_agent` with
-`agent_type="consensus-synthesizer"`.
+`agent_type="consensus-synthesizer"` and `fork_turns="none"`.
 A default or general-purpose worker is not the named synthesizer; its result is
 invalid.
 Follow the mandatory Round 2, Round 3 tiebreak, stop,

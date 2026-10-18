@@ -140,7 +140,7 @@ file, rebuilds context, and re-runs the checks). A few small fixes are
 faster to make directly, one partition at a time. When you dispatch, send
 ALL partitions at once:
 
-For each partition, call `spawn_agent` to start one built-in `default` subagent
+For each partition, call `spawn_agent` with `fork_turns="none"` to start one built-in `default` subagent
 without a model or reasoning-effort override, all in ONE tool turn, with the
 worker prompt below as its task. Then `wait_agent` on every handle until each
 delivers its result; a status update or a timed-out wait is not the result.
