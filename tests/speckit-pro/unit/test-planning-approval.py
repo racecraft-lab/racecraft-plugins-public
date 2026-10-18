@@ -40,7 +40,7 @@ class PlanningApprovalFixture(PlanningHelperFixture):
     workflow_text = "## Project Commands\nTest: python3 check.py\n"
 
     def call(self, action="manifest", mode="read_only", **extra):
-        inputs = dict(feature_dir=self.feature_dir, workflow_file=self.workflow_file, action=action, **extra)
+        inputs = self.helper_inputs(action=action, **extra)
         return self.run_helper("planning-approval", inputs, mode=mode)
 
     def approval(self):

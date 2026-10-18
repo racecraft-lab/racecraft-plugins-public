@@ -10,9 +10,16 @@ from runner_invocation import run_runner
 
 class PlanningHelperFixture(unittest.TestCase):
     feature_dir = "specs/demo"
-    workflow_file = "specs/demo/workflow.md"
+    workflow_name = "workflow.md"
     workflow_text = "## Project Commands\n"
     runner_root = Path(__file__).resolve().parents[3] / "speckit-pro"
+
+    @property
+    def workflow_file(self):
+        return (Path(self.feature_dir) / self.workflow_name).as_posix()
+
+    def helper_inputs(self, **inputs):
+        return dict(feature_dir=self.feature_dir, workflow_file=self.workflow_file, **inputs)
 
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
@@ -24,7 +31,7 @@ class PlanningHelperFixture(unittest.TestCase):
             "spec.md": "A feature",
             "plan.md": "A plan",
             "tasks.md": "- [ ] T001 Build a thing",
-            "workflow.md": self.workflow_text,
+            self.workflow_name: self.workflow_text,
         }.items():
             (self.feature / name).write_text(text)
 

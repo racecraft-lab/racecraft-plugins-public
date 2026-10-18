@@ -25,10 +25,13 @@ REQUESTS = [
 
 class PlanReviewPromptFixture(PlanningHelperFixture):
     def call(self, drop=(), **extra):
-        manifest = self.run_helper("planning-approval", dict(action="manifest", feature_dir=self.feature_dir,
-                                                               workflow_file=self.workflow_file))
-        inputs = dict(feature_dir=self.feature_dir, workflow_file=self.workflow_file, findings=copy.deepcopy(FINDINGS),
-                      reviewed_revision=manifest["data"]["manifest_digest"], requests=copy.deepcopy(REQUESTS), withdrawals=[])
+        manifest = self.run_helper("planning-approval", self.helper_inputs(action="manifest"))
+        inputs = self.helper_inputs(
+            findings=copy.deepcopy(FINDINGS),
+            reviewed_revision=manifest["data"]["manifest_digest"],
+            requests=copy.deepcopy(REQUESTS),
+            withdrawals=[],
+        )
         inputs.update(extra)
         for key in drop:
             inputs.pop(key)
@@ -237,11 +240,15 @@ class PlanReviewPromptUnicodeBoundaryTest(PlanReviewPromptFixture):
 
 
 def _plan_review_test_cases():
-    return tuple(
-        candidate for candidate in globals().values()
-        if isinstance(candidate, type) and candidate is not PlanReviewPromptFixture
-        and issubclass(candidate, PlanReviewPromptFixture)
-    )
+    pending = list(PlanReviewPromptFixture.__subclasses__())
+    cases = []
+    while pending:
+        candidate = pending.pop(0)
+        cases.append(candidate)
+        pending.extend(candidate.__subclasses__())
+    if not cases or not any(unittest.defaultTestLoader.getTestCaseNames(case) for case in cases):
+        raise AssertionError("No plan review prompt test cases were discovered.")
+    return tuple(cases)
 
 
 class HostPayloadTest(unittest.TestCase):
