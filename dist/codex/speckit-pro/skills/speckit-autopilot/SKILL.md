@@ -138,6 +138,10 @@ Bind the workflow to actual Codex primitives:
   `agent_type="<installed-agent-name>"` to `spawn_agent`. Never omit
   `agent_type` or accept a `default` or general-purpose worker as equivalent to
   the installed role.
+- Every `spawn_agent` call passes `fork_turns="none"`. Codex treats an omitted
+  `fork_turns` as `"all"` and copies the caller's whole history into the child,
+  so each dispatch would re-pay the caller's context. The message is the
+  child's complete task.
 - When `close_agent` is exposed, call it promptly after consuming the result.
   Cleanup policy is best-effort: if the surface reports the agent already gone,
   log it and continue without retry-looping. When `close_agent` is absent,
@@ -331,8 +335,8 @@ Concrete Codex mapping:
   plugin_payload` (prerequisites.md Step 0.10) and defer that phase. Mid-run,
   follow §Plugin Update Mid-Run: Record, Re-resolve, Continue instead
 - Build the phase prompt in the parent session
-- Call `spawn_agent` with `agent_type="<installed-agent-name>"` plus the
-  workflow prompt
+- Call `spawn_agent` with `agent_type="<installed-agent-name>"`,
+  `fork_turns="none"` and the workflow prompt
 - Call `wait_agent` for completion
 - Persist the returned summary into the workflow file and `autopilot-state.json`
 
@@ -421,7 +425,7 @@ or malformed synthesizer result. Such a result authorizes no edit and cannot
 mark consensus complete. Append the Consensus Resolution Log only from a valid
 consumed result.
 Follow the mandatory Codex dispatch form `spawn_agent` with
-`agent_type="consensus-synthesizer"`.
+`agent_type="consensus-synthesizer"` and `fork_turns="none"`.
 A default or general-purpose worker is not the named synthesizer; its result is
 invalid.
 Follow the mandatory Round 2, Round 3 tiebreak, stop,

@@ -31,6 +31,9 @@ Do the work in this thread: the orchestrator already runs independent
 batches in parallel, so use `spawn_agent` only for a large, independent piece
 of your own batch, and never to re-check your own result.
 <!-- /host -->
+<!-- host:codex: Codex defaults an omitted fork_turns to all, which copies the thread into the child -->
+Every `spawn_agent` call passes `fork_turns="none"`.
+<!-- /host -->
 <!-- host:codex: an installed Codex agent cannot read the plugin's reference files, so it carries their rules inline -->
 
 Discovery and grounding rules, inlined from the autopilot references

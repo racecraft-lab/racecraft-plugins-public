@@ -31,6 +31,20 @@ python3 scripts/refresh-release-artifacts.py
 pnpm --dir docs-site reference:generate
 ```
 
+The persistent Codex instruction inventory also changes when a merge changes
+rendered skills or generated agent TOMLs. Review the merged instructions first,
+then regenerate the inventory; never hand-resolve its hashes or path keys:
+
+```text
+python3 scripts/refresh-codex-instruction-inventory.py
+```
+
+Commit `tests/speckit-pro/unit/fixtures/codex-spawn-instruction-inventory.json`
+with the reviewed source changes. Validation compares complete content and path
+sets, including new and removed files, and never refreshes this evidence itself.
+For the review boundary and known limits, see
+[dispatch instruction coverage](reviews/pr-1375-instruction-coverage.md).
+
 ## Running speckit-pro in a Scratch Clone
 
 Until the canary is green, a repo hook blocks every speckit-pro skill, typed or
