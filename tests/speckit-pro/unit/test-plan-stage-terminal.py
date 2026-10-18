@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 sys.path.insert(0, str(ROOT / "speckit-pro"))
 from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
-from host_skill_views import host_skill_root  # noqa: E402
+from host_skill_views import rendered_section  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner import autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
@@ -303,6 +303,13 @@ class OneCallSequenceTests(TerminalFixture):
         self.assertEqual(data["preview"]["observer_dispatches"], data["pages"]["generated"])
         self.assertEqual(json.loads((self.root / STATE).read_text(encoding="utf-8"))["status"], "completed")
 
+    def test_a_dry_run_writes_nothing(self) -> None:
+        self.assertEqual(self.finish("dry_run")["status"], "ok")
+        self.assertEqual(self.git("status", "--porcelain"), "")
+        self.assertEqual(self.cli.gh, [])
+
+
+class StopReportTests(TerminalFixture):
     def test_a_completed_run_returns_the_stop_report_the_parent_prints(self) -> None:
         """The parent prints `report` and then `stop_label`, so it reads no reference to compose the report."""
         for host in ("claude", "codex"):
@@ -325,11 +332,6 @@ class OneCallSequenceTests(TerminalFixture):
         data = self.finish(execution_mode="headless")["data"]
         (gap,) = data["pages"]["gaps"]
         self.assertIn(f"gap: {gap['reason']}", data["report"])
-
-    def test_a_dry_run_writes_nothing(self) -> None:
-        self.assertEqual(self.finish("dry_run")["status"], "ok")
-        self.assertEqual(self.git("status", "--porcelain"), "")
-        self.assertEqual(self.cli.gh, [])
 
 
 class NarrativeTests(TerminalFixture):
@@ -1235,25 +1237,14 @@ class GuardTests(TerminalFixture):
 class TerminalGuidanceTests(unittest.TestCase):
     """The parent's terminal step costs one response per poll and per reference read (issue 1317)."""
 
-    def section(self, host: str) -> str:
-        reference = (host_skill_root(host) / "speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
-        start = reference.index("#### Draft-PR emission: the terminal-step sequence")
-        return " ".join(reference[start:reference.index("#### The `artifact-author` dispatch", start)].split())
-
-    def test_both_hosts_print_the_helper_report_on_a_completed_run(self) -> None:
-        for host in ("claude", "codex"):
+    def test_each_host_prints_the_helper_report_and_codex_waits_in_one_long_poll(self) -> None:
+        for host, codex in (("claude", False), ("codex", True)):
+            section = rendered_section(host, "speckit-autopilot/references/phase-execution.md",
+                                       "#### Draft-PR emission: the terminal-step sequence", "#### The `artifact-author` dispatch")
             with self.subTest(host=host):
-                self.assertIn("For `outcome: completed`, the answer's `report` is the whole stop report", self.section(host))
-
-    def test_a_codex_parent_waits_on_the_finishing_call_in_one_long_poll(self) -> None:
-        for host in ("claude", "codex"):
-            section = self.section(host)
-            with self.subTest(host=host):
-                if host == "codex":
-                    self.assertIn("`yield_time_ms: 30000`", section)
-                    self.assertIn("`yield_time_ms: 300000`", section)
-                else:
-                    self.assertNotIn("write_stdin", section)
+                self.assertIn("For `outcome: completed`, the answer's `report` is the whole stop report", section)
+                self.assertEqual(("`yield_time_ms: 30000`" in section, "`yield_time_ms: 300000`" in section), (codex, codex))
+                self.assertEqual("write_stdin" in section, codex)
 
 
 class FixtureRootTests(unittest.TestCase):

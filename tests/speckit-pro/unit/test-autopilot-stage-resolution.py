@@ -1107,6 +1107,40 @@ class RequestLayerDiagnosticTests(unittest.TestCase):
         self.assertEqual(response["status"], "input_error")
         self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["invalid_input"])
 
+    def test_path_outside_the_trust_boundary_yields_a_diagnostic_and_no_exit_code(self) -> None:
+        response = run_runner({"workflow_file": OUTSIDE_TRUST_BOUNDARY})
+        self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_path"])
+        # `unsupported_path` never reaches the helper, so no helper exit code is
+        # recorded, and it has no entry in the runner's exit-code map. A fixture
+        # asserting exit 2 for a trust-boundary path would be asserting against
+        # the wrong surface entirely.
+        self.assertIsNone(response["data"].get("exit_code"))
+        self.assertNotIn("unsupported_path", read_only.EXIT_DIAGNOSTIC.values())
+
+    def test_operation_rejections_are_the_only_exit_two(self) -> None:
+        response = run_runner(
+            {"workflow_file": WORKFLOW_FILE, "autopilot_args": ["--stage", "planning"]}
+        )
+        self.assertEqual(response["data"]["exit_code"], 2)
+        self.assertEqual(
+            response["data"]["stderr"]["text"],
+            "error: unrecognized stage 'planning' — accepted values: plan, implement, full\n",
+        )
+
+    def test_registered_operation_resolves_an_explicit_stage_through_the_runner(self) -> None:
+        response = run_runner(
+            {"workflow_file": WORKFLOW_FILE, "autopilot_args": ["--stage", "plan"]}
+        )
+        self.assertEqual(response["status"], "ok")
+        envelope = response["data"]["stdout_json"]
+        self.assertEqual(envelope["tool"], "resolve-autopilot-stage")
+        self.assertEqual(envelope["stage"], "plan")
+        self.assertEqual(envelope["source"], "argv")
+
+
+class ResolverInputNameTests(unittest.TestCase):
+    """A resolver refuses a key it does not know, and the skill names only keys it knows (issue 1317)."""
+
     def test_an_unknown_input_is_refused_and_names_the_accepted_inputs(self) -> None:
         """A misnamed `argv` was ignored, so the stage resolved as auto-detect (issue 1317)."""
         for helper_id, inputs in (
@@ -1141,36 +1175,6 @@ class RequestLayerDiagnosticTests(unittest.TestCase):
         ):
             with self.subTest(helper_id=helper_id):
                 self.assertEqual(run_runner(inputs, helper_id)["status"], "ok")
-
-    def test_path_outside_the_trust_boundary_yields_a_diagnostic_and_no_exit_code(self) -> None:
-        response = run_runner({"workflow_file": OUTSIDE_TRUST_BOUNDARY})
-        self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_path"])
-        # `unsupported_path` never reaches the helper, so no helper exit code is
-        # recorded, and it has no entry in the runner's exit-code map. A fixture
-        # asserting exit 2 for a trust-boundary path would be asserting against
-        # the wrong surface entirely.
-        self.assertIsNone(response["data"].get("exit_code"))
-        self.assertNotIn("unsupported_path", read_only.EXIT_DIAGNOSTIC.values())
-
-    def test_operation_rejections_are_the_only_exit_two(self) -> None:
-        response = run_runner(
-            {"workflow_file": WORKFLOW_FILE, "autopilot_args": ["--stage", "planning"]}
-        )
-        self.assertEqual(response["data"]["exit_code"], 2)
-        self.assertEqual(
-            response["data"]["stderr"]["text"],
-            "error: unrecognized stage 'planning' — accepted values: plan, implement, full\n",
-        )
-
-    def test_registered_operation_resolves_an_explicit_stage_through_the_runner(self) -> None:
-        response = run_runner(
-            {"workflow_file": WORKFLOW_FILE, "autopilot_args": ["--stage", "plan"]}
-        )
-        self.assertEqual(response["status"], "ok")
-        envelope = response["data"]["stdout_json"]
-        self.assertEqual(envelope["tool"], "resolve-autopilot-stage")
-        self.assertEqual(envelope["stage"], "plan")
-        self.assertEqual(envelope["source"], "argv")
 
 
 class WorkflowStageSignalTests(unittest.TestCase):
@@ -1894,6 +1898,7 @@ def build_suite() -> unittest.TestSuite:
     for case in (
         StageVocabularyAndArgvTests,
         RequestLayerDiagnosticTests,
+        ResolverInputNameTests,
         WorkflowStageSignalTests,
         DraftPrRowTests,
         DraftPrCorroborationTests,
