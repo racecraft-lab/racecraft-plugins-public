@@ -1254,24 +1254,31 @@ class TerminalGuidanceTests(unittest.TestCase):
                                  "Review the complete rendered terminal instructions before updating this host's digest")
 
 
+@contextmanager
+def mutated_terminal_guidance(host: str, mutate):
+    """Stage one mutation in a disposable rendered host tree for the real gate."""
+    relative = "speckit-autopilot/references/phase-execution.md"
+    roots = {name: host_skill_views.host_skill_root(name) for name in ("claude", "codex")}
+    original = (roots[host] / relative).read_text(encoding="utf-8")
+    changed = mutate(original)
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / relative
+        path.parent.mkdir(parents=True)
+        path.write_text(changed, encoding="utf-8")
+        roots[host] = Path(temporary)
+        with unittest.mock.patch.object(host_skill_views, "host_skill_root", side_effect=roots.__getitem__):
+            yield original, changed
+
+
 class TerminalGuidanceGateMutationTests(unittest.TestCase):
     """Mutate the rendered file, then exercise the real guidance gate."""
 
     def assert_guidance_rejected(self, host: str, mutate) -> None:
-        relative = "speckit-autopilot/references/phase-execution.md"
-        roots = {name: host_skill_views.host_skill_root(name) for name in ("claude", "codex")}
-        original = (roots[host] / relative).read_text(encoding="utf-8")
-        changed = mutate(original)
-        self.assertNotEqual(changed, original, "mutation must reach the rendered guidance")
-        with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / relative
-            path.parent.mkdir(parents=True)
-            path.write_text(changed, encoding="utf-8")
-            roots[host] = Path(temporary)
-            with unittest.mock.patch.object(host_skill_views, "host_skill_root", side_effect=roots.__getitem__):
-                gate = TerminalGuidanceTests("test_each_host_prints_the_helper_report_and_codex_waits_in_one_long_poll")
-                with self.assertRaises(AssertionError):
-                    gate.test_each_host_prints_the_helper_report_and_codex_waits_in_one_long_poll()
+        with mutated_terminal_guidance(host, mutate) as (original, changed):
+            self.assertNotEqual(changed, original, "mutation must reach the rendered guidance")
+            gate = TerminalGuidanceTests("test_each_host_prints_the_helper_report_and_codex_waits_in_one_long_poll")
+            with self.assertRaises(AssertionError):
+                gate.test_each_host_prints_the_helper_report_and_codex_waits_in_one_long_poll()
 
     def assert_inert_report_rejected(self, host: str) -> None:
         clause = "For `outcome: completed`, the answer's `report` is the whole stop report: print it unchanged, then its `stop_label`."
