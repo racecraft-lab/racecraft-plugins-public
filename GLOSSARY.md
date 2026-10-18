@@ -86,8 +86,11 @@ _Avoid_: cross-platform support, Codex support
 The protected mechanism that establishes a human's final plan approval and its current validity independently of the coding agent. Its review interface records requested corrections and their checked results before final confirmation. Deferred to follow-on work; the health program uses a recorded approval (ADR 0017).
 _Avoid_: signing prompt, transcript proof, repository approval flag
 
+**Planning manifest**:
+The runner-owned inventory and content digests of authoritative planning inputs. Its digest identifies a planning revision; typed execution bookkeeping does not change it. Criterion text and planning notes remain part of that revision even when they appear beside progress; a Success Criteria tick records completion rather than a planning choice.
+
 **Plan approval record**:
-The record of a human's explicit approval of one full planning revision after all planning findings have been fixed and checked. It permits that revision to be built but supplies neither security consent nor proof that implementation work is complete.
+The record of a human's explicit approval of one full planning revision after all planning findings have been fixed and checked. Its assurance is `recorded`: it holds the confirmation reference without defending against an agent with the operator's file access. It permits that revision to be built but supplies neither security consent nor proof that implementation work is complete.
 _Avoid_: artifact sign-off, planning complete, implementation permission
 
 **Plan review**:

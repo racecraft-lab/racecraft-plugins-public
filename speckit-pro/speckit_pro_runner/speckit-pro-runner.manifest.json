@@ -716,6 +716,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/planning_approval.py",
+        "display": "speckit_pro_runner/helpers/planning_approval.py"
+      },
+      "sha256": "1d7c2af678cec483d9be71082182ec8c9630397ba5697f4b1256f0a0ad3f9462"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
@@ -759,7 +767,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "bf7bd17e701eb8e820e0a8b2ddfb81c4070e238344d7d7294540c66cbb0f4c34"
+      "sha256": "b5284f5978ee3cf915933662752d9a28a3e6bd5d6dd836fd26f3fcf8c373bd0e"
     },
     {
       "path": {
@@ -799,7 +807,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "6f371fd53764c13adc57dbe07a1f9795ff1ec787ed90ce22d1ebb962193baf36"
+      "sha256": "8fea184012b59b09eb4c75cbff2a5ca0e8af90d6d2e74a5c6d750198af6f6fee"
     },
     {
       "path": {
@@ -1175,7 +1183,7 @@
         "value": "speckit_pro_runner/workflow_stage.py",
         "display": "speckit_pro_runner/workflow_stage.py"
       },
-      "sha256": "46b393b080d28c31de455c15c640e42d97d9450ea6b8a2ad336fd1ee88a6ab1e"
+      "sha256": "881b3bf208e8d77a4d3d23d5c96ce5074b00a2b860d457b51b31cb6594913a67"
     }
   ]
 }

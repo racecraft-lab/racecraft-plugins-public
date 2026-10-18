@@ -1652,9 +1652,14 @@ once, after the feedback sweep below and before the first task is dispatched.
    Read `data.baseline.implement_entry`: the helper applies recorded commands
    before selecting and ordering runnable slots, including slots absent from
    detection. Each row's `command` is ready to run.
-3. Run each row's `command` in order. Record each pass or fail in the
-   workflow file's Prerequisites table, with the test count for the
-   `UNIT_TEST` and `INTEGRATION_TEST` rows (a diagnostic; see
+3. Run each row's `command` in order. Insert a typed
+   `prerequisites-baseline` result directly after the workflow's Prerequisites
+   heading and before its first child heading (`### Constitution Validation`
+   in the shipped template),
+   with status, test counts and its `.process/` evidence reference, following
+   the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+   Preserve existing table rows and commands; full per-slot output goes in the
+   evidence record. Test counts remain diagnostic (see
    [Gate Validation §G7](./gate-validation.md#g7--after-implement)).
 4. If a check fails, route the failing check to the implement-executor, which
    repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
@@ -3044,6 +3049,12 @@ repository because GitHub writes require a body file. Remove the private
 session and temporary reply file on success or failure. The run report names
 only that private cleanup completed, never its absolute path or contents.
 
+After planning approval, every workflow progress write in Phase 7 uses the
+[Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+Record narrative result details in the existing execution evidence file and
+append its typed result/reference to the workflow. Preserve planning notes,
+commands, criteria text, and decision definitions when updating progress.
+
 #### Phase 7 Setup: Record the Implement Checklist Gate
 
 Stock `$speckit-implement` stops when a domain checklist has unticked items.
@@ -3074,8 +3085,8 @@ dispatch:
 ```
 
 - **Fail closed on missing evidence.** When `checklists/` is absent or a file
-  cannot be read, write `unknown` and the reason in the Reviewer-owned items
-  cell. Never write a zero you did not count.
+  cannot be read, write the typed `implement-checklist-gate` result with `status=unknown`
+  and an `evidence` reference to the diagnostic in that cell. Never write a zero you did not count.
 
 This gate is not a stop condition and never asks the operator. The PR body
 tells the reviewer the boxes are theirs (post-implementation.md step 6).
