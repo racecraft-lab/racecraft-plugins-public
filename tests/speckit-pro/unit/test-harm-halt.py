@@ -309,8 +309,8 @@ class HaltPublicationFailureTests(QuietTerminal):
                     self.assertFalse((self.root / LIST_FILE).exists())
 
 
-class HaltClearTokenTests(QuietTerminal):
-    """Only the one-time token shown on the owner's terminal clears a standing halt (#1378)."""
+class TokenHalt(QuietTerminal):
+    """A halt whose clear token the patched terminal captured."""
 
     helper_id = harm_halt.HELPER_ID
     files = {WORKFLOW: "# Workflow\n"}
@@ -323,6 +323,17 @@ class HaltClearTokenTests(QuietTerminal):
 
     def clear(self, mode: str = "apply", **token: str) -> dict[str, Any]:
         return self.call(mode, action="clear", **token)
+
+    def run_runner(self, request: dict[str, Any]) -> str:
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with patch.object(sys, "stdin", io.StringIO(json.dumps(request))), \
+                contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            runner_main([])
+        return stdout.getvalue() + stderr.getvalue()
+
+
+class HaltClearTokenTests(TokenHalt):
+    """Only the one-time token shown on the owner's terminal clears a standing halt (#1378)."""
 
     def test_clear_with_the_right_token_resumes(self) -> None:
         token = self.halt()
@@ -374,12 +385,8 @@ class HaltClearTokenTests(QuietTerminal):
                     self.assertEqual("input_error", self.clear(mode, token="anything")["status"])
                 self.assertTrue((self.root / RECORD).exists())
 
-    def run_runner(self, request: dict[str, Any]) -> str:
-        stdout, stderr = io.StringIO(), io.StringIO()
-        with patch.object(sys, "stdin", io.StringIO(json.dumps(request))), \
-                contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            runner_main([])
-        return stdout.getvalue() + stderr.getvalue()
+class HaltTokenExposureTests(TokenHalt):
+    """The documented human request clears, and no agent-readable output or file holds the token."""
 
     def test_the_documented_clear_request_clears(self) -> None:
         adr = (REPO / "docs/adr/0010-stop-policy-enforcement.md").read_text(encoding="utf-8")
@@ -474,7 +481,8 @@ class OwnerTerminalTests(unittest.TestCase):
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                               for case in (HarmHaltTests, HaltDispatchTests, HaltConcurrencyTests,
-                                           HaltPublicationFailureTests, HaltClearTokenTests, OwnerTerminalTests))
+                                           HaltPublicationFailureTests, HaltClearTokenTests, HaltTokenExposureTests,
+                                           OwnerTerminalTests))
 
 
 if __name__ == "__main__":
