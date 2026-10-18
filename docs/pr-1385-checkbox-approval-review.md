@@ -90,3 +90,16 @@ These notes are accepted limits from the cross-host review at head
   `reviewed_evidence` holds a list or object now refuses with the `record` field
   instead of an internal failure (cross-host review at head
   `08c5592008fe76b39a94c1dc0c2ab25b586727bc`).
+
+### Repository identity notes (cross-host review at head `c27e3838fc9ad9cc5a9788c4b416312816aa986a`)
+
+- **Exact origin spelling (Low).** Admission compares the record's
+  `repository` to the `origin` URL as an exact string. A record in a different
+  letter case, or an origin with a trailing slash, an SSH host alias or a user
+  or token in the URL, refuses with `repository` although it names the same
+  repository. Every case fails closed: no foreign repository is admitted. The
+  contract now tells the recorder to copy `owner/name` exactly as `origin`
+  spells it, which covers the ordinary clone forms.
+- **`verify` does not check the origin (Info).** Only `admit` binds the
+  checkout's origin, as ADR 0013 requires for implement entry; `verify` can
+  pass for a record that `admit` refuses.

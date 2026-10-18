@@ -6,13 +6,16 @@ Use the installed runner transport with `helper_id=planning-approval` and
 Inputs always include repository-relative `feature_dir` and `workflow_file`.
 `action=manifest`, `action=verify` and `action=admit` require `mode=read_only`.
 `admit` is the implement entry check: it returns `admitted` or refuses with
-`planning approval field <name>` for a missing record (`record`), a changed bundle
+`planning approval field <name>` for a missing record (`record`), a checkout whose
+`origin` does not name the record's repository (`repository`), a changed bundle
 (`manifest_digest`), `canary_issued`, `withdrawn_by`, `superseded_by`, a finding
 (`findings.<id>`) or changed evidence (`reviewed_evidence`). `resolve-autopilot-stage`
 runs it for every implement entry.
 `action=record` requires `mode=dry_run` or `apply` and an `approval` object:
 
-- `repository`, `planning_run`, `repair_runs` (list), `source_commit` (reviewed commit).
+- `repository` (the GitHub `owner/name` exactly as spelled in this checkout's
+  `origin` URL, without `.git`), `planning_run`, `repair_runs` (list),
+  `source_commit` (reviewed commit).
 - `canary_issued=false`, `supersedes` (prior record path or null),
   `superseded_by=null`, `withdrawn_by=null`.
 - `reviewed_evidence`: nonempty unique file references to the reviewed artifact
