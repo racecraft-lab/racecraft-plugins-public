@@ -521,11 +521,15 @@ def run_plan_stage_terminal_helper(entry: Any, request: Any, dispatch: Dispatch)
         data = finish(run, request.mode == "apply")
     except Stop as stop:
         label = stop_label(stop.reason)
+        stopped = {"helper_id": entry.helper_id, "outcome": "stopped", "stop_label": label, "report": stop.report,
+                   "next_action": f"Print the stop report, then {label} as the last line, and stop."}
         if stop_policy.stop_class(stop.reason) == stop_policy.HARM_HALT and request.mode == "apply":
-            harm_halt.record_halt(root, stop.reason, stop.report, f"HEAD {run.initial_head or 'unknown'} before the plan stage")
-        return response("expected_failure", request_id=request.request_id, data={
-            "helper_id": entry.helper_id, "outcome": "stopped", "stop_label": label, "report": stop.report,
-            "next_action": f"Print the stop report, then {label} as the last line, and stop."},
+            try:
+                harm_halt.record_halt(root, stop.reason, stop.report, f"HEAD {run.initial_head or 'unknown'} before the plan stage")
+            except ValueError:
+                # A concurrent trigger already owns the record or its lock; that record stands and still blocks dispatch.
+                stopped["halt_record_status"] = "unavailable"
+        return response("expected_failure", request_id=request.request_id, data=stopped,
             diagnostics=[diagnostic("plan_stage_stopped", stop.report, remediation_summary="Follow the stop report's resume path.")])
     except (ValueError, KeyError, OSError) as error:
         return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(

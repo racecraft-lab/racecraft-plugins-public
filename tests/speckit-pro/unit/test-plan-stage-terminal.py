@@ -400,6 +400,23 @@ class RerunTests(TerminalFixture):
         self.assertEqual(blocked["diagnostics"][0]["code"], "harm_halt_active", blocked)
         self.assertEqual((self.subjects(), self.cli.gh), ([], []))
 
+    def test_a_concurrent_halt_keeps_the_stop_report_and_the_first_record(self) -> None:
+        page = self.root / FEATURE / "artifacts" / f"{self.finish(until='pages')['data']['pages']['generated'][0]}.html"
+        page.write_text(page.read_text(encoding="utf-8") + "<!-- drift -->", encoding="utf-8")
+        record_halt = plan_stage_terminal.harm_halt.record_halt
+
+        def concurrent_trigger_first(root: Path, reason: str, evidence: str, last_safe_state: str) -> dict:
+            record_halt(root, "concurrent_writer", "another process", "before the plan stage")
+            return record_halt(root, reason, evidence, last_safe_state)
+
+        with unittest.mock.patch.object(plan_stage_terminal.harm_halt, "record_halt", side_effect=concurrent_trigger_first):
+            result = self.finish(execution_mode="headless")
+        self.assertEqual((result["status"], result["data"]["halt_record_status"]), ("expected_failure", "unavailable"), result)
+        self.assertEqual(stop_policy.stop_class(result["data"]["stop_label"].removeprefix("stop_reason:")), "harm_halt")
+        record = json.loads((self.root / ".specify/harm-halt/halt.json").read_text(encoding="utf-8"))
+        self.assertEqual(record["reason"], "concurrent_writer")
+        self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
     def test_stale_planning_inputs_stop_with_a_registered_reason_and_no_halt(self) -> None:
         self.finish(until="pages")
         tasks = self.root / PLANNING["tasks_file"]
