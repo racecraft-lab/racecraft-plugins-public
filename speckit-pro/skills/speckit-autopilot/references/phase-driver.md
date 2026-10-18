@@ -14,8 +14,9 @@ contract stays in [phase-execution.md](./phase-execution.md).
      Plan then runs the formal-model-author and formal-check sequence of `formal-methods.md`
      before G3. Tasks then calls `publish-tasks-output` with `brief.inputs.tasks_output`, runs
      mandatory after_tasks hooks and every `brief.after_tasks_hooks.run` hook through
-     `read-tasks-output` with the unchanged publisher `tasks_binding`, as §Phase 5's
-     bound-consumer handoff specifies. A pathname consumer also requires `live_path`.
+     `read-tasks-output` with the unchanged publisher `tasks_binding`, as the
+     bound-consumer handoff in §Phase 5 of `phase-execution.md` specifies. A pathname
+     consumer also requires `live_path`.
      Run each selected optional hook once; skip every `brief.after_tasks_hooks.skip`
      entry. Record each run as `optional_hook_run` and each unconfirmed skip as
      `authority_action_skipped` through `decisions-list`, with the exact extension,
