@@ -112,3 +112,13 @@ restored to a directory after inspection. Agents leave this recovery to the huma
 - `apply_refusal` returns no refusal when the runner cannot resolve the
   repository root. Every dispatch path then rejects the same request for that
   root, so no write follows.
+- `apply_refusal` repeats the payload gate's root rule
+  (`path_utils.find_repo_root(Path.cwd())` for `payload-gate`) rather than
+  asking the gate. The architecture rules keep helpers from importing gates,
+  and the rule itself already lives in core `path_utils`. The two roots differ
+  only under a nested `.specify` fixture inside the source checkout; in a
+  consumer repository the source-checkout resolver returns nothing and the
+  payload gate answers `missing_prerequisite`.
+- A `dry_run` request with `action` `clear` validates and returns the record
+  with `halted: true` and `resume: "refused"`. It clears nothing and claims no
+  clear would succeed; the `apply` request is refused.
