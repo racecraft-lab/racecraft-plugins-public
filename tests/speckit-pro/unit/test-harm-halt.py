@@ -348,6 +348,77 @@ class HaltClearTokenTests(TokenHalt):
         self.assertFalse((self.root / RECORD).exists())
         self.assertEqual("ok", self.write_attempt()["status"])
 
+    def test_wrong_missing_and_reused_tokens_refuse_and_the_halt_stands(self) -> None:
+        first = self.halt()
+        for attempt in ({"token": first[:-1] + ("A" if first[-1] != "A" else "B")}, {"token": ""}, {},
+                        {"confirm_reason": "tampering_or_forged_evidence"}, {"token": 7}):
+            with self.subTest(attempt=sorted(attempt)):
+                self.assertEqual("input_error", self.clear(**attempt)["status"])
+                self.assertEqual("refused", self.read_only_data()["resume"])
+        self.assertEqual("ok", self.clear(token=first)["status"])
+        self.assertEqual("input_error", self.clear(token=first)["status"], "a used token clears nothing")
+        second = self.halt("second trigger")
+        self.assertNotEqual(first, second)
+        self.assertEqual("input_error", self.clear(token=first)["status"])
+        self.assertEqual("second trigger", self.read_only_data()["record"]["evidence"])
+        self.assertEqual("harm_halt_active", self.write_attempt()["diagnostics"][0]["code"])
+
+    def test_a_refused_second_trigger_releases_its_lock_and_the_owner_token_still_clears(self) -> None:
+        token = self.halt()
+        second = self.call("apply", action="halt", reason="concurrent_writer", evidence="second evidence",
+                           last_safe_state=SAFE_STATE)
+        self.assertEqual("input_error", second["status"], second)
+        self.assertIn("already stands", json.dumps(second))
+        self.assertFalse((self.root / RECORD).with_suffix(".lock").exists(), "a refused trigger changed nothing")
+        self.assertTrue(self.clear("dry_run", token=token)["data"]["would_clear"])
+        cleared = self.clear(token=token)
+        self.assertEqual("ok", cleared["status"], cleared)
+        self.assertFalse((self.root / RECORD).exists())
+
+    def test_a_record_without_a_valid_token_digest_refuses_every_clear(self) -> None:
+        for stored in (None, "", "\u00e9" * 64, "A" * 64, 7):
+            with self.subTest(stored=stored):
+                self.setUp()
+                self.halt()
+                record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
+                record.pop("clear_token_sha256")
+                if stored is not None:
+                    record["clear_token_sha256"] = stored
+                (self.root / RECORD).write_text(json.dumps(record), encoding="utf-8")
+                for mode in ("dry_run", "apply"):
+                    self.assertEqual("input_error", self.clear(mode, token="anything")["status"])
+                self.assertTrue((self.root / RECORD).exists())
+
+
+class HaltClearDryRunTests(TokenHalt):
+    """A dry-run clear answers what apply would do and changes nothing."""
+
+    def test_dry_run_clear_reports_without_changing_state(self) -> None:
+        token = self.halt()
+        before = (self.root / RECORD).read_bytes()
+        for candidate, expected in ((token, True), ("wrong", False)):
+            with self.subTest(expected=expected):
+                planned = self.clear("dry_run", token=candidate)
+                self.assertEqual("ok", planned["status"], planned)
+                self.assertEqual((expected, True, "refused"), (planned["data"]["would_clear"],
+                                 planned["data"]["halted"], planned["data"]["resume"]))
+                self.assertEqual(before, (self.root / RECORD).read_bytes())
+        self.assertEqual("ok", self.clear(token=token)["status"], "a dry run does not spend the token")
+
+    def test_dry_run_and_apply_agree_while_the_publication_lock_is_held(self) -> None:
+        token = self.halt()
+        (self.root / RECORD).with_suffix(".lock").mkdir()
+        planned = self.clear("dry_run", token=token)
+        self.assertEqual("ok", planned["status"], planned)
+        self.assertFalse(planned["data"]["would_clear"], planned)
+        self.assertIn("locked", planned["data"]["clear_refusal"])
+        self.assertEqual("input_error", self.clear(token=token)["status"])
+        self.assertEqual("refused", self.read_only_data()["resume"])
+
+
+class HaltTokenDeliveryTests(TokenHalt):
+    """Every answer that records a halt says whether the token reached the owner's terminal."""
+
     def test_the_halt_answer_reports_whether_the_token_reached_the_terminal(self) -> None:
         for delivered, expected in ((True, "shown_on_owner_terminal"), (False, "not_delivered")):
             with self.subTest(delivered=delivered):
@@ -369,70 +440,6 @@ class HaltClearTokenTests(TokenHalt):
                 self.assertTrue('["clear_token"]' in (runner / name).read_text(encoding="utf-8"), name)
         guidance = (REPO / "speckit-pro/skills/speckit-autopilot/references/stop-policy.md").read_text(encoding="utf-8")
         self.assertTrue("Every answer that records a halt carries `clear_token`" in guidance, "stop-policy.md")
-
-    def test_wrong_missing_and_reused_tokens_refuse_and_the_halt_stands(self) -> None:
-        first = self.halt()
-        for attempt in ({"token": first[:-1] + ("A" if first[-1] != "A" else "B")}, {"token": ""}, {},
-                        {"confirm_reason": "tampering_or_forged_evidence"}, {"token": 7}):
-            with self.subTest(attempt=sorted(attempt)):
-                self.assertEqual("input_error", self.clear(**attempt)["status"])
-                self.assertEqual("refused", self.read_only_data()["resume"])
-        self.assertEqual("ok", self.clear(token=first)["status"])
-        self.assertEqual("input_error", self.clear(token=first)["status"], "a used token clears nothing")
-        second = self.halt("second trigger")
-        self.assertNotEqual(first, second)
-        self.assertEqual("input_error", self.clear(token=first)["status"])
-        self.assertEqual("second trigger", self.read_only_data()["record"]["evidence"])
-        self.assertEqual("harm_halt_active", self.write_attempt()["diagnostics"][0]["code"])
-
-    def test_dry_run_clear_reports_without_changing_state(self) -> None:
-        token = self.halt()
-        before = (self.root / RECORD).read_bytes()
-        for candidate, expected in ((token, True), ("wrong", False)):
-            with self.subTest(expected=expected):
-                planned = self.clear("dry_run", token=candidate)
-                self.assertEqual("ok", planned["status"], planned)
-                self.assertEqual((expected, True, "refused"), (planned["data"]["would_clear"],
-                                 planned["data"]["halted"], planned["data"]["resume"]))
-                self.assertEqual(before, (self.root / RECORD).read_bytes())
-        self.assertEqual("ok", self.clear(token=token)["status"], "a dry run does not spend the token")
-
-    def test_a_refused_second_trigger_releases_its_lock_and_the_owner_token_still_clears(self) -> None:
-        token = self.halt()
-        second = self.call("apply", action="halt", reason="concurrent_writer", evidence="second evidence",
-                           last_safe_state=SAFE_STATE)
-        self.assertEqual("input_error", second["status"], second)
-        self.assertIn("already stands", json.dumps(second))
-        self.assertFalse((self.root / RECORD).with_suffix(".lock").exists(), "a refused trigger changed nothing")
-        self.assertTrue(self.clear("dry_run", token=token)["data"]["would_clear"])
-        cleared = self.clear(token=token)
-        self.assertEqual("ok", cleared["status"], cleared)
-        self.assertFalse((self.root / RECORD).exists())
-
-    def test_dry_run_and_apply_agree_while_the_publication_lock_is_held(self) -> None:
-        token = self.halt()
-        (self.root / RECORD).with_suffix(".lock").mkdir()
-        planned = self.clear("dry_run", token=token)
-        self.assertEqual("ok", planned["status"], planned)
-        self.assertFalse(planned["data"]["would_clear"], planned)
-        self.assertIn("locked", planned["data"]["clear_refusal"])
-        self.assertEqual("input_error", self.clear(token=token)["status"])
-        self.assertEqual("refused", self.read_only_data()["resume"])
-
-    def test_a_record_without_a_valid_token_digest_refuses_every_clear(self) -> None:
-        for stored in (None, "", "\u00e9" * 64, "A" * 64, 7):
-            with self.subTest(stored=stored):
-                self.setUp()
-                self.halt()
-                record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
-                record.pop("clear_token_sha256")
-                if stored is not None:
-                    record["clear_token_sha256"] = stored
-                (self.root / RECORD).write_text(json.dumps(record), encoding="utf-8")
-                for mode in ("dry_run", "apply"):
-                    self.assertEqual("input_error", self.clear(mode, token="anything")["status"])
-                self.assertTrue((self.root / RECORD).exists())
-
 
 class HaltTokenExposureTests(TokenHalt):
     """The documented human request clears, and no agent-readable output or file holds the token."""
@@ -596,7 +603,8 @@ class OwnerTerminalGuardTests(OwnerTerminalCase):
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                               for case in (HarmHaltTests, HarmHaltRecordTests, HaltDispatchTests, HaltConcurrencyTests,
-                                           HaltPublicationFailureTests, HaltClearTokenTests, HaltTokenExposureTests,
+                                           HaltPublicationFailureTests, HaltClearTokenTests, HaltClearDryRunTests,
+                                           HaltTokenDeliveryTests, HaltTokenExposureTests,
                                            OwnerTerminalWalkTests, OwnerTerminalWriteTests, OwnerTerminalGuardTests))
 
 

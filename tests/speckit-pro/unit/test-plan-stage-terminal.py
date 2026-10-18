@@ -595,6 +595,8 @@ class HaltObstructionTests(HaltPublicationFixture):
                                                  {"workflow_file": WORKFLOW, "action": "start"})
                 self.assertEqual("ok", handle_request(request)["status"])
 
+
+class RecordedPlanStopTests(HaltPublicationFixture):
     def test_real_plan_stop_supplies_registered_reason_and_text_state(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
