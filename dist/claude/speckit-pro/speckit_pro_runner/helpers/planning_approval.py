@@ -264,11 +264,16 @@ def spec_map_status(match: re.Match[str]) -> str:
 
 # Generated rows echo runtime inputs the inventory excludes (.process/prs.json and
 # runtime file names). A row is progress only when each value is a bounded token:
-# no whitespace, Markdown or HTML syntax, URL scheme, address, or www. autolink.
-NAVIGATION_TOKEN = r"(?:PR#-?[0-9]+|[A-Za-z0-9_.+-]+(?:/[A-Za-z0-9_.+-]+)*)"
+# no whitespace, active Markdown or HTML syntax, URL scheme, address, or www. autolink.
+# Underscores are literal only inside ASCII words; punctuation-adjacent runs
+# can delimit GFM emphasis, including inside a backlink's label.
+NAVIGATION_COMPONENT = r"(?:[A-Za-z0-9.+-]|(?<=[A-Za-z0-9])_+(?=[A-Za-z0-9]))+"
+NAVIGATION_TOKEN = rf"(?:PR#-?[0-9]+|{NAVIGATION_COMPONENT}(?:/{NAVIGATION_COMPONENT})*)"
 NAVIGATION_ROWS = (
-    rf"\|(?: (?:{NAVIGATION_TOKEN}(?:, {NAVIGATION_TOKEN})*)? \|)+",  # PRS v2 header and rows
-    r"\|(?:-+\|)+",  # PRS v2 table rule
+    # PRS v2: seven scalar columns, a Scope list, and scalar Verification.
+    rf"\|(?: {NAVIGATION_TOKEN} \|){{7}} "
+    rf"(?:{NAVIGATION_TOKEN}(?:, {NAVIGATION_TOKEN})*)? \| {NAVIGATION_TOKEN} \|",
+    r"\|(?:-+\|){9}",  # PRS v2 table rule
     rf"{NAVIGATION_TOKEN} {SPEC_INDEX_SEPARATOR} {NAVIGATION_TOKEN} {SPEC_INDEX_SEPARATOR} {NAVIGATION_TOKEN}",  # PRS v1
     rf"- \[({NAVIGATION_TOKEN})\]\(\1\)",  # BACKLINKS
 )
