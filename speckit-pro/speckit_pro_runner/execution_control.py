@@ -920,7 +920,8 @@ def _exhausted_cause(ledger: dict[str, Any], check: str) -> dict[str, Any] | Non
                        if item.get("retry_ladder", {}).get("command_sha256") == check),
                       key=lambda pair: pair[1]["reserved_at"])
     failing = _newest_failing_record(ledger, check)
-    if not attempts or next_rung([item for _, item in attempts]) is not None or failing is None or failing["failing"] == []:
+    if (not attempts or next_rung([item for _, item in attempts]) is not None or failing is None
+            or not _fails_again(ledger, check, [item for _, item in attempts])):
         return None
     return {**{key: failing[key] for key in ("command_id", "output_sha256", "failing", "recorded_at")},
             "attempts": [{"dispatch_id": dispatch_id, "rung": item["retry_ladder"]["rung"], "outcome": item["outcome"],

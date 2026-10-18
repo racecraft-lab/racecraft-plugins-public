@@ -8,7 +8,7 @@ work, never completion, and no later resume or human disposition changes that.
 The record lives at `ledger["blocked_work"]`:
 
 - `causes[check_sha256]` keeps the evidence once per cause: the check, its final failure
-  and every ladder attempt.
+  every ladder attempt, retained work and the unblock note.
 - `entries["task:T003"]` or `entries["gate:G4"]` keeps one blocked unit. An exhausted unit
   is a root. A dependent skip links to its roots and records no attempt of its own.
 
@@ -23,7 +23,7 @@ BLOCK_EXHAUSTED_CHECK = "block-exhausted-check"
 ACCEPT_BLOCKED_GAP = "accept-blocked-gap"
 GAP_ACCEPTED = "gap_accepted"
 
-ENTRY_KEYS = {"kind", "unit", "reason", "cause", "roots", "attempted", "retained_work", "verification", "unblock",
+ENTRY_KEYS = {"kind", "unit", "reason", "causes", "roots", "attempted", "retained_work", "verification", "unblock",
               "plan_sha256", "blocked_at", "disposition"}
 DISPOSITION_KEYS = {"decision", "event_id", "recorded_at"}
 
@@ -48,7 +48,7 @@ class Block(NamedTuple):
 
 
 def _entry(block: Block, kind: str, unit: str, **fields: Any) -> dict[str, Any]:
-    record = {"kind": kind, "unit": unit, "reason": "check_exhausted", "cause": block.check, "roots": [],
+    record = {"kind": kind, "unit": unit, "reason": "check_exhausted", "causes": [block.check], "roots": [],
               "attempted": True, "retained_work": block.retained_work, "verification": "failed",
               "unblock": block.unblock, "plan_sha256": block.plan_sha256, "blocked_at": block.now,
               "disposition": None, **fields}
@@ -58,17 +58,20 @@ def _entry(block: Block, kind: str, unit: str, **fields: Any) -> dict[str, Any]:
 
 
 def dependents(depends_on: dict[str, list[str]], roots: list[str]) -> list[str]:
-    """Every task that depends on a root, directly or through other tasks, in plan order."""
+    """Every task that depends on a root, regardless of the sidecar object ordering."""
     blocked = set(roots)
-    for task_id, deps in depends_on.items():  # the sidecar lists prerequisites first
-        if blocked.intersection(deps):
-            blocked.add(task_id)
+    while True:
+        discovered = {task_id for task_id, deps in depends_on.items() if blocked.intersection(deps)} - blocked
+        if not discovered:
+            break
+        blocked.update(discovered)
     return [task_id for task_id in depends_on if task_id in blocked and task_id not in roots]
 
 
 def block_exhausted_check(record: dict[str, Any], block: Block) -> list[str]:
-    """Record the block and return the entry IDs it created. A blocked unit stays blocked; a repeat adds roots only."""
-    record["causes"].setdefault(block.check, block.cause)
+    """Record the block and return the entry IDs it created. A blocked unit stays blocked; a repeat adds cause and root links."""
+    record["causes"].setdefault(block.check, {**block.cause, "retained_work": block.retained_work,
+                                            "unblock": block.unblock})
     entries = record["entries"]
     if block.gate is not None:
         roots = {entry_id("gate", block.gate): _entry(block, "gate", block.gate)}
@@ -82,8 +85,10 @@ def block_exhausted_check(record: dict[str, Any], block: Block) -> list[str]:
         if key not in entries:
             entries[key] = entry
             created.append(key)
-        elif entry["reason"] == "dependency_blocked" and entries[key]["reason"] == "dependency_blocked":
-            entries[key]["roots"] = sorted({*entries[key]["roots"], *entry["roots"]})
+        else:
+            entries[key]["causes"] = sorted({*entries[key]["causes"], block.check})
+            if entry["reason"] == "dependency_blocked" and entries[key]["reason"] == "dependency_blocked":
+                entries[key]["roots"] = sorted({*entries[key]["roots"], *entry["roots"]})
     return created
 
 
@@ -125,7 +130,9 @@ def validate_blocked_work(ledger: dict[str, Any]) -> None:
     for key, entry in record["entries"].items():
         if (not isinstance(entry, dict) or not ENTRY_KEYS <= set(entry) <= ENTRY_KEYS | {"tdd_unit"}
                 or key != entry_id(str(entry["kind"]), str(entry["unit"])) or entry["kind"] not in {"task", "gate"}
-                or entry["cause"] not in record["causes"] or entry["reason"] not in {"check_exhausted", "dependency_blocked"}
+                or not isinstance(entry["causes"], list) or not entry["causes"]
+                or any(cause not in record["causes"] for cause in entry["causes"])
+                or entry["reason"] not in {"check_exhausted", "dependency_blocked"}
                 or (entry["reason"] == "dependency_blocked") != (not entry["attempted"])
                 or (entry["reason"] == "dependency_blocked") != bool(entry["roots"])
                 or ("tdd_unit" in entry) != (entry["kind"] == "task")

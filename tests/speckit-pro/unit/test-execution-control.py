@@ -4017,12 +4017,41 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
         for dependent in (near, far):
             self.assertEqual((dependent["attempted"], dependent["roots"], dependent["reason"]),
                              (False, ["task:T001"], "dependency_blocked"))
-            self.assertEqual(dependent["cause"], root["cause"])
+            self.assertEqual(dependent["causes"], root["causes"])
         cause = blocked["ledger"]["blocked_work"]["causes"][self.check]
         self.assertEqual([attempt["rung"] for attempt in cause["attempts"]], [1, 2, 3])
         self.assertEqual((root["retained_work"], root["unblock"], root["verification"]),
                          (["src/alpha"], "fix the check", "failed"))
         self.assertIn("- [ ] T001", (self.root / "feature/tasks.md").read_text())
+
+    def test_json_task_order_does_not_hide_transitive_dependents(self):
+        path = self.root / "feature/.process/task-execution.json"
+        metadata = json.loads(path.read_text())
+        metadata["tasks"] = dict(reversed(list(metadata["tasks"].items())))
+        path.write_text(json.dumps(metadata))
+        blocked = self.block(owner_tasks=["T001"])
+        self.assertEqual(sorted(self.entries(blocked)), ["task:T001", "task:T002", "task:T003"])
+
+    def test_a_final_attempt_needs_fresh_failure_evidence_before_blocking(self):
+        argv = ("python3", "fresh.py")
+        check = self.exhaust(argv, rungs=2)
+        self.now += 10
+        self.invoke("reserve-retry-rung", dispatch_id="fresh-3", host="claude", command_sha256=check)
+        self.settle("fresh-3")
+        result = self.block(command_sha256=check, owner_tasks=["T001"])
+        self.assertEqual(result["reasons"], ["retry_ladder_not_exhausted"])
+        self.assertNotIn("blocked_work", result["ledger"])
+
+    def test_multiple_checks_preserve_each_cause_for_the_same_work(self):
+        other = self.exhaust(("python3", "other.py"))
+        self.block(owner_tasks=["T001"])
+        blocked = self.block(command_sha256=other, owner_tasks=["T001"],
+                             retained_work=["src/beta"], unblock="repair other check")
+        entry = self.entries(blocked)["task:T001"]
+        self.assertEqual(set(entry["causes"]), {self.check, other})
+        cause = blocked["ledger"]["blocked_work"]["causes"][other]
+        self.assertEqual((cause["retained_work"], cause["unblock"]), (["src/beta"], "repair other check"))
+        self.assert_schema_valid(blocked["ledger"])
 
     def test_an_ownerless_check_blocks_its_gate_and_no_task(self):
         blocked = self.block(gate="G4")
