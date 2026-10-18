@@ -35,10 +35,14 @@ class PlanningHelperFixture(unittest.TestCase):
         }.items():
             (self.feature / name).write_text(text)
 
+    def runner_environment(self):
+        """The environment entries the runner child receives on top of the test's own."""
+        return {"PYTHONPATH": str(self.runner_root)}
+
     def run_helper(self, helper_id, inputs, mode="read_only"):
         request = dict(schema_version="1.0", helper_id=helper_id, operation=helper_id,
                        mode=mode, inputs=inputs)
-        _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
+        _, reply, _ = run_runner(request, cwd=self.root, extra_env=self.runner_environment())
         return reply
 
     def assertRefused(self, reply, reason):

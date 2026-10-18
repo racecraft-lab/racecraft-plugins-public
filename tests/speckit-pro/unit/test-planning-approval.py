@@ -2,7 +2,9 @@
 """Planning approval at the portable runner request seam."""
 import json
 import re
+import shutil
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -43,6 +45,14 @@ class PlanningApprovalFixture(PlanningHelperFixture):
     def setUp(self):
         super().setUp()
         git(self.root, "remote", "add", "origin", "https://github.com/example/project.git")
+        # Record and admit read origin through the runner's trusted CLI probe, which skips a whole PATH
+        # directory when any entry in it cannot be authenticated, as on hosted CI runners. A private
+        # directory holding only a link to git keeps the check off the host's other PATH entries.
+        self.git_directory = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        (self.git_directory / "git").symlink_to(shutil.which("git"))
+
+    def runner_environment(self):
+        return {**super().runner_environment(), "PATH": str(self.git_directory)}
 
     def helper(self, helper_id, mode="read_only", **inputs):
         return self.run_helper(helper_id, {**self.helper_inputs(), **inputs}, mode=mode)
