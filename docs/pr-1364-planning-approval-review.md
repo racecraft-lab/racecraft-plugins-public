@@ -165,6 +165,13 @@ No new independent Daybreak verdict is claimed here.
   repository regeneration skips them. The preflight repair below tests the
   boundary from partial or absent navigation to an existing gated markerless
   map; these controls are not exemptions for that versioned map.
+- A caller-selected feature outside a direct child of `specs/`, such as
+  `docs/example` or `specs/group/feature`, can have a versioned markerless map
+  refused by record preflight while repository regeneration does not visit
+  that path. This is a fail-closed input limit, not a canonical-navigation
+  false pass. Native scaffolding places features directly under `specs/`, so
+  native writers do not produce this layout. The same non-native-location
+  limit already applied to maps with generated markers before this repair.
 - The assurance guard accepts its two explicit denial forms and does not infer
   arbitrary English negation. Obfuscated assurance terms split by HTML,
   entities, punctuation, or look-alike letters are outside its recognition;
