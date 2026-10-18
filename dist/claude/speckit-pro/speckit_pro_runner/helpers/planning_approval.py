@@ -14,6 +14,7 @@ from ..canonical_json import canonical_bytes
 from ..cli_probe import probe
 from ..formal.evidence import CHECKPOINT_ROWS, read_checkpoint, record_path
 from ..formal.primitives import CATALOG_PATH
+from ..github_remote import remote_urls
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import next_fence, require_fields, require_text, unique_object
 from ..task_execution import owned_path, task_definitions
@@ -458,9 +459,7 @@ def refused(field: str, reason: str) -> ValueError:
 def admit_repository(root: Path, repository: Any) -> None:
     """Bind the portable owner/name identity to this checkout's origin without network access."""
     origin = probe(root, ["git", "remote", "get-url", "origin"], allowed=("git",), timeout=10)
-    expected = {f"{prefix}{repository}{suffix}" for prefix in
-                ("https://github.com/", "git@github.com:", "ssh://git@github.com/") for suffix in ("", ".git")}
-    if origin["exit_status"] != 0 or origin["stdout_tail"] not in expected:
+    if origin["exit_status"] != 0 or origin["stdout_tail"] not in remote_urls(repository):
         raise refused("repository", "the approval does not identify this checkout's origin")
 
 

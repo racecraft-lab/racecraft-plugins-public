@@ -116,6 +116,13 @@ class RepositoryAdmissionTest(AdmissionFixture):
         self.refusal(self.call("admit"), "repository")
 
 
+    def test_github_remote_spellings_live_in_one_runner_module(self):
+        runner = HERE.parents[2] / "speckit-pro/speckit_pro_runner"
+        homes = sorted(str(path.relative_to(runner)) for path in runner.rglob("*.py")
+                       if "git@github.com" in path.read_text(encoding="utf-8"))
+        self.assertEqual(homes, ["github_remote.py"])
+
+
 class StageAdmissionTest(AdmissionFixture):
     def resolve(self, *args, feature_dir="specs/demo"):
         return self.helper("resolve-autopilot-stage", autopilot_args=list(args), feature_dir=feature_dir)

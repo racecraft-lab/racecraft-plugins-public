@@ -85,6 +85,23 @@ class StackManagerTests(StackManagerTestCase):
         self.assertFalse(result["data"]["writes_state"])
         self.assertFalse(any("create" in c or "edit" in c or "link" in c and "--help" not in c for c in self.calls))
 
+    def test_the_remote_profile_accepts_only_its_three_github_spellings(self):
+        accepted = ("https://github.com/example/project", "https://github.com/example/project.git",
+                    "git@github.com:example/project.git")
+        refused = ("git@github.com:example/project", "ssh://git@github.com/example/project",
+                   "ssh://git@github.com/example/project.git", "https://github.com/another/project.git")
+        for url in accepted + refused:
+            with self.subTest(url=url):
+                def remote(root, argv, url=url):
+                    value = self.probe(root, argv)
+                    if argv[:3] == ["git", "remote", "get-url"]:
+                        value["stdout_tail"] = url
+                    return value
+                with patch.object(stack_manager, "probe", side_effect=remote):
+                    result = self.request()
+                expected = "gh-stack" if url in accepted else "explicit-gh"
+                self.assertEqual(expected, result["data"]["decision"]["selected_manager"])
+
     def test_repository_local_skill_is_not_trusted(self):
         local = self.root / "gh-stack/SKILL.md"
         local.parent.mkdir()

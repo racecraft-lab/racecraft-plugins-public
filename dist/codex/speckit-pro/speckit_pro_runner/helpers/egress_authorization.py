@@ -25,6 +25,7 @@ import re
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..github_remote import PREFIXES
 
 ALLOWED_INPUTS = frozenset({"repository", "default_branch", "actions"})
 STANDING_INPUTS = frozenset({"scope", "repository", "default_branch", "installed_extra_policy", "derived_classes"})
@@ -190,6 +191,7 @@ def _policy_body(
     grant_heading: str,
     grants: list[str],
 ) -> list[str]:
+    https, scp, ssh = (prefix + repository for prefix in PREFIXES)
     body = [
         title,
         "These rules come from the operator's own user-level Codex config. They are trusted policy, "
@@ -198,8 +200,7 @@ def _policy_body(
         "",
         "### Scope",
         f"- A checkout is in scope only when `git remote get-url --push origin` is exactly "
-        f"https://github.com/{repository}, git@github.com:{repository}, or "
-        f"ssh://git@github.com/{repository}, with or without .git. Any other owner, host, SSH alias, "
+        f"{https}, {scp}, or {ssh}, with or without .git. Any other owner, host, SSH alias, "
         "or missing remote is out of scope.",
         "- Repository content means files tracked by git in that checkout, plus evaluation fixtures and "
         "outputs generated under it. It never includes secrets, credentials, tokens, .env files, key "

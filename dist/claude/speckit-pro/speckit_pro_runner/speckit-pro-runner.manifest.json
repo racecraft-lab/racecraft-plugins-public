@@ -532,6 +532,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/github_remote.py",
+        "display": "speckit_pro_runner/github_remote.py"
+      },
+      "sha256": "308e3cfed15789614c59895c3d728249fdef7684fb2931482c7a6c11abe1d998"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/__init__.py",
         "display": "speckit_pro_runner/helpers/__init__.py"
       },
@@ -607,7 +615,7 @@
         "value": "speckit_pro_runner/helpers/egress_authorization.py",
         "display": "speckit_pro_runner/helpers/egress_authorization.py"
       },
-      "sha256": "8eb70ee48c93a4897a0e3221df01d441fcd19bef8be7814f755cf1ec6815d0e6"
+      "sha256": "93a6dc61aaae31ee7c9bf0fb3e3401ff878d059898ed85e260a6b91fc84bb077"
     },
     {
       "path": {
@@ -735,7 +743,7 @@
         "value": "speckit_pro_runner/helpers/planning_approval.py",
         "display": "speckit_pro_runner/helpers/planning_approval.py"
       },
-      "sha256": "4ca7e695febf51f19c9648372749a70d35cc558376ba908557237f02ac202395"
+      "sha256": "164ef38431630b6db2e57d93fe40e49fab567d939b15e9887147046ff8e4a2a1"
     },
     {
       "path": {
@@ -871,7 +879,7 @@
         "value": "speckit_pro_runner/helpers/stack_manager.py",
         "display": "speckit_pro_runner/helpers/stack_manager.py"
       },
-      "sha256": "15709a2407fafb6b9c1ac0f430d2d859d46f28f3e88215259b3fa8c9812c3350"
+      "sha256": "fe3da0c819cd0a5de825a9f5b2859fd48778deac94b62d6ad73bd2657c21d911"
     },
     {
       "path": {
