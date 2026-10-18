@@ -447,6 +447,51 @@ def write_approval(root: Path, target: Path, record: dict[str, Any], snapshot: d
             raise ValueError("approval record was written; map refresh failed; regenerate navigation before verification") from error
 
 
+def refused(field: str, reason: str) -> ValueError:
+    return ValueError(f"planning approval field {field}: {reason}; return to plan review")
+
+
+def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, Any]:
+    """Admit implement only for a valid record bound to the current manifest, else name the failing field."""
+    directory = root / feature / "plan-approvals"
+    path = f"{feature}/plan-approvals/{binding['manifest_digest']}.json"
+    if not (root / path).is_file():
+        if any(directory.glob("*.json")):
+            raise refused("manifest_digest", "planning inputs changed since the recorded approval")
+        raise refused("record", "no plan approval record exists for this feature")
+    try:
+        stored = json.loads(captured(root, path), object_pairs_hook=unique_object)
+    except ValueError as error:
+        raise refused("record", f"the record is not valid JSON ({error})") from error
+    if not isinstance(stored, dict):
+        raise refused("record", "the record is not a JSON object")
+    for field, reason in (("canary_issued", "a canary-issued record never admits production"),
+                          ("withdrawn_by", "the approval was withdrawn"),
+                          ("superseded_by", "a later approval supersedes this record")):
+        if stored.get(field) not in (False, None):
+            raise refused(field, reason)
+    try:
+        refuse_superseded(root, path)
+    except ValueError as error:
+        raise refused("superseded_by", "a later approval supersedes this record") from error
+    computed = {"manifest", "manifest_digest", "schema_version", "assurance", "feature_dir", "evidence"}
+    try:
+        record = approval_record(root, feature, {k: v for k, v in stored.items() if k not in computed}, binding)
+    except ValueError as error:
+        # Finding checks word their refusal "<finding id>: ..."; other refusals carry no such prefix.
+        identity, _, _ = str(error).partition(": ")
+        raise refused("findings." + identity if identity in stored.get("findings", {}) else "record", str(error)) from error
+    if record != stored:
+        raise refused("reviewed_evidence", "record bindings or reviewed evidence changed")
+    return {"admitted": True, "manifest_digest": binding["manifest_digest"], "record_path": path}
+
+
+def admit_implement(root: Path, feature_dir: str, workflow_file: str) -> dict[str, Any]:
+    """The one implement-entry check; the stage resolver calls it for every implement entry."""
+    feature = owned_path(feature_dir, root)
+    return admission(root, feature, planning_manifest(root, feature, workflow_file))
+
+
 def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     action = inputs.get("action")
     required = {"feature_dir", "workflow_file", "action"} | ({"approval"} if action == "record" else set())
@@ -455,6 +500,8 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     binding = planning_manifest(root, feature, fields["workflow_file"])
     if action == "manifest" and mode == "read_only":
         return {**binding, "writes_state": False}
+    if action == "admit" and mode == "read_only":
+        return {**admission(root, feature, binding), "writes_state": False}
     path = feature + "/plan-approvals/" + binding["manifest_digest"] + ".json"
     target = root / path
     snapshot = snapshot_write_target(target, root)

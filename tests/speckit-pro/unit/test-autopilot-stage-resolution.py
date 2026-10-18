@@ -37,7 +37,8 @@ if str(PLUGIN_ROOT) not in sys.path:
 from runner_invocation import run_runner as invoke_runner, runner_env  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
-from speckit_pro_runner.helpers import read_only  # noqa: E402
+from speckit_pro_runner.helpers import planning_approval, read_only  # noqa: E402
+from unittest.mock import patch  # noqa: E402
 
 COVERAGE_VALIDATOR = (
     PLUGIN_ROOT
@@ -416,10 +417,10 @@ AUTO_DETECTION_CASES = (
         ("Analyze", "⏳ Pending"),
     ),
     (
-        "every predicate row terminal resolves implement",
+        "every predicate row terminal still resolves plan, never implement",
         PLANNING_COMPLETE,
         [],
-        "implement",
+        "plan",
         "auto-detect",
         (),
     ),
@@ -916,7 +917,7 @@ ENVELOPE_KEY_CASES = (
 # (contracts/stage-corroboration.md:44-46, :204-207).
 # (argv, the stage it resolves against a planning-complete workflow file)
 CORROBORATION_TRIGGER_CASES = (
-    ([], "implement"),
+    ([], "plan"),
     (["--stage", "plan"], "plan"),
     (["--stage", "implement"], "implement"),
     (["--stage", "full"], "full"),
@@ -1027,10 +1028,13 @@ def resolve_stage(
         inputs: dict[str, object] = {
             "workflow_file": "stage-workflow.md",
             "autopilot_args": args or [],
+            "feature_dir": ".",
         }
         if observation is not OBSERVATION_ABSENT:
             inputs["pr_observation"] = observation
-        return read_only.resolve_autopilot_stage(inputs, repo_root)
+        # Admission has its own tests (test-implement-admission.py); these fixtures are about stage choice.
+        with patch.object(planning_approval, "admit_implement", return_value={"admitted": True}):
+            return read_only.resolve_autopilot_stage(inputs, repo_root)
 
 
 def resolve_envelope(
@@ -1594,7 +1598,7 @@ class AutoDetectionTests(unittest.TestCase):
 
     def test_the_basis_reports_completion_when_no_row_is_open(self) -> None:
         envelope = resolve_envelope(workflow_document(PLANNING_COMPLETE))
-        self.assertEqual(envelope["stage"], "implement")
+        self.assertEqual(envelope["stage"], "plan")
         self.assertNotIn("None", str(envelope["basis"]))
         self.assertTrue(str(envelope["basis"]).startswith("auto-detect"), envelope["basis"])
 
@@ -1646,24 +1650,24 @@ class OpenAnalysisFindingTests(unittest.TestCase):
     def test_a_resolved_row_lets_planning_complete(self) -> None:
         text = OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, RESOLVED_FINDING_ROW)
         envelope = resolve_envelope(text)
-        self.assertEqual(envelope["stage"], "implement")
+        self.assertEqual(envelope["stage"], "plan")
         self.assertTrue(envelope["planning_complete"])
 
-    def test_a_legacy_workflow_without_the_table_still_resolves_implement(self) -> None:
+    def test_a_legacy_workflow_without_the_table_still_resolves_plan(self) -> None:
         text = OPEN_FINDING_WORKFLOW.split("## Analysis Results", 1)[0]
         envelope = resolve_envelope(text)
-        self.assertEqual(envelope["stage"], "implement")
+        self.assertEqual(envelope["stage"], "plan")
         self.assertTrue(envelope["planning_complete"])
 
     def test_a_commented_out_open_row_is_not_evidence(self) -> None:
         text = OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, f"<!-- {OPEN_FINDING_ROW} -->")
-        self.assertEqual(resolve_envelope(text)["stage"], "implement")
+        self.assertEqual(resolve_envelope(text)["stage"], "plan")
 
     def test_g6_and_stage_resolution_agree_through_the_runner(self) -> None:
         """The skill's G6 and stage requests, run on one workflow, give one verdict."""
         variants = {
             "open": (OPEN_FINDING_WORKFLOW, 1, False, "plan"),
-            "resolved": (OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, RESOLVED_FINDING_ROW), 0, True, "implement"),
+            "resolved": (OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, RESOLVED_FINDING_ROW), 0, True, "plan"),
         }
         for name, (text, high, complete, stage) in variants.items():
             with self.subTest(variant=name), tempfile.TemporaryDirectory() as tmp:

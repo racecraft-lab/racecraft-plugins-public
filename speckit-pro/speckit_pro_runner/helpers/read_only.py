@@ -2935,7 +2935,8 @@ def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
     is what decided it, because that is the row they must act on.
     """
     if first_open is None:
-        return "auto-detect: every planning phase and the confidence gate are terminal"
+        return ("auto-detect: every planning phase and the confidence gate are terminal; planning ends at plan review,"
+                " so implement needs an explicit --stage implement and a valid plan approval record")
     phase, status = first_open
     if status and status.endswith(ANALYSIS_OPEN_FINDINGS_STATUS):
         return (
@@ -2987,10 +2988,26 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         source = "auto-detect"
         stage = "plan"
         basis = "artifact review handoff is unverified; resume the plan terminal step"
+    elif parsed["from_phase"] == "implement":
+        source = "from-phase"
+        stage = "implement"
+        basis = "explicit --from-phase implement"
     else:
+        # Planning ends at the review artifacts and draft PR; implement is only ever an explicit entry.
         source = "auto-detect"
-        stage = "implement" if signals["planning_complete"] else "plan"
+        stage = "plan"
         basis = auto_detect_basis(signals["first_open"])
+    approval = None
+    if stage in ("implement", "full"):
+        # Function-level import: planning_approval imports this module at load time.
+        from .planning_approval import admit_implement
+        feature_dir = inputs.get("feature_dir")
+        if not isinstance(feature_dir, str) or not feature_dir:
+            return make_result("", "error: feature_dir is required to admit an implement entry\n", 2)
+        try:
+            approval = admit_implement(repo_root, feature_dir, workflow_raw)
+        except ValueError as exc:
+            return make_result("", f"error: {exc}\n", 2)
     # Blanked the way `workflow_stage_signals` blanks them, so a commented-out
     # row can never become evidence. `corroboration` is always present, so a run
     # that could not check stays distinguishable from one that checked and agreed.
@@ -3008,6 +3025,7 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "confidence_gate_status": signals["confidence_gate_status"],
         "from_phase": parsed["from_phase"],
         "corroboration": corroboration,
+        **({"planning_approval": approval} if approval else {}),
         **({"artifact_review": review} if review["status"] != "absent" else {}),
         **({"formal_checkpoint": formal} if formal["required"] else {}),
     }))
