@@ -13,7 +13,7 @@ TEST_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TEST_DIR.parents[2]
 sys.path[:0] = [str(REPO_ROOT / "speckit-pro"), str(TEST_DIR.parent / "lib")]
 
-from host_skill_views import host_skill_root  # noqa: E402
+from host_skill_views import host_skill_root, rendered_section  # noqa: E402
 from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -186,9 +186,7 @@ class TasksHookHandoffTests(OptionalTasksHookFixture):
 
 def nested_section(host: str) -> str:
     """The nested-mode part of the autopilot skill as this host loads it, whitespace folded."""
-    text = (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")
-    start = text.index("### Nested mode: phase drivers")
-    return " ".join(text[start:text.index("\n## ", start)].split())
+    return rendered_section(host, "speckit-autopilot/SKILL.md", "### Nested mode: phase drivers", "\n## ")
 
 
 # What the root must say in nested mode, and what each host's section must leave out.
@@ -232,8 +230,8 @@ class SkillContractTests(unittest.TestCase):
         """A driver's progress message wakes the root's wait for one more full-context turn (issue 1317)."""
         rule = "Your envelope is your only message to the parent"
         for host in HOST_TOOLS:
-            reference = (host_skill_root(host) / "speckit-autopilot/references/phase-driver.md").read_text(encoding="utf-8")
-            driver = " ".join(reference[reference.index("## Nested-mode phase driver"):reference.index("## Phase executor summary")].split())
+            driver = rendered_section(host, "speckit-autopilot/references/phase-driver.md",
+                                      "## Nested-mode phase driver", "## Phase executor summary")
             with self.subTest(host=host):
                 if host == "codex":
                     self.assertIn(rule, driver)

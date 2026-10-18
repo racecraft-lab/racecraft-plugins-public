@@ -1071,7 +1071,8 @@ your own here.
    ends the sequence with `outcome: stopped`.
 4. The parent dispatches `artifact-preview-observer` for each page in `preview.observer_dispatches`; the isolated observer never inherits general repository tools. The list is empty, and this step is skipped, on a headless run and when the readiness record shows no preview surface.
 5. Validate and commit/push the workflow-only preview evidence. Skip this step when step 4 was skipped.
-6. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. For `outcome: stopped`, the answer's `report` is the stop report for that shape and its `stop_label` is the one marker to print instead, as the precedence rule under the stop report requires.
+6. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. For `outcome: completed`, the answer's `report` is the whole stop report: print it unchanged, then its `stop_label`. For `outcome: stopped`, the answer's `report` is the stop report for that shape and its `stop_label` is the one marker to print instead, as the precedence rule under the stop report requires.
+
 
 
 **Read the [Artifact Review Handoff contract](./artifact-review.md) before step 4.**
@@ -1211,7 +1212,9 @@ failure shape names the step that failed, the state it left behind, and the
 resume path — one line of substance each, in the style Step 0.6c already uses, so
 the report alone is enough to hand off.
 
-- **Emission ran.** Carry the pull request URL, the artifact index, generation
+- **Emission ran.** On `outcome: completed` the helper's `report` is this
+  report; print it as step 6 says. After a preview observer ran, write it
+  yourself. Carry the pull request URL, the artifact index, generation
   gaps, per-page preview dispositions and blockers, direct local file links, and
   resume instructions. Do not report the review handoff complete while previews
   remain unverified; publication stays successful. Report any failure to commit

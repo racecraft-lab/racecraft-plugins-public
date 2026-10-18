@@ -544,7 +544,8 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    `.claude/speckit-pro.local.md` or
    `.codex/speckit-pro.local.md` (see prerequisites.md §Step 0.6).
 6b. **Resolve pre-Implement confidence gate mode** — run runner helper
-   `resolve-confidence-mode` with the invocation argv to resolve
+   `resolve-confidence-mode` with the invocation argv as
+   `inputs.autopilot_args` (an array of strings) to resolve
    the mode for G6.5 (precedence: `--strict` / `--advisory` flag
    in argv > `confidence_gate_mode` in `.claude/speckit-pro.local.md`
    or `.codex/speckit-pro.local.md` (the helper checks both default
@@ -556,7 +557,8 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    resolver at G6.5; G6.5 reads `CONFIDENCE_GATE_MODE` directly.**
    See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
 6c. **Resolve the stage** — run runner helper `resolve-autopilot-stage`
-   with the invocation argv and the workflow file path, and
+   with the invocation argv as `inputs.autopilot_args`, the workflow file path
+   as `inputs.workflow_file`, and
    `inputs.host` set to `codex`.
    The runner reads that host's readiness record for the preview surface. It returns one
    JSON envelope; record `stage` as `AUTOPILOT_STAGE` and keep `source`,
