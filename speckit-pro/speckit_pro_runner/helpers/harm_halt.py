@@ -186,6 +186,16 @@ def outermost_terminal() -> str | None:
     return None
 
 
+def write_terminal_payload(descriptor: int, payload: bytes) -> bool:
+    """Complete the terminal frame, refusing a write that makes no progress."""
+    while payload:
+        written = os.write(descriptor, payload)
+        if written <= 0:
+            return False
+        payload = payload[written:]
+    return True
+
+
 def show_on_owner_terminal(token: str) -> bool:
     """Write the token to the owner's terminal only; True when written. Any doubt withholds it."""
     if os.environ.get(TERMINAL_SWITCH) == "off":
@@ -199,13 +209,13 @@ def show_on_owner_terminal(token: str) -> bool:
             device = os.fstat(descriptor)
             if not stat.S_ISCHR(device.st_mode) or device.st_rdev in runner_terminals():
                 return False
-            os.write(descriptor, ("\r\n\r\nspeckit-pro harm halt: one-time clear token (shown once, only here):\r\n"
-                                  f"{token}\r\n\r\n").encode("ascii"))
+            return write_terminal_payload(descriptor, (
+                "\r\n\r\nspeckit-pro harm halt: one-time clear token (shown once, only here):\r\n"
+                f"{token}\r\n\r\n").encode("ascii"))
         finally:
             os.close(descriptor)
     except (OSError, ValueError, IndexError, subprocess.SubprocessError):
         return False
-    return True
 
 
 def harm_halt(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, Any]:

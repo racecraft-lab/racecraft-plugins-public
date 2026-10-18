@@ -486,6 +486,34 @@ class OwnerTerminalWalkTests(OwnerTerminalCase):
                 self.assertFalse(self.shown(rows))
 
 
+class OwnerTerminalWriteTests(OwnerTerminalCase):
+    """Delivery is reported only after the entire terminal frame is written."""
+
+    FRAME = (b"\r\n\r\nspeckit-pro harm halt: one-time clear token (shown once, only here):\r\n"
+             b"tok-123\r\n\r\n")
+
+    def test_short_writes_are_completed_before_reporting_delivery(self) -> None:
+        frame = self.FRAME
+        write = os.write
+        for cut in (5, frame.index(b"tok-123") + 3, len(frame) - 2):
+            with self.subTest(cut=cut):
+                owner, name = self.terminal()
+                limits = iter((cut, len(frame)))
+                with patch.object(harm_halt.os, "write", side_effect=lambda fd, data: write(fd, data[:next(limits)])) as fault:
+                    self.assertTrue(self.shown({os.getpid(): (1, name)}))
+                self.assertEqual(2, fault.call_count)
+                self.assertEqual(frame[cut:], bytes(fault.call_args.args[1]))
+                self.assertIn(b"tok-123", self.drained(owner))
+
+    def test_zero_or_failed_writes_do_not_report_delivery(self) -> None:
+        for prefix in ([], [5], [self.FRAME.index(b"tok-123") + 3], [len(self.FRAME) - 2]):
+            for stop in (0, OSError("terminal write failed")):
+                with self.subTest(prefix=prefix, stop=stop):
+                    _, name = self.terminal()
+                    with patch.object(harm_halt.os, "write", side_effect=[*prefix, stop]):
+                        self.assertFalse(self.shown({os.getpid(): (1, name)}))
+
+
 class OwnerTerminalGuardTests(OwnerTerminalCase):
     """A terminal the runner's own streams use, or the suite switch, withholds the token."""
 
@@ -522,7 +550,7 @@ def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                               for case in (HarmHaltTests, HaltDispatchTests, HaltConcurrencyTests,
                                            HaltPublicationFailureTests, HaltClearTokenTests, HaltTokenExposureTests,
-                                           OwnerTerminalWalkTests, OwnerTerminalGuardTests))
+                                           OwnerTerminalWalkTests, OwnerTerminalWriteTests, OwnerTerminalGuardTests))
 
 
 if __name__ == "__main__":

@@ -18,6 +18,8 @@ this doc describes the current behavior.
   standard streams or controlling terminal use. Any doubt (no terminal, `ps`
   refused, not a character device, write failure) withholds the token. It
   never falls back to stdout, stderr, the environment or a file.
+  Short writes retry the unwritten suffix until the entire terminal frame is
+  delivered; a zero-byte return or `OSError` reports `not_delivered`.
 - `clear_halt` checks the token against the digest with `hmac.compare_digest`
   and removes the record under the same publication lock that recording uses.
   A wrong, empty, non-string or missing token, a record without a digest, and
@@ -47,6 +49,10 @@ this doc describes the current behavior.
   it, and no process-tree check can tell an agent's PTY from a human's. A halt
   already shown to the owner is never re-shown, and an ancestry deeper than the
   64-process walk withholds the token (review finding, fixed red-first).
+  **Accepted by the owner on 2026-10-18** as a known limit of this PR; it is
+  reachable when an agent launches the runner in an agent-readable detached
+  terminal. Follow-up #1382 tracks an out-of-band owner channel. This PR does
+  not close that gap.
 - **Codex sandbox.** The Codex macOS sandbox is reported to refuse `ps`. Then
   the token is withheld: the halt records and blocks, and only manual human
   recovery clears it. Not exercised live; the probe was refused in this session.
