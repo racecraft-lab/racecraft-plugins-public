@@ -116,7 +116,10 @@ These notes are accepted limits from the cross-host review at head
 - **One home for GitHub remote spellings (R1385-269bf837, fixed).**
   `speckit_pro_runner/github_remote.py` now holds the spellings. Admission,
   gh-stack qualification and the egress policy prose take them from it, and a
-  test fails when a second runner module spells a GitHub remote. The move kept
+  test fails when a second runner module spells the scp or `ssh://` form
+  (`git@github.com`). The test does not catch a copy that spells only the
+  `https://github.com/` form, because runner modules use that prefix for web
+  and package URLs that are not remotes. The move kept
   each caller's exact results, so two differences remain on purpose. gh-stack
   qualification still accepts only its three-spelling profile (no bare scp
   spelling, no `ssh://` URL), now named `GH_STACK_FORMS` in the owner; a test
