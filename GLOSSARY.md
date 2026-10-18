@@ -85,6 +85,12 @@ An isolated feedback worker timed out, failed to start, or exited unsuccessfully
 **Sweep session expiry**:
 The private feedback snapshot outlived its allowed lifetime. A fresh capture is required; elapsed time alone is not forged evidence (`sweep_session_expired`).
 
+**Missing sweep session**:
+A well-formed session id names no session in the private store: it was closed, mistyped, or never made. Nothing can be accepted from it, so the refusal is not forged evidence (`sweep_session_missing`), even for a receipt sent to it. An unsafe path where the session should be, such as a symlink, still halts, as does a replayed or cross-session receipt sent to a live session.
+
+**Unknown sweep comment**:
+A launch names a comment the session never captured. No capability is minted, and the caller's mistake is not forged evidence (`sweep_comment_unknown`).
+
 **Sweep isolation preflight gap**:
 An informational boundary check could not attest the runtime (`isolation_preflight_unavailable`). It reports readiness without launching a worker or creating a harm halt; capture and launch still enforce their boundaries.
 
