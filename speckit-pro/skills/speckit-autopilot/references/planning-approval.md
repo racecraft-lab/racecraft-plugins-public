@@ -37,6 +37,14 @@ planning and its tick state is progress. Other workflow planning-choice
 checkboxes bind checked/unchecked state; `x` and `X` are equivalent spellings.
 Fences remain literal planning content. Canonical SPEC-MOC navigation is compared
 with its generator's output rather than discarded as a whole region.
+The spec-index generator encodes contributor-controlled PR fields and backlink
+labels as literal text and percent-encodes backlink destinations. Runtime names
+and PR metadata can therefore refresh canonical navigation without introducing
+Markdown structure or external links. A complete canonical runtime table header
+and delimiter form one typed Implement write. Partial scaffolds and separator
+column or alignment changes remain bound; other workflow separators are retained.
+URL-shaped and email-shaped metadata is refused rather than auto-linked.
+Backlink labels may contain those characters inside their quoted relative links.
 
 Older projection digests may require a new approval after this change. Do not
 rewrite a prior approval record to adopt the new digest.

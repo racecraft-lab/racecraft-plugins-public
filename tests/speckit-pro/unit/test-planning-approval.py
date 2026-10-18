@@ -417,6 +417,7 @@ class DeclaredProgressTest(WorkflowFixture):
         recorded = self.call("record", "apply", approval=self.approval())
         self.assertEqual(recorded["status"], "ok", recorded)
         path.write_text(before + "\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n")
+        path.write_text(path.read_text() + "|---|---|---|---|---|---|---|---|\n")
         self.assertEqual(self.call()["data"]["manifest_digest"], recorded["data"]["record"]["manifest_digest"])
         self.assertEqual(self.call("verify")["status"], "ok")
 
