@@ -23,7 +23,8 @@ print its reason, redacted evidence, and last safe state before the stop marker.
 - `F1370-f201596b`: halt publication reuses the execution-control exclusive
   ledger lock and atomic JSON writer. A concurrent second trigger is refused;
   the first reason and evidence remain intact, including same-reason races.
-  An interrupted publication lock also refuses dispatch and resume.
+  An interrupted publication lock or unsafe ignore-marker directory also
+  refuses dispatch and resume.
 - `F1370-06475426`: agent `clear` requests remain refused. ADR 0004 removes
   operator-event paths; the remaining `execution_control._operator_event`
   validates a caller-supplied event shape, run binding and single use. It does
@@ -34,7 +35,9 @@ print its reason, redacted evidence, and last safe state before the stop marker.
   outside the agent runner remains necessary.
 - `R1370-9009d152`: ordinary process timeout, launch failure and non-zero exit
   return `sweep_process_failed`; TTL expiry returns `sweep_session_expired`.
-  Both refuse that sweep attempt without recording tampering. Boundary failure
+  Both refuse that sweep attempt without recording tampering. The parent also
+  revalidates its private session after a zero-exit worker and before decoding
+  its output, so expiry during either host launch remains recoverable. Boundary failure
   and invalid, replayed or cross-session receipts retain the halt.
 - `R1370-126d65ed`: payload requests check the same root the payload gate uses,
   including invocation beneath a nested `.specify` fixture.
@@ -50,7 +53,38 @@ payloads render the same guidance and ship the same Python policy. No skill
 entrypoint, agent source or Codex-only overlay changed in this repair, so no
 trigger-eval draft requires rebinding.
 
+## CI regression repair
+
+The earlier halt guard also runs before read-only helpers. Path-inspection
+errors now retain `internal_failure`, while an actual standing halt reports
+`expected_failure`; both refuse before dispatch. This preserves the existing
+phase-brief symlink boundary contract without weakening it. Informational
+Claude attestation is a pure preflight: an unavailable boundary there reports
+its closed reason without persisting a halt. Capture and launch boundary
+failures still persist one. This prevents the read-only helper fixture from
+leaving a halt that contaminates later G0 probes.
+
+## Human recovery
+
+Agent clearance remains refused. After resolving the cause, a human outside the
+agent workflow inspects and preserves the redacted record, confirms no halt
+publisher is live, then removes `.specify/harm-halt/halt.json` and any abandoned
+`.specify/harm-halt/halt.lock` directory. Removing only the record leaves an
+abandoned publication lock blocking resume. An unsafe
+`.specify/harm-halt/.gitignore` directory must also be repaired into the runner's
+regular ignore marker. Agents leave this recovery to the human; no repository field or reason string authorizes it.
+
 ## Known limits
+
+- The standards review's failed-worker attestation note does not leave reusable
+  evidence: the entire random runtime directory is enclosed by
+  `TemporaryDirectory`, which removes the attestation on every exception exit,
+  including non-zero process exits before the explicit unlink block.
+- The pure-read allowlist is manually audited policy, not a general filesystem
+  sandbox for future helper implementations. The six current entries read
+  registries or supplied/local text and return derived values; adding an entry
+  requires verifying its code path. The static test graph does not prove this
+  property for arbitrary future changes.
 
 - The standards re-review noted that `SchemaViolation` has no `reason`, so an
   invalid sweep request can also take the isolation fallback and persist a

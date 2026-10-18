@@ -68,7 +68,7 @@ not establish which output a later reader will consume or authorize hooks.
 _Avoid_: confirmed live output
 
 **Harm halt**:
-The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must clear it before resume.
+The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must resolve and clear it before resume. Agents cannot authorize its clearance.
 _Avoid_: integrity failure, hard stop
 
 **Sweep process failure**:
@@ -76,6 +76,9 @@ An isolated feedback worker timed out, failed to start, or exited unsuccessfully
 
 **Sweep session expiry**:
 The private feedback snapshot outlived its allowed lifetime. A fresh capture is required; elapsed time alone is not forged evidence (`sweep_session_expired`).
+
+**Sweep isolation preflight gap**:
+An informational boundary check could not attest the runtime (`isolation_preflight_unavailable`). It reports readiness without launching a worker or creating a harm halt; capture and launch still enforce their boundaries.
 
 **Terminal state**:
 Where a run may end without a harm halt: planning ready for review, or ready for UAT. The runner owns the closed list and answers "may this run end now?" from it.

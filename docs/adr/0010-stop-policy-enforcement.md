@@ -34,6 +34,12 @@ A harm halt fires only when the next action could cause damage a later review ca
 
 On a harm halt the runner stops all dispatch at once. No commit, push, PR edit or artifact publish follows the trigger, because a PR edit could spread a leaked secret. The runner writes a local halt record (reason, redacted trigger evidence, last safe state) and prints it. Resume is refused until a human clears the record with an explicit runner command.
 
+Implementation limit: an authenticated operator halt-clear command is not yet
+available. ADR 0004 removes the old approval paths, and their caller-supplied
+event fields cannot authenticate a human. The runner therefore refuses every
+agent clear request. Human recovery happens outside the agent workflow; the
+record and any abandoned publication lock must both be inspected before resume.
+
 ## Former stop sites
 
 | Today | Decision |

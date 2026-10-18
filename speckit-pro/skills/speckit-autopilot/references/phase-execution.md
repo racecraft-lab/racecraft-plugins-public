@@ -2852,6 +2852,11 @@ its reason, redacted evidence, and last safe state. Resume and state-changing
 requests remain refused while that record stands. Agent `clear` requests are
 refused; follow the human-inspection limit in the stop-policy reference.
 
+An informational `attest_claude` check instead reports
+`isolation_preflight_unavailable` without creating a halt. Record that readiness
+gap and keep the sweep unavailable; capture and launch still enforce their
+boundaries before any worker runs.
+
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool
 was absent, the tool was unauthenticated, the tool was rate-limited, or the tool

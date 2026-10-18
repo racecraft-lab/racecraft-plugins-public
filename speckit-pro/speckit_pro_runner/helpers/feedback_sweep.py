@@ -158,6 +158,8 @@ def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str
 def sweep_isolation_failure(violation: Exception, repo_root: Path, named_surface: str) -> dict[str, Any]:
     """Persist isolation harm before reporting it; observation failures keep their recoverable reason."""
     reason = getattr(violation, "reason", "isolation_boundary_unavailable")
+    if reason == "isolation_boundary_unavailable" and named_surface == "attest_claude":
+        reason = "isolation_preflight_unavailable"
     payload = {"status": "blocked", "reason": reason}
     if reason == "isolation_boundary_unavailable":
         try:

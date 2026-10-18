@@ -452,6 +452,8 @@ def run_codex_sweep(
             raise SweepProcessFailure("isolated Codex sweep invocation failed") from exc
         if completed.returncode != 0:
             raise SweepProcessFailure("isolated Codex sweep invocation returned a failure")
+        # Classify elapsed TTL from parent-owned state before decoding worker output.
+        session.head()
         verify_codex_event_trace(completed.stdout, stage=stage)
         try:
             parsed = json.loads(output_path.read_text(encoding="utf-8"))
@@ -674,6 +676,7 @@ def run_claude_sweep(
             raise SweepProcessFailure("isolated Claude sweep invocation failed") from exc
         if completed.returncode != 0:
             raise SweepProcessFailure("isolated Claude sweep invocation returned a failure")
+        session.head()
         try:
             verify_claude_attestation(runtime_root, plugin_root, max_age_seconds=300)
             payload = json.loads(completed.stdout)

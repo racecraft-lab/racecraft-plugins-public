@@ -226,7 +226,34 @@ class SweepSessionCase(unittest.TestCase):
             self.fixture.root, "specs/001-safe", self.session, receipt, mode=mode)
 
 
-class SessionAndReceiptTests(SweepSessionCase):
+class SweepOperationalFailureTests(SweepSessionCase):
+    def test_expiry_during_a_zero_exit_launch_is_recoverable_on_both_hosts(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host), patch.object(sweep_isolation.time, "time", return_value=1_000) as clock:
+                session = sweep_isolation.SweepSession.open(self.metadata["session_id"], state_root=self.state_root)
+
+                def worker_finishes(*args: object, **kwargs: object) -> SimpleNamespace:
+                    clock.return_value = 1_061
+                    return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+                with (
+                    patch.object(sweep_launcher, "verify_codex_boundary"),
+                    patch.object(sweep_launcher, "verify_claude_boundary"),
+                    patch.object(sweep_launcher, "codex_command", return_value=["/trusted/codex"]),
+                    patch.object(sweep_launcher, "claude_command", return_value=["claude"]),
+                    patch.object(sweep_launcher.shutil, "which", return_value="/trusted/codex"),
+                    patch.object(sweep_launcher, "trusted_executable", return_value=Path("/trusted/codex")),
+                    patch.object(sweep_isolation, "current_head", return_value=self.head),
+                    patch.object(sweep_launcher.SweepSession, "open", return_value=session),
+                    patch.object(sweep_launcher.subprocess, "run", side_effect=worker_finishes),
+                    patch.object(sweep_launcher, "_run_claude_process", side_effect=worker_finishes),
+                ):
+                    result = read_only.sweep_isolation_session(
+                        {"named_surface": f"launch_{host}", "session_id": self.metadata["session_id"],
+                         "comment_id": "RC_kwDO123", "stage": "classifier"}, self.fixture.root)
+                self.assertEqual("sweep_session_expired", json.loads(result["stdout"])["reason"])
+                self.assertIsNone(stored_halt(self.fixture.root))
+
     def test_ordinary_sweep_process_failures_do_not_persist_a_harm_halt(self) -> None:
         for host in ("codex", "claude"):
             for failure in (subprocess.TimeoutExpired("isolated sweep", 300),
@@ -252,6 +279,7 @@ class SessionAndReceiptTests(SweepSessionCase):
                     self.assertEqual("sweep_process_failed", json.loads(result["stdout"])["reason"])
                     self.assertIsNone(stored_halt(self.fixture.root))
 
+
     def test_expired_session_refuses_without_a_harm_halt(self) -> None:
         receipt = self.session.submit_result("classifier", self.classifier())
         expired = sweep_isolation.SweepSession.open(
@@ -263,6 +291,9 @@ class SessionAndReceiptTests(SweepSessionCase):
         self.assertEqual("sweep_session_expired", json.loads(result["stdout"])["reason"])
         self.assertIsNone(stored_halt(self.fixture.root))
 
+
+
+class SessionAndReceiptTests(SweepSessionCase):
     def test_public_session_metadata_never_contains_reviewer_text(self) -> None:
         encoded = json.dumps(self.metadata, sort_keys=True)
         self.assertNotIn(self.comment_canary, encoded)
@@ -1479,6 +1510,14 @@ class CaptureAndHookTests(unittest.TestCase):
         record = stored_halt(self.fixture.root)
         self.assertEqual("tampering_or_forged_evidence", record["reason"])
         self.assertIn("capture", record["last_safe_state"])
+
+    def test_informational_attestation_failure_writes_no_halt(self) -> None:
+        with patch.object(sweep_launcher, "verify_claude_boundary",
+                          side_effect=sweep_launcher.LauncherViolation("unsupported")):
+            result = read_only.sweep_isolation_session({"named_surface": "attest_claude"}, self.fixture.root)
+        self.assertEqual("isolation_preflight_unavailable", json.loads(result["stdout"])["reason"])
+        self.assertIsNone(stored_halt(self.fixture.root))
+        self.assertFalse(result["writes_state"])
 
     def test_isolation_halt_write_is_reported_in_the_runner_envelope(self) -> None:
         (self.fixture.root / ".specify").mkdir()

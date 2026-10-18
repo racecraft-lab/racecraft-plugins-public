@@ -18,6 +18,7 @@ sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from speckit_pro_runner.helpers import harm_halt  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
+from speckit_pro_runner.sweep_isolation import RECEIPT_PREFIX  # noqa: E402
 from mutation_request_case import MutationRequestCase  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -135,11 +136,14 @@ class HarmHaltTests(MutationRequestCase):
 
 class HaltDispatchTests(MutationRequestCase):
     helper_id = harm_halt.HELPER_ID
+    files = {WORKFLOW: "# Workflow\n"}
 
     def test_direct_helper_dispatch_refuses_a_stateful_read(self) -> None:
         harm_halt.record_halt(self.root, "secret_exposure", "withheld", SAFE_STATE)
         request = SimpleNamespace(schema_version="1.0", request_id="direct", helper_id="sweep-isolation-session",
-                                  operation="sweep-isolation-session", mode="read_only", inputs={"named_surface": "capture"})
+                                  operation="sweep-isolation-session", mode="read_only",
+                                  inputs={"named_surface": "capture", "surface": "codex", "repository": "owner/repo",
+                                          "pr_number": 498, "workflow_file": WORKFLOW})
         with patch("speckit_pro_runner.helpers.registry.run_registered_helper") as dispatch:
             result = dispatch_helper(request)
         self.assertEqual("harm_halt_active", result["diagnostics"][0]["code"], result)
@@ -149,9 +153,17 @@ class HaltDispatchTests(MutationRequestCase):
         harm_halt.record_halt(self.root, "secret_exposure", "withheld", SAFE_STATE)
         for surface in ("capture", "launch_codex", "launch_claude", "accept", "close"):
             with self.subTest(surface=surface):
+                inputs: dict[str, Any] = {"named_surface": surface, "session_id": "a" * 32}
+                if surface == "capture":
+                    inputs = {"named_surface": surface, "surface": "codex", "repository": "owner/repo",
+                              "pr_number": 498, "workflow_file": WORKFLOW}
+                elif surface.startswith("launch_"):
+                    inputs.update(comment_id="RC_kwDO123", stage="classifier")
+                elif surface == "accept":
+                    inputs.update(receipt=RECEIPT_PREFIX + "b" * 64, stage="classifier")
                 request = SimpleNamespace(schema_version="1.0", request_id="attempt",
                                           helper_id="sweep-isolation-session", operation="sweep-isolation-session",
-                                          mode="read_only", inputs={"named_surface": surface})
+                                          mode="read_only", inputs=inputs)
                 with patch("speckit_pro_runner.helpers.registry.run_registered_helper") as dispatch:
                     blocked = handle_request(request)
                 self.assertEqual("harm_halt_active", blocked["diagnostics"][0]["code"], blocked)
@@ -174,6 +186,17 @@ class HaltDispatchTests(MutationRequestCase):
 
 class HaltConcurrencyTests(MutationRequestCase):
     helper_id = harm_halt.HELPER_ID
+    files = {WORKFLOW: "# Workflow\n"}
+
+    def test_an_unsafe_ignore_marker_refuses_writes_and_resume(self) -> None:
+        (self.root / ".specify/harm-halt/.gitignore").mkdir(parents=True)
+        request = SimpleNamespace(schema_version="1.0", request_id="storage", helper_id="decisions-list",
+                                  operation="decisions-list", mode="apply", inputs={"workflow_file": WORKFLOW, "entries": [ENTRY]})
+        with patch("speckit_pro_runner.helpers.registry.dispatch_helper") as dispatch:
+            result = handle_request(request)
+        self.assertEqual("harm_halt_active", result["diagnostics"][0]["code"], result)
+        dispatch.assert_not_called()
+        self.assertEqual("input_error", self.call("read_only")["status"])
 
     def test_an_interrupted_publication_refuses_writes_and_resume(self) -> None:
         lock = self.root / ".specify/harm-halt/halt.lock"

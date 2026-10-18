@@ -933,7 +933,7 @@ def mutation_request_refusal(entry: MutationEntry, request: Any) -> dict[str, An
             ],
         )
 
-    # A standing harm halt refuses every apply-mode helper but its own clear (ADR 0010).
+    # The shared halt policy refuses state-changing dispatch in every mode.
     return harm_halt_refusal(entry, request)
 
 

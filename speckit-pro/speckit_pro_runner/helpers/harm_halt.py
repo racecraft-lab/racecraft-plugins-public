@@ -1,4 +1,4 @@
-"""The harm-halt record: a local file that stops all runner writes until a human clears it (ADR 0010).
+"""The harm-halt record: local state that stops runner writes while it stands (ADR 0010).
 
 A harm halt means the next action could cause damage a later review cannot undo, so after
 the trigger no commit, push, PR edit or publish may follow. The runner writes one record
@@ -48,8 +48,8 @@ def stored_halt(root: Any) -> dict[str, Any] | None:
     """The active record, None when there is none; an unreadable or malformed record raises, so callers fail closed."""
     path = confined_path(root, RECORD_PATH)
     if not path.exists():
-        if path.with_suffix(".lock").exists():
-            raise SelectionError("halt publication is active or interrupted; a human must inspect it")
+        if path.with_suffix(".lock").exists() or (path.parent / ".gitignore").is_dir():
+            raise SelectionError("halt publication is active, interrupted or unsafe; a human must inspect it")
         return None
     try:
         record = require_fields(json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object),
@@ -86,7 +86,7 @@ def clear_halt(root: Any, confirm_reason: str) -> None:
 
 
 def harm_halt(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
-    """Report the halt, or (apply) record or clear it."""
+    """Report the halt or record it in apply mode; agent clearance is refused."""
     request = {key: value for key, value in inputs.items() if key != "repo_root"}
     if mode == "read_only":
         require_fields(request, set(), "inputs")
@@ -118,15 +118,17 @@ def apply_refusal(entry: Any, request: Any) -> dict[str, Any] | None:
         root = find_payload_root(Path.cwd()) or root
     if isinstance(root, dict):
         return None
+    status = "expected_failure"
     try:
         record = stored_halt(root)
     except (SelectionError, ValueError, OSError) as error:
         message = str(error)
+        status = "internal_failure"
     else:
         if record is None:
             return None
         message = f"a harm halt ({record['reason']}) stands: {record['evidence']}"
-    return response("expected_failure", request_id=request.request_id, diagnostics=[diagnostic(
+    return response(status, request_id=request.request_id, diagnostics=[diagnostic(
         "harm_halt_active", message, details={"helper_id": entry.helper_id},
         remediation_summary="Nothing was written. A human must inspect the halt outside the agent runner.",
         remediation_actions=["Read the record with harm-halt in read_only mode.", "Resolve the cause; agent clear requests are refused."])])
