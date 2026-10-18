@@ -89,7 +89,7 @@ It rejects an existing output symlink, including dangling links, and other
 non-regular entries. It delegates to the existing `atomic_write` policy owner with a
 `WriteBinding` holding that descriptor, creates a fresh exclusive temporary inode,
 and atomically replaces the inventory entry using the held parent descriptor for creation,
-replacement, and cleanup. It never truncates an existing inode. Serialization
+replacement, and cleanup. It never truncates an existing inode. Write
 and publication failures preserve the old inventory and remove the temporary
 file. These are repository tooling changes; neither host's guidance or payload
 changes, and release regeneration produces no payload changes.
@@ -108,7 +108,7 @@ The refresh entry-point tests cover:
 | Parent swap immediately before file creation | `test_refresh_parent_swap_before_creation_cannot_redirect_write` |
 | Output swapped to an absolute/relative, existing/dangling link during serialization | `test_refresh_rejects_file_swap_without_following_link` |
 | Temporary-name symlink collision | `test_refresh_temporary_name_collision_cannot_follow_link` |
-| Serialization/publication failure and temporary cleanup | `test_refresh_serialization_failure_preserves_inventory_and_cleans_temporary`, `test_refresh_publication_failure_preserves_inventory_and_cleans_temporary` |
+| Temporary write/publication failure and temporary cleanup | `test_refresh_write_failure_preserves_inventory_and_cleans_temporary`, `test_refresh_publication_failure_preserves_inventory_and_cleans_temporary` |
 
 The initial red run accepted every reported category (207/222 checks passed;
 15 failed). The expanded suite is also tested against the pre-fix writer to

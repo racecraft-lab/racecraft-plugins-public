@@ -705,9 +705,10 @@ class InventoryRefreshWriteTests(unittest.TestCase):
         self.assertFalse(temporary.is_symlink())
         self.assertFalse(self.output.exists())
 
-    def test_refresh_serialization_failure_preserves_inventory_and_cleans_temporary(self) -> None:
+    def test_refresh_write_failure_preserves_inventory_and_cleans_temporary(self) -> None:
+        # Fail on the temporary's fsync, after the temporary file exists, so the cleanup check is not vacuous.
         self.output.write_text("old inventory", encoding="utf-8")
-        with patch.object(json, "dumps", side_effect=ValueError("serialization failed")), self.assertRaises(ValueError):
+        with patch.object(os, "fsync", side_effect=OSError("write failed")), self.assertRaisesRegex(OSError, "write failed"):
             self.run_refresh()
         self.assertEqual(self.output.read_text(encoding="utf-8"), "old inventory")
         self.assertEqual(list(self.output.parent.iterdir()), [self.output])
