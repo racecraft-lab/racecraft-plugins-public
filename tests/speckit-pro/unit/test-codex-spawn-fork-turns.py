@@ -144,7 +144,9 @@ def skill_paths(root: Path) -> list[Path]:
     return [path for path in paths if path.is_file()]
 
 
-def assert_reviewed_prose(test: unittest.TestCase, key: str, text: str) -> None:
+def assert_reviewed_prose(
+    test: unittest.TestCase, key: str, text: str, *, excerpt_text: str | None = None,
+) -> None:
     inventory = json.loads(PROSE_INVENTORY.read_text(encoding="utf-8"))
     # Bind the COMPLETE surface before extracting any excerpts. Keyword, call,
     # paragraph and whitespace filters cannot decide which instructions matter.
@@ -153,7 +155,7 @@ def assert_reviewed_prose(test: unittest.TestCase, key: str, text: str) -> None:
     test.assertIn(key, digests, f"unreviewed dispatch surface: {key}")
     test.assertEqual(hashlib.sha256(text.encode("utf-8")).hexdigest(), digests[key],
                      f"review complete instruction surface explicitly: {key}")
-    for block in prose_blocks(text):
+    for block in prose_blocks(text if excerpt_text is None else excerpt_text):
         test.assertIn(block, inventory.get(key, []), f"review dispatch prose explicitly: {key}: {block}")
 
 
@@ -171,9 +173,10 @@ class CodexSpawnForkTests(unittest.TestCase):
     def test_every_codex_agent_that_dispatches_states_the_rule(self) -> None:
         checked = []
         for path in skill_paths(REPO_ROOT / "speckit-pro/codex-agents"):
-            text = tomllib.loads(path.read_text(encoding="utf-8"))["developer_instructions"]
+            source = path.read_bytes().decode("utf-8")
+            text = tomllib.loads(source)["developer_instructions"]
             with self.subTest(agent=path.stem):
-                assert_reviewed_prose(self, "agents/" + path.name, text)
+                assert_reviewed_prose(self, "agents/" + path.name, source, excerpt_text=text)
             if "spawn_agent" in text or "fork_turns" in text:
                 checked.append(path.stem)
                 with self.subTest(agent=path.stem):
@@ -185,7 +188,7 @@ class CodexSpawnForkTests(unittest.TestCase):
     def test_every_prose_dispatch_in_the_codex_skills_passes_fork_turns_none(self) -> None:
         root = host_skill_root("codex")
         for path in skill_paths(root):
-            text = path.read_text(encoding="utf-8", errors="replace")
+            text = path.read_bytes().decode("utf-8")
             with self.subTest(file=str(path.relative_to(root))):
                 assert_reviewed_prose(self, "skills/" + path.relative_to(root).as_posix(), text)
 
@@ -195,10 +198,9 @@ class CodexSpawnForkTests(unittest.TestCase):
 
 
 def agent_instruction_sources() -> dict[str, str]:
-    """Load the real agent instructions used by fault-injection fixtures."""
+    """Load complete agent files so fault fixtures preserve untouched bytes."""
     agents = REPO_ROOT / "speckit-pro/codex-agents"
-    return {path.name: tomllib.loads(path.read_text(encoding="utf-8"))["developer_instructions"]
-            for path in agents.glob("*.toml")}
+    return {path.name: path.read_bytes().decode("utf-8") for path in sorted(agents.glob("*.toml"))}
 
 
 class CodexSpawnGateFaultTests(unittest.TestCase):
@@ -236,12 +238,19 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         sources = agent_instruction_sources()
         # Keep all existing dispatchers as controls, so adding an unmarked agent
         # cannot be rejected just because the dispatch-count floor was missed.
-        candidates = {**sources, "new.toml": "", "renamed.toml": ""}
-        for name in candidates:
+        for name in (*sources, "new.toml", "renamed.toml"):
             with self.subTest(agent=name):
                 self.assert_agent_rejected(
-                    candidates, name,
+                    {**sources, name: sources.get(name, "")}, name,
                     "For any child you launch, inherit the complete parent conversation.")
+
+    def test_keyword_free_agent_metadata_variants_are_rejected(self) -> None:
+        sources = agent_instruction_sources()
+        for name, source in sources.items():
+            for field in sorted(tomllib.loads(source).keys() - {"developer_instructions"}):
+                with self.subTest(agent=name, field=field):
+                    self.assert_agent_rejected(
+                        sources, name, "For any child you launch, inherit the complete parent conversation.", field)
 
     def assert_skill_rejected(
         self, snippet: str, method: str, relative: str = "speckit-autopilot/SKILL.md",
@@ -272,6 +281,21 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             with self.subTest(replacement=replacement[:40]):
                 with self.assertRaises(AssertionError):
                     assert_reviewed_prose(self, key, replacement)
+
+    def test_skill_line_endings_cannot_bypass_content_review(self) -> None:
+        relative = "speckit-autopilot/SKILL.md"
+        original = (host_skill_root("codex") / relative).read_bytes()
+        for newline in (b"\r\n", b"\r"):
+            with self.subTest(newline=newline), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                target = root / relative
+                target.parent.mkdir(parents=True)
+                target.write_bytes(original.replace(b"\n", newline))
+                result = unittest.TestResult()
+                with patch(__name__ + ".host_skill_root", return_value=root):
+                    CodexSpawnForkTests("test_every_prose_dispatch_in_the_codex_skills_passes_fork_turns_none").run(result)
+                self.assertFalse(result.wasSuccessful(), "gate normalized away a byte change")
+                self.assertFalse(result.errors, result.errors)
 
     def test_space_after_opening_parenthesis_is_rejected(self) -> None:
         self.assert_skill_rejected(
@@ -402,12 +426,13 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                 "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none", relative)
 
     def test_linked_skill_reference_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            (root / "target").write_text('spawn_agent(task_name="job")', encoding="utf-8")
-            (root / "linked.md").symlink_to(root / "target")
-            with self.assertRaisesRegex(AssertionError, "skill symlink"):
-                skill_paths(root)
+        for filename in ("linked.md", "linked.toml"):
+            with self.subTest(link=filename), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                (root / "target").write_text('spawn_agent(task_name="job")', encoding="utf-8")
+                (root / filename).symlink_to(root / "target")
+                with self.assertRaisesRegex(AssertionError, "skill symlink"):
+                    skill_paths(root)
 
     def test_shipped_codex_payload_passes_the_same_gates(self) -> None:
         payload = REPO_ROOT / "dist/codex"
@@ -436,17 +461,35 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                 with self.subTest(agent=name, conflict=conflict):
                     self.assert_agent_rejected(sources, name, conflict)
 
-    def assert_agent_rejected(self, sources: dict[str, str], name: str, conflict: str) -> None:
+    def assert_agent_rejected(
+        self, sources: dict[str, str], name: str, conflict: str, field: str = "developer_instructions",
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             agents = root / "speckit-pro/codex-agents"
             agents.mkdir(parents=True)
             for filename, original in sources.items():
-                text = original + ("\n\n" + conflict if filename == name else "")
-                (agents / filename).write_text("developer_instructions = " + json.dumps(text, ensure_ascii=False), encoding="utf-8")
+                if original:
+                    (agents / filename).write_bytes(original.encode("utf-8"))
+            method = "test_every_codex_agent_that_dispatches_states_the_rule"
+            control = unittest.TestResult()
+            with patch(__name__ + ".REPO_ROOT", root):
+                CodexSpawnForkTests(method).run(control)
+            self.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
+            original = sources[name] or 'developer_instructions = """\n"""\n'
+            if field == "developer_instructions":
+                marker = 'developer_instructions = """\n'
+                self.assertEqual(original.count(marker), 1)
+                text = original.replace(marker, marker + conflict + "\n\n", 1)
+            else:
+                text, replacements = re.subn(
+                    rf"(?m)^{re.escape(field)} = .+$", lambda _: f"{field} = {json.dumps(conflict)}", original)
+                self.assertEqual(replacements, 1)
+            self.assertIn(conflict, tomllib.loads(text)[field])
+            (agents / name).write_bytes(text.encode("utf-8"))
             result = unittest.TestResult()
             with patch(__name__ + ".REPO_ROOT", root):
-                CodexSpawnForkTests("test_every_codex_agent_that_dispatches_states_the_rule").run(result)
+                CodexSpawnForkTests(method).run(result)
             self.assertFalse(result.wasSuccessful(), "gate accepted conflicting agent instructions")
             self.assertFalse(result.errors, result.errors)
 
