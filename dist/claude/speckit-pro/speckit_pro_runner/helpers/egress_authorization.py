@@ -297,7 +297,8 @@ def _run_standing(entry: Any, request: Any, inputs: dict[str, Any]) -> dict[str,
     try:
         unknown = sorted(set(inputs) - STANDING_INPUTS)
         if unknown:
-            raise _InvalidInput(f"unknown inputs for scope=standing: {', '.join(unknown)}")
+            raise _InvalidInput(f"unknown inputs for scope=standing: {', '.join(unknown)}; "
+                                f"accepted inputs: {', '.join(sorted(STANDING_INPUTS))}")
         repository = _repository(inputs.get("repository"))
         default_branch = _text(inputs.get("default_branch"), "default_branch")
         installed_text = inputs.get("installed_extra_policy")
@@ -337,7 +338,8 @@ def run_egress_authorization_helper(entry: Any, request: Any) -> dict[str, Any]:
     try:
         unknown = sorted(set(inputs) - ALLOWED_INPUTS)
         if unknown:
-            raise _InvalidInput(f"unknown inputs: {', '.join(unknown)}")
+            raise _InvalidInput(f"unknown inputs: {', '.join(unknown)}; "
+                                f"accepted inputs: {', '.join(sorted(ALLOWED_INPUTS | {'scope'}))}")
         repository = _repository(inputs.get("repository"))
         default_branch = _text(inputs.get("default_branch"), "default_branch")
         actions = _actions(inputs.get("actions"))

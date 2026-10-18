@@ -615,7 +615,7 @@
         "value": "speckit_pro_runner/helpers/egress_authorization.py",
         "display": "speckit_pro_runner/helpers/egress_authorization.py"
       },
-      "sha256": "93a6dc61aaae31ee7c9bf0fb3e3401ff878d059898ed85e260a6b91fc84bb077"
+      "sha256": "8bfd37ffb86a087fd03ead556e16321daa0d0e2b38eae48227458dfaf4dd0cff"
     },
     {
       "path": {
@@ -743,7 +743,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "4b2ebdd8ced06223dd3c9b71ac1013f06b01007317c0fa079097ccd3e15b00a7"
+      "sha256": "6f31fcae0eda6ad4df9df0c9145b41ace9b4216d29b010af61a9058137ad055c"
     },
     {
       "path": {
@@ -799,7 +799,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "d7cee5ef72b31e7e3e31953b956090d542938f9c7fa15adb84997da0134080b9"
+      "sha256": "e4232746428b59579e03ba5fbd0d768613b74c0441ff0e4210d6f517f8f6d7c6"
     },
     {
       "path": {

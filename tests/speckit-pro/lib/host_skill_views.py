@@ -52,3 +52,10 @@ def rendered_skill_source(host: str, skill: str, plugin_root: Path = PLUGIN_ROOT
         if path.is_file():
             return path
     raise ValueError(f"skill not found for requested skill {skill!r}")
+
+
+def rendered_section(host: str, relative: str, start: str, end: str) -> str:
+    """The text of `relative` (under the rendered skill tree) from `start` to the next `end`, whitespace folded."""
+    text = (host_skill_root(host) / relative).read_text(encoding="utf-8")
+    first = text.index(start)
+    return " ".join(text[first:text.index(end, first)].split())

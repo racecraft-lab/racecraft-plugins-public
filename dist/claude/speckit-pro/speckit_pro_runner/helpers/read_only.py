@@ -301,6 +301,13 @@ def replay_command(stdin_request: dict[str, Any]) -> str:
     return f"printf '%s' {shlex.quote(canonical_bytes(stdin_request).decode('utf-8'))} | python -m speckit_pro_runner"
 
 
+# A resolver reads optional keys with defaults, so a misnamed key would yield a default answer; refuse it.
+RESOLVER_INPUTS = {
+    "resolve-confidence-mode": frozenset({"repo_root", "config_path", "autopilot_args"}),
+    "resolve-autopilot-stage": frozenset({"repo_root", "workflow_file", "feature_dir", "autopilot_args", "host", "pr_observation"}),
+}
+
+
 def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: Path) -> list[str] | dict[str, Any]:
     if helper_id in {"detect-commands", "detect-presets"}:
         return []
@@ -344,6 +351,11 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         # Pure in-process computation from structured size signals — no derived
         # CLI args and no path inputs (like detect-commands/detect-presets).
         return []
+    if helper_id in RESOLVER_INPUTS:
+        unknown = sorted(set(inputs) - RESOLVER_INPUTS[helper_id])
+        if unknown:
+            accepted = ", ".join(sorted(RESOLVER_INPUTS[helper_id]))
+            return invalid_args(helper_id, f"unknown inputs: {', '.join(unknown)}; accepted inputs: {accepted}")
     if helper_id == "resolve-confidence-mode":
         argv: list[str] = []
         config_path = inputs.get("config_path")
