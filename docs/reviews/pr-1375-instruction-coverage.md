@@ -2,9 +2,9 @@
 
 Daybreak resolved **F1375-0784f4ad**, class **false-pass gate on unmarked
 instructions**, in its re-check at `f6f93a81c`.
-Finding **F1375-a524ccf3**, class **unowned write through inventory symlink**,
-remains open until a later Daybreak re-check accounts for this fix's commits
-and every reported variant.
+Daybreak also resolved **F1375-a524ccf3**, class **unowned write through
+inventory symlink**, in its [re-check at `20a19681`](https://github.com/racecraft-lab/racecraft-plugins-public/pull/1375#issuecomment-6245725763),
+which accounts for the fix commits and reported variants.
 
 ## Rules and the review seam
 
@@ -115,7 +115,33 @@ The initial red run accepted every reported category (207/222 checks passed;
 prove the additional redirect controls fail without the fix. Exact final
 counts and full fix SHAs are recorded in the security-fix PR comment.
 
+## Main-merge CI recovery
+
+The merge at `ff5129ef` brought in main's changes to the autopilot
+`phase-execution.md` and `stop-policy.md` references without refreshing their
+instruction inventory. Both Linux heavy-preflight artifacts and the PR test
+job report the same layer-4 inventory mismatch; every other heavy-preflight
+entry point passed. This is deterministic proof-data drift, not a flake.
+
+The focused spawn/inventory suite reproduced the failure through the isolated
+Linux runner (192/227 passed). After reviewing the merged reference diff and
+running `python3 scripts/refresh-codex-instruction-inventory.py`, only those two
+skill hashes changed. The identical focused suite then passed 230/230.
+Release regeneration reported no changes. The inventory remains an explicit
+review step; validation does not refresh its own expected evidence.
+
 ## Known limits
+
+- Earlier non-blocking review observations remain accepted: the structural-only
+  `assert_skill_rejected` helper has no independent accept control (the inventory
+  fault helper does); the call scanner restates the vendored-root list; and the
+  inventory merge procedure lives in the required agent runbook rather than the
+  root contract's generated-artifact table. None causes a demonstrated reachable
+  false pass in this recovery, which changes only two inventory hashes and this
+  note. The temporary-name collision assertion also accepts any `OSError`, and
+  the held-parent docstring uses "unlinked" to mean "not a symlink". These test
+  precision, duplication, and wording observations are retained rather than
+  reopening the previously reviewed implementation.
 
 - Git cannot preserve hard-link identity in a checkout; that variant requires
   local filesystem control. Parent swaps and renames during refresh likewise
