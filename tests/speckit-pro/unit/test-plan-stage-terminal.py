@@ -1275,9 +1275,9 @@ class TerminalGuidanceGateMutationTests(unittest.TestCase):
 
     def assert_inert_report_rejected(self, host: str) -> None:
         clause = "For `outcome: completed`, the answer's `report` is the whole stop report: print it unchanged, then its `stop_label`."
-        for replacement in ("", "For `outcome: completed`, rewrite the report before printing it."):
-            with self.subTest(host=host, replacement=replacement):
-                self.assert_guidance_rejected(host, lambda text: text.replace(clause, f"<!-- {clause} --> {replacement}"))
+        hidden = f"<!-- {clause} -->"
+        self.assert_guidance_rejected(host, lambda text: text.replace(clause, hidden))
+        self.assert_guidance_rejected(host, lambda text: text.replace(clause, hidden + " Rewrite the completed report."))
 
     def test_claude_rejects_inert_completed_report(self) -> None:
         self.assert_inert_report_rejected("claude")
