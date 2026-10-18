@@ -202,9 +202,14 @@ class RecordedApprovalTest(PlanningApprovalFixture):
         self.assertRefused(self.call("record", "apply", approval=changed), "approval already exists")
         self.assertEqual(path.read_bytes(), original)
 
-    def test_new_approval_supersedes_the_previous_revision(self):
+
+class SupersessionTest(PlanningApprovalFixture):
+    def record_superseding(self, reference):
+        """Record a first approval, then a revised one whose `supersedes` is `reference(first_record_path)`.
+
+        Returns the first record's path and the replacement reply, with `plan.md` restored to the first revision.
+        """
         first = self.call("record", "apply", approval=self.approval())["data"]
-        (self.root / "approval-alias.json").symlink_to(first["record_path"])
         confirmation = self.feature / "artifacts/confirmation.json"
         original = confirmation.read_bytes()
         (self.feature / "plan.md").write_text("Revised plan")
@@ -212,19 +217,47 @@ class RecordedApprovalTest(PlanningApprovalFixture):
         (self.feature / "artifacts/new-confirmation.json").write_bytes(confirmation.read_bytes())
         confirmation.write_bytes(original)
         revised["confirmation"]["reference"] = "specs/demo/artifacts/new-confirmation.json"
-        revised["supersedes"] = "approval-alias.json"
+        revised["supersedes"] = reference(first["record_path"])
         replacement = self.call("record", "apply", approval=revised)
         self.assertEqual(replacement["status"], "ok", replacement)
         self.assertEqual(self.call("verify")["status"], "ok")
         (self.feature / "plan.md").write_text("A plan")
+        return first["record_path"], replacement
+
+    def store_supersedes(self, replacement, reference):
+        history = self.root / replacement["data"]["record_path"]
+        history.write_text(json.dumps({**json.loads(history.read_text()), "supersedes": reference}))
+
+    @staticmethod
+    def case_variant(record_path):
+        path = Path(record_path)
+        return (path.parent / (path.stem.upper() + path.suffix)).as_posix()
+
+    def test_new_approval_supersedes_the_previous_revision(self):
+        def alias(record_path):
+            (self.root / "approval-alias.json").symlink_to(record_path)
+            return "approval-alias.json"
+
+        first_path, replacement = self.record_superseding(alias)
         self.assertRefused(self.call("verify"), "subsequent supersession")
-        self.assertEqual(replacement["data"]["record"]["supersedes"], first["record_path"])
+        self.assertEqual(replacement["data"]["record"]["supersedes"], first_path)
 
         # Previously stored alias references must also revoke the old approval.
-        history = self.root / replacement["data"]["record_path"]
-        stored = json.loads(history.read_text())
-        stored["supersedes"] = "approval-alias.json"
-        history.write_text(json.dumps(stored))
+        self.store_supersedes(replacement, "approval-alias.json")
+        self.assertRefused(self.call("verify"), "subsequent supersession")
+
+    def test_stored_case_variant_reference_revokes_the_previous_revision(self):
+        # Needs no case-insensitive filesystem: the comparison is conservative everywhere.
+        first_path, replacement = self.record_superseding(lambda path: path)
+        self.store_supersedes(replacement, self.case_variant(first_path))
+        self.assertRefused(self.call("verify"), "subsequent supersession")
+
+    def test_recorded_case_variant_reference_revokes_the_previous_revision(self):
+        # A case variant is a valid reference only where the filesystem folds case; skip on case-sensitive ones.
+        (self.root / "CaseProbe.tmp").write_text("")
+        if not (self.root / "caseprobe.tmp").exists():
+            self.skipTest("case-sensitive filesystem: a case-variant reference does not name the record")
+        self.record_superseding(self.case_variant)
         self.assertRefused(self.call("verify"), "subsequent supersession")
 
 
@@ -853,7 +886,8 @@ class ShippedWorkflowTest(WorkflowFixture):
 
 
 if __name__ == "__main__":
-    cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, AssuranceGuardTest,
+    cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, SupersessionTest,
+             AssuranceGuardTest,
              WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest, InventoryProgressTest,
              ProgressExamplesTest, GeneratedNavigationTest, NavigationContentTest, NavigationStructureTest,
              NavigationCompatibilityTest, NavigationApprovalLifecycleTest, NavigationConfirmationLifecycleTest,

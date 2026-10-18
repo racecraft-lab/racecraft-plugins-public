@@ -15,7 +15,7 @@ from ..formal.evidence import CHECKPOINT_ROWS, read_checkpoint, record_path
 from ..formal.primitives import CATALOG_PATH
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import next_fence, require_fields, require_text, unique_object
-from ..task_execution import owned_path, task_definitions
+from ..task_execution import owned_path, path_key, task_definitions
 from ..trusted_io import trusted_tree_snapshot
 from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
 from ..sweep_export import SWEEP_LOG_HEADING, sweep_is_table_rule, sweep_table_cells
@@ -408,7 +408,8 @@ def refuse_superseded(root: Path, path: str) -> None:
     for _, content in trusted_tree_snapshot((root / path).parent, root).values():
         if content is not None:
             peer = json.loads(content, object_pairs_hook=unique_object)
-            if not isinstance(peer, dict) or (peer.get("supersedes") is not None and owned_path(peer["supersedes"], root) == path):
+            if not isinstance(peer, dict) or (peer.get("supersedes") is not None
+                                             and path_key(owned_path(peer["supersedes"], root)) == path_key(path)):
                 raise ValueError("approval has a subsequent supersession or unreadable history; return to plan review")
 
 
