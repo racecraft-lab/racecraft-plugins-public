@@ -43,6 +43,11 @@ and schema v2 `pr_number` and `review_order`.
 `ScalarNavigationBoundaryTest` covers comma-separated instruction words in
 every v2 scalar string column; the main matrix also tests extra cells made of
 plain tokens and both single- and double-underscore comma lists.
+`AdversarialNavigationBoundaryTest` checks a balanced cell-plus-line split
+that would form two nine-cell rows if evaluated independently. It stays bound:
+the canonical-block comparison requires each renderer record to match one
+physical line, so an embedded newline makes that comparison fail before any
+line can be projected away.
 
 The allowlist follows [GFM's emphasis rules](https://github.github.com/gfm/#emphasis-and-strong-emphasis):
 intraword underscores cannot open or close emphasis. This rule belongs to the
@@ -61,6 +66,11 @@ values are exempt from approval. Regenerated host payloads carry the same code.
   dialects has not been verified. A review raised intraword emphasis in a
   non-GFM renderer as a possible limit; that variant is unreachable under GFM,
   whose underscore delimiters cannot open or close inside these ASCII words.
+- **Legacy v1 slice names may resemble list markers.** A slice named `-`, `+`
+  or `1.` can make the fixed v1 row a Markdown list item. This does not admit
+  inline links, emphasis, whitespace prose or URL schemes: those characters
+  remain outside the token grammar. The review classified this as Info; it
+  cannot reach the reported inline-injection path.
 - **A fuzzy linkifier may render a domain-shaped token.** A token such as
   `example.invalid/landing` is plain text under CommonMark and GitHub
   Flavored Markdown. A previewer with fuzzy linkify turned on may still show it
