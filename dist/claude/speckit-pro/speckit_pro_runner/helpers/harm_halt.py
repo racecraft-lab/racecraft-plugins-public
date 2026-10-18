@@ -98,29 +98,21 @@ def digest(token: str) -> str:
 
 
 def record_halt(root: Any, reason: str, evidence: str, last_safe_state: str) -> dict[str, Any]:
-<<<<<<< HEAD
-    """Write the halt record, then show its clear token on the owner's terminal; the first trigger stands."""
-=======
-    """Validate before locking; once locked, leave either a record or a blocking lock, even on failure."""
+    """Validate before locking; once locked, leave either a record or a blocking lock, even on failure.
+
+    Only after the record is published does the clear token go to the owner's terminal."""
     reason = require_text(reason, "reason")
->>>>>>> origin/feat-stop-registry-harm-halts
     if STOP_REASONS.get(reason) != HARM_HALT:
         raise SelectionError(f"reason must be a harm halt: {sorted(r for r, c in STOP_REASONS.items() if c == HARM_HALT)}")
-    record = {"schema_version": SCHEMA_VERSION, "reason": reason, "evidence": redacted(reason, require_text(evidence, "evidence")),
-              "last_safe_state": require_text(last_safe_state, "last_safe_state")[:MAX_TEXT]}
-    path = confined_path(root, RECORD_PATH)
     token = secrets.token_urlsafe(32)
+    record = {"schema_version": SCHEMA_VERSION, "reason": reason, "evidence": redacted(reason, require_text(evidence, "evidence")),
+              "last_safe_state": require_text(last_safe_state, "last_safe_state")[:MAX_TEXT], DIGEST_FIELD: digest(token)}
+    path = confined_path(root, RECORD_PATH)
     try:
         with exclusive_ledger(path, retain_on_error=True):
             existing = stored_halt(root) if path.exists() else None
             if existing is not None:
                 raise SelectionError("a harm halt already stands; the second trigger is refused")
-<<<<<<< HEAD
-            record = {"schema_version": SCHEMA_VERSION, "reason": reason, "evidence": redacted(reason, evidence),
-                      "last_safe_state": require_text(last_safe_state, "last_safe_state")[:MAX_TEXT],
-                      DIGEST_FIELD: digest(token)}
-=======
->>>>>>> origin/feat-stop-registry-harm-halts
             durable_json(path, record)
     except ValueError as error:
         raise SelectionError(f"harm-halt trigger {reason} refused: {error}") from error

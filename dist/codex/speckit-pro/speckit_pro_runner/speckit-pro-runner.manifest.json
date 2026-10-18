@@ -663,11 +663,7 @@
         "value": "speckit_pro_runner/helpers/harm_halt.py",
         "display": "speckit_pro_runner/helpers/harm_halt.py"
       },
-<<<<<<< HEAD
-      "sha256": "03aa7f6b340d6f9443c0b6801072b64694e2d80b160777aa67d38e6a536dbec8"
-=======
-      "sha256": "5865c1f34048dfc24cbb19716f3c31877d3805dd752c6c503768f88a1269f9cc"
->>>>>>> origin/feat-stop-registry-harm-halts
+      "sha256": "1fed488614d367c65a6eab0e664b4691d81d1fd0e9ac44ae1aff0a23d4ec3463"
     },
     {
       "path": {
