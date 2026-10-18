@@ -191,8 +191,10 @@ Step 0.11 never asks about them. The contract is in
 1. **Derive the classes.** Run read-only `detect-commands` for the project
    commands. Run read-only `check-gate-preflight-coverage` with `repo_root` set to
    `WORKFLOW_ROOT`, every gate the run-start record can know as `gates` (the
-   G-gates and each populated `PROJECT_COMMANDS` slot, each with its exact
-   `command` and `needs`), an empty `inventory_actions`, `writable_roots` set to the
+   G-gates and each populated `PROJECT_COMMANDS` slot, each one object
+   `{"gate": <id>, "command": <its exact command>, "needs": [...]}`, where each
+   need is `{"category": ..., "target": ...}` and a gate with no need has an empty
+   list), an empty `inventory_actions`, `writable_roots` set to the
    thread's current writable roots, and `write_paths` set to `[WORKFLOW_ROOT]`
    when the binding relation is `external`. Its `policy_classes` are the gate
    egress needs, including each declared pre-PR audit. Its `missing` also names
@@ -204,7 +206,8 @@ Step 0.11 never asks about them. The contract is in
    `owner/name` of the `origin` remote (never a path); `default_branch`;
    `installed_extra_policy`, the `auto_review.extra_policy` string from
    `$CODEX_HOME/config.toml` (`~/.codex/config.toml` when `CODEX_HOME` is unset;
-   read it, never write it); and step 1's `policy_classes` verbatim as
+   read only that string, in the command that sends the request; never print the
+   config file or write it); and step 1's `policy_classes` verbatim as
    `derived_classes`.
    `installed=false` means the policy was never installed or a new gate need
    changed its text. Either way the install text is the helper's
@@ -1085,10 +1088,12 @@ templates they override), `extensions`, `hooks`, and
 `templates` (resolved paths for tasks/spec/plan templates).
 
 If `has_presets` is `true`:
-1. Read each preset's overridden templates to understand
-   the conventions it enforces (TDD, architecture, etc.)
-2. Record as PRESET_CONVENTIONS for subagent prompts
-3. Include PRESET_CONVENTIONS in ALL subagent prompts —
+1. Record each preset's name and the resolved paths of the templates it
+   overrides, from `presets` and `templates`, as PRESET_CONVENTIONS. Never
+   read a template body in the orchestrator: each phase's Spec Kit command
+   loads its resolved template, and a subagent reads a listed path when it
+   needs a convention (TDD, architecture, etc.)
+2. Include PRESET_CONVENTIONS in ALL subagent prompts —
    presets affect every phase, not just implement
 
 If no presets AND no extensions, skip this step.

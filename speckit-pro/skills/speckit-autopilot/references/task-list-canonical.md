@@ -131,7 +131,8 @@ items. Never omit consensus tasks from the task list at creation time.
 ## Other Rules
 
 - Replace `Phase 7: Implement - Pending task decomposition` with concrete
-  task-group items immediately after `tasks.md` is created. Do not leave Phase 7
+  task-group items named `Phase 7: Implement - <group>` immediately after
+  `tasks.md` is created; the coverage guard requires that prefix. Do not leave Phase 7
   as a single placeholder once tasks can be parsed.
 - Phase 7 decomposes into groups after `tasks.md` is created
   (test / impl / verify per phase — see [`phase-execution.md`](./phase-execution.md))

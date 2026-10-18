@@ -1,7 +1,8 @@
 # Bounded Execution and Verification
 
-Read at kickoff/resume and before Tasks, implementation dispatch, corrective
-work, or final verification. This shared contract governs both native hosts;
+At kickoff/resume, read §Durable run ledger through its `complete` entry. Read
+each later section only at the step that cites it. This shared contract
+governs both native hosts;
 it does not replace their dispatch, authorization, or mandatory gate rules.
 
 ## Durable run ledger
