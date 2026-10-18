@@ -333,7 +333,8 @@ def completed_report(run: Run, found: dict[str, Any], pages: dict[str, Any], rev
     for page_id in pages["generated"]:
         preview = previews.get(page_id, {})
         detail = preview.get("blocker") or f"preview {preview.get('status', 'unknown')}"
-        lines.append(f"- {run.gallery[page_id]['title']}: {run.feature}/artifacts/{page_id}.html ({detail})")
+        path = f"{run.feature}/artifacts/{page_id}.html"
+        lines.append(f"- [{run.gallery[page_id]['title']}](<{run.root / path}>): {path} ({detail})")
     lines += [f"- {gap_title(run, gap)}: gap: {gap['reason']}" for gap in pages["gaps"]]
     flag = run.inputs.get("unratified_defaults")
     return "\n".join([*lines, *(["", flag] if flag else []), "", f"Resume with: `{resume_command(run)}`"])

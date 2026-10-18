@@ -320,6 +320,7 @@ class StopReportTests(TerminalFixture):
                 self.assertIn(URL, report)
                 for page in data["pages"]["generated"]:
                     self.assertIn(f"{FEATURE}/artifacts/{page}.html", report)
+                    self.assertIn(f"](<{self.root}/{FEATURE}/artifacts/{page}.html>)", report)
                 self.assertIn("preview unavailable", report)
                 self.assertIn(f"{plan_stage_terminal.RESUME[host]} {WORKFLOW} --stage implement", report)
                 self.assertNotIn("stop_reason:", report)
