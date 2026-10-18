@@ -1692,6 +1692,12 @@ class _EscalationFixture(_ExecutionControlFixture):
         self.verify(unittest_output("test_a"), argv=argv)
         return digest(list(argv))
 
+    def ledger_path(self):
+        return self.root / self.invoke("status", mode="read_only")["ledger_path"]
+
+    def ledger_bytes(self):
+        return self.ledger_path().read_bytes()
+
 
 class EscalationAllowanceTests(_EscalationFixture, unittest.TestCase):
     """A failed unit climbs tier 2 then tier 3 outside the corrective budget before it is exhausted (issue 829)."""
@@ -3849,12 +3855,6 @@ class _RetryLadderFixture(_EscalationFixture):
         self.interrupt(first)
         return self.climb(again)
 
-    def ledger_path(self):
-        return self.root / self.invoke("status", mode="read_only")["ledger_path"]
-
-    def ledger_bytes(self):
-        return self.ledger_path().read_bytes()
-
 
 class RetryLadderAdmissionTests(_RetryLadderFixture, unittest.TestCase):
     """A failing check climbs one ladder of three attempts for the whole run (ADR 0004)."""
@@ -4037,8 +4037,8 @@ class RetryLadderForgeryTests(_RetryLadderFixture, unittest.TestCase):
         self.assert_forgeries_fail_closed(self.ledger_path(), valid, tampers)
 
 
-class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
-    """A check that spends its ladder blocks its owners and their dependents for UAT (ADR 0012)."""
+class _BlockedWorkFixture(_EscalationFixture):
+    """Shared fixture for the blocked-work tests: four tasks, one exhausted check and the block call."""
 
     ARGV = ("python3", "gate.py")
     TASKS = "".join(f"- [ ] T00{n} Build part {n}\n" for n in range(1, 5))
@@ -4076,6 +4076,10 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
     def entries(self, result):
         return result["ledger"].get("blocked_work", {}).get("entries", {})
 
+
+class BlockedWorkRecordTests(_BlockedWorkFixture, unittest.TestCase):
+    """A check that spends its ladder blocks its owners and their transitive dependents for UAT (ADR 0012)."""
+
     def test_exhaustion_blocks_the_owners_and_their_transitive_dependents(self):
         blocked = self.block(owner_tasks=["T001"])
         self.assert_schema_valid(blocked["ledger"])
@@ -4101,16 +4105,6 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
         blocked = self.block(owner_tasks=["T001"])
         self.assertEqual(sorted(self.entries(blocked)), ["task:T001", "task:T002", "task:T003"])
 
-    def test_a_final_attempt_needs_fresh_failure_evidence_before_blocking(self):
-        argv = ("python3", "fresh.py")
-        check = self.exhaust(argv, rungs=2)
-        self.now += 10
-        self.invoke("reserve-retry-rung", dispatch_id="fresh-3", host="claude", command_sha256=check)
-        self.settle("fresh-3")
-        result = self.block(command_sha256=check, owner_tasks=["T001"])
-        self.assertEqual(result["reasons"], ["retry_ladder_not_exhausted"])
-        self.assertNotIn("blocked_work", result["ledger"])
-
     def test_multiple_checks_preserve_each_cause_for_the_same_work(self):
         other = self.exhaust(("python3", "other.py"))
         self.block(owner_tasks=["T001"])
@@ -4122,9 +4116,39 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
         self.assertEqual((cause["retained_work"], cause["unblock"]), (["src/beta"], "repair other check"))
         self.assert_schema_valid(blocked["ledger"])
 
+    def test_an_ownerless_check_blocks_its_gate_and_no_task(self):
+        blocked = self.block(gate="G4")
+        self.assert_schema_valid(blocked["ledger"])
+        self.assertEqual(list(self.entries(blocked)), ["gate:G4"])
+        self.assertEqual(blocked["ledger"]["blocked_work"]["entries"]["gate:G4"]["roots"], [])
+
+
+class BlockedWorkBoundaryTests(_BlockedWorkFixture, unittest.TestCase):
+    """Blocking waits for a spent ladder, keeps every cause, and refuses a malformed request."""
+
+    def test_a_final_attempt_needs_fresh_failure_evidence_before_blocking(self):
+        argv = ("python3", "fresh.py")
+        check = self.exhaust(argv, rungs=2)
+        self.now += 10
+        self.invoke("reserve-retry-rung", dispatch_id="fresh-3", host="claude", command_sha256=check)
+        self.settle("fresh-3")
+        result = self.block(command_sha256=check, owner_tasks=["T001"])
+        self.assertEqual(result["reasons"], ["retry_ladder_not_exhausted"])
+        self.assertNotIn("blocked_work", result["ledger"])
+
+    def test_a_check_with_ladder_left_or_a_malformed_request_blocks_nothing(self):
+        short = self.exhaust(("python3", "short.py"), rungs=1)
+        self.assertEqual(self.block(command_sha256=short, owner_tasks=["T001"])["reasons"],
+                         ["retry_ladder_not_exhausted"])
+        before = (self.ledger_path()).read_bytes()
+        for request in ({}, {"owner_tasks": ["T001"], "gate": "G4"}, {"owner_tasks": ["T999"]}, {"gate": ""}):
+            with self.subTest(request=request), self.assertRaises(ValueError):
+                self.block(**request)
+        self.assertEqual((self.ledger_path()).read_bytes(), before)
+
     def test_overlapping_exhausted_owners_keep_their_attempts_and_dependencies(self):
         other = self.exhaust(("python3", "dependent.py"))
-        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        path = self.ledger_path()
         initial = path.read_bytes()
         requests = ({"owner_tasks": ["T001"]}, {"command_sha256": other, "owner_tasks": ["T002"],
                                                 "retained_work": ["src/beta"], "unblock": "repair beta"})
@@ -4145,21 +4169,9 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
                 self.assertEqual((skipped["attempted"], skipped["roots"]), (False, ["task:T001", "task:T002"]))
                 self.assertEqual(set(skipped["causes"]), {self.check, other})
 
-    def test_an_ownerless_check_blocks_its_gate_and_no_task(self):
-        blocked = self.block(gate="G4")
-        self.assert_schema_valid(blocked["ledger"])
-        self.assertEqual(list(self.entries(blocked)), ["gate:G4"])
-        self.assertEqual(blocked["ledger"]["blocked_work"]["entries"]["gate:G4"]["roots"], [])
 
-    def test_a_check_with_ladder_left_or_a_malformed_request_blocks_nothing(self):
-        short = self.exhaust(("python3", "short.py"), rungs=1)
-        self.assertEqual(self.block(command_sha256=short, owner_tasks=["T001"])["reasons"],
-                         ["retry_ladder_not_exhausted"])
-        before = (self.root / self.invoke("status", mode="read_only")["ledger_path"]).read_bytes()
-        for request in ({}, {"owner_tasks": ["T001"], "gate": "G4"}, {"owner_tasks": ["T999"]}, {"gate": ""}):
-            with self.subTest(request=request), self.assertRaises(ValueError):
-                self.block(**request)
-        self.assertEqual((self.root / self.invoke("status", mode="read_only")["ledger_path"]).read_bytes(), before)
+class BlockedWorkResumeTests(_BlockedWorkFixture, unittest.TestCase):
+    """A resumed run keeps its blocks and never dispatches blocked work again."""
 
     def test_resume_keeps_blocks_and_never_redispatches_blocked_work(self):
         self.block(owner_tasks=["T001"])
@@ -4176,6 +4188,26 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
         self.assertEqual(after["blocked_work"], record["blocked_work"])
         self.assertEqual({key: item for key, item in after["dispatches"].items() if "retry_ladder" in item},
                          {key: item for key, item in record["dispatches"].items() if "retry_ladder" in item})
+
+    def test_escalating_a_blocked_check_or_blocking_past_an_unknown_dispatch_is_refused(self):
+        self.invoke("reserve", dispatch_id="lost", kind="implementation")
+        self.invoke("reconcile", dispatch_id="lost")
+        held = self.block(owner_tasks=["T001"])
+        self.assertIn("unknown_dispatch_blocks_unit", held["reasons"])
+        self.assertNotIn("blocked_work", held["ledger"])
+        self.invoke("complete", dispatch_id="lost", outcome="failed", native_observation={
+            "native_event_id": "n1", "run_id": self.run_id, "dispatch_id": "lost", "action": "dispatch_result",
+            "outcome": "failed"})
+        self.block(owner_tasks=["T001"])
+        self.now += 10
+        escalation = {"unit_kind": "gate_failure", "unit": self.check, "tier": 2}
+        refused = self.invoke("reserve", dispatch_id="esc", kind="corrective", escalation=escalation)
+        self.assertEqual(refused["reasons"], ["blocked_for_uat"])
+        self.assertNotIn("esc", refused["ledger"]["dispatches"])
+
+
+class BlockedWorkRemediationTests(_BlockedWorkFixture, unittest.TestCase):
+    """Remediation and escalation requests cannot reach blocked work."""
 
     def test_remediation_requests_cannot_redispatch_blocked_work(self):
         other = self.exhaust(("python3", "other-gate.py"))
@@ -4211,21 +4243,9 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
                 for field in ("blocked_work", "dispatches", "escalation_allowances", "corrective_cycles"):
                     self.assertEqual(refused["ledger"].get(field), before.get(field))
 
-    def test_escalating_a_blocked_check_or_blocking_past_an_unknown_dispatch_is_refused(self):
-        self.invoke("reserve", dispatch_id="lost", kind="implementation")
-        self.invoke("reconcile", dispatch_id="lost")
-        held = self.block(owner_tasks=["T001"])
-        self.assertIn("unknown_dispatch_blocks_unit", held["reasons"])
-        self.assertNotIn("blocked_work", held["ledger"])
-        self.invoke("complete", dispatch_id="lost", outcome="failed", native_observation={
-            "native_event_id": "n1", "run_id": self.run_id, "dispatch_id": "lost", "action": "dispatch_result",
-            "outcome": "failed"})
-        self.block(owner_tasks=["T001"])
-        self.now += 10
-        escalation = {"unit_kind": "gate_failure", "unit": self.check, "tier": 2}
-        refused = self.invoke("reserve", dispatch_id="esc", kind="corrective", escalation=escalation)
-        self.assertEqual(refused["reasons"], ["blocked_for_uat"])
-        self.assertNotIn("esc", refused["ledger"]["dispatches"])
+
+class BlockedWorkDispositionTests(_BlockedWorkFixture, unittest.TestCase):
+    """A human accepts a gap with one event bound to one entry; the block stays a block."""
 
     def accept(self, key="task:T001", event_id="gap-1", **changes):
         event = dict(native_event_id=event_id, run_id=self.run_id, action="blocked_gap_accepted", entry_id=key,
@@ -4257,7 +4277,7 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
 
     def test_forged_blocked_work_records_fail_closed(self):
         self.block(owner_tasks=["T001"])
-        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        path = self.ledger_path()
         valid = path.read_bytes()
         entries = lambda ledger: ledger["blocked_work"]["entries"]
         tampers = {
