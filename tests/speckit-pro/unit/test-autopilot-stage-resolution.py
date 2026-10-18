@@ -19,6 +19,7 @@ Python 3.11+ standard library only.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -36,6 +37,7 @@ if str(PLUGIN_ROOT) not in sys.path:
 
 from runner_invocation import run_runner as invoke_runner, runner_env  # noqa: E402
 from test_result import run_counted  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 
 from speckit_pro_runner.helpers import read_only  # noqa: E402
 
@@ -1049,13 +1051,13 @@ def resolve_envelope(
 NO_BYTECODE = {"PYTHONDONTWRITEBYTECODE": "1"}
 
 
-def run_runner(inputs: dict[str, object]) -> dict[str, object]:
-    """Dispatch a `resolve-autopilot-stage` request through the real runner."""
+def run_runner(inputs: dict[str, object], helper_id: str = "resolve-autopilot-stage") -> dict[str, object]:
+    """Dispatch a resolver request through the real runner."""
     request = {
         "schema_version": "1.0",
-        "request_id": "test-resolve-autopilot-stage",
-        "helper_id": "resolve-autopilot-stage",
-        "operation": "resolve-autopilot-stage",
+        "request_id": f"test-{helper_id}",
+        "helper_id": helper_id,
+        "operation": helper_id,
         "mode": "read_only",
         "inputs": inputs,
     }
@@ -1104,6 +1106,41 @@ class RequestLayerDiagnosticTests(unittest.TestCase):
         response = run_runner({"workflow_file": WORKFLOW_FILE, "autopilot_args": "--stage plan"})
         self.assertEqual(response["status"], "input_error")
         self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["invalid_input"])
+
+    def test_an_unknown_input_is_refused_and_names_the_accepted_inputs(self) -> None:
+        """A misnamed `argv` was ignored, so the stage resolved as auto-detect (issue 1317)."""
+        for helper_id, inputs in (
+            ("resolve-autopilot-stage", {"workflow_file": WORKFLOW_FILE, "argv": ["--stage", "plan"]}),
+            ("resolve-confidence-mode", {"argv": ["--strict"]}),
+        ):
+            with self.subTest(helper_id=helper_id):
+                response = run_runner(inputs, helper_id)
+                self.assertEqual(response["status"], "input_error", response)
+                (diagnostic,) = response["diagnostics"]
+                self.assertEqual(diagnostic["code"], "invalid_input")
+                self.assertIn("unknown inputs: argv", diagnostic["message"])
+                self.assertIn("autopilot_args", diagnostic["message"])
+
+    def test_the_skill_names_each_resolver_input_the_runner_accepts(self) -> None:
+        """Steps 6b and 6c spell the request keys, so the parent sends no guessed key."""
+        for host in ("claude", "codex"):
+            text = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
+            steps = {"resolve-confidence-mode": text[text.index("\n6b. "):text.index("\n6c. ")],
+                     "resolve-autopilot-stage": text[text.index("\n6c. "):text.index("\n6d. ")]}
+            for helper_id, step in steps.items():
+                with self.subTest(host=host, helper_id=helper_id):
+                    named = set(re.findall(r"`inputs\.([a-z_]+)`", step))
+                    self.assertIn("autopilot_args", named)
+                    self.assertLessEqual(named, read_only.RESOLVER_INPUTS[helper_id])
+
+    def test_every_documented_input_is_accepted(self) -> None:
+        for helper_id, inputs in (
+            ("resolve-autopilot-stage", {"repo_root": ".", "workflow_file": WORKFLOW_FILE, "autopilot_args": [],
+                                         "host": "codex", "pr_observation": {"ok": False, "reason": "not queried"}}),
+            ("resolve-confidence-mode", {"repo_root": ".", "autopilot_args": [], "config_path": ".codex/speckit-pro.local.md"}),
+        ):
+            with self.subTest(helper_id=helper_id):
+                self.assertEqual(run_runner(inputs, helper_id)["status"], "ok")
 
     def test_path_outside_the_trust_boundary_yields_a_diagnostic_and_no_exit_code(self) -> None:
         response = run_runner({"workflow_file": OUTSIDE_TRUST_BOUNDARY})

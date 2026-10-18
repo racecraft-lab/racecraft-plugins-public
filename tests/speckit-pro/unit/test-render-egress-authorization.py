@@ -12,6 +12,7 @@ pin both, plus the fail-closed input rules.
 from __future__ import annotations
 
 import json
+import re
 import os
 import subprocess
 import sys
@@ -25,6 +26,8 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
     if str(entry) not in sys.path:
         sys.path.insert(0, str(entry))
 
+from host_skill_views import host_skill_root  # noqa: E402
+from speckit_pro_runner.helpers import egress_authorization  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "render-egress-authorization"
@@ -321,6 +324,26 @@ class RenderEgressAuthorizationTests(unittest.TestCase):
             with self.subTest(case=label):
                 response = _run(inputs)
                 self.assertEqual(response["status"], "input_error", response)
+
+    def test_an_unknown_input_names_the_accepted_inputs(self) -> None:
+        """A guessed `repo_root` cost the run a search of runner source (issue 1317)."""
+        for inputs, accepted in (
+            (_standing_inputs(repo_root="."), "default_branch, derived_classes, installed_extra_policy, repository, scope"),
+            (_inputs(repo_root="."), "actions, default_branch, repository, scope"),
+        ):
+            with self.subTest(scope=inputs.get("scope", "run")):
+                (diagnostic,) = _run(inputs)["diagnostics"]
+                self.assertIn("repo_root", diagnostic["message"])
+                self.assertIn(f"accepted inputs: {accepted}", diagnostic["message"])
+
+    def test_step_minus_two_names_each_standing_input_the_helper_accepts(self) -> None:
+        """Codex's run-start step spells the standing request, so the parent sends no guessed key (issue 1317)."""
+        text = (host_skill_root("codex") / "speckit-autopilot/references/prerequisites.md").read_text(encoding="utf-8")
+        step = text[text.index("2. **Check the standing policy.**"):text.index("3. **Probe every class before Phase 1.**")]
+        named = set(re.findall(r"`([a-z_]+)`", step)) & (egress_authorization.STANDING_INPUTS | {"repo_root"})
+        self.assertEqual(named, egress_authorization.STANDING_INPUTS - {"scope"})
+        self.assertIn("`owner/name`", step)
+        self.assertIn("`$CODEX_HOME/config.toml`", step)
 
     def test_fixture_request_renders(self) -> None:
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
