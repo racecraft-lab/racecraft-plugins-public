@@ -2065,47 +2065,40 @@ class StaleIsolationReferenceTests(unittest.TestCase):
             with self.subTest(host=host):
                 self.assert_recoverable(fixture, self.dispatch(fixture, state_root, inputs), "sweep_comment_unknown")
 
-    def test_replayed_cross_session_and_unsafe_session_references_still_halt(self) -> None:
-        def replayed() -> tuple[GitFixture, Path, dict[str, object]]:
+    def assert_halts(self, fixture: GitFixture, result: dict[str, object]) -> None:
+        self.assertEqual(3, result["exit_code"], result)
+        self.assertEqual("isolation_boundary_unavailable", result["data"]["stdout_json"]["reason"], result)
+        self.assertEqual("tampering_or_forged_evidence", stored_halt(fixture.root)["reason"])
+
+    def test_replayed_and_cross_session_receipts_still_halt(self) -> None:
+        for case in ("replayed", "cross_session"):
             fixture, state_root, session_id = self.live_case()
             receipt = self.classifier_receipt(state_root, session_id)
-            sweep_isolation.SweepSession.open(session_id, state_root=state_root).accept_receipt(
-                receipt, expected_stage="classifier")
-            return fixture, state_root, {"named_surface": "accept", "session_id": session_id,
-                                         "receipt": receipt, "stage": "classifier"}
+            if case == "replayed":
+                sweep_isolation.SweepSession.open(session_id, state_root=state_root).accept_receipt(
+                    receipt, expected_stage="classifier")
+            else:
+                session_id = sweep_isolation.SweepSession.create(
+                    fixture.root, state_root=state_root, comments=[])["session_id"]
+            inputs = {"named_surface": "accept", "session_id": session_id, "receipt": receipt, "stage": "classifier"}
+            with self.subTest(case=case):
+                self.assert_halts(fixture, self.dispatch(fixture, state_root, inputs))
 
-        def cross_session() -> tuple[GitFixture, Path, dict[str, object]]:
+    def test_an_unsafe_path_in_place_of_a_session_still_halts(self) -> None:
+        # Only an absent path is a missing session. Something planted where a
+        # session should be is tampering with the private store.
+        plants = {
+            "symlink_to_a_live_session": lambda path, live: path.symlink_to(live, target_is_directory=True),
+            "dangling_symlink": lambda path, live: path.symlink_to(live.with_name("f" * 32), target_is_directory=True),
+            "regular_file": lambda path, live: path.write_text("{}", encoding="utf-8"),
+        }
+        for case, plant in plants.items():
             fixture, state_root, session_id = self.live_case()
-            receipt = self.classifier_receipt(state_root, session_id)
-            other = sweep_isolation.SweepSession.create(fixture.root, state_root=state_root, comments=[])
-            return fixture, state_root, {"named_surface": "accept", "session_id": other["session_id"],
-                                         "receipt": receipt, "stage": "classifier"}
-
-        def symlinked_session() -> tuple[GitFixture, Path, dict[str, object]]:
-            fixture, state_root, session_id = self.live_case()
-            planted = "d" * 32
-            (state_root / planted).symlink_to(state_root / session_id, target_is_directory=True)
-            return fixture, state_root, {"named_surface": "close", "session_id": planted}
-
-        def dangling_symlink() -> tuple[GitFixture, Path, dict[str, object]]:
-            fixture, state_root, _session_id = self.live_case()
-            planted = "e" * 32
-            (state_root / planted).symlink_to(state_root / ("f" * 32), target_is_directory=True)
-            return fixture, state_root, {"named_surface": "close", "session_id": planted}
-
-        def file_in_place_of_session() -> tuple[GitFixture, Path, dict[str, object]]:
-            fixture, state_root, _session_id = self.live_case()
-            planted = "0" * 32
-            (state_root / planted).write_text("{}", encoding="utf-8")
-            return fixture, state_root, {"named_surface": "close", "session_id": planted}
-
-        for build in (replayed, cross_session, symlinked_session, dangling_symlink, file_in_place_of_session):
-            fixture, state_root, inputs = build()
-            with self.subTest(case=build.__name__):
-                result = self.dispatch(fixture, state_root, inputs)
-                self.assertEqual(3, result["exit_code"], result)
-                self.assertEqual("isolation_boundary_unavailable", result["data"]["stdout_json"]["reason"], result)
-                self.assertEqual("tampering_or_forged_evidence", stored_halt(fixture.root)["reason"])
+            planted = state_root / ("d" * 32)
+            plant(planted, state_root / session_id)
+            with self.subTest(case=case):
+                self.assert_halts(fixture, self.dispatch(
+                    fixture, state_root, {"named_surface": "close", "session_id": planted.name}))
 
 
 class WorkflowAndEvalContractTests(unittest.TestCase):
