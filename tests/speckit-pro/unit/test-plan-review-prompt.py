@@ -65,11 +65,10 @@ class PlanReviewPromptTest(unittest.TestCase):
 
     def test_prompt_sends_nothing_and_starts_no_work(self):
         data = self.call()["data"]
-        self.assertFalse(data["writes_state"])
-        self.assertFalse(data["sends"])
-        self.assertFalse(data["starts_work"])
-        self.assertIn("Do not start implementation", data["prompt"])
-        self.assertIn("blocked entries", data["prompt"])
+        self.assertEqual({flag: data[flag] for flag in ("writes_state", "sends", "starts_work")},
+                         dict.fromkeys(("writes_state", "sends", "starts_work"), False))
+        for promise in ("Do not start implementation", "blocked entries"):
+            self.assertIn(promise, data["prompt"])
 
     def test_every_finding_needs_a_request_and_no_unknown_finding_is_accepted(self):
         self.assertRefused(self.call(requests=REQUESTS[:1]), "F2")
