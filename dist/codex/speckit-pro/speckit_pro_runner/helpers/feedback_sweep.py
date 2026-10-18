@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .harm_halt import record_halt
+
 from ..sweep_export import (
     SWEEP_LOG_HEADING,
     SWEEP_LOG_KEY_COLUMN,
@@ -60,6 +62,47 @@ def sweep_pr_feedback(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
     return sweep_parse(inputs, repo_root)
 
 
+# Surface -> the exact fields its request takes beside named_surface.
+ISOLATION_REQUEST_FIELDS = {
+    "attest_claude": frozenset(),
+    "close": frozenset({"session_id"}),
+    "capture": frozenset({"surface", "repository", "pr_number", "workflow_file"}),
+    "accept": frozenset({"session_id", "receipt", "stage"}),
+    "launch_claude": frozenset({"session_id", "comment_id", "stage"}),
+    "launch_codex": frozenset({"session_id", "comment_id", "stage"}),
+}
+
+
+def isolation_request_fits(inputs: dict[str, Any]) -> bool:
+    """Whether a request carries its surface's exact fields and closed values.
+
+    A misfit is the caller's input error, never evidence that failed a hash or
+    provenance check, so it must not record a harm halt (ADR 0010).
+    """
+    from ..sweep_isolation import PERSPECTIVES, SESSION_ID_RE, STAGES
+
+    surface = inputs.get("named_surface")
+    if not isinstance(surface, str) or surface not in ISOLATION_REQUEST_FIELDS:
+        return False
+    expected = ISOLATION_REQUEST_FIELDS[surface]
+    launch = surface.startswith("launch_")
+    stage = inputs.get("stage")
+    if launch and stage == "perspective":
+        expected = expected | {"perspective"}
+    if set(inputs) != expected | {"named_surface"}:
+        return False
+    session_id = inputs.get("session_id")
+    if "session_id" in expected and not (isinstance(session_id, str) and SESSION_ID_RE.fullmatch(session_id)):
+        return False
+    if surface == "capture":
+        return inputs["surface"] in ("claude", "codex")
+    if surface == "accept":
+        return stage in ("classifier", "perspective")
+    if launch:
+        return stage in STAGES and (stage != "perspective" or inputs["perspective"] in PERSPECTIVES)
+    return True
+
+
 def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     """Operate the private feedback-sweep boundary without returning prose."""
     from ..sweep_isolation import (
@@ -79,33 +122,19 @@ def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str
     )
 
     named_surface = inputs.get("named_surface")
-    allowed = {
-        "capture",
-        "accept",
-        "launch_claude",
-        "launch_codex",
-        "attest_claude",
-        "close",
-    }
-    if named_surface not in allowed:
+    if not isolation_request_fits(inputs):
         return make_result(json_text({"status": "invalid_request"}), "isolation request rejected\n", 2)
 
     plugin_root = Path(__file__).resolve().parents[2]
     try:
         if named_surface == "attest_claude":
-            if set(inputs) != {"named_surface"}:
-                raise SchemaViolation("attestation fields do not match")
             verify_claude_boundary(repo_root, plugin_root)
             payload = {"surface": "claude", "status": "attested"}
         elif named_surface == "close":
-            if set(inputs) != {"named_surface", "session_id"}:
-                raise SchemaViolation("close fields do not match")
             session = SweepSession.open(inputs["session_id"])
             session.invalidate()
             payload = {"session_id": inputs["session_id"], "status": "closed"}
         elif named_surface == "capture":
-            if set(inputs) != {"named_surface", "surface", "repository", "pr_number", "workflow_file"}:
-                raise SchemaViolation("capture fields do not match")
             surface = inputs["surface"]
             if surface == "claude":
                 verify_claude_boundary(repo_root, plugin_root)
@@ -121,19 +150,9 @@ def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str
             )
             payload["surface"] = surface
         elif named_surface == "accept":
-            if set(inputs) != {"named_surface", "session_id", "receipt", "stage"}:
-                raise SchemaViolation("accept fields do not match")
-            stage = inputs["stage"]
-            if stage not in {"classifier", "perspective"}:
-                raise SchemaViolation("only non-synthesis receipts may be accepted directly")
             session = SweepSession.open(inputs["session_id"])
-            payload = session.accept_receipt(inputs["receipt"], expected_stage=stage)
+            payload = session.accept_receipt(inputs["receipt"], expected_stage=inputs["stage"])
         elif named_surface in {"launch_claude", "launch_codex"}:
-            expected = {"named_surface", "session_id", "comment_id", "stage"}
-            if inputs.get("stage") == "perspective":
-                expected.add("perspective")
-            if set(inputs) != expected:
-                raise SchemaViolation("isolated launch fields do not match")
             launcher = run_claude_sweep if named_surface == "launch_claude" else run_codex_sweep
             payload = launcher(
                 plugin_root=plugin_root,
@@ -146,11 +165,31 @@ def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str
         else:
             raise SchemaViolation("isolation surface is unreachable")
     except (CaptureViolation, IsolationViolation, LauncherViolation, ReceiptViolation, SchemaViolation) as violation:
-        # A capture failure names its own closed reason, so the orchestrator can
-        # tell an absent tool or credential from a spent retry schedule.
-        reason = getattr(violation, "reason", "isolation_boundary_unavailable")
-        return make_result(json_text({"status": "blocked", "reason": reason}), f"feedback sweep blocked: {reason}\n", 3)
-    return make_result(json_text(payload))
+        result = sweep_isolation_failure(violation, repo_root, str(named_surface))
+    else:
+        result = make_result(json_text(payload))
+    result["writes_state"] = named_surface != "attest_claude" or result.get("writes_state", False)
+    return result
+
+
+def sweep_isolation_failure(violation: Exception, repo_root: Path, named_surface: str) -> dict[str, Any]:
+    """Persist isolation harm before reporting it; observation failures keep their recoverable reason."""
+    reason = getattr(violation, "reason", "isolation_boundary_unavailable")
+    if reason == "isolation_boundary_unavailable" and named_surface == "attest_claude":
+        reason = "isolation_preflight_unavailable"
+    payload = {"status": "blocked", "reason": reason}
+    if reason == "isolation_boundary_unavailable":
+        try:
+            recorded = record_halt(repo_root, "tampering_or_forged_evidence", "Feedback sweep isolation boundary unavailable",
+                                   f"Before sweep isolation surface {named_surface}; no further runner writes permitted")
+            payload["clear_token"] = recorded["clear_token"]
+        except ValueError:
+            # Keep the closed boundary failure when a prior record needs human
+            # inspection or another trigger already owns its publication lock.
+            payload["halt_record_status"] = "unavailable"
+    result = make_result(json_text(payload), f"feedback sweep blocked: {reason}\n", 3)
+    result["writes_state"] = reason == "isolation_boundary_unavailable"
+    return result
 
 
 def sweep_parse(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:

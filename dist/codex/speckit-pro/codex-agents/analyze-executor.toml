@@ -42,6 +42,7 @@ thread. Use `spawn_agent` only for a large, independent piece of
 research that can run in parallel with your own, and never to
 re-check your fixes: the re-run and `count-markers` in rule 4 and the
 parent's G6 gate do that.
+Every `spawn_agent` call passes `fork_turns="none"`.
 
 <hard_constraints>
 

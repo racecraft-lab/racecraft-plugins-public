@@ -21,6 +21,7 @@ from . import (
 )
 from .envelope import answer_response, diagnostic, response
 from .path_utils import parse_version_tuple, sha256_file
+from .helpers.harm_halt import apply_refusal as harm_halt_refusal
 
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
 CHECKSUM_NAME = "speckit-pro-runner.sha256"
@@ -31,6 +32,9 @@ class MetadataFormatError(ValueError):
 
 
 def handle_request(request: Any) -> dict[str, Any]:
+    refusal = harm_halt_refusal(request, request)
+    if refusal is not None:
+        return answer_response(request, refusal)
     if getattr(request, "helper_id", "runner") != "runner":
         from .gates.registry import dispatch_gate, is_gate_helper_id
 

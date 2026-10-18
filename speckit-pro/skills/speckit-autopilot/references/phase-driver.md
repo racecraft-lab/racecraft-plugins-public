@@ -34,7 +34,7 @@ contract stays in [phase-execution.md](./phase-execution.md).
    Dispatch with the `Agent` tool, foreground, as that reference's template shows.
 <!-- /host -->
 <!-- host:codex: Codex dispatches children with spawn_agent and wait_agent -->
-   Dispatch with `spawn_agent`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
+   Dispatch with `spawn_agent` and `fork_turns="none"`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
 <!-- /host -->
    Run the phase's gate with `validate-gate`, repair within the shared reservation, and record
    the phase results in the workflow file.

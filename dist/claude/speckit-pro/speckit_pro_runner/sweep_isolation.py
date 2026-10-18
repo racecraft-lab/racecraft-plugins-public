@@ -105,8 +105,30 @@ class SchemaViolation(ValueError):
     """A model record does not match its exact closed schema."""
 
 
+class SweepCommentUnknown(SchemaViolation):
+    """A launch names a comment the session never captured; no capability is minted."""
+
+    reason = "sweep_comment_unknown"
+
+
 class ReceiptViolation(ValueError):
     """A receipt is invalid, stale, expired, replayed, or cross-session."""
+
+
+class SweepSessionExpired(ReceiptViolation):
+    """The session lifetime elapsed; recapture rather than treating it as forged evidence."""
+
+    reason = "sweep_session_expired"
+
+
+class SweepSessionMissing(ReceiptViolation):
+    """No session exists under a well-formed id: closed, mistyped, or never made.
+
+    Nothing can be accepted from it, so the refusal stays closed without claiming
+    forged evidence. An unsafe path where the session should be is not this case.
+    """
+
+    reason = "sweep_session_missing"
 
 
 class MutationViolation(ValueError):
@@ -881,8 +903,15 @@ class SweepSession:
         self.state_root = state_root
         self._now = now
         self.session_path = _safe_session_path(state_root, session_id)
-        if not self.session_path.is_dir() or self.session_path.is_symlink():
-            raise ReceiptViolation("private sweep session does not exist")
+        try:
+            # lstat does not follow a link, so a symlink, dangling or not, is unsafe.
+            entry = os.lstat(self.session_path)
+        except FileNotFoundError:
+            raise SweepSessionMissing("private sweep session does not exist") from None
+        except OSError as exc:
+            raise ReceiptViolation("private sweep session path is unsafe") from exc
+        if not stat.S_ISDIR(entry.st_mode):
+            raise ReceiptViolation("private sweep session path is unsafe")
         self.state_path = self.session_path / "state.json"
         self.lock_path = self.session_path / "state.lock"
 
@@ -1014,7 +1043,7 @@ class SweepSession:
         if state.get("version") != SESSION_VERSION or state.get("session_id") != self.session_id:
             raise ReceiptViolation("private sweep session version or identity is invalid")
         if self._clock() > float(state.get("expires_at", 0)):
-            raise ReceiptViolation("sweep session has expired")
+            raise SweepSessionExpired("sweep session has expired")
         if not isinstance(state.get("receipt_key"), str) or len(state["receipt_key"]) != 64:
             raise ReceiptViolation("sweep receipt key is invalid")
 
@@ -1117,11 +1146,17 @@ class SweepSession:
         except OSError as exc:
             raise ReceiptViolation("private sweep session directory could not be removed") from exc
 
-    def _comment(self, state: dict[str, Any], comment_id: str) -> dict[str, Any]:
+    def _comment(
+        self,
+        state: dict[str, Any],
+        comment_id: str,
+        *,
+        unknown: type[SchemaViolation] = SchemaViolation,
+    ) -> dict[str, Any]:
         for comment in state["comments"]:
             if comment["id"] == comment_id:
                 return comment
-        raise SchemaViolation("comment id is not part of this sweep session")
+        raise unknown("comment id is not part of this sweep session")
 
     def _accepted_payload(
         self, state: dict[str, Any], stage: str, comment_id: str
@@ -1169,7 +1204,9 @@ class SweepSession:
             raise SchemaViolation("perspective is only valid for a perspective capability")
         with self._locked_state() as state:
             self._assert_live_head(state)
-            self._comment(state, comment_id)
+            # The orchestrator names this comment; an id from model output or a
+            # signed binding keeps the plain violation.
+            self._comment(state, comment_id, unknown=SweepCommentUnknown)
             if stage in {"perspective", "synthesis"}:
                 self._require_consensus_prerequisites(state, comment_id, stage)
             binding = {

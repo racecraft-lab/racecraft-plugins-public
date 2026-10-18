@@ -72,8 +72,31 @@ not establish which output a later reader will consume or authorize hooks.
 _Avoid_: confirmed live output
 
 **Harm halt**:
-The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must clear it before resume.
+The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must resolve and clear it before resume. Agents cannot authorize its clearance.
 _Avoid_: integrity failure, hard stop
+
+**Clear token**:
+The one-time secret that clears one harm halt. The runner mints it when it records the halt, keeps only its digest, and shows it only on the owner's terminal. A wrong, used or missing token clears nothing (`clear_token`, `clear_token_sha256`).
+_Avoid_: confirm reason, approval
+
+**Sweep process failure**:
+An isolated feedback worker timed out, failed to start, or exited unsuccessfully. It blocks that sweep attempt without establishing tampering (`sweep_process_failed`).
+
+**Sweep session expiry**:
+The private feedback snapshot outlived its allowed lifetime. A fresh capture is required; elapsed time alone is not forged evidence (`sweep_session_expired`).
+
+**Missing sweep session**:
+A well-formed session id names no session in the private store: it was closed, mistyped, or never made. Nothing can be accepted from it, so the refusal is not forged evidence (`sweep_session_missing`), even for a receipt sent to it. An unsafe path where the session should be, such as a symlink, still halts, as does a replayed or cross-session receipt sent to a live session.
+
+**Unknown sweep comment**:
+A launch names a comment the session never captured. No capability is minted, and the caller's mistake is not forged evidence (`sweep_comment_unknown`).
+
+**Sweep isolation preflight gap**:
+An informational boundary check could not attest the runtime (`isolation_preflight_unavailable`). It reports readiness without launching a worker or creating a harm halt; capture and launch still enforce their boundaries.
+
+**Terminal state**:
+Where a run may end without a harm halt: planning ready for review, or ready for UAT. The runner owns the closed list and answers "may this run end now?" from it.
+_Avoid_: stop reason, finish
 
 **Host**:
 A coding-agent product that runs the plugin: Claude Code or Codex.

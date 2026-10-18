@@ -549,6 +549,7 @@ entry. Reconcile partial results and resume only unfinished tasks; missing
 effects require the read-only reconciliation/checkpoint path, not a replay of
 the entire batch. Existing legacy partition output is consumed one task at a
 time even if its old `[P]` runs contain several tasks.
+Each `spawn_agent` call passes `fork_turns="none"`.
 
 ### Persist per-task evidence
 

@@ -9,6 +9,9 @@ Each reason has exactly one class:
 - ``authority``: the next step needs a power agents do not hold.
 - ``exhausted``: the problem failed every escalation tier, or the tier-3 cap.
 - ``harm_halt``: continuing could compound harm, so the whole run halts now.
+
+A run may end only in one of the ``END_STATES`` (a terminal state or the security
+interrupt) or on a harm halt (ADR 0010). ``may_end`` is the one query for that.
 """
 
 from __future__ import annotations
@@ -20,6 +23,13 @@ EXHAUSTED = "exhausted"
 HARM_HALT = "harm_halt"
 
 STOP_CLASSES = frozenset({AUTHORITY, EXHAUSTED, HARM_HALT})
+
+TERMINAL = "terminal"
+INTERRUPT = "interrupt"
+# state -> kind. The two terminal states and the security interrupt are the only non-harm ends.
+END_STATES = {"planning_ready_for_review": TERMINAL,
+              "ready_for_uat": TERMINAL,
+              "security_interrupt": INTERRUPT}
 
 ALL_TIERS_FAILED = "all_tiers_failed"
 TIER3_CAP_REACHED = "tier3_cap_reached"
@@ -45,7 +55,8 @@ STOP_REASONS = {"merge": AUTHORITY,
                 TIER3_CAP_REACHED: EXHAUSTED,
                 "tampering_or_forged_evidence": HARM_HALT,
                 "secret_exposure": HARM_HALT,
-                "integrity_failure": HARM_HALT}
+                "identity_mismatch": HARM_HALT,
+                "concurrent_writer": HARM_HALT}
 
 
 def stop_class(reason: str) -> str:
@@ -54,6 +65,11 @@ def stop_class(reason: str) -> str:
         return STOP_REASONS[reason]
     except KeyError:
         raise ValueError(f"unknown stop reason: {reason!r}") from None
+
+
+def may_end(state: str) -> bool:
+    """Whether a run may end in `state`: an end state or a harm halt; anything else, unknown included, may not."""
+    return state in END_STATES or STOP_REASONS.get(state) == HARM_HALT
 
 
 def publication_pending(state: dict[str, Any], dispatches: dict[str, Any]) -> bool:

@@ -16,8 +16,11 @@ import tempfile
 import time
 import unittest
 import unittest.mock
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Event, get_ident
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
@@ -26,6 +29,7 @@ from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner import autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
+from speckit_pro_runner.runtime import handle_request  # noqa: E402
 
 SOURCE = ROOT / "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source"
 FEATURE = "specs/art-007-draft-pr-emission"
@@ -386,8 +390,234 @@ class RerunTests(TerminalFixture):
         text = page.read_text(encoding="utf-8")
         page.write_text(re.sub(r"(<!-- FILL:[a-z0-9-]+:START -->)", r"\1<script>alert(1)</script>", text, count=1), encoding="utf-8")
         result = self.finish(execution_mode="headless")
-        self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure")
+        self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence")
         self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+    def test_artifact_binding_drift_is_a_registered_harm_halt_that_blocks_the_next_write(self) -> None:
+        page = self.root / FEATURE / "artifacts" / f"{self.finish(until='pages')['data']['pages']['generated'][0]}.html"
+        page.write_text(page.read_text(encoding="utf-8") + "<!-- drift -->", encoding="utf-8")
+        label = self.finish(execution_mode="headless")["data"]["stop_label"]
+        self.assertEqual(stop_policy.stop_class(label.removeprefix("stop_reason:")), "harm_halt")
+        record = json.loads((self.root / ".specify/harm-halt/halt.json").read_text(encoding="utf-8"))
+        self.assertEqual(record["reason"], label.removeprefix("stop_reason:"))
+        blocked = self.finish(execution_mode="headless")
+        self.assertEqual(blocked["diagnostics"][0]["code"], "harm_halt_active", blocked)
+        self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+    def test_stale_planning_inputs_stop_with_a_registered_reason_and_no_halt(self) -> None:
+        self.finish(until="pages")
+        tasks = self.root / PLANNING["tasks_file"]
+        tasks.write_bytes(tasks.read_bytes() + b"\nA late task.\n")
+        result = self.finish(execution_mode="headless")
+        self.assertEqual(result["data"]["stop_label"], LABEL, result)
+        self.assertFalse((self.root / ".specify/harm-halt/halt.json").exists())
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+
+
+class ConcurrentHaltTests(TerminalFixture):
+    def test_a_concurrent_halt_keeps_the_stop_report_and_the_first_record(self) -> None:
+        page = self.root / FEATURE / "artifacts" / f"{self.finish(until='pages')['data']['pages']['generated'][0]}.html"
+        page.write_text(page.read_text(encoding="utf-8") + "<!-- drift -->", encoding="utf-8")
+        record_halt = plan_stage_terminal.harm_halt.record_halt
+
+        def concurrent_trigger_first(root: Path, reason: str, evidence: str, last_safe_state: str) -> dict:
+            record_halt(root, "concurrent_writer", "another process", "before the plan stage")
+            return record_halt(root, reason, evidence, last_safe_state)
+
+        with unittest.mock.patch.object(plan_stage_terminal.harm_halt, "record_halt", side_effect=concurrent_trigger_first):
+            result = self.finish(execution_mode="headless")
+        self.assertEqual((result["status"], result["data"]["halt_record_status"]), ("expected_failure", "blocked"), result)
+        self.assertEqual(stop_policy.stop_class(result["data"]["stop_label"].removeprefix("stop_reason:")), "harm_halt")
+        record = json.loads((self.root / ".specify/harm-halt/halt.json").read_text(encoding="utf-8"))
+        self.assertEqual(record["reason"], "concurrent_writer")
+        self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+
+
+class HaltPublicationFixture(TerminalFixture):
+    def tamper_stop(self, inject, host: str = "claude") -> dict:
+        page = self.root / FEATURE / "artifacts" / f"{self.finish(host=host, until='pages')['data']['pages']['generated'][0]}.html"
+        page.write_text(page.read_text(encoding="utf-8") + "<!-- drift -->", encoding="utf-8")
+        finish = plan_stage_terminal.finish
+
+        def after_precheck(run, apply):
+            try:
+                return finish(run, apply)
+            except plan_stage_terminal.Stop as stop:
+                self.assertEqual("tampering_or_forged_evidence", stop.reason)
+                inject()
+                raise
+
+        request = envelope.RunnerRequest("tamper", "finish-plan-stage", "finish-plan-stage", "apply",
+                                         {"host": host, "workflow_file": WORKFLOW, **PLANNING, "execution_mode": "headless"})
+        with unittest.mock.patch.object(plan_stage_terminal, "finish", side_effect=after_precheck), \
+                unittest.mock.patch.object(plan_stage_terminal, "cli", self.cli):
+            result = handle_request(request)
+        self.assertEqual((result["status"], result["data"]["stop_label"]),
+                         ("expected_failure", "stop_reason:tampering_or_forged_evidence"), result)
+        self.assertEqual((self.subjects(), self.cli.gh), ([], []))
+        return result
+
+    def assert_resume_refused(self) -> None:
+        result = self.finish(execution_mode="headless")
+        self.assertEqual("harm_halt_active", result["diagnostics"][0]["code"], result)
+
+
+
+class CompetingHaltFixture(HaltPublicationFixture):
+    def competing_trigger(self, last_safe_state, host: str, publication_error=None) -> tuple[dict, dict]:
+        entered, release = Event(), Event()
+        owner = plan_stage_terminal.harm_halt
+        ledger = owner.exclusive_ledger
+        publish = owner.durable_json
+        plan_thread = get_ident()
+
+        def publishing(path, record):
+            if publication_error is not None and record["evidence"] == "first evidence":
+                raise publication_error
+            publish(path, record)
+
+        @contextmanager
+        def paused_ledger(*args, **kwargs):
+            with ledger(*args, **kwargs):
+                if get_ident() != plan_thread:
+                    entered.set()
+                    if not release.wait(10):
+                        raise RuntimeError("competing writer was not released")
+                yield
+
+        def trigger():
+            request = envelope.RunnerRequest("competitor", "harm-halt", "harm-halt", "apply",
+                                             {"action": "halt", "reason": "concurrent_writer", "evidence": "first evidence",
+                                              "last_safe_state": last_safe_state})
+            try:
+                return handle_request(request)
+            finally:
+                entered.set()  # Malformed input must finish without ever taking the lock.
+
+        with unittest.mock.patch.object(owner, "exclusive_ledger", side_effect=paused_ledger), \
+                unittest.mock.patch.object(owner, "durable_json", side_effect=publishing), ThreadPoolExecutor() as pool:
+            pending = []
+
+            def inject():
+                pending.append(pool.submit(trigger))
+                self.assertTrue(entered.wait(10), "competing writer did not start")
+
+            try:
+                stopped = self.tamper_stop(inject, host)
+            finally:
+                release.set()
+            competitor = pending[0].result(timeout=10)
+        self.assert_resume_refused()
+        return stopped, competitor
+
+
+class HaltPublisherRaceTests(CompetingHaltFixture):
+    def check_competition(self, last_safe_state, competitor_status: str, halt_status: str, expected: dict) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                stopped, competitor = self.competing_trigger(last_safe_state, host)
+                self.assertEqual(competitor_status, competitor["status"])
+                self.assertEqual(halt_status, stopped["data"]["halt_record_status"])
+                record = plan_stage_terminal.harm_halt.stored_halt(self.root)
+                self.assertEqual(expected, {key: record[key] for key in expected})
+
+    def test_malformed_competitor_cannot_discard_the_independent_tamper_halt(self) -> None:
+        self.check_competition(17, "input_error", "recorded", {"reason": "tampering_or_forged_evidence"})
+
+    def test_valid_competitor_keeps_first_evidence_and_resume_refusal(self) -> None:
+        self.check_competition("before plan", "ok", "blocked",
+                               {"reason": "concurrent_writer", "evidence": "first evidence"})
+
+    def test_aborting_valid_competitor_leaves_durable_resume_refusal(self) -> None:
+        for host, error in itertools.product(("claude", "codex"), (ValueError("rejected"), OSError("disk full"))):
+            with self.subTest(host=host, error=type(error).__name__):
+                self.setUp()
+                stopped, competitor = self.competing_trigger("before plan", host, error)
+                self.assertNotEqual("ok", competitor["status"])
+                self.assertEqual("blocked", stopped["data"]["halt_record_status"])
+                self.assertTrue((self.root / ".specify/harm-halt/halt.lock").is_dir())
+                self.assertFalse((self.root / ".specify/harm-halt/halt.json").exists())
+
+
+class HaltObstructionTests(HaltPublicationFixture):
+    def obstruct(self, kind: str, host: str) -> Path:
+        record = self.root / ".specify/harm-halt/halt.json"
+        obstruction = record.with_suffix(".lock") if "lock" in kind else record
+
+        def inject():
+            record.parent.mkdir(parents=True)
+            if kind == "lock":
+                obstruction.mkdir()
+            elif kind == "lock_file":
+                obstruction.write_text("foreign lock", encoding="utf-8")
+            else:
+                target = self.root / "foreign-target"
+                if kind in ("lock_symlink", "record_symlink"):
+                    target.write_text("foreign content", encoding="utf-8")
+                obstruction.symlink_to(target)
+
+        result = self.tamper_stop(inject, host)
+        self.assertEqual("blocked", result["data"]["halt_record_status"])
+        self.assertNotIn("clear_token", result["data"], "a blocked halt minted no token")
+        self.assertTrue(record.is_symlink() or not record.exists())
+        if kind in ("lock_symlink", "record_symlink"):
+            self.assertEqual("foreign content", (self.root / "foreign-target").read_text(encoding="utf-8"))
+        self.assert_resume_refused()
+        return obstruction
+
+    def check_obstruction_on_both_hosts(self, kind: str) -> None:
+        for host in ("claude", "codex"):
+            self.setUp()
+            self.obstruct(kind, host)
+
+    def test_lock_appearing_after_precheck_keeps_resume_refused(self) -> None:
+        self.check_obstruction_on_both_hosts("lock")
+
+    def test_symlink_appearing_after_precheck_keeps_resume_refused(self) -> None:
+        self.check_obstruction_on_both_hosts("symlink")
+
+    def test_linked_or_non_directory_locks_and_live_record_links_refuse_resume(self) -> None:
+        for kind in ("lock_file", "lock_symlink", "dangling_lock", "record_symlink"):
+            self.check_obstruction_on_both_hosts(kind)
+
+    def test_storage_controller_can_remove_lock_or_symlink_after_the_stop(self) -> None:
+        for kind, host, action in itertools.product(("lock", "symlink"), ("claude", "codex"), ("remove", "rename")):
+            with self.subTest(kind=kind, host=host, action=action):
+                self.setUp()
+                obstruction = self.obstruct(kind, host)
+                if action == "rename":
+                    obstruction.rename(obstruction.with_name("retired-halt-storage"))
+                else:
+                    obstruction.rmdir() if kind == "lock" else obstruction.unlink()
+                self.assertIsNone(plan_stage_terminal.harm_halt.stored_halt(self.root))
+                request = envelope.RunnerRequest("resume", "execution-control", "execution-control", "apply",
+                                                 {"workflow_file": WORKFLOW, "action": "start"})
+                self.assertEqual("ok", handle_request(request)["status"])
+
+
+class RecordedPlanStopTests(HaltPublicationFixture):
+    def test_real_plan_stop_supplies_registered_reason_and_text_state(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                result = self.tamper_stop(lambda: None, host)
+                self.assertEqual("recorded", result["data"]["halt_record_status"])
+                record = plan_stage_terminal.harm_halt.stored_halt(self.root)
+                self.assertEqual("harm_halt", stop_policy.stop_class(record["reason"]))
+                self.assertRegex(record["last_safe_state"], r"^HEAD [a-f0-9]+ before the plan stage$")
+                self.assert_resume_refused()
+
+    def test_a_recorded_plan_stop_reports_whether_the_clear_token_was_delivered(self) -> None:
+        for host, (delivered, expected) in itertools.product(
+                ("claude", "codex"), ((True, "shown_on_owner_terminal"), (False, "not_delivered"))):
+            with self.subTest(host=host, delivered=delivered):
+                self.setUp()
+                with unittest.mock.patch.object(plan_stage_terminal.harm_halt, "show_on_owner_terminal",
+                                                return_value=delivered):
+                    result = self.tamper_stop(lambda: None, host)
+                self.assertEqual(("recorded", expected),
+                                 (result["data"]["halt_record_status"], result["data"].get("clear_token")), result)
 
 
 class ContentEvidenceTests(TerminalFixture):
@@ -442,7 +672,7 @@ class PageRefusalFixture(TerminalFixture):
                 self.assertEqual(count, 1, "the attack must rewrite a generated field")
                 page.write_text(altered, encoding="utf-8")
                 result = self.finish(host=host, execution_mode="headless")
-                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence", result)
                 self.assertIn("planning markup", result["diagnostics"][0]["message"], result)
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
                 self.assertEqual(json.loads((self.root / STATE).read_text())["status"], "in_progress")
@@ -745,7 +975,7 @@ class PublicationOwnershipTests(TerminalFixture):
                 else:
                     entry.write_text("retained private content", encoding="utf-8")
                 result = self.finish(host=host, execution_mode="headless")
-                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence", result)
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
                 self.assertEqual(git(self.remote, "show-ref", check=False).returncode, 1)
                 self.assertNotIn(name, self.git("ls-files", "--", f"{FEATURE}/artifacts"))
@@ -782,7 +1012,7 @@ class UnexpectedArtifactEntryTests(TerminalFixture):
                     entry.symlink_to("missing-target")
                 else:
                     entry.write_text("private content")
-                self.assertEqual(self.finish(execution_mode="headless")["data"]["stop_label"], "stop_reason:integrity_failure")
+                self.assertEqual(self.finish(execution_mode="headless")["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence")
                 self.assertEqual((self.subjects(), self.cli.gh), ([], []))
 
 
@@ -803,7 +1033,8 @@ class PublicationTransactionFixture(TerminalFixture):
             action = functools.partial(stage_unowned_entry, entry=entry, content=content, commit_subject=subject)
             self.cli = after_cli_call(self.cli, prefix, occurrence, action)
             result = self.finish(execution_mode="headless")
-            self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+            expected = "identity_mismatch" if scenario == "sibling" else "tampering_or_forged_evidence"
+            self.assertEqual(result["data"]["stop_label"], f"stop_reason:{expected}", result)
             if subject is None:
                 self.assertEqual(self.subjects(), [])
             self.assertEqual(git(self.remote, "show-ref", check=False).returncode, 1)
@@ -834,7 +1065,7 @@ class StagedArtifactPublicationTests(PublicationTransactionFixture):
                 action = functools.partial(stage_unowned_entry, entry=entry, content="private staged content")
                 self.cli = after_cli_call(self.cli, ("git", "add", "--"), window, action)
                 result = self.finish(host=host, execution_mode="headless")
-                self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence", result)
                 local = self.git("ls-tree", "-r", "HEAD", "--", f"{FEATURE}/artifacts")
                 self.assertNotIn("unowned.html", local)
                 remote = git(self.remote, "ls-tree", "-r", "art-007-draft-pr-emission", check=False)
@@ -879,7 +1110,7 @@ class ArtifactSubstitutionTests(TerminalFixture):
 
                     self.cli = swap
                     result = self.finish(host=host, execution_mode="headless")
-                    self.assertEqual(result["data"]["stop_label"], "stop_reason:integrity_failure", result)
+                    self.assertEqual(result["data"]["stop_label"], "stop_reason:tampering_or_forged_evidence", result)
                     self.assertEqual(self.subjects(), [])
                     self.assertEqual(external.read_text(), "private external sentinel")
 

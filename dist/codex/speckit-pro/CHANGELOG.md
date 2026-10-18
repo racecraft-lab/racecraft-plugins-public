@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.46.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.45.2...speckit-pro-v2.46.0) (2026-10-18)
+
+
+### Features
+
+* **speckit-pro:** record planning manifests and plan approvals ([#1364](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1364)) ([8ca050d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8ca050d942db7f026f713347ccd4f625fdb4136b)), closes [#1073](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1073)
+
+
+### Bug Fixes
+
+* **speckit-pro:** honor operator requests for flat planning mode ([#1360](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1360)) ([4b67723](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4b67723c763231ff328e23c841c30b8c3064e5cf)), closes [#1359](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1359)
+* **speckit-pro:** persist nesting preflight results in run state ([#1361](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1361)) ([1a8c9b3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1a8c9b338f2afdf8a00c3859a10fca576d37e295)), closes [#1358](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1358)
+* **speckit-pro:** phase drivers read a small reference at dispatch ([#1369](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1369)) ([6c1e61d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6c1e61d953f737850f854dd76b3ffb9b0db39f8f)), closes [#1308](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1308)
+* **speckit-pro:** refresh runner run facts and defer mid-run push checks ([#1363](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1363)) ([b05a772](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b05a7721706ac71ef496ea36b35f47055f23aa88)), closes [#1163](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1163)
+
 ## [2.45.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.45.1...speckit-pro-v2.45.2) (2026-10-15)
 
 
