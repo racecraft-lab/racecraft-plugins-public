@@ -40,7 +40,7 @@ class PlanningApprovalFixture(PlanningHelperFixture):
     workflow_text = "## Project Commands\nTest: python3 check.py\n"
 
     def call(self, action="manifest", mode="read_only", **extra):
-        inputs = dict(feature_dir="specs/demo", workflow_file="specs/demo/workflow.md", action=action, **extra)
+        inputs = dict(feature_dir=self.feature_dir, workflow_file=self.workflow_file, action=action, **extra)
         return self.run_helper("planning-approval", inputs, mode=mode)
 
     def approval(self):
@@ -234,18 +234,18 @@ class SupersessionTest(PlanningApprovalFixture):
         self.store_supersedes(replacement, self.case_variant(first_path))
         self.assertRefused(self.call("verify"), "subsequent supersession")
 
-    def test_recorded_case_variant_reference_revokes_the_previous_revision(self):
+    def test_casefolded_recorded_reference_revokes_the_previous_revision(self):
         # On case-sensitive filesystems, copy the bytes to exercise path-key case folding.
         (self.root / "CaseProbe.tmp").write_text("")
         if (self.root / "caseprobe.tmp").exists():
             reference = self.case_variant
         else:
-            def case_variant_alias(record_path):
+            def case_spelled_record(record_path):
                 variant = self.case_variant(record_path)
                 (self.root / variant).write_bytes((self.root / record_path).read_bytes())
                 return variant
 
-            reference = case_variant_alias
+            reference = case_spelled_record
         self.record_superseding(reference)
         self.assertRefused(self.call("verify"), "subsequent supersession")
 

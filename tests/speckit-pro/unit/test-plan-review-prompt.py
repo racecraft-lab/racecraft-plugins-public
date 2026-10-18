@@ -21,11 +21,13 @@ REQUESTS = [
     {"id": "R1", "finding": "F1", "kind": "recommended", "instruction": "Keep history and prepare a linked repair draft."},
     {"id": "R2", "finding": "F2", "kind": "custom", "instruction": "Feed both documents one shared task list."},
 ]
+
+
 class PlanReviewPromptFixture(PlanningHelperFixture):
     def call(self, drop=(), **extra):
-        manifest = self.run_helper("planning-approval", dict(action="manifest", feature_dir="specs/demo",
-                                                               workflow_file="specs/demo/workflow.md"))
-        inputs = dict(feature_dir="specs/demo", workflow_file="specs/demo/workflow.md", findings=copy.deepcopy(FINDINGS),
+        manifest = self.run_helper("planning-approval", dict(action="manifest", feature_dir=self.feature_dir,
+                                                               workflow_file=self.workflow_file))
+        inputs = dict(feature_dir=self.feature_dir, workflow_file=self.workflow_file, findings=copy.deepcopy(FINDINGS),
                       reviewed_revision=manifest["data"]["manifest_digest"], requests=copy.deepcopy(REQUESTS), withdrawals=[])
         inputs.update(extra)
         for key in drop:
@@ -234,13 +236,18 @@ class PlanReviewPromptUnicodeBoundaryTest(PlanReviewPromptFixture):
         self.assertEqual(data["active"], [{"request": text, "finding": text, "kind": "custom", "instruction": text}])
 
 
-PLAN_REVIEW_TEST_CASES = tuple(PlanReviewPromptFixture.__subclasses__())
+def _plan_review_test_cases():
+    return tuple(
+        candidate for candidate in globals().values()
+        if isinstance(candidate, type) and candidate is not PlanReviewPromptFixture
+        and issubclass(candidate, PlanReviewPromptFixture)
+    )
 
 
 class HostPayloadTest(unittest.TestCase):
     def test_both_host_payloads_answer_the_same_request(self):
         for host in ("claude", "codex"):
-            for test_case in PLAN_REVIEW_TEST_CASES:
+            for test_case in _plan_review_test_cases():
                 for name in unittest.defaultTestLoader.getTestCaseNames(test_case):
                     with self.subTest(host=host, check=name):
                         case = test_case(name)
@@ -252,5 +259,5 @@ class HostPayloadTest(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (*PLAN_REVIEW_TEST_CASES, HostPayloadTest))
+                               for case in (*_plan_review_test_cases(), HostPayloadTest))
     raise SystemExit(run_counted(suite, label="test-plan-review-prompt"))

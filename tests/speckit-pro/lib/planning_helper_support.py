@@ -9,6 +9,8 @@ from runner_invocation import run_runner
 
 
 class PlanningHelperFixture(unittest.TestCase):
+    feature_dir = "specs/demo"
+    workflow_file = "specs/demo/workflow.md"
     workflow_text = "## Project Commands\n"
     runner_root = Path(__file__).resolve().parents[3] / "speckit-pro"
 
@@ -16,7 +18,7 @@ class PlanningHelperFixture(unittest.TestCase):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         git(self.root, "init", "--quiet")
         (self.root / ".specify").mkdir()
-        self.feature = self.root / "specs/demo"
+        self.feature = self.root / self.feature_dir
         self.feature.mkdir(parents=True)
         for name, text in {
             "spec.md": "A feature",
