@@ -306,17 +306,37 @@ def sentence(text: str) -> str:
     return re.split(r"(?<=[.!?])\s", " ".join(text.split()), maxsplit=1)[0]
 
 
+def resume_command(run: Run) -> str:
+    return f"{RESUME[run.inputs['host']]} {run.workflow} --stage implement"
+
+
+def gap_title(run: Run, gap: dict[str, Any]) -> str:
+    return str(run.gallery[gap["id"]]["title"]) if gap["id"] in run.gallery else "All artifacts"
+
+
 def draft_body(run: Run, title: str, pages: dict[str, Any]) -> str:
     """The two-section draft description: the artifacts index with gap rows, and the resume command."""
     rows = [f"| {run.gallery[page_id]['title']} | {sentence(run.gallery[page_id]['when_to_use'])} | "
             f"`open {run.feature}/artifacts/{page_id}.html` |" for page_id in pages["generated"]]
-    rows += [f"| {run.gallery[gap['id']]['title'] if gap['id'] in run.gallery else 'All artifacts'} | Gap: {gap['reason']} | none |"
-             for gap in pages["gaps"]]
+    rows += [f"| {gap_title(run, gap)} | Gap: {gap['reason']} | none |" for gap in pages["gaps"]]
     flag = run.inputs.get("unratified_defaults")
-    resume = f"{RESUME[run.inputs['host']]} {run.workflow} --stage implement"
     return "\n".join([f"# {title}", "", "## Artifacts", "", "| Artifact | Purpose | Open |", "| --- | --- | --- |", *rows, "",
                       *([flag, ""] if flag else []), "## Resume", "",
-                      "Stage: plan. Stopped at the plan-stage boundary for review.", f"Resume with: `{resume}`", ""])
+                      "Stage: plan. Stopped at the plan-stage boundary for review.", f"Resume with: `{resume_command(run)}`", ""])
+
+
+def completed_report(run: Run, found: dict[str, Any], pages: dict[str, Any], review: dict[str, Any]) -> str:
+    """The `Emission ran` stop report, so the parent prints it instead of composing it from the reference."""
+    previews = {page["id"]: page for page in review.get("pages", [])}
+    lines = [f"Planning stage published: draft pull request #{found['number']}, {found['url']}. "
+             "Implementation has not started.", "", "Artifacts:"]
+    for page_id in pages["generated"]:
+        preview = previews.get(page_id, {})
+        detail = preview.get("blocker") or f"preview {preview.get('status', 'unknown')}"
+        lines.append(f"- {run.gallery[page_id]['title']}: {run.feature}/artifacts/{page_id}.html ({detail})")
+    lines += [f"- {gap_title(run, gap)}: gap: {gap['reason']}" for gap in pages["gaps"]]
+    flag = run.inputs.get("unratified_defaults")
+    return "\n".join([*lines, *(["", flag] if flag else []), "", f"Resume with: `{resume_command(run)}`"])
 
 
 def base_branch(run: Run) -> str:
@@ -482,8 +502,8 @@ def terminal_sequence(run: Run, pages: dict[str, Any]) -> dict[str, Any]:
     if review["status"] == "pending":
         return {**done, "outcome": "preview_pending", "stop_label": None,
                 "next_action": f"Observe pages {pending} through the runner, commit the preview evidence, then print {label}."}
-    return {**done, "outcome": "completed", "stop_label": label,
-            "next_action": f"Print the stop report, then {label} as the last line, and stop."}
+    return {**done, "outcome": "completed", "stop_label": label, "report": completed_report(run, found, pages, review),
+            "next_action": f"Print `report` as the stop report, then {label} as the last line, and stop."}
 
 
 def check_inputs(inputs: dict[str, Any]) -> None:
