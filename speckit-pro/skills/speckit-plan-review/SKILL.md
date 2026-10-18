@@ -97,7 +97,7 @@ required, so ask for a replacement request.
 
 Call `helper_id=plan-review-prompt operation=plan-review-prompt mode=read_only` with
 `feature_dir`, `workflow_file`, `findings` (`id`, `summary`), `requests` (all of them, in order,
-withdrawn ones included) and `withdrawals` (`request`, `finding`, `instruction`).
+withdrawn ones included) and `withdrawals` (`request`, `finding`, `instruction`; an empty list when none).
 
 If the runner refuses, read its message, fix the named field with the user and call again.
 On success, show `data.prompt` in a fenced text block and tell the user:
