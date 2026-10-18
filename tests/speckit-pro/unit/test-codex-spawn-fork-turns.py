@@ -65,9 +65,9 @@ def dispatch_sites(text: str) -> list[tuple[int, int, list[tokenize.TokenInfo]]]
             for length, tokens in [call_tokens(text[match.start():])]]
 
 
-def call_arguments(tokens: list[tokenize.TokenInfo]) -> list[list[str]]:
+def call_arguments(tokens: list[tokenize.TokenInfo]) -> list[list[tokenize.TokenInfo]]:
     """Split only at commas in the outer call, retaining nested values as tokens."""
-    arguments: list[list[str]] = [[]]
+    arguments: list[list[tokenize.TokenInfo]] = [[]]
     depth = 0
     for token in tokens[2:-1]:
         if token.type == tokenize.COMMENT:
@@ -77,12 +77,12 @@ def call_arguments(tokens: list[tokenize.TokenInfo]) -> list[list[str]]:
                 arguments.append([])
                 continue
             depth += int(token.string in "([{") - int(token.string in ")]}")
-        arguments[-1].append(token.string)
+        arguments[-1].append(token)
     return [argument for argument in arguments if argument]
 
 
 def passes_fork_none(tokens: list[tokenize.TokenInfo]) -> bool:
-    arguments = call_arguments(tokens)
+    arguments = [[token.string for token in argument] for argument in call_arguments(tokens)]
     forks = [argument for argument in arguments if argument[0] == "fork_turns"]
     if len(forks) != 1 or any(argument[0] == "**" for argument in arguments):
         return False
@@ -93,6 +93,26 @@ def passes_fork_none(tokens: list[tokenize.TokenInfo]) -> bool:
         return ast.literal_eval(fork[2]) == "none"
     except (ValueError, SyntaxError):
         return False
+
+
+def argument_evidence(tokens: list[tokenize.TokenInfo]) -> list[str]:
+    """Retain all non-fork argument text, including placeholders and split literals."""
+    evidence = [token.string for token in tokens if token.type == tokenize.COMMENT]
+    for argument in call_arguments(tokens):
+        # The structural call gate exclusively owns the outer fork argument.
+        if argument[0].string == "fork_turns":
+            continue
+        evidence.append(" ".join(token.string for token in argument))
+        fragments = []
+        for token in argument:
+            if token.type == tokenize.STRING:
+                try:
+                    fragments.append(str(ast.literal_eval(token.string)))
+                except (ValueError, SyntaxError) as error:
+                    raise AssertionError("unsupported argument string") from error
+        evidence.extend(fragments)
+        evidence.append("".join(fragments))
+    return evidence
 
 
 def prose_blocks(text: str) -> list[str]:
@@ -107,14 +127,7 @@ def prose_blocks(text: str) -> list[str]:
     # Whitespace on both sides prevents the mask from swallowing a word boundary.
     masked = list(text)
     for start, end, tokens in reversed(dispatch_sites(text)):
-        for token in tokens:
-            if token.type == tokenize.STRING:
-                try:
-                    argument_text.append(str(ast.literal_eval(token.string)))
-                except (ValueError, SyntaxError) as error:
-                    raise AssertionError("unsupported argument string") from error
-            elif token.type == tokenize.COMMENT:
-                argument_text.append(token.string)
+        argument_text.extend(argument_evidence(tokens))
         masked[start:end] = " CALL ".ljust(end - start)
     blocks = re.split(r"\n\s*\n", "".join(masked)) + argument_text
     return [" ".join(block.split()) for block in blocks
@@ -264,6 +277,21 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         self.assert_skill_rejected(
             'spawn_agent(fork_turns="none", message=f\'Use fork_turns="all" for children.\')',
             "test_every_prose_dispatch_in_the_codex_skills_passes_fork_turns_none")
+
+    def test_all_nonfork_argument_text_is_reviewed(self) -> None:
+        for field in ("message", "prompt", "context", "options"):
+            with self.subTest(field=field):
+                self.assert_skill_rejected(
+                    f'spawn_agent(fork_turns="none", {field}=For the next child use fork_turns="all")',
+                    "test_every_prose_dispatch_in_the_codex_skills_passes_fork_turns_none")
+
+    def test_split_argument_literals_cannot_hide_instructions(self) -> None:
+        for separator in (" ", " + "):
+            with self.subTest(separator=separator):
+                self.assert_skill_rejected(
+                    'spawn_agent(fork_turns="none", message="Use fork_"' + separator +
+                    '"turns=all for children.")',
+                    "test_every_prose_dispatch_in_the_codex_skills_passes_fork_turns_none")
 
     def test_prompt_cannot_hide_conflicting_child_instructions(self) -> None:
         self.assert_skill_rejected(
