@@ -22,6 +22,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
 from . import BLOCKED_BY_FIELD, COMPLETED_DISPATCH_IDS_FIELD, UNKNOWN_DISPATCH_IDS_FIELD
+from .blocked_work import (ACCEPT_BLOCKED_GAP, BLOCK_EXHAUSTED_CHECK, GAP_ACCEPTED, Block, accept_gap, block_exhausted_check,
+                           blocked_check, blocked_units, disposition_event_ids, validate_blocked_work)
 from .retry_ladder import RUNGS, is_interrupted, next_rung, replay_rungs, rung_settings
 from .strict_input import SelectionError, require_text as require_nonempty_text
 from .task_partition import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
@@ -317,6 +319,7 @@ def validate_ledger(value: Any) -> None:
     _validate_escalation_cap(value)
     _validate_retry_ladders(value)
     _validate_finalize_observations(value)
+    validate_blocked_work(value)
 
 
 def _validate_corrective_counters(value: dict[str, Any]) -> None:
@@ -872,11 +875,16 @@ def _is_digest(value: Any) -> bool:
     return isinstance(value, str) and _SHA256.fullmatch(value) is not None
 
 
+def _newest_failing_record(ledger: dict[str, Any], check: str) -> dict[str, Any] | None:
+    """The runner's newest failing-check fingerprint for a command digest, or None when it never saw one."""
+    return max((item["failing_checks"] for item in _all_dispatches(ledger) if "failing_checks" in item
+                and item["failing_checks"]["command_sha256"] == check), key=lambda record: record["recorded_at"], default=None)
+
+
 def _fails_again(ledger: dict[str, Any], check: str, earlier: list[dict[str, Any]]) -> bool:
     """True when the check's newest verification failed after the last rung that spent an attempt."""
     spent_at = max((item["completed_at"] for item in earlier if not is_interrupted(item)), default=ledger["started_at"])
-    newest = max((item["failing_checks"] for item in _all_dispatches(ledger) if "failing_checks" in item
-                  and item["failing_checks"]["command_sha256"] == check), key=lambda record: record["recorded_at"], default=None)
+    newest = _newest_failing_record(ledger, check)
     return newest is not None and newest["failing"] != [] and newest["recorded_at"] >= spent_at
 
 
@@ -887,6 +895,8 @@ def reserve_retry_rung(ledger: dict[str, Any], inputs: dict[str, Any], now: floa
         raise ValueError("command_sha256 must be the digest of a command the runner fingerprinted as failing")
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
+    if blocked_check(ledger, check):
+        return {"reasons": ["blocked_for_uat"]}
     earlier = _ladder_dispatches(ledger).get(check, [])
     rung = next_rung(earlier)
     if rung is None:
@@ -901,6 +911,65 @@ def reserve_retry_rung(ledger: dict[str, Any], inputs: dict[str, Any], now: floa
                                          "retry_ladder": {"command_sha256": check, "rung": rung}}
     return {"dispatch_id": dispatch_id, "retry_rung": rung, "retry_role": settings.role,
             "model": settings.model, "effort": settings.effort}
+
+
+def _exhausted_cause(ledger: dict[str, Any], check: str) -> dict[str, Any] | None:
+    """The evidence a spent ladder leaves for its check, or None while a rung is left or the check passes."""
+    attempts = sorted(((dispatch_id, item) for owner in (*ledger.get("corrective_epochs", []), ledger)
+                       for dispatch_id, item in owner["dispatches"].items()
+                       if item.get("retry_ladder", {}).get("command_sha256") == check),
+                      key=lambda pair: pair[1]["reserved_at"])
+    failing = _newest_failing_record(ledger, check)
+    if not attempts or next_rung([item for _, item in attempts]) is not None or failing is None or failing["failing"] == []:
+        return None
+    return {**{key: failing[key] for key in ("command_id", "output_sha256", "failing", "recorded_at")},
+            "attempts": [{"dispatch_id": dispatch_id, "rung": item["retry_ladder"]["rung"], "outcome": item["outcome"],
+                          "interrupted": is_interrupted(item)} for dispatch_id, item in attempts]}
+
+
+def _block_request(inputs: dict[str, Any]) -> tuple[str, list[str], str | None, list[str], str]:
+    """The check, its owning tasks or its gate (exactly one of the two), the retained work and the unblock note."""
+    check, owners, gate = str(inputs.get("command_sha256")), inputs.get("owner_tasks", []), inputs.get("gate")
+    work = inputs.get("retained_work", [])
+    if (not _is_digest(check) or not isinstance(owners, list) or not all(isinstance(task, str) for task in owners)
+            or bool(owners) == (gate is not None) or not _sorted_paths(work)):
+        raise ValueError("block-exhausted-check names a check digest, sorted retained_work, and owner_tasks or a gate")
+    return (check, owners, None if gate is None else require_text(gate, "gate"), work,
+            require_text(inputs.get("unblock"), "unblock"))
+
+
+def _block_exhausted_check(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path,
+                           now: float) -> dict[str, Any]:
+    """Block the owners of a check that spent its ladder, and their dependents; an ownerless check blocks its gate."""
+    check, owners, gate, work, unblock = _block_request(inputs)
+    if blocked_check(ledger, check):
+        return {"reasons": ["blocked_for_uat"]}
+    cause = _exhausted_cause(ledger, check)
+    if cause is None:
+        return {"reasons": ["retry_ladder_not_exhausted"]}
+    error, evidence = _task_ownership(root, spec)
+    if error is not None and owners:
+        return {"reasons": [error]}
+    tasks = evidence.get("tasks", {})
+    if not set(owners) <= set(tasks):
+        raise ValueError("owner_tasks names a task the plan does not define")
+    plan = None if error else evidence["metadata"]["fingerprints"]["tasks_sha256"]
+    block = Block(check, cause, owners, gate, {task: entry["depends_on"] for task, entry in tasks.items()},
+                  {task: entry["tdd_unit"] for task, entry in tasks.items()}, plan, work, unblock, now)
+    record = ledger.setdefault("blocked_work", {"causes": {}, "entries": {}})
+    return {"blocked": block_exhausted_check(record, block)}
+
+
+def _accept_blocked_gap(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
+    """Record one human's acceptance of a blocked gap; it changes the disposition and nothing else."""
+    key = require_text(inputs.get("entry_id"), "entry_id")
+    event, event_id = _operator_event(ledger, inputs, {"native_event_id", "run_id", "action", "entry_id", "decision"},
+                                      "blocked gap acceptance")
+    if (event["run_id"], event["action"], event["entry_id"], event["decision"]) != (
+            ledger["run_id"], "blocked_gap_accepted", key, GAP_ACCEPTED):
+        raise ValueError("operator event does not match this blocked entry")
+    accept_gap(ledger, key, event_id, now)
+    return {"accepted": key}
 
 
 def _mark_interrupted(item: dict[str, Any], inputs: dict[str, Any]) -> None:
@@ -1350,6 +1419,7 @@ def _consumed_native_event_ids(ledger: dict[str, Any]) -> set[str]:
                     if "operator_recovery_event_id" in item)
     consumed.update(item["operator_continuation_event_id"] for item in ledger["dispatches"].values()
                     if "operator_continuation_event_id" in item)
+    consumed.update(disposition_event_ids(ledger))
     if "corrective_exception" in ledger:
         consumed.add(ledger["corrective_exception"]["operator_exception_event_id"])
     for epoch in ledger.get("corrective_epochs", []):
@@ -2170,6 +2240,8 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
                                 _gate_remediation(inputs), _test_fix_request(inputs), _implementation_units(inputs))
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
+    if requests.units and blocked_units(ledger).intersection(requests.units):
+        return {"reasons": ["blocked_for_uat"]}
     verifies = _verifies_request(ledger, inputs)
     reservation = inputs.get("reservation_id")
     if "escalation" in inputs:
@@ -2854,6 +2926,7 @@ FAILURE_PATH_ACTIONS: dict[str, _FailurePathAction] = {
 UNKNOWN_GUARDED_ACTIONS = frozenset({*FAILURE_PATH_ACTIONS, "begin-verification", RESERVE_RETRY_RUNG})
 _ACTIONS = frozenset({"start", "status", "begin-verification", "complete", "reconcile", "reconcile-unit",
                       "checkpoint", "pause", "resume", "relocate-workflow", RECORD_FINALIZE_CYCLE, RESERVE_RETRY_RUNG,
+                      BLOCK_EXHAUSTED_CHECK, ACCEPT_BLOCKED_GAP,
                       *FAILURE_PATH_ACTIONS})
 
 
@@ -2965,6 +3038,10 @@ def _guarded_action(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[s
         return begin_verification(ledger, ctl.inputs)
     if ctl.action == RESERVE_RETRY_RUNG:
         return reserve_retry_rung(ledger, ctl.inputs, now)
+    if ctl.action == BLOCK_EXHAUSTED_CHECK:
+        return _block_exhausted_check(ctl.root, ledger, ctl.inputs, ctl.spec, now)
+    if ctl.action == ACCEPT_BLOCKED_GAP:
+        return _accept_blocked_gap(ledger, ctl.inputs, now)
     return {}
 
 

@@ -2,7 +2,7 @@
 
 Status: accepted
 
-Implementation status: planning decision; this ticket changes no plugin runtime behavior. The ledger, renderers, resume behavior and host parity described here require implementation and verification.
+Implementation status: the ledger record, the resume guard and the human disposition are built (`blocked_work.py`, execution-control v2). The PR body and UAT runbook renderers, the repair-run link and the handoff counts are not built yet.
 
 Decision: [Blocked-for-UAT in the ledger, PR body and UAT runbook](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1023), part of [Wayfinder: speckit-pro health program](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1006).
 
