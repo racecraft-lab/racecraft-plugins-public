@@ -159,6 +159,11 @@ No new independent Daybreak verdict is claimed here.
   can be refused by record preflight while the repository regeneration writer
   skips them. Native scaffolding sets this field. Set the structure version
   before regenerating such a map; this input is not produced by native writers.
+- Typed progress cells that hold identifiers accept any identifier-shaped
+  token: the sweep `author` and `comment` cells and `.process/` evidence paths
+  (`planning_approval.py:73,75,130`). A value such as
+  `skip-security-review` keeps the digest. No reader takes a planning decision
+  from these cells, so a word placed there does not change the approved plan.
 - The assurance guard accepts its two explicit denial forms and does not infer
   arbitrary English negation. Obfuscated assurance terms split by HTML,
   entities, punctuation, or look-alike letters are outside its recognition;
