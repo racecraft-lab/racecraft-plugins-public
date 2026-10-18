@@ -301,7 +301,7 @@ def replay_command(stdin_request: dict[str, Any]) -> str:
     return f"printf '%s' {shlex.quote(canonical_bytes(stdin_request).decode('utf-8'))} | python -m speckit_pro_runner"
 
 
-# The two run-start resolvers silently dropped a misnamed key and answered with a default.
+# A resolver reads optional keys with defaults, so a misnamed key would yield a default answer; refuse it.
 RESOLVER_INPUTS = {
     "resolve-confidence-mode": frozenset({"repo_root", "config_path", "autopilot_args"}),
     "resolve-autopilot-stage": frozenset({"repo_root", "workflow_file", "autopilot_args", "host", "pr_observation"}),
