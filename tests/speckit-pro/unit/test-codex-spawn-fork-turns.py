@@ -686,7 +686,7 @@ class InventoryRefreshWriteTests(unittest.TestCase):
                         self.output.symlink_to(destination)
                         return text
 
-                    with patch.object(json, "dumps", side_effect=swap_file), self.assertRaises(OSError):
+                    with patch.object(json, "dumps", side_effect=swap_file), self.assertRaisesRegex(OSError, "unsafe existing target"):
                         self.run_refresh()
                     self.assertTrue(self.output.is_symlink())
                     if dangling:
