@@ -655,6 +655,27 @@ class OwnerTerminalGuardTests(OwnerTerminalCase):
 
         self.assertEqual("off", child_environment(REPO)[harm_halt.TERMINAL_SWITCH])
 
+    def test_a_test_file_run_on_its_own_withholds_the_token(self) -> None:
+        from test_result import run_counted
+
+        seen: list[str | None] = []
+
+        class Probe(unittest.TestCase):
+            def test_switch(self) -> None:
+                seen.append(os.environ.get(harm_halt.TERMINAL_SWITCH))
+
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(Probe)
+        self.assertEqual(0, run_counted(suite, label="probe", stream=io.StringIO(), allow_live_specs=True))
+        self.assertEqual(["off"], seen)
+
+    def test_a_test_started_by_unittest_withholds_the_token(self) -> None:
+        env = {key: value for key, value in os.environ.items() if key != harm_halt.TERMINAL_SWITCH}
+        probe = (f"import os, sys; sys.path.insert(0, {str(REPO / 'tests/speckit-pro/lib')!r}); import test_result; "
+                 f"print(os.environ.get({harm_halt.TERMINAL_SWITCH!r}))")
+        shown = subprocess.run([sys.executable, "-c", probe], env=env, capture_output=True, text=True,
+                               timeout=60, check=True)
+        self.assertEqual("off", shown.stdout.strip())
+
 
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
