@@ -417,6 +417,7 @@ class DeclaredProgressTest(WorkflowFixture):
         recorded = self.call("record", "apply", approval=self.approval())
         self.assertEqual(recorded["status"], "ok", recorded)
         path.write_text(before + "\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n")
+        path.write_text(path.read_text() + "|---|---|---|---|---|---|---|---|\n")
         self.assertEqual(self.call()["data"]["manifest_digest"], recorded["data"]["record"]["manifest_digest"])
         self.assertEqual(self.call("verify")["status"], "ok")
 
@@ -756,7 +757,7 @@ class NavigationConfirmationLifecycleTest(NavigationFixture):
 
 
 class GeneratedNavigationTest(PlanningApprovalFixture):
-    def test_spec_map_writer_progress_preserves_approval_but_edited_navigation_does_not(self):
+    def test_spec_map_prs_updates_bind_approval_even_when_canonical(self):
         path = self.feature / "SPEC-MOC.md"
         path.write_text("---\nstructureVersion: 1\nstatus: pending\n---\n# Map\n")
         rendered, _ = render_spec_index(self.root)
@@ -772,7 +773,8 @@ class GeneratedNavigationTest(PlanningApprovalFixture):
         rendered, _ = render_spec_index(self.root)
         path.write_text(rendered[0].rendered)
         self.assertNotEqual(rendered[0].original, rendered[0].rendered)
-        self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+        self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+        before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
         for text in ("PR#42", "[spec.md]"):
             with self.subTest(text=text):
                 self.assertIn(text, rendered[0].rendered)
@@ -789,7 +791,7 @@ class InventoryProgressTest(ProgressFixture):
                 for stage in ("before", "after", "planning"):
                     self.writeProgressCase(case, stage)
                     bindings.append(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"))
-                self.assertEqual(bindings[0], bindings[1])
+                self.assertEqual(bindings[0] == bindings[1], case.get("preserves_revision", True))
                 self.assertNotEqual(bindings[1], bindings[2])
 
     def test_reader_status_vocabulary_preserves_the_revision(self):
@@ -828,7 +830,8 @@ class ShippedWorkflowTest(WorkflowFixture):
                     self.writeProgressCase(case, "before")
                     before = self.call()["data"]["manifest_digest"]
                     self.writeProgressCase(case, "after")
-                    self.assertEqual(self.call()["data"]["manifest_digest"], before)
+                    self.assertEqual(self.call()["data"]["manifest_digest"] == before,
+                                     case.get("preserves_revision", True))
                     self.writeProgressCase(case, "planning")
                     self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
 

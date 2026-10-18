@@ -1,4 +1,5 @@
 # Recorded plan review uses the shared planning-approval runner helper and confirmation reference.
+# Regenerate navigation with the shared spec-index helper before final plan review.
 interface:
   display_name: "SpecKit Autopilot"
   short_description: "Archive-aware autonomous SDD workflow executor"
