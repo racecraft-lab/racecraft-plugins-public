@@ -25,7 +25,7 @@ so a wording edit to a Codex skill or agent needs no fixture change.
 The gate scans the rendered Codex skill tree and every generated Codex agent
 TOML. It skips only the file kinds that cannot dispatch a Codex child agent:
 
-- files under a `scripts/` directory;
+- Python files under a `scripts/` directory;
 - JSON schemas (`*.schema.json`);
 - lockfiles (`*-lock.json`, `*-lock.yaml`, `*.lock`);
 - vendored upstream trees, meaning any directory that holds an

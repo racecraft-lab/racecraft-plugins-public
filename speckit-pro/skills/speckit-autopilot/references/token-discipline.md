@@ -21,8 +21,10 @@ Token discipline applies **only** to:
 - Subagent → orchestrator return summaries (the "result"
   payload of an `Agent(...)` / `spawn_agent` call)
 - Orchestrator → subagent dispatch prompts (the "prompt"
-  argument; on Codex, `fork_turns="none"` keeps the child's
-  context to that prompt)
+  argument)
+<!-- host:codex: Codex children start without the parent's turns -->
+  On Codex, `fork_turns="none"` keeps the child's context to that prompt.
+<!-- /host -->
 - Internal multi-agent debate transcripts (consensus rounds)
 
 Token discipline does **not** touch:

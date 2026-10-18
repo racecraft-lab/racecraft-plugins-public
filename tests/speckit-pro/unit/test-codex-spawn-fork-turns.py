@@ -119,7 +119,7 @@ def read_surface(path: Path) -> str:
 def is_dispatch_surface(root: Path, path: Path) -> bool:
     """Skip only the kinds that cannot dispatch; any other file kind stays in scope."""
     relative = path.relative_to(root)
-    if "scripts" in relative.parts[:-1]:
+    if "scripts" in relative.parts[:-1] and path.suffix == ".py":
         return False
     if path.name.endswith(".schema.json") or LOCKFILE.search(path.name):
         return False
@@ -273,13 +273,14 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             with self.subTest(skipped=relative):
                 self.assert_skill_gates_accept({relative: ("", call)})
         for relative in ("speckit-coach/examples/new.py", "speckit-autopilot/contracts/new.json",
-                         "speckit-autopilot/agents/openai.yaml", "other/new.data"):
+                         "speckit-autopilot/agents/openai.yaml", "speckit-autopilot/scripts/new.md",
+                         "other/new.data"):
             with self.subTest(scanned=relative):
                 self.assert_skill_gates_reject({relative: ("", call)})
 
     def test_unreadable_surface_or_call_fails_closed(self) -> None:
         for relative, new in (
-            ("speckit-autopilot/references/new.md", b"\xff\xfe spawn_agent("),
+            ("speckit-autopilot/references/new.md", b"\xff\xfe plain notes\n"),
             ("speckit-autopilot/references/new.md", '\nspawn_agent(fork_turns="none", message="work"\n'),
         ):
             with self.subTest(content=new[:24]):
