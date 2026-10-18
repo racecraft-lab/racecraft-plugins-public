@@ -187,6 +187,13 @@ class CodexSpawnForkTests(unittest.TestCase):
         self.assertIn(f"Every `spawn_agent` call passes `{FORK}`", text)
 
 
+def agent_instruction_sources() -> dict[str, str]:
+    """Load the real agent instructions used by fault-injection fixtures."""
+    agents = REPO_ROOT / "speckit-pro/codex-agents"
+    return {path.name: tomllib.loads(path.read_text(encoding="utf-8"))["developer_instructions"]
+            for path in agents.glob("*.toml")}
+
+
 class CodexSpawnGateFaultTests(unittest.TestCase):
     """Inject contributor-controlled text through the same gates as shipped files."""
 
@@ -361,9 +368,7 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         self.assertTrue(result.wasSuccessful(), (result.failures, result.errors))
 
     def test_conflicting_agent_instruction_is_rejected(self) -> None:
-        agents = REPO_ROOT / "speckit-pro/codex-agents"
-        sources = {path.name: tomllib.loads(path.read_text(encoding="utf-8"))["developer_instructions"]
-                   for path in agents.glob("*.toml")}
+        sources = agent_instruction_sources()
         dispatchers = [name for name, text in sources.items() if "spawn_agent" in text]
         self.assertGreaterEqual(len(dispatchers), 4)
         for name in dispatchers:
