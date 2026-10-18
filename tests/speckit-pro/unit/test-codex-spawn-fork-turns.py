@@ -141,12 +141,21 @@ def reviewed_instruction_inventory() -> dict[str, dict[str, str]]:
     """Load the reviewed map from small fixture chunks without dropping entries."""
     try:
         manifest = json.loads(read_surface(REVIEW_INVENTORY))
+        if not isinstance(manifest, dict):
+            raise ValueError("invalid inventory fixture manifest")
         agents = manifest["agents"]
-        parts = manifest["skills"]
-        if not isinstance(agents, dict) or not isinstance(parts, list) or not parts:
+        chunk_names = {name for name in manifest if name.startswith("skills-")}
+        expected_names = {f"skills-{index}" for index in range(1, len(chunk_names) + 1)}
+        if (
+            not isinstance(agents, dict)
+            or not chunk_names
+            or chunk_names != expected_names
+            or set(manifest) != {"agents", *chunk_names}
+        ):
             raise ValueError("invalid inventory fixture manifest")
         skills = {}
-        for part in parts:
+        for name in (f"skills-{index}" for index in range(1, len(chunk_names) + 1)):
+            part = manifest[name]
             if not isinstance(part, dict) or not part or skills.keys() & part.keys():
                 raise ValueError("invalid or repeated inventory fixture entries")
             skills.update(part)
@@ -435,15 +444,18 @@ class CodexSpawnInventoryTests(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "instruction root"):
                 instruction_inventory(root / "missing")
 
+class CodexSpawnInventoryFixtureTests(unittest.TestCase):
     def test_unreadable_review_inventory_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             inventory = Path(temporary) / "inventory.json"
             for content in (
                 None, b"\xff", b"{", b"{}", b"[]", b'null',
-                b'{"agents": {}, "skills": []}',
-                b'{"agents": {}, "skills": [{}]}',
-                b'{"agents": {}, "skills": [null]}',
-                b'{"agents": {}, "skills": [{"one": "hash"}, {"one": "hash"}]}',
+                b'{"agents": {}}',
+                b'{"agents": {}, "skills-1": {}}',
+                b'{"agents": {}, "skills-1": null}',
+                b'{"agents": {}, "skills-2": {"one": "hash"}}',
+                b'{"agents": {}, "skills-1": {"one": "hash"}, "skills-2": {"one": "hash"}}',
+                b'{"agents": {}, "skills-1": {"one": "hash"}, "other": {}}',
             ):
                 with self.subTest(content=content), patch(__name__ + ".REVIEW_INVENTORY", inventory):
                     if content is not None:
@@ -453,7 +465,7 @@ class CodexSpawnInventoryTests(unittest.TestCase):
 
     def test_review_inventory_with_a_missing_chunk_entry_fails_closed(self) -> None:
         manifest = json.loads(REVIEW_INVENTORY.read_text(encoding="utf-8"))
-        manifest["skills"][0].pop(next(iter(manifest["skills"][0])))
+        manifest["skills-1"].pop(next(iter(manifest["skills-1"])))
         with tempfile.TemporaryDirectory() as temporary:
             inventory = Path(temporary) / "inventory.json"
             inventory.write_text(json.dumps(manifest), encoding="utf-8")

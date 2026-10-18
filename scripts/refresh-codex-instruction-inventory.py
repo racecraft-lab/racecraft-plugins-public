@@ -49,13 +49,11 @@ def main() -> int:
         skills = Path(temporary) / "skills"
         render_host_skills(REPO_ROOT / "speckit-pro", "codex", skills)
         skill_entries = sorted(instruction_inventory(skills).items())
-        inventory = {
-            "skills": [
-                dict(skill_entries[index:index + SKILL_CHUNK_SIZE])
-                for index in range(0, len(skill_entries), SKILL_CHUNK_SIZE)
-            ],
-            "agents": instruction_inventory(REPO_ROOT / "speckit-pro/codex-agents"),
-        }
+        inventory = {"agents": instruction_inventory(REPO_ROOT / "speckit-pro/codex-agents")}
+        inventory.update({
+            f"skills-{index // SKILL_CHUNK_SIZE + 1}": dict(skill_entries[index:index + SKILL_CHUNK_SIZE])
+            for index in range(0, len(skill_entries), SKILL_CHUNK_SIZE)
+        })
     write_inventory(inventory)
     print("Wrote instruction inventory. Review source changes and the inventory diff together.")
     return 0
