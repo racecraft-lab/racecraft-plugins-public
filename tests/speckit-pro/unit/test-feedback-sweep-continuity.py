@@ -23,8 +23,10 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
         sys.path.insert(0, str(import_root))
 
 from host_skill_views import host_skill_root  # noqa: E402
+from mutation_request_case import MutationRequestCase  # noqa: E402
 from speckit_pro_runner import sweep_isolation, sweep_launcher  # noqa: E402
 from speckit_pro_runner.helpers import read_only  # noqa: E402
+from speckit_pro_runner.helpers.harm_halt import stored_halt  # noqa: E402
 from speckit_pro_runner.stop_policy import STOP_REASONS  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -196,7 +198,7 @@ class GitHubStopTests(ScriptedGh):
                 self.assertNotIn(marker, str(violation))
 
 
-class CaptureReasonTests(unittest.TestCase):
+class CaptureReasonTests(MutationRequestCase):
     """The capture surface tells the orchestrator which failure it hit."""
 
     def capture(self, violation: BaseException) -> tuple[dict, int]:
@@ -210,7 +212,7 @@ class CaptureReasonTests(unittest.TestCase):
         with patch.object(sweep_launcher, "verify_claude_boundary"), patch.object(
             sweep_isolation, "capture_github_session", side_effect=violation
         ):
-            result = read_only.sweep_isolation_session(inputs, REPO_ROOT)
+            result = read_only.sweep_isolation_session(inputs, self.root)
         return json.loads(result["stdout"]), result["exit_code"]
 
     def test_each_capture_failure_reports_its_own_closed_reason(self) -> None:
@@ -223,10 +225,12 @@ class CaptureReasonTests(unittest.TestCase):
         ):
             with self.subTest(reason=violation.reason):
                 self.assertEqual(self.capture(violation), ({"status": "blocked", "reason": violation.reason}, 3))
+                self.assertIsNone(stored_halt(self.root))
 
     def test_a_boundary_failure_keeps_the_isolation_reason(self) -> None:
         payload, code = self.capture(sweep_isolation.IsolationViolation("boundary"))
         self.assertEqual((payload["reason"], code), ("isolation_boundary_unavailable", 3))
+        self.assertEqual("tampering_or_forged_evidence", stored_halt(self.root)["reason"])
 
     def test_the_closed_reason_set_is_what_the_guidance_branches_on(self) -> None:
         self.assertEqual(
@@ -251,7 +255,7 @@ GUIDANCE_PINS = {
             "their committed diff is the only amendment text it can see",
             "List every amended comment in the final report",
             "Keep the isolation-unavailable stop",
-            "`stop_reason:integrity_failure`",
+            "`stop_reason:tampering_or_forged_evidence`",
             "Invalidate the private sweep session",
         ),
         "absent": (
@@ -311,7 +315,7 @@ class HostGuidanceTests(unittest.TestCase):
             with self.subTest(host=host):
                 named = set(marker.findall(phase)) | set(marker.findall(skill))
                 self.assertLessEqual(
-                    {"integrity_failure", "tool_unavailable", "ambiguous_pr_record", "reopen_closed_pr"}, named
+                    {"tampering_or_forged_evidence", "tool_unavailable", "ambiguous_pr_record", "reopen_closed_pr"}, named
                 )
                 self.assertLessEqual(named, set(STOP_REASONS))
         for reason in ("tool_unavailable", "ambiguous_pr_record"):
