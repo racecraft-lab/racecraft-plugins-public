@@ -79,9 +79,18 @@ values are exempt from approval. Regenerated host payloads carry the same code.
   whitespace.
 - **A token can still spell words.** A value such as
   `skip-review-and-merge` is a valid branch or slice name, so it stays
-  progress. It cannot carry whitespace-separated prose, a link or markup, and
-  it appears only in a typed column of a generated row. A value with spaces
-  stays bound to the revision.
+  progress. It cannot carry a link or markup, and it appears only in a typed
+  column of a generated row. In a scalar column, a value with spaces stays
+  bound to the revision.
+- **Scope can list plain words.** The Scope column is checked after the
+  renderer joins `declared_files` with `, `, so `["Ignore", "all", "plans"]`
+  stays progress. A single item `"Ignore, all, plans"` renders the same bytes
+  and is projected the same way. Each word is a legal file name, so checking
+  items before the join would close nothing. No markup, link or extra cell can
+  pass. Review classified this as Low wording and Info reachability.
+- **A v1 `merged_sha` ending in a carriage return projects (Info).** The
+  trailing `\r` only forms a CRLF line ending in the generated row. It cannot
+  carry markup or split the row.
 - **Markdown table separators are projected away (`F1373-ea4f0cb9`, Low).**
   Scopes with an `omit_row` progress rule drop every table separator, so
   changing a separator's column count or alignment keeps the workflow digest.
