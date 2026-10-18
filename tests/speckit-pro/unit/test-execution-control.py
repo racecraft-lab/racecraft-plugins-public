@@ -1678,17 +1678,14 @@ class _EscalationFixture(_ExecutionControlFixture):
         self.assertEqual(self.deferred["disposition"], "defer")
         self.family = {"unit_kind": "failure_family", "unit": "FR-001"}
 
-    def later(self, action, **inputs):
-        """Invoke an action ten seconds after the last one."""
-        self.now += 10
-        return self.invoke(action, **inputs)
-
     def escalate(self, dispatch_id, tier, unit=None, **inputs):
-        return self.later("reserve", dispatch_id=dispatch_id, kind="corrective",
-                          escalation={**(unit or self.family), "tier": tier}, **inputs)
+        self.now += 10
+        return self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective",
+                           escalation={**(unit or self.family), "tier": tier}, **inputs)
 
-    def settle(self, dispatch_id, outcome="failed", **inputs):
-        return self.later("complete", dispatch_id=dispatch_id, outcome=outcome, **inputs)
+    def settle(self, dispatch_id, outcome="failed"):
+        self.now += 10
+        return self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
 
     def verify_red(self, argv):
         """A failing verification of one command, fingerprinted by the runner; returns the command digest."""
@@ -3829,10 +3826,13 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
         self.assertEqual(self.verify_red(self.ARGV), self.check)
 
     def climb(self, dispatch_id, host="claude", check=None):
-        return self.later("reserve-retry-rung", dispatch_id=dispatch_id, host=host, command_sha256=check or self.check)
+        self.now += 10
+        request = {"dispatch_id": dispatch_id, "host": host, "command_sha256": check or self.check}
+        return self.invoke("reserve-retry-rung", **request)
 
     def interrupt(self, dispatch_id, **inputs):
-        return self.settle(dispatch_id, interrupted=True, **inputs)
+        self.now += 10
+        return self.invoke("complete", **{"dispatch_id": dispatch_id, "outcome": "failed", "interrupted": True, **inputs})
 
     def ledger_bytes(self):
         return (self.root / self.invoke("status", mode="read_only")["ledger_path"]).read_bytes()
@@ -3910,6 +3910,14 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
                 self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome, interrupted=True)
         self.assertEqual(self.ledger_bytes(), before)
 
+    def test_a_new_epoch_does_not_reset_a_checks_count(self):
+        self.climb("rung-1")
+        self.settle("rung-1")
+        self.open_stage_epoch()
+        self.verify_red(self.ARGV)
+        self.assertEqual(self.climb("rung-2")["retry_rung"], 2)
+        self.assertEqual(self.climb("rung-1")["reasons"], ["dispatch_already_reserved_no_relaunch"])
+
     def test_each_rung_reports_the_model_and_effort_its_host_runs_it_with(self):
         expected = {"claude": [(None, None), ("opus", "xhigh"), ("opus", "max")],
                     "codex": [(None, None), ("gpt-6-sol", "xhigh"), ("gpt-6-sol", "max")]}
@@ -3952,6 +3960,8 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
             "a corrective reservation": lambda ledger: dispatch(ledger).update(reservation_id="r"),
             "a second allowance": lambda ledger: dispatch(ledger).update(increment="alpha"),
             "an interrupted success": lambda ledger: dispatch(ledger).update(outcome="completed", interrupted=True),
+            "a check the runner never saw fail": lambda ledger: dispatch(ledger)["retry_ladder"].update(
+                command_sha256="0" * 64),
             "a third dispatch on a rung": lambda ledger: ledger["dispatches"].update(
                 extra={**dispatch(ledger), "reserved_at": self.now + 1}),
         }

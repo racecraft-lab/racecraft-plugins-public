@@ -859,8 +859,10 @@ def _validate_ladder_dispatch(item: dict[str, Any]) -> None:
 
 def _validate_retry_ladders(ledger: dict[str, Any]) -> None:
     """Each check's ladder dispatches ran in order, one at a time, never past the last rung."""
-    if not all(replay_rungs(items) for items in _ladder_dispatches(ledger).values()):
-        raise ValueError("a retry-ladder dispatch runs a rung its check had not reached")
+    failed = {item["failing_checks"]["command_sha256"] for item in _all_dispatches(ledger) if failed_verification(item)}
+    for check, items in _ladder_dispatches(ledger).items():
+        if check not in failed or not replay_rungs(items):
+            raise ValueError("a retry-ladder dispatch runs a rung its check had not reached")
 
 
 _SHA256 = re.compile(r"[0-9a-f]{64}")
