@@ -21,7 +21,7 @@ Work a run cannot finish or verify and hands to human review with its reason and
 _Avoid_: completed with deferrals, failed run, waived completion
 
 **Canary**:
-A fixed small SPEC run end to end, unattended, on both hosts from a clean install: scaffold from an answers file, planning, plan review by a simulated reviewer, and implement. Its green result is what lets a release ship.
+A fixed small SPEC run end to end, unattended, on both hosts from a clean install: scaffold through the real interview answered by the operator agent, planning, plan review by a simulated reviewer, and implement. Its green result is what lets a release ship.
 _Avoid_: smoke test, integration eval, dogfood run
 
 **Canary receipt**:
@@ -59,6 +59,10 @@ _Avoid_: verify loop, re-check pass
 **Gate**:
 A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.
 _Avoid_: quality gate, phase
+
+**Operator agent**:
+The canary's stand-in for the human operator during the scaffold interview. It knows the roadmap entry and the fixture answers, and nothing about the planted defects. A question its answers do not cover gets "no preference".
+_Avoid_: simulated user, scripted operator
 
 **Tasks input snapshot**:
 A private copy of the specification, plan and checklist reports accepted by G4
