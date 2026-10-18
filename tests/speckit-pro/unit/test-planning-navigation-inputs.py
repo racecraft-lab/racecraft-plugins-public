@@ -29,6 +29,7 @@ class NavigationInputsFixture(fixtures.NavigationFixture):
                 data["records"][0]["status"] = "merged"
             manifest.write_text(json.dumps(data))
             yield version, field
+        manifest.write_text(json.dumps(original))
 
     def recordNavigationApproval(self):
         self.approval()
