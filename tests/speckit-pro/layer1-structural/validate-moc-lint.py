@@ -28,7 +28,7 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
 
 from speckit_pro_runner.helpers.read_only import (
     _spec_index_id_match,
-    _spec_index_is_gated,
+    spec_index_is_gated,
     _spec_index_scalar,
 )
 from test_result import run_counted
@@ -55,7 +55,7 @@ def _write(path: Path, text: str) -> Path:
 
 def moc_is_gated(marker: Path) -> bool:
     text = _read_text(marker)
-    return text is not None and _spec_index_is_gated(text)
+    return text is not None and spec_index_is_gated(text)
 
 
 def moc_field(marker: Path, field: str) -> str | None:
@@ -300,7 +300,7 @@ class ValidateMocLintRunnerAgreement(unittest.TestCase):
         for token in self.GATE_TOKENS:
             with self.subTest(token=token):
                 marker = self.marker(f"structureVersion: {token}\n")
-                self.assertEqual(_spec_index_is_gated(marker.read_text(encoding="utf-8")), moc_is_gated(marker))
+                self.assertEqual(spec_index_is_gated(marker.read_text(encoding="utf-8")), moc_is_gated(marker))
 
     def test_both_scans_skip_a_marker_the_runner_does_not_gate(self) -> None:
         for token in ("²", "١"):

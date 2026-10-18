@@ -3956,7 +3956,7 @@ def _spec_index_scalar(text: str, field: str) -> tuple[bool, str]:
     return True, value
 
 
-def _spec_index_is_gated(text: str) -> bool:
+def spec_index_is_gated(text: str) -> bool:
     raw = _spec_index_frontmatter_raw(text, "structureVersion")
     if raw is None:
         return False
@@ -4328,7 +4328,7 @@ def _spec_index_render_home_index(
         if _spec_index_path_state(moc, "SPEC-MOC.md", repo_root) == "missing":
             continue
         moc_text = _spec_index_read_text(moc, repo_root)
-        if not _spec_index_is_gated(moc_text) or not _spec_index_home_owns(home_path, home_text, moc_text):
+        if not spec_index_is_gated(moc_text) or not _spec_index_home_owns(home_path, home_text, moc_text):
             continue
         has_id, spec_id = _spec_index_scalar(moc_text, "spec_id")
         if not has_id or not spec_id:
@@ -4352,7 +4352,7 @@ def _spec_index_render_home_index(
             branch = spec_dir.name
             moc = spec_dir / "SPEC-MOC.md"
             moc_state = _spec_index_path_state(moc, "SPEC-MOC.md", repo_root)
-            if moc_state == "regular" and _spec_index_is_gated(_spec_index_read_text(moc, repo_root)):
+            if moc_state == "regular" and spec_index_is_gated(_spec_index_read_text(moc, repo_root)):
                 continue
             if _spec_index_candidate_out_of_scope(branch):
                 continue
@@ -4544,7 +4544,7 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
         if _spec_index_path_state(moc, "SPEC-MOC.md", root) == "missing":
             continue
         original = _spec_index_read_text(moc, root)
-        if not _spec_index_is_gated(original):
+        if not spec_index_is_gated(original):
             continue
         rebuilt = render_feature_spec_index(root, spec_dir.relative_to(root).as_posix(), original)
         rendered.append(RenderedSpecIndexMap(moc, spec_dir.name, original, rebuilt))
@@ -4578,7 +4578,7 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
         if _spec_index_path_state(home, "roadmap-MOC home note", root) == "missing":
             continue
         original = _spec_index_read_text(home, root)
-        if not _spec_index_is_gated(original):
+        if not spec_index_is_gated(original):
             continue
         rebuilt = _spec_index_rebuild_map(
             home,
