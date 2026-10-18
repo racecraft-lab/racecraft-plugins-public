@@ -6,8 +6,10 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from html import unescape
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 from ..atomic_write import snapshot_write_target, write_bytes_atomic
 from ..canonical_json import canonical_bytes
@@ -20,7 +22,8 @@ from ..trusted_io import trusted_tree_snapshot
 from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
 from ..sweep_export import SWEEP_LOG_HEADING, sweep_table_cells
 from .read_only import (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS, SPEC_INDEX_ENDS,
-                        SpecIndexRenderError, render_feature_spec_index, spec_index_is_gated, spec_index_progress)
+                        SpecIndexRenderError, render_feature_spec_index, spec_index_is_gated,
+                        spec_index_progress)
 from .execution_requests import Refusal, run_contained_helper
 
 # Inventory roots are runner-owned, never a caller-selected subset. Feature additions
@@ -277,8 +280,23 @@ def spec_map_status(match: re.Match[str]) -> str:
     return match[1] + '""' + match[2][len(value):] + match[3]
 
 
+# Only BACKLINKS may omit bounded runtime filenames. PRS is free-form data:
+# even a list of individually plain tokens can assemble unreviewed instructions.
+# Bind the entire PRS block instead of inferring trust from rendered Markdown.
+# Underscores are literal only inside ASCII words in backlink labels.
+NAVIGATION_COMPONENT = r"(?:[A-Za-z0-9.+-]|(?<=[A-Za-z0-9])_+(?=[A-Za-z0-9]))+"
+NAVIGATION_TOKEN = rf"(?:PR#-?[0-9]+|{NAVIGATION_COMPONENT}(?:/{NAVIGATION_COMPONENT})*)"
+
+
+def navigation_progress(line: str, zone: str) -> bool:
+    """A bounded generated backlink; all other generated content stays bound."""
+    # Canonical renderers escape labels and quote destinations before this check.
+    line = unquote(unescape(line))
+    return zone == "backlinks" and "www." not in line.casefold() and re.fullmatch(rf"- \[({NAVIGATION_TOKEN})\]\(\1\)", line) is not None
+
+
 def map_navigation(content: str, expected: dict[str, tuple[str, ...]]) -> bytes:
-    """Project exact generated bodies; preserve marker identity and placement."""
+    """Project exact generated bodies; preserve marker identity, placement and untyped rows."""
     starts = {value: key for source in (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS)
               for key, value in source.items()}
     raw_lines = content.splitlines(keepends=True)
@@ -302,7 +320,7 @@ def map_navigation(content: str, expected: dict[str, tuple[str, ...]]) -> bytes:
         if zone in seen or raw_lines[index:index + len(block)] != block:
             return canonical_bytes({"raw": content})
         seen.add(zone)
-        kept.extend((raw, block[-1]))
+        kept.extend((raw, *(line for line in block[1:-1] if not navigation_progress(line.rstrip("\r\n"), zone)), block[-1]))
         index += len(block)
     return canonical_bytes({"projected": kept})
 

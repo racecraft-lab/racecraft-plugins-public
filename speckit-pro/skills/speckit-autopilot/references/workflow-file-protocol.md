@@ -57,7 +57,7 @@ revision, even during Implement.
 | Implement | `uat-outcome` | Post-Implementation Checklist UAT result |
 | Implement | `pr-emission` | Post-Implementation Checklist emission result |
 | Implement | `spec-map-status` | Feature SPEC-MOC frontmatter status |
-| Implement | `spec-map-navigation` | Canonical generated PRS and backlinks |
+| Implement | `spec-map-navigation` | Canonical bounded BACKLINKS only; the complete PRS block is planning |
 
 For prose-capable progress fields, append the runner's typed result form:
 

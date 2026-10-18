@@ -2776,6 +2776,20 @@ def run_failure_path(action: str, call: FailurePathCall, held_result: dict[str, 
     return held_result if call.held else entry.run(call)
 
 
+class UnitEscalation(NamedTuple):
+    """A failed unit's escalation as the ledger shows it: the next step, its record, and the run's tier-3 cap."""
+
+    progress: str
+    record: dict[str, Any] | None
+    tier3_cap: int
+
+
+def unit_escalation(ledger: dict[str, Any], unit_kind: str, unit: str) -> UnitEscalation:
+    """Read-only view of one unit's escalation; the end-of-run request reads the allowances only through it."""
+    record = ledger.get("escalation_allowances", {}).get(escalation_key(unit_kind, unit))
+    return UnitEscalation(escalation_progress(ledger, unit_kind, unit), record, ESCALATION_TIER3_CAP)
+
+
 class _Control(NamedTuple):
     """One validated execution-control request: what to run, against which workflow, spec, and ledger file."""
 

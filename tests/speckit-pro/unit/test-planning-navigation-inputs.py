@@ -36,11 +36,11 @@ class NavigationInputsFixture(fixtures.NavigationFixture):
         self.map_path.write_text(render_spec_index(self.root)[0][0].rendered)
         self.assertEqual(self.call("record", "apply", approval=self.approval())["status"], "ok")
 
-    def assertVerifiedNavigation(self, text):
+    def assertNavigationRequiresApproval(self, text):
         self.map_path.write_text(text)
         for host, runner_root in HOST_RUNNERS.items():
             self.runner_root = runner_root
-            self.assertEqual(self.call("verify")["status"], "ok", host)
+            self.assertEqual(self.call("verify")["status"], "input_error", host)
 
 
 class NavigationInjectionTest(NavigationInputsFixture):
@@ -53,7 +53,7 @@ class NavigationInjectionTest(NavigationInputsFixture):
                 text = render_spec_index(self.root)[0][0].rendered
                 self.assertNotIn(payload, text)
                 self.assertIn(literal, text)
-                self.assertVerifiedNavigation(text)
+                self.assertNavigationRequiresApproval(text)
 
     def test_external_links_are_refused_in_every_pr_field(self):
         for payload in ("[injected](https://untrusted.invalid)",
@@ -75,7 +75,7 @@ class NavigationInjectionTest(NavigationInputsFixture):
             {"slice": "us1", "pr": 41, "merged_sha": "abc  "}]}))
         text = render_spec_index(self.root)[0][0].rendered
         self.assertIn("\nus1 · PR#41 · abc\n", text)
-        self.assertVerifiedNavigation(text)
+        self.assertNavigationRequiresApproval(text)
 
 
     def test_scoped_package_paths_remain_literal_metadata(self):
@@ -112,7 +112,7 @@ class BacklinkSafetyTest(NavigationInputsFixture):
                     text = render_spec_index(self.root)[0][0].rendered
                     self.assertIn(f"- [{directory}/x&#93;&#40;{label}&#41;&#91;y&#10;.md]({directory}/x%5D%28{destination}%29%5By%0A.md)", text)
                     self.assertNotIn(f"x]({target})[y", text)
-                    self.assertVerifiedNavigation(text)
+                    self.assertNavigationRequiresApproval(text)
 
     def test_backlink_labels_can_contain_at_signs_and_www_without_external_links(self):
         for name, label, destination in (("logo" + chr(64) + "2x.png", "logo&#64;2x.png", "logo%402x.png"),

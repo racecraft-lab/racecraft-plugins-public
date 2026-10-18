@@ -3895,6 +3895,11 @@ SPEC_INDEX_ENDS = {
     "backlinks": "<!-- GENERATED:BACKLINKS:END -->",
 }
 SPEC_INDEX_ZONE_ORDER = ("index", "prs", "backlinks")
+SPEC_INDEX_PRS_NOTICE = (
+    "Note: for open PR rows, `SHA` records the PR evidence snapshot head commit; for merged rows, "
+    "`SHA` records the merged commit. Open-row snapshot SHAs are not expected to equal later commits "
+    "that contain refreshed generated metadata."
+)
 
 
 class SpecIndexRenderError(RuntimeError):
@@ -4139,7 +4144,7 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
             return []
         rows.sort(key=lambda item: (item[0], item[1].encode("utf-8")))
         return [
-            "Note: for open PR rows, `SHA` records the PR evidence snapshot head commit; for merged rows, `SHA` records the merged commit. Open-row snapshot SHAs are not expected to equal later commits that contain refreshed generated metadata.",
+            SPEC_INDEX_PRS_NOTICE,
             "",
             "| Order | Slice | PR | Status | Branch | Base | SHA | Scope | Verification |",
             "|---|---|---|---|---|---|---|---|---|",

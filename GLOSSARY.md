@@ -49,7 +49,7 @@ A checklist domain executor's return: its gaps and proposed plain prose changes 
 _Avoid_: patch, remediation, fix pass
 
 **Failure-path seam**:
-The one table in the runner's execution-control module through which every action that reserves a correction, grants an operator approval, opens a replan or stage epoch, or freezes the invariant registry passes. Nothing else calls those actions. Ledger bookkeeping and the end-of-run request that reads the same state stay outside it.
+The one table in the runner's execution-control module through which every action that reserves a correction, grants an operator approval, opens a replan or stage epoch, or freezes the invariant registry passes. Nothing else calls those actions. Ledger bookkeeping stays outside it. The run-finalization helper reads a unit's escalation only through `unit_escalation`, a read-only view beside the seam.
 _Avoid_: corrective gateway, budget facade
 
 **Final verify round**:
