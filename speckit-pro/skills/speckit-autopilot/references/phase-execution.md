@@ -9,7 +9,7 @@ artifact edits, and logging remain authoritative. On Codex, every shared
 consensus-synthesizer step dispatches the installed
 `consensus-synthesizer`, awaits its actual result, and validates that result
 before the parent applies any edit. The parent never performs synthesis as a
-fallback. Dispatch means calling `spawn_agent` with the installed
+fallback. Dispatch (with `fork_turns="none"`) means calling `spawn_agent` with the installed
 `consensus-synthesizer` role, then `wait_agent` and consuming that returned
 result.
 <!-- /host -->
@@ -396,7 +396,7 @@ for phase in PHASES starting from first_pending:
        Other phases: for EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
-       b. spawn_agent the resolved <executor>:
+       b. spawn_agent the resolved <executor> with fork_turns="none":
           "Run $speckit-<phase> with: <prompt>"
        c. Loop bounded wait_agent calls (timeout_ms=brief.wait.codex.timeout_ms) until this
           executor's actual summary is delivered; a status update or timeout alone is not the result. Record
@@ -1679,7 +1679,7 @@ and keeps executing independent work.
               only; no Artifact Edit).
 <!-- /host -->
 <!-- host:codex: Codex dispatches the analyst and the installed synthesizer with spawn_agent and consumes each result -->
-            - spawn_agent on the appropriate analyst for that target
+            - spawn_agent with fork_turns="none" on the appropriate analyst for that target
               (e.g., "task_understanding" lowest → clarify-executor
               re-pass on spec.md; "completeness" → verify artifact
               presence).
@@ -1911,7 +1911,7 @@ Agent(
 <!-- /host -->
 <!-- host:codex: Codex dispatches the installed agent with spawn_agent and bounded wait_agent polls -->
 ```text
-spawn_agent("artifact-author", prompt="""
+spawn_agent("artifact-author", fork_turns="none", prompt="""
   WORKFLOW_ROOT: <canonical absolute worktree root>
   Use WORKFLOW_ROOT as the workdir for every shell call and as the base for
   every filesystem path. Write and return paths only inside WORKFLOW_ROOT.
@@ -2211,7 +2211,7 @@ original parent start result independently of the worker-owned journal. Pass
 it as `expected_partition_sha256` on every later start, inspect, or record;
 never reconstruct it from the journal's current plan. On resume, use `action=inspect` and
 reconcile retained complete/unfinished results rather than renumbering batches.
-Dispatch one `spawn_agent` per implementation or research batch; verification
+Dispatch one `spawn_agent` (`fork_turns="none"`) per implementation or research batch; verification
 routes stay orchestrator-direct with no agent. A task routes to verification
 by its leading verb: `verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`. Supply TDD only to implementation
 and project agents, up to four adjacent assigned tasks sequentially, with shared

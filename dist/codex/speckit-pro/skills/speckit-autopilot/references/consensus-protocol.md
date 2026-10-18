@@ -270,7 +270,7 @@ Stage 2 — All synthesizers, ONE assistant message:
   Runtime name mapping: Claude Code dispatches
   `speckit-pro:consensus-synthesizer`; Codex dispatches the installed
   `consensus-synthesizer` with
-  `spawn_agent(agent_type="consensus-synthesizer", ...)`.
+  `spawn_agent(agent_type="consensus-synthesizer", fork_turns="none", ...)`.
   Omitting `agent_type` and accepting the default role is a failed dispatch.
   The parent never performs this synthesis itself.
 
@@ -400,13 +400,13 @@ unattended run behave the same: the parent asks no question and stops nowhere.
 
 1. Wave one: dispatch one fresh `spec-context-analyst` (Claude Code
    `speckit-pro:spec-context-analyst`; Codex
-   `spawn_agent(agent_type="spec-context-analyst", ...)`), a new instance with
+   `spawn_agent(agent_type="spec-context-analyst", fork_turns="none", ...)`), a new instance with
    no memory of the earlier rounds. Its prompt carries the item, all prior
    analyst answers, the constitution, and the technical roadmap, and asks for
    the single most conservative option that satisfies the spec.
 2. Wave two, after that analyst returns: dispatch a `consensus-tiebreaker` at
    max effort (Claude Code `speckit-pro:consensus-tiebreaker`; Codex
-   `spawn_agent(agent_type="consensus-tiebreaker", ...)`; omitting `agent_type`
+   `spawn_agent(agent_type="consensus-tiebreaker", fork_turns="none", ...)`; omitting `agent_type`
    is a failed dispatch). The agent ships pinned at max (Claude Code
    `effort: max`, Codex `model_reasoning_effort = "max"`) with the
    synthesizer's read-only tool set, while `consensus-synthesizer` keeps its
