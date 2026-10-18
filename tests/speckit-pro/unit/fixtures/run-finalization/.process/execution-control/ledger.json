@@ -54,7 +54,7 @@
     }
   },
   "run_id": "fixture-run-finalization",
-  "schema_version": "execution-control/v1",
+  "schema_version": "execution-control/v2",
   "slice_started_at": 1000.0,
   "started_at": 1000.0,
   "workflow_identity": {

@@ -22,12 +22,15 @@ from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
 from . import BLOCKED_BY_FIELD, COMPLETED_DISPATCH_IDS_FIELD, UNKNOWN_DISPATCH_IDS_FIELD
+from .retry_ladder import RUNGS, is_interrupted, next_rung, replay_rungs, rung_settings
 from .strict_input import SelectionError, require_text as require_nonempty_text
 from .task_partition import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
 from .trusted_io import is_test_path, trusted_text
 from .workflow_stage import parse_stage_args, workflow_stage_signals
 
-SCHEMA = "execution-control/v1"
+SCHEMA = "execution-control/v2"
+V1_REFUSAL = ("execution ledger is execution-control/v1, which this runner no longer reads. Restart the stage: "
+              "remove the v1 ledger file, then run the start action to open an execution-control/v2 ledger")
 KINDS = {"implementation", "corrective", "verification", "infrastructure"}
 OUTCOMES = {"completed", "failed", "unknown", "expected_tdd_red"}
 UNKNOWN_BLOCKED = "unknown_dispatch_blocks_unit"
@@ -74,6 +77,8 @@ DEFERRAL_KEYS = {"dispatch_id", "reason", "unit_kind", "unit", "deferred_at"}
 DEFERRAL_RESOLUTION_KEYS = {"resolved_by", "resolved_at"}
 # Verification evidence the runner itself records; never a helper-request action.
 RECORD_FAILING_CHECKS = "record-failing-checks"
+# The retry ladder (ADR 0004) admits a failing check's next rung; the failure-path seam does not own it.
+RESERVE_RETRY_RUNG = "reserve-retry-rung"
 FAILING_CHECK_KEYS = {"command_id", "command_sha256", "format", "failing", "passing", "checks_run", "output_sha256",
                       "recorded_at"}
 # The runner reads the head it verified and whether the worktree matched it. Earlier records lack both.
@@ -300,7 +305,8 @@ def _validate_invariant_binding(ledger: dict[str, Any]) -> None:
 
 def validate_ledger(value: Any) -> None:
     if not isinstance(value, dict) or value.get("schema_version") != SCHEMA:
-        raise ValueError("invalid execution ledger schema")
+        raise ValueError(V1_REFUSAL if isinstance(value, dict) and value.get("schema_version") == "execution-control/v1"
+                         else "invalid execution ledger schema")
     require_text(value.get("run_id"), "run_id")
     _validate_workflow_identity(value.get("workflow_identity"))
     for key in ("started_at", "slice_started_at", "last_observed_at", "checkpoint_at"):
@@ -315,6 +321,7 @@ def validate_ledger(value: Any) -> None:
     if any(sum(event.startswith(prefix) for event in events) > cap for prefix, cap in AGENT_APPROVAL_CAPS):
         raise ValueError("agent-authorized approvals exceed their run-wide cap")
     _validate_escalation_cap(value)
+    _validate_retry_ladders(value)
     _validate_finalize_observations(value)
 
 
@@ -347,8 +354,10 @@ def _validate_dispatch_shape(item: Any) -> None:
         _validate_failing_checks(item["failing_checks"], item)
     if type(item.get("reconciliations")) is not int or not 0 <= item["reconciliations"] <= 1:
         raise ValueError("invalid reconciliation counter")
-    if sum(key in item for key in ("increment", "gate", "metadata_correction", "test_fix", "escalation")) > 1:
+    if sum(key in item for key in ("increment", "gate", "metadata_correction", "test_fix", "escalation",
+                                   "retry_ladder")) > 1:
         raise ValueError("a corrective dispatch draws on one allowance, not an increment and a gate")
+    _validate_ladder_dispatch(item)
     _validate_edit_records(item)
 
 
@@ -369,6 +378,8 @@ def _validate_dispatch_records(value: dict[str, Any], exception_reservation: str
     for dispatch_id, item in value["dispatches"].items():
         require_text(dispatch_id, "dispatch_id")
         _validate_dispatch_shape(item)
+        if "retry_ladder" in item:
+            continue
         reservation = item.get("reservation_id")
         marker = next((name for name in _MARKED_DISPATCH_REFUSALS if name in item), None)
         if "escalation" in item or "escalation_tier" in item:
@@ -824,6 +835,88 @@ def _validate_escalation_cap(ledger: dict[str, Any]) -> None:
         raise ValueError("invalid escalation tier-3 cap")
     if escalation_tier3_used(ledger) > ESCALATION_TIER3_CAP:
         raise ValueError("escalation tier-3 retries pass the per-run cap")
+
+
+def _all_dispatches(ledger: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every dispatch of the run, archived epochs first: the retry ladder's count never resets."""
+    return [item for owner in (*ledger.get("corrective_epochs", []), ledger) for item in owner["dispatches"].values()]
+
+
+def _ladder_dispatches(ledger: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """The run's retry-ladder dispatches by failing-check digest, oldest first."""
+    by_check: dict[str, list[dict[str, Any]]] = {}
+    for item in sorted((item for item in _all_dispatches(ledger) if "retry_ladder" in item),
+                       key=lambda item: item["reserved_at"]):
+        by_check.setdefault(item["retry_ladder"]["command_sha256"], []).append(item)
+    return by_check
+
+
+def _validate_ladder_dispatch(item: dict[str, Any]) -> None:
+    """A ladder dispatch is an unreserved corrective one naming a check digest and a rung; only it can be interrupted."""
+    record = item.get("retry_ladder")
+    if "interrupted" in item and (record is None or item["interrupted"] is not True or item["outcome"] != "failed"):
+        raise ValueError("interrupted marks a failed retry-ladder dispatch")
+    if record is not None and (
+            item["kind"] != "corrective" or item.get("reservation_id") is not None or not isinstance(record, dict)
+            or set(record) != {"command_sha256", "rung"} or not _is_digest(record["command_sha256"])
+            or type(record["rung"]) is not int or not 1 <= record["rung"] <= RUNGS):
+        raise ValueError("invalid retry-ladder dispatch")
+
+
+def _validate_retry_ladders(ledger: dict[str, Any]) -> None:
+    """Each check's ladder dispatches ran in order, one at a time, never past the last rung."""
+    for check, items in _ladder_dispatches(ledger).items():
+        if not replay_rungs(items):
+            raise ValueError("a retry-ladder dispatch runs a rung its check had not reached")
+        for index, item in enumerate(items):
+            if not _fails_again(ledger, check, items[:index], item["reserved_at"]):
+                raise ValueError("a retry-ladder dispatch requires a fresh failing check before reservation")
+
+
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+def _is_digest(value: Any) -> bool:
+    return isinstance(value, str) and _SHA256.fullmatch(value) is not None
+
+
+def _fails_again(ledger: dict[str, Any], check: str, earlier: list[dict[str, Any]], until: float) -> bool:
+    """True when the check's newest verification failed after the last rung that spent an attempt."""
+    spent_at = max((item["completed_at"] for item in earlier if not is_interrupted(item)), default=ledger["started_at"])
+    newest = max((item["failing_checks"] for item in _all_dispatches(ledger) if "failing_checks" in item
+                  and item["failing_checks"]["command_sha256"] == check
+                  and item["failing_checks"]["recorded_at"] <= until), key=lambda record: record["recorded_at"], default=None)
+    return newest is not None and newest["failing"] != [] and newest["recorded_at"] >= spent_at
+
+
+def reserve_retry_rung(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
+    """Admit a failing check's next rung as one corrective dispatch; the runner picks the rung, never the caller."""
+    dispatch_id, check = require_text(inputs.get("dispatch_id"), "dispatch_id"), str(inputs.get("command_sha256"))
+    if not _is_digest(check):
+        raise ValueError("command_sha256 must be the digest of a command the runner fingerprinted as failing")
+    if dispatch_id in _used_dispatch_ids(ledger):
+        return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
+    earlier = _ladder_dispatches(ledger).get(check, [])
+    rung = next_rung(earlier)
+    if rung is None:
+        return {"reasons": ["retry_ladder_exhausted"]}
+    settings = rung_settings(inputs.get("host"), rung)
+    if any(item["outcome"] in {"reserved", "running"} for item in earlier):
+        return {"reasons": ["retry_ladder_dispatch_open"]}
+    if not _fails_again(ledger, check, earlier, now):
+        return {"reasons": ["retry_ladder_requires_a_failing_check"]}
+    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
+                                         "reservation_id": None, "reconciliations": 0,
+                                         "retry_ladder": {"command_sha256": check, "rung": rung}}
+    return {"dispatch_id": dispatch_id, "retry_rung": rung, "retry_role": settings.role,
+            "model": settings.model, "effort": settings.effort}
+
+
+def _mark_interrupted(item: dict[str, Any], inputs: dict[str, Any]) -> None:
+    """Record that the host cut a failed ladder dispatch short, so its rerun spends no rung."""
+    if "interrupted" in inputs:
+        item["interrupted"] = inputs["interrupted"]
+        _validate_ladder_dispatch(item)
 
 
 def _validate_finalize_observations(ledger: dict[str, Any]) -> None:
@@ -2306,6 +2399,8 @@ def _dispatch_scope(ledger: dict[str, Any], item: dict[str, Any]) -> set[str]:
     scope.update(_reservation_scope(ledger, item.get("reservation_id")))
     if "metadata_correction" in item:
         scope.add("metadata")
+    if "retry_ladder" in item:
+        scope.add(f"check:{item['retry_ladder']['command_sha256']}")
     if isinstance(ledger["dispatches"].get(item.get("verifies")), dict):
         scope |= _dispatch_scope(ledger, ledger["dispatches"][item["verifies"]])
     return scope
@@ -2329,6 +2424,8 @@ def _requested_scope(inputs: dict[str, Any]) -> set[str]:
         scope.add(f"gate:{inputs['gate_remediation']['gate']}")
     if inputs.get("metadata_only") is True:
         scope.add("metadata")
+    if isinstance(inputs.get("command_sha256"), str):
+        scope.add(f"check:{inputs['command_sha256']}")
     return scope
 
 
@@ -2474,6 +2571,11 @@ def _result_refusal(ledger: dict[str, Any], item: dict[str, Any], dispatch_id: s
                     outcome: Any) -> dict[str, Any] | None:
     """The refusal a result meets, or None once an unknown dispatch's independent native result is bound."""
     if item["outcome"] == "unknown":
+        # Reconciliation recorded the lost session; discarding it claims no native result.
+        if (item["reconciliations"] == 1 and "retry_ladder" in item
+                and outcome == "failed" and inputs.get("interrupted") is True
+                and inputs.get("native_observation") is None):
+            return None
         event = inputs.get("native_observation")
         if not isinstance(event, dict) or not isinstance(event.get("native_event_id"), str) or not event["native_event_id"].strip():
             return {"reasons": ["missing_independent_native_result"]}
@@ -2508,6 +2610,7 @@ def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, ro
         if changed is not None:
             item["changed_paths"] = changed
     item.update(outcome=outcome, completed_at=now)
+    _mark_interrupted(item, inputs)
     if outcome == "completed":
         _resolve_deferrals(ledger, dispatch_id, now)
     return {"reasons": []}
@@ -2762,9 +2865,9 @@ FAILURE_PATH_ACTIONS: dict[str, _FailurePathAction] = {
     "begin-stage-epoch": _FailurePathAction(
         lambda c: begin_stage_epoch(c.root, c.ledger, c.inputs, c.workflow, c.now)),
 }
-UNKNOWN_GUARDED_ACTIONS = frozenset({*FAILURE_PATH_ACTIONS, "begin-verification"})
+UNKNOWN_GUARDED_ACTIONS = frozenset({*FAILURE_PATH_ACTIONS, "begin-verification", RESERVE_RETRY_RUNG})
 _ACTIONS = frozenset({"start", "status", "begin-verification", "complete", "reconcile", "reconcile-unit",
-                      "checkpoint", "pause", "resume", "relocate-workflow", RECORD_FINALIZE_CYCLE,
+                      "checkpoint", "pause", "resume", "relocate-workflow", RECORD_FINALIZE_CYCLE, RESERVE_RETRY_RUNG,
                       *FAILURE_PATH_ACTIONS})
 
 
@@ -2874,6 +2977,8 @@ def _guarded_action(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[s
         return record_finalize_cycle(ctl.root, ledger, ctl.inputs, ctl.relative, ctl.finalizer)
     if ctl.action == "begin-verification":
         return begin_verification(ledger, ctl.inputs)
+    if ctl.action == RESERVE_RETRY_RUNG:
+        return reserve_retry_rung(ledger, ctl.inputs, now)
     return {}
 
 

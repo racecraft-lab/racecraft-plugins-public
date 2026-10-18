@@ -159,7 +159,7 @@
         "value": "speckit_pro_runner/contracts/execution-control.schema.json",
         "display": "speckit_pro_runner/contracts/execution-control.schema.json"
       },
-      "sha256": "956735b138d26ae78dc447b3171e8064cd195d3529980d7072224f1765cdc5d8"
+      "sha256": "87546d278c87c58f95e13cedcd57d5e6688220020e5fb78996a53f1270a75267"
     },
     {
       "path": {
@@ -247,7 +247,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "aa2d54fe4deb34ac4dc0e3d25f31e75b02d635f1d8394b688970f0c738743bf4"
+      "sha256": "e2e1528ded64c749764d17719bd1601d21f250f39147ea6c8d0babccfeec2eeb"
     },
     {
       "path": {
@@ -984,6 +984,14 @@
         "display": "speckit_pro_runner/research_preflight.py"
       },
       "sha256": "54d05f9b51a56eaf5e641d87661f0d9106daff6bca795b31b0bd76c77d626965"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/retry_ladder.py",
+        "display": "speckit_pro_runner/retry_ladder.py"
+      },
+      "sha256": "9a83b39820530c1be007aa01f1b36d75556e220ec51f06f942911f42ad418703"
     },
     {
       "path": {
