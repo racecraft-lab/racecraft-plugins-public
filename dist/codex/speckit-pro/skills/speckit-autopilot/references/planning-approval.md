@@ -28,6 +28,10 @@ runs it for every implement entry.
   `correction`, and `check` with `status=passed`, `manifest_digest`, `reference`.
   The feature's `planning-findings.json` is the authoritative map of IDs to
   request arrays; an empty map represents a clean plan, never a missing file.
+  `finish-plan-stage` writes it: `{}` for a clean plan, and on a strict confidence
+  shortfall one `confidence-<criterion>` ID per criterion below the threshold
+  (`confidence-composite` when none is), each with an empty request array. It
+  keeps recorded entries. An empty array refuses `record` until the repair fills it.
 
 The runner inventories feature files, workflow, task dispatch metadata, project
 planning configuration and declared formal inputs. It normalizes task completion

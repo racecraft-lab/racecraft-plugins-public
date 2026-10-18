@@ -597,7 +597,7 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    `Stage: <stage> (<source>) — <basis>`, using the envelope's `basis`
    verbatim. For an auto-detected stage that basis names the first
    non-terminal planning phase and its status, which is the row the operator
-   has to act on; `plan` after a strict-mode gate stop reads
+   has to act on; `plan` after a blocked gate row from an older run reads
    `the first non-terminal planning phase is Confidence Gate, which is
    ⚠️ Blocked` rather than an unexplained stage token.
    Open CRITICAL/HIGH rows in the workflow's Analysis Results table also keep

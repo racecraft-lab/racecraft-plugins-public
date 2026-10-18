@@ -41,6 +41,7 @@ PLANNING = {"plan_file": f"{FEATURE}/plan.md", "spec_file": f"{FEATURE}/spec.md"
 CONCEPT = "docs/ai/specs/.process/ART-007-design-concept.md"
 URL = "https://github.com/example/repo/pull/7"
 LABEL = "stop_reason:plan_stage_boundary"
+FINDINGS = f"{FEATURE}/planning-findings.json"
 EVIDENCE_ANCHOR = "Phase 1: Setup (Worktree Preflight)"
 
 
@@ -1161,7 +1162,8 @@ class ConfidenceRecoveryTests(TerminalFixture):
                                .replace("0.94", "0.85"), encoding="utf-8")
                 self.assertEqual(self.finish(host=host, until="pages")["status"], "ok")
                 config.write_text("confidence_threshold: 0.95\n", encoding="utf-8")
-                self.assertNotEqual(self.finish(host=host, until="pages")["status"], "ok")
+                self.assertEqual(self.finish(host=host, until="pages")["status"], "ok")
+                self.assertEqual(json.loads((self.root / FINDINGS).read_text()), {"confidence-composite": []})
 
     def test_no_data_stops_with_a_documented_confidence_recovery_path(self) -> None:
         path = self.root / WORKFLOW
@@ -1179,15 +1181,78 @@ class ConfidenceRecoveryTests(TerminalFixture):
                 self.assertNotIn("proceed", no_data)
 
 
+class StrictFindingsTests(TerminalFixture):
+    """A strict confidence shortfall goes to plan review as findings; it never stops planning (ADR 0013)."""
+
+    CRITERIA = ("\n- Task understanding: 0.95\n- Approach clarity: 0.70\n- Requirements alignment: 0.92\n"
+                "- Risk assessment: 0.91\n- Completeness: 0.80\n")
+
+    def strict(self, emit: str = "📊 Confidence: 0.50") -> None:
+        path = self.root / WORKFLOW
+        path.write_text(path.read_text(encoding="utf-8").replace("| Mode | advisory |", "| Mode | strict |")
+                        .replace("📊 Confidence: 0.94", emit), encoding="utf-8")
+        self.git("commit", "-q", "-am", "strict shortfall")
+
+    def findings(self) -> dict:
+        return json.loads((self.root / FINDINGS).read_text(encoding="utf-8"))
+
+    def test_a_strict_shortfall_publishes_the_draft_pr_and_records_a_finding_on_both_hosts(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                self.strict()
+                result = self.finish(host=host, execution_mode="headless")
+                self.assertEqual(result["status"], "ok", result)
+                self.assertEqual((result["data"]["outcome"], result["data"]["stop_label"]), ("completed", LABEL))
+                self.assertEqual(len(self.cli.calls("create")), 1)
+                self.assertEqual(self.findings(), {"confidence-composite": []})
+                boundary = self.git("log", "--format=%H", "--grep", "close the plan stage boundary", "-1")
+                self.assertIn(FINDINGS, self.git("show", "--name-only", "--format=", boundary).splitlines())
+                self.assertEqual(self.git("status", "--porcelain"), "")
+
+    def test_each_criterion_below_threshold_is_its_own_finding(self) -> None:
+        self.strict("📊 Confidence: 0.86" + self.CRITERIA)
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(self.findings(), {"confidence-approach_clarity": [], "confidence-completeness": []})
+
+    def test_a_rerun_keeps_recorded_findings_and_their_requests(self) -> None:
+        self.strict("📊 Confidence: 0.86" + self.CRITERIA)
+        recorded = {"confidence-completeness": ["List every artifact"], "USER-1": ["Name the owner"]}
+        (self.root / FINDINGS).write_text(json.dumps(recorded), encoding="utf-8")
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(self.findings(), {**recorded, "confidence-approach_clarity": []})
+
+    def test_a_passing_gate_records_a_clean_inventory_and_never_adds_a_finding(self) -> None:
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(self.findings(), {})
+        recorded = {"confidence-composite": ["Raise the plan's confidence"]}
+        (self.root / FINDINGS).write_text(json.dumps(recorded), encoding="utf-8")
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(self.findings(), recorded)
+
+    def test_a_dry_run_records_no_finding(self) -> None:
+        self.strict()
+        self.assertEqual(self.finish("dry_run")["status"], "ok")
+        self.assertFalse((self.root / FINDINGS).exists())
+
+    def test_an_unreadable_inventory_stops_before_any_page(self) -> None:
+        self.strict()
+        (self.root / FINDINGS).write_text("[]", encoding="utf-8")
+        self.assertNotEqual(self.finish(until="pages")["status"], "ok")
+        self.assertFalse((self.root / FEATURE / "artifacts").exists())
+
+
 class GuardTests(TerminalFixture):
-    def test_a_blocked_gate_stops_before_generation_and_writes_nothing(self) -> None:
+    def test_a_legacy_blocked_gate_row_stops_before_generation_and_writes_nothing(self) -> None:
         path = self.root / WORKFLOW
         path.write_text(path.read_text(encoding="utf-8").replace("| Confidence Gate | G6.5 | ✅ Complete", "| Confidence Gate | G6.5 | ⚠️ Blocked"),
                         encoding="utf-8")
         self.git("commit", "-q", "-am", "blocked")
         result = self.finish(execution_mode="headless")
-        self.assertEqual(result["data"]["stop_label"], "stop_reason:strict_confidence_opt_in")
+        self.assertEqual(result["data"]["stop_label"], LABEL)
+        self.assertIn("must finish", result["data"]["report"])
         self.assertFalse((self.root / FEATURE / "artifacts").exists())
+        self.assertFalse((self.root / FINDINGS).exists())
         self.assertEqual((self.subjects(), self.cli.gh), (["blocked"], []))
 
     def test_unfinished_or_unresolved_planning_never_mutates(self) -> None:
@@ -1216,9 +1281,7 @@ class GuardTests(TerminalFixture):
                 path.write_text(original.replace("📊 Confidence: 0.94", emit), encoding="utf-8")
                 self.assertNotEqual(self.finish(until="pages")["status"], "ok")
                 self.assertFalse((self.root / FEATURE / "artifacts").exists())
-        path.write_text(original.replace("| Mode | advisory |", "| Mode | strict |").replace("0.94", "0.50"), encoding="utf-8")
-        self.assertNotEqual(self.finish(until="pages")["status"], "ok")
-        self.assertFalse((self.root / FEATURE / "artifacts").exists())
+                self.assertFalse((self.root / FINDINGS).exists())
 
     def test_a_completed_advisory_warning_allows_pages(self) -> None:
         path = self.root / WORKFLOW

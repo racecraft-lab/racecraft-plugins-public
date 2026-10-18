@@ -533,7 +533,9 @@ disagreement is named in `reason`.
    - exit 2 (FAIL, composite < threshold):
         - advisory mode (default): log the breakdown, surface
           the lowest-scoring criterion, proceed to Phase 7
-        - strict mode: STOP and surface to the operator
+        - strict mode: surface the breakdown; `finish-plan-stage`
+          records each low-confidence finding for plan review and
+          publishes the draft PR. Planning does not stop.
 
 3. Corrective loop (both modes, shared execution-control reservation):
    - If exit 2 AND the same failure-family/spec budget permits repair:

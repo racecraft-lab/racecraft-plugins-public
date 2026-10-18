@@ -113,8 +113,9 @@ Deferred decisions and human UAT never hold a PR in draft. Never merge.
 
 A default planning run ends at the plan boundary: artifacts and the draft PR are
 ready for review (`planning_ready_for_review`, marker `stop_reason:plan_stage_boundary`).
-Opt-in `--strict` also stays: below the confidence threshold it stops before Phase 7
-(`stop_reason:strict_confidence_opt_in`). `--strict` does not apply to a default run.
+Opt-in `--strict` does not stop planning: below the confidence threshold its findings
+go to plan review in the feature's `planning-findings.json`, and the run still ends at
+the plan boundary. `--strict` does not apply to a default run.
 
 ## Run ends
 
@@ -147,7 +148,6 @@ item does not end the run and prints no marker.
 | `stop_reason:ambiguous_pr_record` | authority | The recorded PR is missing, or several open PRs match the branch. Choosing the right PR is a human call. |
 | `stop_reason:plan_stage_boundary` | authority | A `--stage plan` run stops after the plan. |
 | `stop_reason:scaffold_complete` | authority | Scaffold is committed and pushed; the operator starts planning in a separate invocation. |
-| `stop_reason:strict_confidence_opt_in` | authority | An opt-in `--strict` run stops before Phase 7 below the confidence threshold. |
 | `stop_reason:speckit_cli_older` | authority | An answers-file scaffold found a SpecKit CLI older than the plugin pin. Upgrading the CLI is an operator action, and the answers file has no key for it. |
 | `stop_reason:all_tiers_failed` | exhausted | All three escalation tiers failed. |
 | `stop_reason:tier3_cap_reached` | exhausted | The per-run tier 3 cap is spent. |
@@ -157,6 +157,6 @@ item does not end the run and prints no marker.
 | `stop_reason:concurrent_writer` | harm_halt | Another live owner holds the run's ledger lock. |
 
 Authority and exhausted reasons defer, except the operator-chosen boundaries,
-`scaffold_complete`, `plan_stage_boundary` and `strict_confidence_opt_in`, which
+`scaffold_complete` and `plan_stage_boundary`, which
 end the run at the boundary the operator chose. `speckit_cli_older` is outside a run: it ends
 an answers-file scaffold before any mutation. Harm halt reasons halt the run.

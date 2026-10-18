@@ -119,8 +119,8 @@ if no such row  → the stage's work is already done; run its terminal step, the
 Select on **"not terminal"**, not on "pending or in progress". This is the
 difference that matters. The unbounded scan takes the first row reading
 `⏳ Pending` or `🔄 In Progress`, and a `⚠ Blocked` row matches **neither**
-arm. After a strict-mode G6.5 stop the six planning rows are terminal and the
-`Confidence Gate` row is **blocked**, so the unbounded scan skips straight past
+arm. When the six planning rows are terminal and the `Confidence Gate` row is
+**blocked** (as an older strict-mode stop left it), the unbounded scan skips straight past
 it and lands on the implementation row — starting the very phase the gate just
 refused, while the resolved stage still reads `plan`. Both halves look correct
 in isolation; only the pair is wrong.
@@ -176,7 +176,7 @@ Substitute `<flag>` with the flag as given and `<verdict>` with
 
 **When the recorded verdict is non-terminal, the same diagnostic names it and
 says the boundary is being crossed.** A non-terminal verdict — `⚠️ Blocked`, or
-any status outside the terminal set — is the state a strict-mode stop leaves
+any status outside the terminal set — is the state an older strict-mode stop left
 behind. Append:
 
 ```text
@@ -211,8 +211,8 @@ Three resume forms, in order of preference:
   basis. After a plan-stage boundary this re-resolves `plan` whenever the
   `Confidence Gate` row is non-terminal, so a refused boundary is never crossed
   by accident.
-- **`--stage implement`** — the explicit crossing. Required after a strict-mode
-  stop, and it reports the recorded verdict it is proceeding past rather than
+- **`--stage implement`** — the explicit crossing. The runner admits it only with a
+  valid plan approval record, and it reports the recorded verdict rather than
   re-running the gate.
 - **`--from-phase <phase>`** — moves the starting point within the resolved
   stage's range. The older `--from-phase implement` form keeps working and is
@@ -995,12 +995,13 @@ to proceed, surface a remediation hint, or stop.
             - mode=advisory: log the final score + breakdown,
               surface the iteration history to the operator,
               advance to Phase 7.
-            - mode=strict: STOP. Surface the breakdown + history.
-              Operator may resume with `--stage implement` if they
-              accept the lower confidence; that run reads this
-              recorded verdict rather than re-running the gate, and
-              reports that it is crossing a refused boundary. The
-              older `--from-phase implement` form keeps working.
+            - mode=strict: surface the breakdown + history, mark the
+              `Confidence Gate` row `✅ Complete`, and run
+              `finish-plan-stage`. Planning does not stop: the runner
+              records each low-confidence finding in the feature's
+              `planning-findings.json` for plan review, then publishes
+              the draft PR. Implement needs the approval record that
+              review leads to.
 ```
 
 **Why this gate is opt-in for blocking:** the autopilot already
@@ -1022,22 +1023,18 @@ G6.5 runs *after Phase 6 commits and before Phase 7 begins*, so on a
 `--stage plan` run it is the last work the stage does. The run takes the
 stage-boundary commit below and then **STOPs** — it does not advance to Phase 7,
 in any mode. In advisory mode the gate passes or warns and the stage still ends
-here; in strict mode the STOP **is** the gate resolving, and the boundary commit
-is still taken so the failing verdict reaches version history.
+here; a strict-mode shortfall also ends here, with its findings recorded for plan
+review.
 
-On a strict-mode stop, write the `Confidence Gate` row to a **non-terminal**
-blocked status — never to a terminal one. The row must advance off its pending
-state (so the boundary commit is non-empty) while leaving the planning-complete
-predicate unsatisfied (so a later bare invocation re-resolves `plan` rather than
-crossing the boundary the gate refused). Record the failing verdict in a form
-the gate-record matcher does **not** read as a pass: a non-terminal row sitting
-beside a record that scans as a passing G6.5 is exactly the
-status-versus-evidence contradiction that the Step 1.1 coverage guard and the
-tree-wide CI gate both fail on.
+On a strict-mode shortfall, write the `Confidence Gate` row `✅ Complete`, as for a
+warning: the gate resolved by sending its findings to plan review. Record the failing
+verdict in a form the gate-record matcher does **not** read as a pass. A blocked row
+left by an older run keeps planning incomplete; `finish-plan-stage` refuses it until
+G6.5 reruns.
 
 #### Stage-boundary commit (plan stage only)
 
-After the gate resolves (pass, warn, or strict stop), the stage takes **one
+After the gate resolves (pass, warn, or strict shortfall), the stage takes **one
 distinct commit**, `chore(SPEC-XXX): close the plan stage boundary`. It is not a
 renamed analyze-phase commit: that commit was taken before the gate ran, so
 renaming it would leave the verdict uncommitted. It stages `specs/`, the
@@ -1045,13 +1042,12 @@ workflow file, and `<workflow-dir>/autopilot-state.json`, never the workflow
 *directory*, which also holds untracked run byproducts. It is non-empty because
 the `Confidence Gate` row always advances off its pending state, and it is
 `chore:` because a planning-stage boundary ships no runtime change and must not
-trigger a release-please version bump. On pass or warn, `finish-plan-stage`
-takes it as part of the sequence below. On a strict stop, take it yourself with
-the same staged set.
+trigger a release-please version bump. `finish-plan-stage` takes it as part of the
+sequence below.
 
 #### Draft-PR emission: the terminal-step sequence (plan stage only)
 
-Once the final gate resolves **pass or warn**, the terminal step is the
+Once the final gate resolves **pass, warn, or a strict shortfall**, the terminal step is the
 `finish-plan-stage` runner helper and one `artifact-author` dispatch. The helper
 fills the artifact pages, takes the stage-boundary commit, builds and commits the
 draft packet, pushes the branch, creates or refreshes the one draft pull request,
@@ -1157,20 +1153,14 @@ with `stop_reason:tampering_or_forged_evidence` when a page carries active conte
 invalid file cannot be removed. The author never touches `artifacts/` with a
 native tool.
 
-#### Strict-mode block: the return happens before generation
+#### Strict-mode shortfall: the findings go to plan review
 
-On a strict-mode block the run never enters the sequence above. The blocked-stop
-contract from the two subsections above is preserved exactly: the boundary
-commit is still taken, the `Confidence Gate` row is written to a **non-terminal**
-blocked status, and the stage STOPs. That commit belongs to the blocked-stop
-contract in its own right; it is the rest of the sequence — generation, push,
-create-or-refresh, the record, the bookkeeping commit — that does not run.
-
-**The return is placed before generation, not around it.** A blocked stage
-therefore generates no artifact pages at all, pushes nothing, opens no pull
-request, and writes no `Draft PR` row. Emission is not something the blocked path
-fails open through; it is something the blocked path never reaches. The re-run
-that resolves pass or warn is the run that emits.
+A strict-mode shortfall runs the whole sequence above. Before the pages, the
+runner adds each low-confidence finding to the feature's `planning-findings.json`
+(see [Recorded planning approval](./planning-approval.md)). Each finding starts with
+no request, so no approval can be recorded until plan review and its repair close it.
+A gate that did not resolve (NO_DATA, a malformed verdict, or a blocked row) still
+stops before generation: no pages, no push, no pull request.
 
 #### Fail-open: three sinks, and the runs that reach them
 
@@ -1220,7 +1210,7 @@ the report alone is enough to hand off.
   resume instructions. Do not report the review handoff complete while previews
   remain unverified; publication stays successful. Report any failure to commit
   or push preview evidence separately, preserving the valid PR and artifacts.
-- **The gate blocked.** Name the blocked gate in place of a URL, and say that no
+- **The gate did not resolve.** Name the gate in place of a URL, and say that no
   pull request was opened.
 - **The stage-boundary commit or a PR-packet step failed.** Name the failed
   commit, packet generation, validation, or packet commit; state which outputs
@@ -1268,7 +1258,7 @@ append any text after its final line.
 | The pull request could not be opened | Print `stop_reason:plan_stage_boundary` |
 | The branch push failed | Print `stop_reason:plan_stage_boundary` |
 | The bookkeeping commit or its push failed | Print `stop_reason:plan_stage_boundary` |
-| The gate blocked in strict mode | Print `stop_reason:strict_confidence_opt_in` |
+| The gate did not resolve | Print `stop_reason:plan_stage_boundary` |
 | The recorded pull request is closed or merged | Print `stop_reason:reopen_closed_pr` |
 | The recorded pull request is missing, or several open pull requests match | Print `stop_reason:ambiguous_pr_record` |
 | The PR tool is absent or unauthenticated | Print `stop_reason:tool_unavailable` |

@@ -182,7 +182,7 @@ PLAN_STAGE_SHAPES = {
     "The pull request could not be opened": "plan_stage_boundary",
     "The branch push failed": "plan_stage_boundary",
     "The bookkeeping commit or its push failed": "plan_stage_boundary",
-    "The gate blocked in strict mode": "strict_confidence_opt_in",
+    "The gate did not resolve": "plan_stage_boundary",
     "The recorded pull request is closed or merged": "reopen_closed_pr",
     "The recorded pull request is missing, or several open pull requests match": "ambiguous_pr_record",
     "The PR tool is absent or unauthenticated": "tool_unavailable",
