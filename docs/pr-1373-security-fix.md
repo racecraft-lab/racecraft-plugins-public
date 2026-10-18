@@ -63,7 +63,8 @@ values are exempt from approval. Regenerated host payloads carry the same code.
   label, so it stays bound even when the contributor intended a plain filename.
   Adding or changing that row requires a fresh approval. This fails closed;
   the input cannot reach an unchanged-digest false pass. Intraword names such as
-  `demo_one.py` and `run_two__parts.json` still count as progress.
+  `demo_one.py` and `run_two__parts.json` still count as progress in BACKLINKS;
+  every PRS value remains bound regardless of filename spelling.
 - **GFM is the rendering boundary.** Compatibility with other Markdown
   dialects has not been verified. A review raised intraword emphasis in a
   non-GFM renderer as a possible limit; that variant is unreachable under GFM,
