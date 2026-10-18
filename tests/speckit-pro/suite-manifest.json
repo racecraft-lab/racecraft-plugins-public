@@ -123,6 +123,7 @@
         { "path": "tests/speckit-pro/unit/test-generate-spec-index.py", "label": "test-generate-spec-index" },
         { "path": "tests/speckit-pro/unit/test-gh-json.py", "label": "test-gh-json" },
         { "path": "tests/speckit-pro/unit/test-git-write-probe.py", "label": "test-git-write-probe" },
+        { "path": "tests/speckit-pro/unit/test-harm-halt.py", "label": "test-harm-halt" },
         { "path": "tests/speckit-pro/unit/test-host-parity-generator.py", "label": "test-host-parity-generator" },
         { "path": "tests/speckit-pro/unit/test-hosted-windows-preflight.py", "label": "test-hosted-windows-preflight" },
         { "path": "tests/speckit-pro/unit/test-implementation-notes-record.py", "label": "test-implementation-notes-record" },

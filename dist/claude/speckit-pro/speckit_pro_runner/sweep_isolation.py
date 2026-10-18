@@ -109,6 +109,12 @@ class ReceiptViolation(ValueError):
     """A receipt is invalid, stale, expired, replayed, or cross-session."""
 
 
+class SweepSessionExpired(ReceiptViolation):
+    """The session lifetime elapsed; recapture rather than treating it as forged evidence."""
+
+    reason = "sweep_session_expired"
+
+
 class MutationViolation(ValueError):
     """A receipt-gated artifact mutation failed a precondition."""
 
@@ -1014,7 +1020,7 @@ class SweepSession:
         if state.get("version") != SESSION_VERSION or state.get("session_id") != self.session_id:
             raise ReceiptViolation("private sweep session version or identity is invalid")
         if self._clock() > float(state.get("expires_at", 0)):
-            raise ReceiptViolation("sweep session has expired")
+            raise SweepSessionExpired("sweep session has expired")
         if not isinstance(state.get("receipt_key"), str) or len(state["receipt_key"]) != 64:
             raise ReceiptViolation("sweep receipt key is invalid")
 
