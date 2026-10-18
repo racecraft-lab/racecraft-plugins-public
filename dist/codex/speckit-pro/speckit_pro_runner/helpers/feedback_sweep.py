@@ -138,8 +138,10 @@ def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str
             surface = inputs["surface"]
             if surface == "claude":
                 verify_claude_boundary(repo_root, plugin_root)
-            else:
+            elif surface == "codex":
                 verify_codex_boundary(plugin_root)
+            else:
+                raise SchemaViolation("surface is unknown")
             payload = capture_github_session(
                 repo_root,
                 repository=inputs["repository"],
