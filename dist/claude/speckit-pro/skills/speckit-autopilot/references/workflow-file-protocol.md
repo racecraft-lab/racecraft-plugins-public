@@ -15,7 +15,130 @@ across context compactions and `--from-phase` resumes.
 | **Checklist** | Checklist Results table, Addressing Gaps section |
 | **Tasks** | Tasks Results table (total, phases, parallel, coverage) |
 | **Analyze** | Analysis Results table (ID, severity, issue, resolution) |
-| **Implement** | Implement Checklist Gate (before the first dispatch), Implementation Progress, Post-Implementation Checklist, Success Criteria |
+| **Implement** | Every write is listed in the Implement write contract below. |
+
+## Implement write contract
+
+`helpers/planning_approval.py:PROGRESS_WRITES` owns the progress projection for
+both hosts. Every post-approval progress write is listed here and exercised by
+the planning-approval tests. Adding a write requires its code entry and a
+preservation case plus a planning-text counterexample. Planning repairs to
+requirements, commands, decisions, scope or evidence under review change the
+revision, even during Implement.
+
+| Stage | Write | Region |
+| --- | --- | --- |
+| Implement | `overview-status` | Workflow Overview status cell |
+| Implement | `overview-summary` | Workflow Overview summary note |
+| Implement | `stage` | Basic Information Stage row |
+| Implement | `draft-pr` | Basic Information Draft PR row |
+| Implement | `implement-checklist-gate` | Implement Checklist Gate |
+| Implement | `implementation-progress` | Implementation Progress |
+| Implement | `files-generated` | Files Generated completion ticks |
+| Implement | `post-checklist` | Post-Implementation Checklist |
+| Implement | `success-criteria` | Success Criteria / Success Criteria Summary |
+| Implement | `prerequisites-baseline` | Prerequisites baseline results |
+| Implement | `constitution-final` | Constitution Validation final results |
+| Implement | `quality-final` | Quality Gates Final column |
+| Implement | `quality-hardener` | Quality Gates Hardener line |
+| Implement | `formal-checkpoints` | Formal Checkpoints |
+| Implement | `lessons` | Lessons Learned and its three template subsections |
+| Implement | `feedback-sweep` | Feedback Sweep Log |
+| Implement | `consensus-sweep` | Consensus Resolution Log sweep bookkeeping |
+| Implement | `notes-gap` | Implementation Progress notes-write gaps |
+| Implement | `review-followup` | Implementation Progress review follow-ups |
+| Implement | `fallback` | Implementation Progress applied fallback result |
+| Implement | `deferral` | Implementation Progress deferral result and digest |
+| Implement | `interpretation` | Implementation Progress reference to approved interpretation |
+| Implement | `plugin-drift` | Implementation Progress runtime drift result |
+| Implement | `marker-checkpoint` | PR Marker Plan checkpoint results |
+| Implement | `post-integration` | Post-Implementation Checklist integration result |
+| Implement | `terms-lint` | Post-Implementation Checklist terms-lint result |
+| Implement | `uat-outcome` | Post-Implementation Checklist UAT result |
+| Implement | `pr-emission` | Post-Implementation Checklist emission result |
+| Implement | `spec-map-status` | Feature SPEC-MOC frontmatter status |
+| Implement | `spec-map-navigation` | Canonical generated PRS and backlinks |
+
+For prose-capable progress fields, append the runner's typed result form:
+
+```text
+Progress: overview-summary; status=complete; count=3; evidence=specs/example/.process/result.json
+```
+
+Use the write key directly in its listed template region, without adding task
+or result subheadings. Status, counts, iterations, scores, digests and evidence
+references are execution values; the code validates their shape.
+Keep existing planning notes and append `; Progress: ...` to a populated cell.
+On subsequent updates replace that typed suffix in place; do not append a second
+suffix. A result on its own line uses `- Progress: ...`. Full narrative details stay in
+the existing implementation-notes or verification record named by `evidence`.
+Any unrecognized text, including an instruction in a status/evidence cell,
+remains planning-bound. The projection never discards an entire section.
+
+The summary grammar accepts only `status`, `count`, `tests`, `iterations`,
+`score`, `floor`, `digest`, and `evidence`, with each field used at most once
+and at least one field present. Separate fields with `; `. For `status`, use
+one of the canonical writer forms shown below. The numeric fields accept a
+non-negative integer or decimal. A digest is `sha256:` followed by 64 lowercase
+hexadecimal characters. Evidence is a repository-relative path in `.process/`
+(at the root or below a directory), without parent traversal or doubled slashes.
+
+Summary field examples:
+
+```text
+status=complete
+status=skipped
+status=blocked
+status=pending
+status=in_progress
+status=pass
+status=fail
+status=unknown
+status=unavailable
+status=failed-open
+status=not_run
+status=deferred
+status=waived
+count=3
+tests=52
+iterations=2
+score=85.5
+floor=80
+digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+evidence=specs/example/.process/result.json
+```
+
+Put the baseline directly after `## Prerequisites`, before its first child
+heading (`### Constitution Validation` in the shipped template). Preserve that
+first baseline on resume. Do not append it at the end of the section, where it
+would belong to the final child heading.
+
+Baseline placement example:
+
+```markdown
+## Prerequisites
+
+- Progress: prerequisites-baseline; status=pass; tests=52; evidence=specs/example/.process/baseline.json
+
+### Constitution Validation
+```
+
+Replace only the Hardener value before its existing comment. Use the canonical
+status forms above; detailed outcomes such as `floor reached`, `cap reached`,
+`not needed`, or `fallback` stay in the referenced evidence. Do not derive a new
+status token by converting those outcome labels or a checker's verdict to
+underscores.
+
+Hardener value example:
+
+```text
+Progress: quality-hardener; status=complete; iterations=2; score=85; floor=80; evidence=specs/example/.process/hardener.json
+```
+
+Success Criteria text is planning; its checked/unchecked state records progress.
+Other planning-choice checkboxes keep their state. Code fences remain literal
+planning content. The existing typed Checklist Gate and checkpoint writer rows
+continue to work without converting them into summaries.
 
 Clarify Results must preserve each accepted human answer separately from the
 executor's recommendation or later consensus. Record the answer directly when
@@ -25,8 +148,9 @@ the original decision.
 
 ## Additional Updates
 
-- **Constitution Validation table** — update after Specify (initial)
-  and Implement (final).
+- **Constitution Validation table** — update after Specify (initial).
+  After Implement, append a typed `constitution-final` result to its
+  Verification cells, preserving each principle, requirement and command.
 - **Consensus Resolution Log** — if consensus was used, add a row per
   resolution. Mandatory columns: `Round`, `Routed Categories`,
   `Outcome`, `Analysts Used`. See
@@ -151,8 +275,8 @@ under a `Feedback Sweep Log` heading in the workflow file:
 
 | # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | IC_kwDOAAAAAA5vXkZ9Aq | review thread | octocat | amended | Tightened the retry bound in spec.md §4.2 | a1b2c3d | 7 |
-| 2 | IC_kwDOAAAAAA5vXkaB2c | conversation | author unresolved | answered | Answered in the reply; no artifact change |  |  |
+| 1 | IC_kwDOAAAAAA5vXkZ9Aq | review thread | octocat | amended | Applied the accepted feedback to spec.md. | a1b2c3d | 7 |
+| 2 | IC_kwDOAAAAAA5vXkaB2c | conversation | author unresolved | answered | Recorded as answered; no artifact amendment was required. |  |  |
 ```
 
 **One row per handled comment.** A comment is handled once it has been assigned
@@ -167,11 +291,12 @@ escape handling, so one unescaped pipe would shift `CRL #` out of its column
 and make the consensus link read the wrong cell. The comment id sits ahead of
 the disposition, so the skip key survives whatever that prose contains.
 
-**What fills that cell.** The classifier returns a `reason` of at most 512
-bytes as UTF-8, carrying neither a pipe nor a newline. That string crosses the
-redaction surface's `log_row` leg before any use, and what the leg returns is
-the only form that reaches the cell. The escaping above is applied last, to the
-leg's output.
+**What fills that cell.** Use the fixed outbound disposition for the class
+from `phase-execution.md` Phase 7 Setup: Deterministic Outbound Text, after the
+redaction surface's `log_row`
+leg. The classifier's free-form reason stays in the internal evidence record;
+it is not a workflow disposition. The escaping above is applied last.
+Arbitrary disposition prose remains planning-bound.
 
 **An author that cannot be resolved is recorded explicitly** rather than left
 blank, because a blank cell is indistinguishable from a cell nobody wrote.

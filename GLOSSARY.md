@@ -48,6 +48,10 @@ _Avoid_: parallel group, fan-out
 A checklist domain executor's return: its gaps and proposed plain prose changes to the spec and plan. Structural or reference changes remain gaps for review; the executor never writes either artifact.
 _Avoid_: patch, remediation, fix pass
 
+**Failure-path seam**:
+The one table in the runner's execution-control module through which every action that reserves a correction, grants an operator approval, opens a replan or stage epoch, or freezes the invariant registry passes. Nothing else calls those actions. Ledger bookkeeping and the end-of-run request that reads the same state stay outside it.
+_Avoid_: corrective gateway, budget facade
+
 **Final verify round**:
 One re-verify wave of every checklist domain after consensus changed the spec or plan. Each round is claimed in the application record, and the runner allows a fixed number per apply; edits made after the last round stay applied without another wave.
 _Avoid_: verify loop, re-check pass
@@ -99,8 +103,11 @@ _Avoid_: cross-platform support, Codex support
 The protected mechanism that establishes a human's final plan approval and its current validity independently of the coding agent. Its review interface records requested corrections and their checked results before final confirmation. Deferred to follow-on work; the health program uses a recorded approval (ADR 0017).
 _Avoid_: signing prompt, transcript proof, repository approval flag
 
+**Planning manifest**:
+The runner-owned inventory and content digests of authoritative planning inputs. Its digest identifies a planning revision; typed execution bookkeeping does not change it. Criterion text and planning notes remain part of that revision even when they appear beside progress; a Success Criteria tick records completion rather than a planning choice.
+
 **Plan approval record**:
-The record of a human's explicit approval of one full planning revision after all planning findings have been fixed and checked. It permits that revision to be built but supplies neither security consent nor proof that implementation work is complete.
+The record of a human's explicit approval of one full planning revision after all planning findings have been fixed and checked. Its assurance is `recorded`: it holds the confirmation reference without defending against an agent with the operator's file access. It permits that revision to be built but supplies neither security consent nor proof that implementation work is complete.
 _Avoid_: artifact sign-off, planning complete, implementation permission
 
 **Plan review**:

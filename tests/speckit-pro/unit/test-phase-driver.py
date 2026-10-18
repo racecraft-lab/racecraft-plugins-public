@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 import tomllib
 import unittest
@@ -24,6 +25,7 @@ ENVELOPE = load_script("phase_envelope_cases", TEST_DIR / "test-phase-envelope.p
 PHASES = ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze")
 INNER_EXECUTORS = {"Clarify": "clarify-executor", "Checklist": "checklist-executor", "Analyze": "analyze-executor"}
 FEATURE = "specs/example"
+DRIVER_READ_LIMIT_BYTES = 8_000
 
 
 def brief(phase: str, **extra: object) -> dict:
@@ -203,7 +205,7 @@ class SkillContractTests(unittest.TestCase):
                           "authority_action_skipped", "optional_hooks_run", "optional_hooks_skipped", "read-tasks-output")
         for host in HOST_TOOLS:
             root = nested_section(host)
-            reference = (host_skill_root(host) / "speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
+            reference = (host_skill_root(host) / "speckit-autopilot/references/phase-driver.md").read_text(encoding="utf-8")
             driver = reference[reference.index("## Nested-mode phase driver"):reference.index("## Phase executor summary")]
             with self.subTest(host=host):
                 self.assertTrue(all(needle in root for needle in root_needles), root)
@@ -240,12 +242,24 @@ class DriverAgentTests(unittest.TestCase):
                    *INNER_EXECUTORS.values())
         for host, text in (("claude", source), ("codex", generated["developer_instructions"])):
             with self.subTest(host=host):
-                self.assertIn("phase-execution.md#nested-mode-phase-driver", text)
-                reference = (host_skill_root(host) / "speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
+                self.assertIn("phase-driver.md#nested-mode-phase-driver", text)
+                reference = (host_skill_root(host) / "speckit-autopilot/references/phase-driver.md").read_text(encoding="utf-8")
                 start = reference.index("## Nested-mode phase driver")
                 text += reference[start:reference.index("\n## ", start + 1)]
                 for needle in needles:
                     self.assertIn(needle, text)
+
+    def test_the_driver_reads_only_small_references_at_start(self) -> None:
+        """A driver loads each reference the agent names in full, so each must stay small (issue 1308)."""
+        source = (REPO_ROOT / "speckit-pro/agents/phase-executor.md").read_text(encoding="utf-8")
+        generated = tomllib.loads((REPO_ROOT / "speckit-pro/codex-agents/phase-executor.toml").read_text(encoding="utf-8"))
+        for host, text in (("claude", source), ("codex", generated["developer_instructions"])):
+            names = set(re.findall(r"<plugin-root>/skills/speckit-autopilot/references/([\w-]+\.md)", text))
+            with self.subTest(host=host):
+                self.assertTrue(names, "the agent must name its reference files")
+                for name in sorted(names):
+                    size = (host_skill_root(host) / "speckit-autopilot/references" / name).stat().st_size
+                    self.assertLessEqual(size, DRIVER_READ_LIMIT_BYTES, f"{name} is {size} bytes")
 
 
 if __name__ == "__main__":

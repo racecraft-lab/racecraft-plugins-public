@@ -1190,10 +1190,11 @@ class WorkflowStageSignalTests(unittest.TestCase):
 
     def test_terminal_status_vocabulary_matches_the_shipped_validator(self) -> None:
         module = load_coverage_validator()
-        self.assertEqual(
-            sorted(read_only.AUTOPILOT_TERMINAL_STATUSES),
-            sorted(module.WORKFLOW_TERMINAL_STATUSES),
-            "runner terminal-status vocabulary drifted from the shipped validator",
+        # The validator imports the owner's vocabulary; a local copy could drift.
+        self.assertIs(
+            module.WORKFLOW_TERMINAL_STATUSES,
+            read_only.AUTOPILOT_TERMINAL_STATUSES,
+            "the shipped validator must import the runner's terminal-status vocabulary",
         )
 
     def test_confidence_gate_is_in_the_predicate_despite_being_advisory_for_ordering(
