@@ -102,4 +102,38 @@ These notes are accepted limits from the cross-host review at head
   spells it, which covers the ordinary clone forms.
 - **`verify` does not check the origin (Info).** Only `admit` binds the
   checkout's origin, as ADR 0013 requires for implement entry; `verify` can
-  pass for a record that `admit` refuses.
+  pass for a record that `admit` refuses. Record now runs the same origin
+  check, so this needs the origin or the stored record to change after
+  recording.
+
+### Repository identity fixes and notes (fix round after head `cb78f81335eea1c207b58da6ab91449cb3428699`)
+
+- **Record agrees with admission (R1385-a6c81a9c, fixed).** `action=record`
+  runs the admission origin check before it writes, in `dry_run` and `apply`.
+  A `repository` that admission would refuse now refuses at record time with
+  `planning approval field repository`, so no record is keyed to a manifest
+  digest that can never be admitted.
+- **One home for GitHub remote spellings (R1385-269bf837, fixed).**
+  `speckit_pro_runner/github_remote.py` now holds the spellings. Admission,
+  gh-stack qualification and the egress policy prose take them from it, and a
+  test fails when a second runner module spells a GitHub remote. The move kept
+  each caller's exact results, so two differences remain on purpose. gh-stack
+  qualification still accepts only its three-spelling profile (no bare scp
+  spelling, no `ssh://` URL), now named `GH_STACK_FORMS` in the owner; a test
+  pins it. The egress prose still names the push URL, while admission reads
+  the fetch URL. Each difference fails closed, and changing either is its own
+  behavior change.
+- **Probe timeout literal (R1385-08cf55b3, Low).** Admission probes `origin`
+  with a 10 second timeout; gh-stack qualification uses its own 20 second
+  constant. Each caller keeps its own probe, so the owner holds no timeout. A
+  `git remote get-url` call reads local config and returns at once; a hang
+  only makes admission refuse with `repository`, so no wrong admission is
+  reachable.
+- **Non-string `repository` interpolated (R1385-cb03af6c, Info).** A stored
+  `null` or number is formatted into the spellings (for example
+  `https://github.com/None`) before any type check. Git never prints such an
+  origin for a real GitHub remote, so the match fails and the record refuses
+  with `repository`, as the tests show.
+- **Arch edge `gates/payloads.py` to `runtime.py` (R1385-ab772b91, Info).**
+  `ripwire --arch` reports this edge as new against the baseline. An earlier
+  pull request added it, outside this diff, and this round adds no new edge.
