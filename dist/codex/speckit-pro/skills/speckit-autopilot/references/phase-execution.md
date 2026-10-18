@@ -2084,8 +2084,9 @@ does. `isolation_boundary_unavailable` is the isolation stop and names
 record before returning that isolation failure. Read and print the halt record
 with `harm-halt` in `read_only` mode before emitting the stop marker: include
 its reason, redacted evidence, and last safe state. Resume and state-changing
-requests remain refused while that record stands. Agent `clear` requests are
-refused; follow the human-inspection limit in the stop-policy reference.
+requests remain refused while that record stands. Never send a `clear`
+request: only the human holding the one-time token clears the halt (see the
+stop-policy reference).
 
 An informational `attest_claude` check instead reports
 `isolation_preflight_unavailable` without creating a halt. Record that readiness

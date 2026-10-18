@@ -525,8 +525,10 @@ def run_plan_stage_terminal_helper(entry: Any, request: Any, dispatch: Dispatch)
                    "next_action": f"Print the stop report, then {label} as the last line, and stop."}
         if stop_policy.stop_class(stop.reason) == stop_policy.HARM_HALT and request.mode == "apply":
             try:
-                harm_halt.record_halt(root, stop.reason, stop.report, f"HEAD {run.initial_head or 'unknown'} before the plan stage")
+                recorded = harm_halt.record_halt(root, stop.reason, stop.report,
+                                                 f"HEAD {run.initial_head or 'unknown'} before the plan stage")
                 stopped["halt_record_status"] = "recorded"
+                stopped["clear_token"] = recorded["clear_token"]
             except ValueError:
                 # Publishers retain their lock on failure; contention cannot disappear without a record or human repair.
                 stopped["halt_record_status"] = "blocked"

@@ -1511,6 +1511,21 @@ class CaptureAndHookTests(unittest.TestCase):
         self.assertEqual("tampering_or_forged_evidence", record["reason"])
         self.assertIn("capture", record["last_safe_state"])
 
+    def test_a_recorded_isolation_halt_reports_whether_the_clear_token_was_delivered(self) -> None:
+        inputs = {"named_surface": "capture", "surface": "codex", "repository": "owner/repo",
+                  "pr_number": 498, "workflow_file": "workflow.md"}
+        for delivered, expected in ((True, "shown_on_owner_terminal"), (False, "not_delivered")):
+            with self.subTest(delivered=delivered):
+                Path(self.fixture.root, ".specify/harm-halt/halt.json").unlink(missing_ok=True)
+                with patch("speckit_pro_runner.helpers.harm_halt.show_on_owner_terminal", return_value=delivered), \
+                        patch.object(sweep_launcher, "verify_codex_boundary",
+                                     side_effect=sweep_launcher.LauncherViolation("unsupported")):
+                    result = read_only.sweep_isolation_session(inputs, self.fixture.root)
+                payload = json.loads(result["stdout"])
+                self.assertEqual(("isolation_boundary_unavailable", expected),
+                                 (payload["reason"], payload.get("clear_token")), payload)
+                self.assertNotIn("halt_record_status", payload)
+
     def test_informational_attestation_failure_writes_no_halt(self) -> None:
         with patch.object(sweep_launcher, "verify_claude_boundary",
                           side_effect=sweep_launcher.LauncherViolation("unsupported")):
@@ -1542,6 +1557,7 @@ class CaptureAndHookTests(unittest.TestCase):
         self.assertEqual(3, result["exit_code"])
         self.assertEqual("isolation_boundary_unavailable", json.loads(result["stdout"])["reason"])
         self.assertEqual("unavailable", json.loads(result["stdout"])["halt_record_status"])
+        self.assertNotIn("clear_token", json.loads(result["stdout"]), "an unrecorded halt minted no token")
         self.assertEqual("{not json", record.read_text(encoding="utf-8"))
 
     def test_capture_filters_from_committed_workflow_and_validation_failure_leaves_no_session(self) -> None:
