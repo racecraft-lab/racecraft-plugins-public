@@ -20,12 +20,14 @@ deletions, changed whitespace, comments, and line endings require review.
 Symlinks, missing roots, unreadable text, and missing or malformed inventories
 fail closed. Source rendering and the shipped Codex payload use the same check.
 
-The inventory is repository proof data; it is not shipped plugin policy.
+The inventory is repository proof data; it is not shipped plugin policy. Its
+shared test-library owner supplies strict reads and one complete file walker
+to both validation and the repository regeneration script.
 Regenerate it from source after reviewing the instruction changes:
 
 ```text
 python3 scripts/refresh-release-artifacts.py
-python3 tests/speckit-pro/unit/test-codex-spawn-fork-turns.py --write-review-inventory
+python3 scripts/refresh-codex-instruction-inventory.py
 ```
 
 Commit the generated inventory with its source changes. Normal tests never
@@ -70,6 +72,11 @@ malformed review evidence. The shipped Codex skill and agent copies are tested
 too. See the security-fix PR comment for the exact variant-to-test mapping and
 commit SHAs.
 
+The refresh command is documented here and in the gate failure, rather than
+adding this PR-specific proof inventory to the always-loaded agent contract.
+Generated references were regenerated and checked; the generator produced no
+reference changes for the initial test-only delta.
+
 ## Known limits
 
 - The inventory detects unreviewed changes; it does not infer natural-language
@@ -82,9 +89,11 @@ commit SHAs.
 - Comments do not execute as call arguments, and agent descriptions guide the
   parent rather than becoming the child's developer instruction. Both remain
   covered because an agent reading them can act on their text.
-- Hook-emitted context, plugin-manifest text, and later user prompts are outside
-  the skill/agent instruction seam. No changed code introduces a path from
-  those surfaces into this inventory. This gate does not measure canary tokens.
+- Hook-emitted context, runner/helper output, plugin-manifest text, and later
+  user prompts are outside
+  the skill/agent instruction seam. No current contradictory runner output was
+  established by review; arbitrary executable output already lies outside this
+  static instruction-file contract. This gate does not measure canary tokens.
 - Linux validation does not cover macOS plugin CI or
   `test_gate_hardening.py::test_pr_test_code_cannot_touch_the_host_under_the_real_sandbox`
   and `test_gate_hardening.py::test_pr_test_code_cannot_create_or_modify_any_file_in_the_clone`.

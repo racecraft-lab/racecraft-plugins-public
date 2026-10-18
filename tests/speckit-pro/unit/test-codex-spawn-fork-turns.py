@@ -9,16 +9,16 @@ input cost, repeated for every child (#1317).
 Calls must pass the literal argument. Complete instruction surfaces must also
 match a reviewed inventory: keyword matching cannot prove that arbitrary prose
 does not contradict the rule. Regenerate explicitly after reviewing source edits
-with this file's --write-review-inventory mode; normal validation never writes it.
+with scripts/refresh-codex-instruction-inventory.py; validation never writes it.
 """
 
 from __future__ import annotations
 
 import ast
-import hashlib
 import io
 import json
 import re
+import runpy
 import shutil
 import tempfile
 import sys
@@ -30,9 +30,11 @@ from unittest.mock import patch
 
 TEST_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TEST_DIR.parents[2]
-REVIEW_INVENTORY = TEST_DIR / "fixtures/codex-spawn-instruction-inventory.json"
 sys.path[:0] = [str(TEST_DIR.parent / "lib")]
 
+from codex_instruction_review import (  # noqa: E402
+    REVIEW_INVENTORY, instruction_inventory, instruction_paths, read_surface,
+)
 from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -115,13 +117,6 @@ def passes_fork_none(tokens: list[tokenize.TokenInfo]) -> bool:
         return False
 
 
-def read_surface(path: Path) -> str:
-    """Decode strictly: an unreadable file fails the gate instead of being skipped."""
-    try:
-        return path.read_bytes().decode("utf-8")
-    except (OSError, UnicodeDecodeError) as error:
-        raise AssertionError(f"unreadable dispatch surface: {path.name}: {error}") from error
-
 
 def is_dispatch_surface(root: Path, path: Path) -> bool:
     """Skip only the kinds that cannot dispatch; any other file kind stays in scope."""
@@ -134,33 +129,9 @@ def is_dispatch_surface(root: Path, path: Path) -> bool:
 
 
 def skill_paths(root: Path) -> list[Path]:
-    """Every file a Codex agent can read as instructions, including renamed references."""
-    paths = sorted(root.rglob("*"))
-    for path in paths:
-        if path.is_symlink():
-            raise AssertionError(f"unreviewed skill symlink: {path.relative_to(root)}")
-    return [path for path in paths if path.is_file() and is_dispatch_surface(root, path)]
+    """Filter the shared instruction walk for concrete call examples."""
+    return [path for path in instruction_paths(root) if is_dispatch_surface(root, path)]
 
-
-def instruction_inventory(root: Path) -> dict[str, str]:
-    """Bind every instruction byte to its path, without classifying its prose.
-
-    Any file can carry instructions regardless of its extension or directory.
-    Symlinks, including dangling directory links, never inherit a target's review.
-    """
-    records = {}
-    if not root.is_dir() or root.is_symlink():
-        raise AssertionError("missing or linked instruction root")
-    for path in sorted(root.rglob("*")):
-        relative = path.relative_to(root)
-        if path.is_symlink():
-            raise AssertionError(f"unreviewed instruction symlink: {relative}")
-        if not path.is_file():
-            continue
-        records[relative.as_posix()] = hashlib.sha256(read_surface(path).encode("utf-8")).hexdigest()
-    if not records:
-        raise AssertionError("instruction inventory matched nothing")
-    return records
 
 
 def assert_instruction_inventory(case: unittest.TestCase, kind: str, root: Path) -> None:
@@ -169,7 +140,7 @@ def assert_instruction_inventory(case: unittest.TestCase, kind: str, root: Path)
         expected = json.loads(read_surface(REVIEW_INVENTORY))[kind]
     except (ValueError, KeyError, TypeError) as error:
         raise AssertionError("unreadable instruction review inventory") from error
-    case.assertEqual(instruction_inventory(root), expected, "instruction changes require review and inventory refresh")
+    case.assertEqual(instruction_inventory(root), expected, "review instruction changes, then run python3 scripts/refresh-codex-instruction-inventory.py")
 
 
 class CodexSpawnForkTests(unittest.TestCase):
@@ -308,23 +279,32 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                     f'message={message})\n')})
 
     def test_instruction_inventory_detects_renames_and_removals(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary) / "skills"
-            shutil.copytree(host_skill_root("codex"), root)
-            method = "test_codex_skill_instruction_inventory_matches"
-            with patch(__name__ + ".host_skill_root", return_value=root):
-                control = unittest.TestResult()
-                CodexSpawnForkTests(method).run(control)
-                self.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
-                target = root / "speckit-coach/SKILL.md"
+        for kind, source, relative in (
+            ("skills", host_skill_root("codex"), "speckit-coach/SKILL.md"),
+            ("agents", REPO_ROOT / "speckit-pro/codex-agents", "phase-executor.toml"),
+        ):
+            with tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary) / kind
+                shutil.copytree(source, root)
+                assert_instruction_inventory(self, kind, root)
+                target = root / relative
                 target.rename(target.with_suffix(".data"))
                 for change in ("renamed", "removed"):
-                    with self.subTest(change=change):
-                        result = unittest.TestResult()
-                        CodexSpawnForkTests(method).run(result)
-                        self.assertFalse(result.wasSuccessful())
-                        self.assertFalse(result.errors, result.errors)
+                    with self.subTest(kind=kind, change=change), self.assertRaises(AssertionError):
+                        assert_instruction_inventory(self, kind, root)
                     target.with_suffix(".data").unlink(missing_ok=True)
+
+    def test_inventory_refresh_reproduces_reviewed_fixture(self) -> None:
+        module = runpy.run_path(str(REPO_ROOT / "scripts/refresh-codex-instruction-inventory.py"))
+        refresh = module["main"]
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "inventory.json"
+            target.write_text("stale proof data", encoding="utf-8")
+            with patch.dict(refresh.__globals__, {"REVIEW_INVENTORY": target}), patch.object(
+                sys, "argv", ["refresh-codex-instruction-inventory.py"],
+            ):
+                self.assertEqual(refresh(), 0)
+            self.assertEqual(target.read_bytes(), REVIEW_INVENTORY.read_bytes())
 
     def test_inventory_rejects_links_and_missing_roots(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -442,6 +422,8 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         for relative in (
             "speckit-coach/references/quint/quint-lang/new.md",
             "speckit-coach/examples/formal/tooling/quint/package-lock.json",
+            "speckit-autopilot/contracts/new.schema.json",
+            "speckit-autopilot/scripts/new.py",
         ):
             with self.subTest(skipped=relative):
                 self.assert_skill_gates_reject({relative: ("", call)})
@@ -548,7 +530,7 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                 root = Path(temporary)
                 (root / "target").write_text('spawn_agent(task_name="job")', encoding="utf-8")
                 (root / filename).symlink_to(root / "target")
-                with self.assertRaisesRegex(AssertionError, "skill symlink"):
+                with self.assertRaisesRegex(AssertionError, "instruction symlink"):
                     skill_paths(root)
 
     def test_shipped_codex_payload_passes_the_same_gates(self) -> None:
@@ -613,13 +595,5 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["--write-review-inventory"]:
-        inventory = {
-            "skills": instruction_inventory(host_skill_root("codex")),
-            "agents": instruction_inventory(REPO_ROOT / "speckit-pro/codex-agents"),
-        }
-        REVIEW_INVENTORY.write_text(json.dumps(inventory, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        print("Wrote instruction inventory. Review source changes and the inventory diff together.")
-        raise SystemExit(0)
     raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]),
                                  label="test-codex-spawn-fork-turns"))
