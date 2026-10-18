@@ -46,6 +46,8 @@ object; see [record inputs](./references/planning-approval.md). The runner owns 
 Both hosts consume the same `data.manifest_digest`, `data.record_path` and
 record. Approval assurance is `recorded`; preserve the original confirmation
 reference. Never invent a human confirmation or write the record directly.
+Regenerate navigation through the shared spec-index helper before requesting
+approval; see the [navigation contract](./references/planning-approval.md).
 
 <!-- host:claude: Claude loads an invoked skill through the Skill tool, which a redundant call can reinvoke -->
 ## Explicit Invocation Boundary

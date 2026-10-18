@@ -172,11 +172,16 @@ class RuntimeNavigationCase(MapAssertions):
 
     def assertRegenerationRefused(self, mutate, restore):
         mutate()
-        self.regenerate()
-        reply = self.call("verify")
-        restore()
-        self.regenerate()
-        self.assertEqual(reply["status"], "input_error", reply)
+        try:
+            try:
+                self.regenerate()
+            except SpecIndexRenderError as error:
+                self.assertIn("literal text without link syntax", str(error))
+            reply = self.call("verify")
+            self.assertEqual(reply["status"], "input_error", reply)
+        finally:
+            restore()
+            self.regenerate()
 
     def payloads(self, catalog):
         """All payloads on the source runner; a fixed named subset on each shipped host."""
