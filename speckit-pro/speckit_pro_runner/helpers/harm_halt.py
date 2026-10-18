@@ -47,6 +47,8 @@ def redacted(reason: str, evidence: str) -> str:
 def stored_halt(root: Any) -> dict[str, Any] | None:
     """The active record, None when there is none; an unreadable or malformed record raises, so callers fail closed."""
     path = confined_path(root, RECORD_PATH)
+    if path.parent.exists() and not path.parent.is_dir():
+        raise SelectionError("halt storage is not a directory; a human must inspect it")
     if not path.exists():
         if path.with_suffix(".lock").exists() or (path.parent / ".gitignore").is_dir():
             raise SelectionError("halt publication is active, interrupted or unsafe; a human must inspect it")

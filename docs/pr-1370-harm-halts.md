@@ -23,8 +23,8 @@ print its reason, redacted evidence, and last safe state before the stop marker.
 - `F1370-f201596b`: halt publication reuses the execution-control exclusive
   ledger lock and atomic JSON writer. A concurrent second trigger is refused;
   the first reason and evidence remain intact, including same-reason races.
-  An interrupted publication lock or unsafe ignore-marker directory also
-  refuses dispatch and resume.
+  An interrupted publication lock, unsafe ignore-marker directory, or regular
+  file occupying the halt directory also refuses dispatch and resume.
 - `F1370-06475426`: agent `clear` requests remain refused. ADR 0004 removes
   operator-event paths; the remaining `execution_control._operator_event`
   validates a caller-supplied event shape, run binding and single use. It does
@@ -72,7 +72,8 @@ publisher is live, then removes `.specify/harm-halt/halt.json` and any abandoned
 `.specify/harm-halt/halt.lock` directory. Removing only the record leaves an
 abandoned publication lock blocking resume. An unsafe
 `.specify/harm-halt/.gitignore` directory must also be repaired into the runner's
-regular ignore marker. Agents leave this recovery to the human; no repository field or reason string authorizes it.
+regular ignore marker. A regular file occupying `.specify/harm-halt` must be
+restored to a directory after inspection. Agents leave this recovery to the human; no repository field or reason string authorizes it.
 
 ## Known limits
 
@@ -89,8 +90,8 @@ regular ignore marker. Agents leave this recovery to the human; no repository fi
   property for arbitrary future changes.
 
 - The standards re-review noted that `SchemaViolation` has no `reason`, so an
-  invalid sweep request can also take the isolation fallback and persist a
-  halt. Examples are an unknown capture surface or an unsupported receipt
+  invalid capture or receipt request can also take the isolation fallback and
+  persist a halt. Informational attestation instead reports its readiness gap. Examples are an unknown capture surface or an unsupported receipt
   stage. This is a conservative refusal, with explicit human clearance; it
   neither bypasses the halt nor loses evidence. The supported orchestrator
   sends exact closed request shapes; reviewer prose cannot select these
@@ -98,6 +99,11 @@ regular ignore marker. Agents leave this recovery to the human; no repository fi
   The earlier guidance already classified this fallback as the isolation halt.
   Separating invalid caller requests from invalid worker evidence would change
   that existing classification contract, so this repair retains it.
+- The passive halt reader treats a directory-shaped ignore marker as unsafe,
+  including a symlink to a directory. The existing directory writer can repair
+  that link. Supported writers create a regular ignore marker; only manually
+  altered local state reaches the difference. The reader fails closed and
+  leaves repair to human inspection rather than changing state during a read.
 - The architecture advisory flags `gates/payloads.py` importing `runtime.py`.
   This edge exists unchanged on main. No architecture baseline or quality
   acknowledgment was changed to suppress it.

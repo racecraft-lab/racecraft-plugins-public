@@ -188,15 +188,22 @@ class HaltConcurrencyTests(MutationRequestCase):
     helper_id = harm_halt.HELPER_ID
     files = {WORKFLOW: "# Workflow\n"}
 
-    def test_an_unsafe_ignore_marker_refuses_writes_and_resume(self) -> None:
-        (self.root / ".specify/harm-halt/.gitignore").mkdir(parents=True)
-        request = SimpleNamespace(schema_version="1.0", request_id="storage", helper_id="decisions-list",
-                                  operation="decisions-list", mode="apply", inputs={"workflow_file": WORKFLOW, "entries": [ENTRY]})
-        with patch("speckit_pro_runner.helpers.registry.dispatch_helper") as dispatch:
-            result = handle_request(request)
-        self.assertEqual("harm_halt_active", result["diagnostics"][0]["code"], result)
-        dispatch.assert_not_called()
-        self.assertEqual("input_error", self.call("read_only")["status"])
+    def test_unsafe_halt_storage_refuses_writes_and_resume(self) -> None:
+        for obstruction in ("ignore_marker", "directory"):
+            with self.subTest(obstruction=obstruction):
+                self.setUp()
+                if obstruction == "ignore_marker":
+                    (self.root / ".specify/harm-halt/.gitignore").mkdir(parents=True)
+                else:
+                    (self.root / ".specify/harm-halt").write_text("obstruction", encoding="utf-8")
+                request = SimpleNamespace(schema_version="1.0", request_id="storage", helper_id="decisions-list",
+                                          operation="decisions-list", mode="apply",
+                                          inputs={"workflow_file": WORKFLOW, "entries": [ENTRY]})
+                with patch("speckit_pro_runner.helpers.registry.dispatch_helper") as dispatch:
+                    result = handle_request(request)
+                self.assertEqual("harm_halt_active", result["diagnostics"][0]["code"], result)
+                dispatch.assert_not_called()
+                self.assertEqual("input_error", self.call("read_only")["status"])
 
     def test_an_interrupted_publication_refuses_writes_and_resume(self) -> None:
         lock = self.root / ".specify/harm-halt/halt.lock"
