@@ -1164,6 +1164,7 @@ class ConfidenceRecoveryTests(TerminalFixture):
             with self.subTest(host=host):
                 config = self.root / f".{host}/speckit-pro.local.md"
                 config.parent.mkdir(exist_ok=True)
+                (self.root / FINDINGS).unlink(missing_ok=True)
                 config.write_text("confidence_threshold: 0.80\n", encoding="utf-8")
                 path.write_text(original.replace("| Mode | advisory |", "| Mode | **Strict** — resolved at Step 0.6b |")
                                .replace("0.94", "0.85"), encoding="utf-8")

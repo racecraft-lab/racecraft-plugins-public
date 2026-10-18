@@ -3590,6 +3590,12 @@ def confidence_gate_inputs(workflow_file: str, mode_text: str, config_path: Path
             "threshold": thresholds[0] if thresholds else "0.90"}
 
 
+def confidence_findings(verdict: dict[str, Any]) -> list[str]:
+    """The finding ids a strict confidence shortfall sends to plan review: each weak criterion, else the composite."""
+    weak = sorted(name for name, score in verdict["criteria"].items() if score is not None and score < verdict["threshold"])
+    return [f"confidence-{name}" for name in weak] or ["confidence-composite"]
+
+
 def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     workflow_raw = request_path_display(inputs.get("workflow_file") or "", repo_root)
     workflow = resolve_input_path(workflow_raw, repo_root)

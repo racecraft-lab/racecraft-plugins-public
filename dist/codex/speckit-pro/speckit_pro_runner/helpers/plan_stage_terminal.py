@@ -24,7 +24,7 @@ from ..execution_control import contained_workflow_file
 from ..trusted_io import resolve_repo_root, trusted_bytes
 from ..workflow_stage import AUTOPILOT_BASIC_INFO_HEADING, HTML_COMMENT_RE, workflow_stage_signals, workflow_table_rows
 from . import artifact_fill, artifact_publication, artifact_selection, harm_halt, planning_approval
-from .read_only import confidence_gate_inputs, corroborate_draft_pr, observation_pull_requests, workflow_draft_pr_row
+from .read_only import confidence_findings, confidence_gate_inputs, corroborate_draft_pr, observation_pull_requests, workflow_draft_pr_row
 from .readiness_record import preview_surface
 
 Dispatch = Callable[[Any], dict[str, Any]]
@@ -163,7 +163,7 @@ def prepare(run: Run, inputs: dict[str, Any]) -> None:
     if not shortfall and (verdict["status"] != "ok" or result.get("recommended_action") not in {"proceed", "continue_with_warning"}):
         raise Stop("plan_stage_boundary", "the confidence gate must explicitly pass, warn or fail in strict mode before "
                    "publication; rerun Analyze to record confidence, then retry finish-plan-stage")
-    run.findings = planning_approval.confidence_findings(result) if shortfall else []
+    run.findings = confidence_findings(result) if shortfall else []
     run.branch = command(run, ["git", "branch", "--show-current"], "the branch could not be read")
     run.initial_head = command(run, ["git", "rev-parse", "HEAD"], "the initial commit could not be read")
 

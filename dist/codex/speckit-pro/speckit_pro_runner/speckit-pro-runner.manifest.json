@@ -743,7 +743,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "9f44a15a5eaa9ca505b964d3ac0608cad4106c595373e9bc2c754b36f18205eb"
+      "sha256": "f93613fbf9f7930ba54b1eb6eb56372dd265fa7f091f6c963804d74b4f74db84"
     },
     {
       "path": {
@@ -751,7 +751,7 @@
         "value": "speckit_pro_runner/helpers/planning_approval.py",
         "display": "speckit_pro_runner/helpers/planning_approval.py"
       },
-      "sha256": "c24b379e494ae89d7bd851b09a6ee64a3f8d039af1ef88aa494c15cb2b45e7ec"
+      "sha256": "24b26edcd3aa931d31c65b99c05a755c4bfb3afb64d7db06d4bdee522938c1cc"
     },
     {
       "path": {
@@ -799,7 +799,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "e4232746428b59579e03ba5fbd0d768613b74c0441ff0e4210d6f517f8f6d7c6"
+      "sha256": "87f2634189a5bb771769b60a7f9b7f8dacaf0e6700b0ac197ae185b342923ddd"
     },
     {
       "path": {

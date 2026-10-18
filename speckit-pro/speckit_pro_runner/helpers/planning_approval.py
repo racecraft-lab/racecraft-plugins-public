@@ -392,12 +392,6 @@ def evidence(root: Path, reference: str) -> dict[str, str]:
     return {"reference": owned_path(reference, root), "sha256": hashlib.sha256(captured(root, reference)).hexdigest()}
 
 
-def confidence_findings(verdict: dict[str, Any]) -> list[str]:
-    """The finding ids a strict confidence shortfall sends to plan review: each weak criterion, else the composite."""
-    weak = sorted(name for name, score in verdict["criteria"].items() if score is not None and score < verdict["threshold"])
-    return [f"confidence-{name}" for name in weak] or ["confidence-composite"]
-
-
 def add_findings(root: Path, feature: str, identities: list[str]) -> None:
     """Add each new finding with no request yet and keep every recorded entry; a clean plan gets an empty map."""
     relative = f"{feature}/{FINDINGS_FILE}"
