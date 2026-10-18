@@ -1968,6 +1968,42 @@ class CaptureAndHookTests(unittest.TestCase):
                     sweep_launcher.verify_claude_attestation(REPO_ROOT, PLUGIN_ROOT)
 
 
+class MalformedIsolationRequestTests(unittest.TestCase):
+    def test_a_malformed_isolation_request_is_an_input_error_and_records_no_halt(self) -> None:
+        # ADR 0010 reserves tampering_or_forged_evidence for evidence that fails its
+        # hash or provenance check. A caller's typo is neither, and no agent can clear
+        # a halt, so one bad request must not stop every runner write.
+        session_id = "a" * 32
+        malformed = (
+            {"named_surface": "attest_claude", "extra": 1},
+            {"named_surface": "close"},
+            {"named_surface": "close", "session_id": session_id, "extra": 1},
+            {"named_surface": "close", "session_id": "not-a-session-id"},
+            {"named_surface": "close", "session_id": 17},
+            {"named_surface": "capture", "surface": "gemini", "repository": "owner/repo",
+             "pr_number": 498, "workflow_file": "workflow.md"},
+            {"named_surface": "capture", "surface": "codex"},
+            {"named_surface": "accept", "session_id": session_id, "receipt": "r", "stage": "synthesis"},
+            {"named_surface": "launch_codex", "session_id": session_id, "comment_id": "RC_kwDO123"},
+            {"named_surface": "launch_codex", "session_id": session_id, "comment_id": "RC_kwDO123", "stage": "bogus"},
+            {"named_surface": "launch_claude", "session_id": session_id, "comment_id": "RC_kwDO123",
+             "stage": "perspective", "perspective": "bogus"},
+        )
+        for inputs in malformed:
+            fixture = GitFixture()
+            self.addCleanup(fixture.close)
+            (fixture.root / ".specify").mkdir()
+            request = SimpleNamespace(schema_version="1.0", request_id="malformed", mode="read_only",
+                                      helper_id="sweep-isolation-session", operation="sweep-isolation-session",
+                                      inputs=inputs)
+            with self.subTest(inputs=inputs), patch.object(Path, "cwd", return_value=fixture.root):
+                result = registry.dispatch_helper(request)
+                self.assertEqual(("input_error", 2), (result["status"], result["exit_code"]), result)
+                self.assertEqual({"status": "invalid_request"}, result["data"]["stdout_json"], result)
+                self.assertFalse(result["data"]["writes_state"], result)
+                self.assertIsNone(stored_halt(fixture.root))
+
+
 class WorkflowAndEvalContractTests(unittest.TestCase):
     def setUp(self) -> None:
         from host_skill_views import host_skill_root

@@ -29,7 +29,7 @@ from ..execution_control import LEDGER_LOCKED, confined_path, durable_json, excl
 from ..path_utils import find_repo_root as find_payload_root
 from ..stop_policy import HARM_HALT, STOP_REASONS
 from ..strict_input import SelectionError, require_fields, require_text, unique_object
-from ..trusted_io import resolve_repo_root
+from ..trusted_io import find_repo_root
 from .execution_requests import Refusal, run_contained_helper
 
 SCHEMA_VERSION = "harm-halt/v1"
@@ -261,10 +261,13 @@ def apply_refusal(entry: Any, request: Any) -> dict[str, Any] | None:
     if request.mode == "read_only" and (entry.helper_id in HALTED_READ_HELPERS or
                                         (entry.helper_id == "runner" and request.operation == "runtime-info")):
         return None
-    root = resolve_repo_root(request.inputs)
+    # The halt stands at the invocation root. Helpers resolve their root from the cwd too,
+    # so a repo_root input the runner cannot resolve must not skip this check.
+    root = find_repo_root(Path.cwd())
     if entry.helper_id == "payload-gate":
         root = find_payload_root(Path.cwd()) or root
-    if isinstance(root, dict):
+    if root is None:
+        # No trusted marker above the cwd, so no .specify directory can hold a record.
         return None
     status = "expected_failure"
     try:
