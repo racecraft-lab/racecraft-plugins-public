@@ -535,6 +535,7 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     elif action == "record" and mode in {"dry_run", "apply"}:
         map_state = approval_map_snapshot(root, feature)
         record = approval_record(root, feature, fields["approval"], binding)
+        admit_repository(root, record["repository"])  # never record what admission always refuses
         if target.exists() and json.loads(captured(root, path)) != record:
             raise ValueError("approval already exists; preserve the original decision")
         if mode == "apply":

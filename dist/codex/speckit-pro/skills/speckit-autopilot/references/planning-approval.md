@@ -15,7 +15,8 @@ runs it for every implement entry.
 
 - `repository` (the GitHub `owner/name` exactly as spelled in this checkout's
   `origin` URL, without `.git`), `planning_run`, `repair_runs` (list),
-  `source_commit` (reviewed commit).
+  `source_commit` (reviewed commit). Record refuses with `planning approval field
+  repository` when `origin` does not name it, the same check `admit` runs.
 - `canary_issued=false`, `supersedes` (prior record path or null),
   `superseded_by=null`, `withdrawn_by=null`.
 - `reviewed_evidence`: nonempty unique file references to the reviewed artifact

@@ -21,7 +21,6 @@ STAGE_WORKFLOW = (HERE / "fixtures/autopilot-stage/workflow.md").read_text()
 class AdmissionFixture(PlanningApprovalFixture):
     def setUp(self):
         super().setUp()
-        subprocess.run(["git", "-C", str(self.root), "remote", "add", "origin", "https://github.com/example/project.git"], check=True)
         (self.feature / "workflow.md").write_text(STAGE_WORKFLOW)
 
     def record(self, **changes):
@@ -90,9 +89,18 @@ class PlanApprovalAdmissionTest(AdmissionFixture):
 
 
 class RepositoryAdmissionTest(AdmissionFixture):
-    def test_a_foreign_repository_approval_is_refused_by_name(self):
-        self.record(repository="someone-else/unrelated")
-        self.refusal(self.call("admit"), "repository")
+    def test_record_refuses_a_repository_that_admission_would_refuse(self):
+        for repository in ("someone-else/unrelated", "project", "https://github.com/example/project", "Example/Project"):
+            for mode in ("dry_run", "apply"):
+                with self.subTest(repository=repository, mode=mode):
+                    reply = self.call("record", mode, approval={**self.approval(), "repository": repository})
+                    self.refusal(reply, "repository")
+                    self.assertEqual(list(self.feature.glob("plan-approvals/*.json")), [])
+        subprocess.run(["git", "-C", str(self.root), "remote", "remove", "origin"], check=True)
+        self.refusal(self.call("record", "apply", approval=self.approval()), "repository")
+        subprocess.run(["git", "-C", str(self.root), "remote", "add", "origin", "https://github.com/example/project"], check=True)
+        self.record()
+        self.assertEqual(self.call("admit")["status"], "ok")
 
     def test_changed_repository_identity_is_refused_by_name(self):
         path, record = self.record()

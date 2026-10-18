@@ -42,6 +42,7 @@ class PlanningApprovalFixture(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         subprocess.run(["git", "init", "--quiet", str(self.root)], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.root), "remote", "add", "origin", "https://github.com/example/project.git"], check=True)
         (self.root / ".specify").mkdir()
         self.runner_root = Path(__file__).resolve().parents[3] / "speckit-pro"
         self.feature = self.root / "specs/demo"
