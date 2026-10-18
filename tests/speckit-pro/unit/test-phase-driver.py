@@ -228,6 +228,19 @@ class SkillContractTests(unittest.TestCase):
                 self.assertLess(section.index("publish-tasks-output"), verify)
                 self.assertLess(section.index("formal-check"), verify)
 
+    def test_a_codex_driver_sends_the_parent_only_its_envelope(self) -> None:
+        """A driver's progress message wakes the root's wait for one more full-context turn (issue 1317)."""
+        rule = "Your envelope is your only message to the parent"
+        for host in HOST_TOOLS:
+            reference = (host_skill_root(host) / "speckit-autopilot/references/phase-driver.md").read_text(encoding="utf-8")
+            driver = " ".join(reference[reference.index("## Nested-mode phase driver"):reference.index("## Phase executor summary")].split())
+            with self.subTest(host=host):
+                if host == "codex":
+                    self.assertIn(rule, driver)
+                    self.assertIn("wakes the parent's `wait_agent`", driver)
+                else:
+                    self.assertNotIn("send_message", driver)
+
     def test_the_nesting_preflight_no_longer_says_drivers_are_pending(self) -> None:
         for host in HOST_TOOLS:
             text = (host_skill_root(host) / "speckit-autopilot" / "SKILL.md").read_text(encoding="utf-8")
