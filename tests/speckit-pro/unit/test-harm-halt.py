@@ -429,8 +429,8 @@ class HaltTokenExposureTests(TokenHalt):
         self.assertFalse([path for path in self.root.rglob("*") if path.is_file() and token.encode() in path.read_bytes()])
 
 
-class OwnerTerminalTests(unittest.TestCase):
-    """The token goes only to the outermost ancestor terminal, never to one the runner's own streams use."""
+class OwnerTerminalCase(unittest.TestCase):
+    """Fake terminals and a fake process table; the real terminal-name switch is cleared."""
 
     def setUp(self) -> None:
         switch = patch.dict(os.environ)
@@ -442,59 +442,67 @@ class OwnerTerminalTests(unittest.TestCase):
         master, slave = os.openpty()
         self.addCleanup(os.close, master)
         self.addCleanup(os.close, slave)
-        return master, os.ttyname(slave)
+        return master, os.ttyname(slave).removeprefix("/dev/")
 
-    def drained(self, master: int) -> bytes:
+    def drained(self, *masters: int) -> bytes:
         received = b""
-        while select.select([master], [], [], 0.2)[0]:
-            received += os.read(master, 4096)
+        for master in masters:
+            while select.select([master], [], [], 0.2)[0]:
+                received += os.read(master, 4096)
         return received
 
-    def table(self, rows: dict[int, tuple[int, str]]) -> Any:
+    def shown(self, rows: dict[int, tuple[int, str]], own: frozenset[int] = frozenset()) -> bool:
+        """Deliver a fixed token through `rows` as the process table, with `own` as the runner's devices."""
         def row(pid: int) -> tuple[int, str]:
             if pid not in rows:
                 raise OSError("ps could not read the process")
             return rows[pid]
 
-        return patch.object(harm_halt, "process_row", side_effect=row)
+        with patch.object(harm_halt, "process_row", side_effect=row), \
+                patch.object(harm_halt, "runner_terminals", return_value=set(own)):
+            return harm_halt.show_on_owner_terminal("tok-123")
+
+
+class OwnerTerminalWalkTests(OwnerTerminalCase):
+    """The token goes only to the outermost ancestor terminal, and only when the walk reaches the top."""
 
     def test_the_outermost_ancestor_terminal_receives_the_token(self) -> None:
-        outer, outer_path = self.terminal()
-        inner, inner_path = self.terminal()
-        rows = {os.getpid(): (10, "??"), 10: (11, inner_path.removeprefix("/dev/")),
-                11: (12, outer_path.removeprefix("/dev/")), 12: (1, "??")}
-        with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=set()):
-            self.assertTrue(harm_halt.show_on_owner_terminal("tok-123"))
+        (outer, outer_name), (inner, inner_name) = self.terminal(), self.terminal()
+        self.assertTrue(self.shown({os.getpid(): (10, "??"), 10: (11, inner_name), 11: (12, outer_name), 12: (1, "??")}))
         self.assertIn(b"tok-123", self.drained(outer))
         self.assertNotIn(b"tok-123", self.drained(inner))
+
+    def test_an_ancestry_deeper_than_the_walk_withholds_the_token(self) -> None:
+        (owner, owner_name), (agent, agent_name) = self.terminal(), self.terminal()
+        depth = harm_halt.MAX_ANCESTORS + 6
+        rows = {os.getpid(): (1000, "??"), 1000 + depth: (1, owner_name)}
+        rows.update({1000 + step: (1001 + step, agent_name) for step in range(depth)})
+        self.assertFalse(self.shown(rows))
+        self.assertNotIn(b"tok-123", self.drained(agent, owner))
+
+    def test_no_terminal_or_an_unreadable_process_table_delivers_nothing(self) -> None:
+        for rows in ({os.getpid(): (1, "??")}, {}, {os.getpid(): (10, "../etc/passwd"), 10: (1, "??")}):
+            with self.subTest(rows=rows):
+                self.assertFalse(self.shown(rows))
+
+
+class OwnerTerminalGuardTests(OwnerTerminalCase):
+    """A terminal the runner's own streams use, or the suite switch, withholds the token."""
 
     def test_a_terminal_the_runner_uses_or_the_suite_switch_withholds_the_token(self) -> None:
         for case in ("runner_stream", "suite_switch"):
             with self.subTest(case=case):
-                outer, outer_path = self.terminal()
-                own = {os.stat(outer_path).st_rdev} if case == "runner_stream" else set()
+                outer, outer_name = self.terminal()
+                own = frozenset({os.stat("/dev/" + outer_name).st_rdev}) if case == "runner_stream" else frozenset()
                 if case == "suite_switch":
                     os.environ[harm_halt.TERMINAL_SWITCH] = "off"
-                rows = {os.getpid(): (10, outer_path.removeprefix("/dev/")), 10: (1, "??")}
-                with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=own):
-                    self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
+                self.assertFalse(self.shown({os.getpid(): (10, outer_name), 10: (1, "??")}, own))
                 self.assertNotIn(b"tok-123", self.drained(outer))
 
-    def test_an_ancestry_deeper_than_the_walk_withholds_the_token(self) -> None:
-        owner, owner_path = self.terminal()
-        agent, agent_path = self.terminal()
-        depth = harm_halt.MAX_ANCESTORS + 6
-        rows = {os.getpid(): (1000, "??")}
-        rows.update({1000 + step: (1001 + step, agent_path.removeprefix("/dev/")) for step in range(depth)})
-        rows[1000 + depth] = (1, owner_path.removeprefix("/dev/"))
-        with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=set()):
-            self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
-        self.assertNotIn(b"tok-123", self.drained(agent) + self.drained(owner))
-
     def test_the_runner_counts_its_own_terminal_streams(self) -> None:
-        _, path = self.terminal()
+        _, name = self.terminal()
         saved = os.dup(2)
-        stream = os.open(path, os.O_WRONLY | os.O_NOCTTY)
+        stream = os.open("/dev/" + name, os.O_WRONLY | os.O_NOCTTY)
         try:
             os.dup2(stream, 2)
             seen = harm_halt.runner_terminals()
@@ -502,24 +510,19 @@ class OwnerTerminalTests(unittest.TestCase):
             os.dup2(saved, 2)
             os.close(saved)
             os.close(stream)
-        self.assertIn(os.stat(path).st_rdev, seen)
+        self.assertIn(os.stat("/dev/" + name).st_rdev, seen)
 
     def test_suite_children_withhold_the_token(self) -> None:
         from suite_child_env import child_environment
 
         self.assertEqual("off", child_environment(REPO)[harm_halt.TERMINAL_SWITCH])
 
-    def test_no_terminal_or_an_unreadable_process_table_delivers_nothing(self) -> None:
-        for rows in ({os.getpid(): (1, "??")}, {}, {os.getpid(): (10, "../etc/passwd"), 10: (1, "??")}):
-            with self.subTest(rows=rows), self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=set()):
-                self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
-
 
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                               for case in (HarmHaltTests, HaltDispatchTests, HaltConcurrencyTests,
                                            HaltPublicationFailureTests, HaltClearTokenTests, HaltTokenExposureTests,
-                                           OwnerTerminalTests))
+                                           OwnerTerminalWalkTests, OwnerTerminalGuardTests))
 
 
 if __name__ == "__main__":
