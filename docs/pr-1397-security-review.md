@@ -54,7 +54,17 @@ this repair preserves their default snapshot contract.
 - The parent-replacement actor already controls the feature directory. The
   repair refuses a changed parent before opening the publication temporary file,
   and descriptor-relative publication cannot redirect a later write into a
-  replacement directory. It does not revoke the actor's existing directory access.
+  replacement directory. If the parent is renamed after the writer opens it,
+  publication can land in that renamed-away directory through its held descriptor;
+  the replacement directory's inventory is not overwritten. The regression test
+  covers capture through reopening the parent. This does not revoke the actor's
+  existing directory access.
+- Info: an uncoordinated writer can retain a descriptor for the former inventory
+  inode and write after the successful displaced-entry check but before cleanup
+  removes that old inode. That write targets an already displaced inode rather
+  than the canonical inventory pathname. Rename-based publication cannot make
+  arbitrary external descriptor writers participate in the inventory protocol;
+  this existing publication limitation is outside the pathname races repaired here.
 - Missing or unsafe parent directories fail closed; the helper does not create
   a replacement feature directory.
 - Daybreak must re-check a receipt containing the fix commits before resolving
