@@ -33,6 +33,7 @@ from speckit_pro_runner import sweep_isolation  # noqa: E402
 from speckit_pro_runner import sweep_broker  # noqa: E402
 from speckit_pro_runner import sweep_launcher  # noqa: E402
 from speckit_pro_runner.helpers import read_only, registry  # noqa: E402
+from speckit_pro_runner.helpers.harm_halt import stored_halt  # noqa: E402
 
 
 def issuer_secret_cases() -> tuple[str, ...]:
@@ -223,6 +224,73 @@ class SweepSessionCase(unittest.TestCase):
     def apply_receipt(self, receipt: object, mode: str) -> dict[str, object]:
         return sweep_isolation.apply_synthesis_receipt(
             self.fixture.root, "specs/001-safe", self.session, receipt, mode=mode)
+
+
+class SweepOperationalFailureTests(SweepSessionCase):
+    def test_expiry_during_a_zero_exit_launch_is_recoverable_on_both_hosts(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host), patch.object(sweep_isolation.time, "time", return_value=1_000) as clock:
+                session = sweep_isolation.SweepSession.open(self.metadata["session_id"], state_root=self.state_root)
+
+                def worker_finishes(*args: object, **kwargs: object) -> SimpleNamespace:
+                    clock.return_value = 1_061
+                    return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+                with (
+                    patch.object(sweep_launcher, "verify_codex_boundary"),
+                    patch.object(sweep_launcher, "verify_claude_boundary"),
+                    patch.object(sweep_launcher, "codex_command", return_value=["/trusted/codex"]),
+                    patch.object(sweep_launcher, "claude_command", return_value=["claude"]),
+                    patch.object(sweep_launcher.shutil, "which", return_value="/trusted/codex"),
+                    patch.object(sweep_launcher, "trusted_executable", return_value=Path("/trusted/codex")),
+                    patch.object(sweep_isolation, "current_head", return_value=self.head),
+                    patch.object(sweep_launcher.SweepSession, "open", return_value=session),
+                    patch.object(sweep_launcher.subprocess, "run", side_effect=worker_finishes),
+                    patch.object(sweep_launcher, "_run_claude_process", side_effect=worker_finishes),
+                ):
+                    result = read_only.sweep_isolation_session(
+                        {"named_surface": f"launch_{host}", "session_id": self.metadata["session_id"],
+                         "comment_id": "RC_kwDO123", "stage": "classifier"}, self.fixture.root)
+                self.assertEqual("sweep_session_expired", json.loads(result["stdout"])["reason"])
+                self.assertIsNone(stored_halt(self.fixture.root))
+
+    def test_ordinary_sweep_process_failures_do_not_persist_a_harm_halt(self) -> None:
+        for host in ("codex", "claude"):
+            for failure in (subprocess.TimeoutExpired("isolated sweep", 300),
+                            SimpleNamespace(returncode=1, stdout="", stderr="worker failed")):
+                with (
+                    self.subTest(host=host, failure=type(failure).__name__),
+                    patch.object(sweep_launcher, "verify_codex_boundary"),
+                    patch.object(sweep_launcher, "verify_claude_boundary"),
+                    patch.object(sweep_launcher, "codex_command", return_value=["/trusted/codex"]),
+                    patch.object(sweep_launcher, "claude_command", return_value=["claude"]),
+                    patch.object(sweep_launcher.shutil, "which", return_value="/trusted/codex"),
+                    patch.object(sweep_launcher, "trusted_executable", return_value=Path("/trusted/codex")),
+                    patch.object(sweep_launcher.SweepSession, "open", return_value=self.session),
+                    patch.object(self.session, "issue_capability", return_value="private capability"),
+                    patch.object(sweep_launcher.subprocess, "run",
+                                 **({"side_effect": failure} if isinstance(failure, Exception) else {"return_value": failure})),
+                    patch.object(sweep_launcher, "_run_claude_process",
+                                 **({"side_effect": failure} if isinstance(failure, Exception) else {"return_value": failure})),
+                ):
+                    result = read_only.sweep_isolation_session(
+                        {"named_surface": f"launch_{host}", "session_id": self.metadata["session_id"],
+                         "comment_id": "RC_kwDO123", "stage": "classifier"}, self.fixture.root)
+                    self.assertEqual("sweep_process_failed", json.loads(result["stdout"])["reason"])
+                    self.assertIsNone(stored_halt(self.fixture.root))
+
+
+    def test_expired_session_refuses_without_a_harm_halt(self) -> None:
+        receipt = self.session.submit_result("classifier", self.classifier())
+        expired = sweep_isolation.SweepSession.open(
+            self.metadata["session_id"], state_root=self.state_root, now=1_061)
+        with patch.object(sweep_isolation.SweepSession, "open", return_value=expired):
+            result = read_only.sweep_isolation_session(
+                {"named_surface": "accept", "session_id": self.metadata["session_id"],
+                 "receipt": receipt, "stage": "classifier"}, self.fixture.root)
+        self.assertEqual("sweep_session_expired", json.loads(result["stdout"])["reason"])
+        self.assertIsNone(stored_halt(self.fixture.root))
+
 
 
 class SessionAndReceiptTests(SweepSessionCase):
@@ -1439,6 +1507,42 @@ class CaptureAndHookTests(unittest.TestCase):
         self.assertEqual(3, result["exit_code"])
         self.assertIn("isolation_boundary_unavailable", result["stdout"])
         github_read.assert_not_called()
+        record = stored_halt(self.fixture.root)
+        self.assertEqual("tampering_or_forged_evidence", record["reason"])
+        self.assertIn("capture", record["last_safe_state"])
+
+    def test_informational_attestation_failure_writes_no_halt(self) -> None:
+        with patch.object(sweep_launcher, "verify_claude_boundary",
+                          side_effect=sweep_launcher.LauncherViolation("unsupported")):
+            result = read_only.sweep_isolation_session({"named_surface": "attest_claude"}, self.fixture.root)
+        self.assertEqual("isolation_preflight_unavailable", json.loads(result["stdout"])["reason"])
+        self.assertIsNone(stored_halt(self.fixture.root))
+        self.assertFalse(result["writes_state"])
+
+    def test_isolation_halt_write_is_reported_in_the_runner_envelope(self) -> None:
+        (self.fixture.root / ".specify").mkdir()
+        request = SimpleNamespace(schema_version="1.0", request_id="capture", mode="read_only",
+                                  helper_id="sweep-isolation-session", operation="sweep-isolation-session",
+                                  inputs={"named_surface": "capture", "surface": "codex", "repository": "owner/repo",
+                                          "pr_number": 498, "workflow_file": "workflow.md"})
+        with patch.object(Path, "cwd", return_value=self.fixture.root), patch.object(
+                sweep_launcher, "verify_codex_boundary", side_effect=sweep_launcher.LauncherViolation("unsupported")):
+            result = registry.dispatch_helper(request)
+        self.assertIn("writes_state", result["data"], result)
+        self.assertTrue(result["data"]["writes_state"], result)
+        self.assertEqual("tampering_or_forged_evidence", stored_halt(self.fixture.root)["reason"])
+
+    def test_an_unreadable_halt_preserves_the_closed_isolation_failure(self) -> None:
+        record = self.fixture.write(".specify/harm-halt/halt.json", "{not json")
+        with patch.object(sweep_launcher, "verify_codex_boundary",
+                          side_effect=sweep_launcher.LauncherViolation("unsupported")):
+            result = read_only.sweep_isolation_session(
+                {"named_surface": "capture", "surface": "codex", "repository": "owner/repo",
+                 "pr_number": 498, "workflow_file": "workflow.md"}, self.fixture.root)
+        self.assertEqual(3, result["exit_code"])
+        self.assertEqual("isolation_boundary_unavailable", json.loads(result["stdout"])["reason"])
+        self.assertEqual("unavailable", json.loads(result["stdout"])["halt_record_status"])
+        self.assertEqual("{not json", record.read_text(encoding="utf-8"))
 
     def test_capture_filters_from_committed_workflow_and_validation_failure_leaves_no_session(self) -> None:
         # The working copy tries to erase the durable skip key. Capture must use

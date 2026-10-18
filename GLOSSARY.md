@@ -48,6 +48,10 @@ _Avoid_: parallel group, fan-out
 A checklist domain executor's return: its gaps and proposed plain prose changes to the spec and plan. Structural or reference changes remain gaps for review; the executor never writes either artifact.
 _Avoid_: patch, remediation, fix pass
 
+**Failure-path seam**:
+The one table in the runner's execution-control module through which every action that reserves a correction, grants an operator approval, opens a replan or stage epoch, or freezes the invariant registry passes. Nothing else calls those actions. Ledger bookkeeping and the end-of-run request that reads the same state stay outside it.
+_Avoid_: corrective gateway, budget facade
+
 **Final verify round**:
 One re-verify wave of every checklist domain after consensus changed the spec or plan. Each round is claimed in the application record, and the runner allows a fixed number per apply; edits made after the last round stay applied without another wave.
 _Avoid_: verify loop, re-check pass
@@ -68,8 +72,21 @@ not establish which output a later reader will consume or authorize hooks.
 _Avoid_: confirmed live output
 
 **Harm halt**:
-The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must clear it before resume.
+The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must resolve and clear it before resume. Agents cannot authorize its clearance.
 _Avoid_: integrity failure, hard stop
+
+**Sweep process failure**:
+An isolated feedback worker timed out, failed to start, or exited unsuccessfully. It blocks that sweep attempt without establishing tampering (`sweep_process_failed`).
+
+**Sweep session expiry**:
+The private feedback snapshot outlived its allowed lifetime. A fresh capture is required; elapsed time alone is not forged evidence (`sweep_session_expired`).
+
+**Sweep isolation preflight gap**:
+An informational boundary check could not attest the runtime (`isolation_preflight_unavailable`). It reports readiness without launching a worker or creating a harm halt; capture and launch still enforce their boundaries.
+
+**Terminal state**:
+Where a run may end without a harm halt: planning ready for review, or ready for UAT. The runner owns the closed list and answers "may this run end now?" from it.
+_Avoid_: stop reason, finish
 
 **Host**:
 A coding-agent product that runs the plugin: Claude Code or Codex.

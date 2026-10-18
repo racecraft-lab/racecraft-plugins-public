@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .harm_halt import record_halt
+
 from ..sweep_export import (
     SWEEP_LOG_HEADING,
     SWEEP_LOG_KEY_COLUMN,
@@ -146,11 +148,30 @@ def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str
         else:
             raise SchemaViolation("isolation surface is unreachable")
     except (CaptureViolation, IsolationViolation, LauncherViolation, ReceiptViolation, SchemaViolation) as violation:
-        # A capture failure names its own closed reason, so the orchestrator can
-        # tell an absent tool or credential from a spent retry schedule.
-        reason = getattr(violation, "reason", "isolation_boundary_unavailable")
-        return make_result(json_text({"status": "blocked", "reason": reason}), f"feedback sweep blocked: {reason}\n", 3)
-    return make_result(json_text(payload))
+        result = sweep_isolation_failure(violation, repo_root, str(named_surface))
+    else:
+        result = make_result(json_text(payload))
+    result["writes_state"] = named_surface != "attest_claude" or result.get("writes_state", False)
+    return result
+
+
+def sweep_isolation_failure(violation: Exception, repo_root: Path, named_surface: str) -> dict[str, Any]:
+    """Persist isolation harm before reporting it; observation failures keep their recoverable reason."""
+    reason = getattr(violation, "reason", "isolation_boundary_unavailable")
+    if reason == "isolation_boundary_unavailable" and named_surface == "attest_claude":
+        reason = "isolation_preflight_unavailable"
+    payload = {"status": "blocked", "reason": reason}
+    if reason == "isolation_boundary_unavailable":
+        try:
+            record_halt(repo_root, "tampering_or_forged_evidence", "Feedback sweep isolation boundary unavailable",
+                        f"Before sweep isolation surface {named_surface}; no further runner writes permitted")
+        except ValueError:
+            # Keep the closed boundary failure when a prior record needs human
+            # inspection or another trigger already owns its publication lock.
+            payload["halt_record_status"] = "unavailable"
+    result = make_result(json_text(payload), f"feedback sweep blocked: {reason}\n", 3)
+    result["writes_state"] = reason == "isolation_boundary_unavailable"
+    return result
 
 
 def sweep_parse(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
