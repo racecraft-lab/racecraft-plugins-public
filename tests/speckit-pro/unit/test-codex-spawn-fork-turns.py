@@ -17,8 +17,10 @@ from __future__ import annotations
 import ast
 import io
 import json
+import os
 import re
 import runpy
+import secrets
 import shutil
 import tempfile
 import sys
@@ -298,9 +300,11 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         module = runpy.run_path(str(REPO_ROOT / "scripts/refresh-codex-instruction-inventory.py"))
         refresh = module["main"]
         with tempfile.TemporaryDirectory() as temporary:
-            target = Path(temporary) / "inventory.json"
+            root = Path(temporary)
+            (root / "speckit-pro").symlink_to(REPO_ROOT / "speckit-pro", target_is_directory=True)
+            target = root / "inventory.json"
             target.write_text("stale proof data", encoding="utf-8")
-            with patch.dict(refresh.__globals__, {"REVIEW_INVENTORY": target}), patch.object(
+            with patch.dict(refresh.__globals__, {"REPO_ROOT": root, "REVIEW_INVENTORY": target}), patch.object(
                 sys, "argv", ["refresh-codex-instruction-inventory.py"],
             ):
                 self.assertEqual(refresh(), 0)
@@ -592,6 +596,181 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                     CodexSpawnForkTests(method).run(result)
             self.assertFalse(result.wasSuccessful(), "gate accepted conflicting agent instructions")
             self.assertFalse(result.errors, result.errors)
+
+
+class InventoryRefreshWriteTests(unittest.TestCase):
+    """Exercise the refresh entry point against real filesystem redirects."""
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        (self.root / "speckit-pro").symlink_to(REPO_ROOT / "speckit-pro", target_is_directory=True)
+        self.output = self.root / REVIEW_INVENTORY.relative_to(REPO_ROOT)
+        self.output.parent.mkdir(parents=True)
+        module = runpy.run_path(str(REPO_ROOT / "scripts/refresh-codex-instruction-inventory.py"))
+        self.refresh = module["main"]
+        self.target = self.root / ".git/config"
+        self.target.parent.mkdir()
+        self.target.write_text("preserve clone control data", encoding="utf-8")
+
+    def run_refresh(self) -> int:
+        with patch.dict(self.refresh.__globals__, {"REPO_ROOT": self.root, "REVIEW_INVENTORY": self.output}), patch.object(
+            sys, "argv", ["refresh-codex-instruction-inventory.py"],
+        ):
+            return self.refresh()
+
+    def assert_file_link_rejected(self, *, relative: bool, dangling: bool) -> None:
+        if dangling:
+            self.target.unlink()
+        destination = os.path.relpath(self.target, self.output.parent) if relative else self.target
+        self.output.symlink_to(destination)
+        with self.assertRaises(OSError):
+            self.run_refresh()
+        self.assertTrue(self.output.is_symlink())
+        if dangling:
+            self.assertFalse(self.target.exists())
+        else:
+            self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
+
+    def test_refresh_rejects_absolute_inventory_symlink(self) -> None:
+        self.assert_file_link_rejected(relative=False, dangling=False)
+
+    def test_refresh_rejects_relative_inventory_symlink_to_clone_config(self) -> None:
+        self.assert_file_link_rejected(relative=True, dangling=False)
+
+    def test_refresh_rejects_dangling_absolute_inventory_symlink(self) -> None:
+        self.assert_file_link_rejected(relative=False, dangling=True)
+
+    def test_refresh_rejects_dangling_relative_inventory_symlink(self) -> None:
+        self.assert_file_link_rejected(relative=True, dangling=True)
+
+    def test_refresh_rejects_every_linked_inventory_parent(self) -> None:
+        for parent in self.output.relative_to(self.root).parents[:-1]:
+            for relative in (False, True):
+                with self.subTest(parent=str(parent), relative=relative):
+                    original = self.root / parent
+                    moved = self.root / "moved"
+                    original.rename(moved)
+                    destination = os.path.relpath(moved, original.parent) if relative else moved
+                    original.symlink_to(destination, target_is_directory=True)
+                    try:
+                        with self.assertRaises(OSError):
+                            self.run_refresh()
+                        self.assertEqual(list(moved.rglob("*.json")), [])
+                    finally:
+                        original.unlink()
+                        moved.rename(original)
+
+    def test_refresh_replaces_hard_link_without_truncating_target(self) -> None:
+        os.link(self.target, self.output)
+        self.assertEqual(self.run_refresh(), 0)
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
+        self.assertEqual(self.output.read_bytes(), REVIEW_INVENTORY.read_bytes())
+        self.assertNotEqual(self.output.stat().st_ino, self.target.stat().st_ino)
+
+    def test_refresh_file_swap_cannot_redirect_write(self) -> None:
+        dumps = json.dumps
+        for relative in (False, True):
+            for dangling in (False, True):
+                with self.subTest(relative=relative, dangling=dangling):
+                    self.target.write_text("preserve clone control data", encoding="utf-8")
+                    if dangling:
+                        self.target.unlink()
+
+                    def swap_file(*args, **kwargs):
+                        text = dumps(*args, **kwargs)
+                        destination = os.path.relpath(self.target, self.output.parent) if relative else self.target
+                        self.output.unlink(missing_ok=True)
+                        self.output.symlink_to(destination)
+                        return text
+
+                    with patch.object(json, "dumps", side_effect=swap_file):
+                        self.assertEqual(self.run_refresh(), 0)
+                    self.assertFalse(self.output.is_symlink())
+                    self.assertEqual(self.output.read_bytes(), REVIEW_INVENTORY.read_bytes())
+                    if dangling:
+                        self.assertFalse(self.target.exists())
+                    else:
+                        self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
+                    self.output.unlink()
+
+    def test_refresh_temporary_name_collision_cannot_follow_link(self) -> None:
+        temporary = self.output.with_name(f".{self.output.name}.collision.tmp")
+        temporary.symlink_to(self.target)
+        with patch.object(secrets, "token_hex", return_value="collision"), self.assertRaises(OSError):
+            self.run_refresh()
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
+        self.assertTrue(temporary.is_symlink())
+        self.assertFalse(self.output.exists())
+
+    def test_refresh_serialization_failure_preserves_inventory_and_cleans_temporary(self) -> None:
+        self.output.write_text("old inventory", encoding="utf-8")
+        with patch.object(json, "dumps", side_effect=ValueError("serialization failed")), self.assertRaises(ValueError):
+            self.run_refresh()
+        self.assertEqual(self.output.read_text(encoding="utf-8"), "old inventory")
+        self.assertEqual(list(self.output.parent.iterdir()), [self.output])
+
+    def test_refresh_parent_swap_cannot_redirect_write(self) -> None:
+        dumps = json.dumps
+        for link in (False, True):
+            with self.subTest(link=link):
+                parent = self.output.parent
+                moved = parent.with_name("held-fixtures")
+
+                def swap_parent(*args, **kwargs):
+                    text = dumps(*args, **kwargs)
+                    parent.rename(moved)
+                    if link:
+                        parent.symlink_to(self.target.parent, target_is_directory=True)
+                    else:
+                        parent.mkdir()
+                    return text
+
+                try:
+                    with patch.object(json, "dumps", side_effect=swap_parent):
+                        self.assertEqual(self.run_refresh(), 0)
+                    redirected = self.target.parent if link else parent
+                    self.assertFalse((redirected / self.output.name).exists())
+                    self.assertEqual((moved / self.output.name).read_bytes(), REVIEW_INVENTORY.read_bytes())
+                finally:
+                    if link:
+                        parent.unlink()
+                    else:
+                        shutil.rmtree(parent)
+                    moved.rename(parent)
+                    self.output.unlink(missing_ok=True)
+
+    def test_refresh_parent_swap_before_creation_cannot_redirect_write(self) -> None:
+        open_file, open_fd = io.open, os.open
+        parent = self.output.parent
+        moved = parent.with_name("held-fixtures")
+
+        def swap_on_output_open(path) -> None:
+            if isinstance(path, int) or self.output.name not in Path(path).name or moved.exists():
+                return
+            parent.rename(moved)
+            parent.symlink_to(self.target.parent, target_is_directory=True)
+
+        def file_open(path, *args, **kwargs):
+            swap_on_output_open(path)
+            return open_file(path, *args, **kwargs)
+
+        def fd_open(path, *args, **kwargs):
+            swap_on_output_open(path)
+            return open_fd(path, *args, **kwargs)
+
+        with patch.object(io, "open", side_effect=file_open), patch.object(os, "open", side_effect=fd_open):
+            self.assertEqual(self.run_refresh(), 0)
+        self.assertFalse((self.target.parent / self.output.name).exists())
+        self.assertEqual((moved / self.output.name).read_bytes(), REVIEW_INVENTORY.read_bytes())
+
+    def test_refresh_publication_failure_preserves_inventory_and_cleans_temporary(self) -> None:
+        self.output.write_text("old inventory", encoding="utf-8")
+        with patch.object(os, "replace", side_effect=OSError("publication failed")), self.assertRaises(OSError):
+            self.run_refresh()
+        self.assertEqual(self.output.read_text(encoding="utf-8"), "old inventory")
+        self.assertEqual(list(self.output.parent.iterdir()), [self.output])
 
 
 if __name__ == "__main__":

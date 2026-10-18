@@ -1,7 +1,10 @@
 # PR 1375: dispatch gate coverage
 
-Security finding **F1375-0784f4ad**, class **false-pass gate on unmarked
-instructions**, remains open until Daybreak re-checks the fix commits.
+Daybreak resolved **F1375-0784f4ad**, class **false-pass gate on unmarked
+instructions**, in its re-check at `f6f93a81c`.
+Finding **F1375-a524ccf3**, class **unowned write through inventory symlink**,
+remains open until a later Daybreak re-check accounts for this fix's commits
+and every reported variant.
 
 ## Rules and the review seam
 
@@ -78,8 +81,50 @@ requires for merges. The gate failure names the same command.
 Generated references were regenerated and checked; the generator produced no
 reference changes for the initial test-only delta.
 
+## Inventory output boundary
+
+The refresh command reuses `trusted_open_directory` to open every inventory
+parent component without following links, anchored at the repository root.
+It rejects an existing output symlink, including dangling links, and other
+non-regular entries. It creates a fresh exclusive temporary inode and atomically
+replaces the inventory entry using the held parent descriptor for creation,
+replacement, and cleanup. It never truncates an existing inode. Serialization
+and publication failures preserve the old inventory and remove the temporary
+file. These are repository tooling changes; neither host's guidance or payload
+changes, and release regeneration produces no payload changes.
+
+The refresh entry-point tests cover:
+
+| Variant | Test in `test-codex-spawn-fork-turns.py` |
+| --- | --- |
+| Existing absolute output symlink | `test_refresh_rejects_absolute_inventory_symlink` |
+| Relative output symlink to clone control data | `test_refresh_rejects_relative_inventory_symlink_to_clone_config` |
+| Dangling absolute output symlink | `test_refresh_rejects_dangling_absolute_inventory_symlink` |
+| Dangling relative output symlink | `test_refresh_rejects_dangling_relative_inventory_symlink` |
+| Every parent position, absolute and relative symlinks | `test_refresh_rejects_every_linked_inventory_parent` |
+| Hard-linked output preserves its other name | `test_refresh_replaces_hard_link_without_truncating_target` |
+| Parent rename and replacement with a directory or symlink during serialization | `test_refresh_parent_swap_cannot_redirect_write` |
+| Parent swap immediately before file creation | `test_refresh_parent_swap_before_creation_cannot_redirect_write` |
+| Output swapped to an absolute/relative, existing/dangling link during serialization | `test_refresh_file_swap_cannot_redirect_write` |
+| Temporary-name symlink collision | `test_refresh_temporary_name_collision_cannot_follow_link` |
+| Serialization/publication failure and temporary cleanup | `test_refresh_serialization_failure_preserves_inventory_and_cleans_temporary`, `test_refresh_publication_failure_preserves_inventory_and_cleans_temporary` |
+
+The initial red run accepted every reported category (207/222 checks passed;
+15 failed). The expanded suite is also tested against the pre-fix writer to
+prove the additional redirect controls fail without the fix. Exact final
+counts and full fix SHAs are recorded in the security-fix PR comment.
+
 ## Known limits
 
+- Git cannot preserve hard-link identity in a checkout; that variant requires
+  local filesystem control. Parent swaps and renames during refresh likewise
+  require concurrent local write control. Tests still verify that existing
+  hard-link targets and replacement parent targets are not overwritten. A
+  locally controlled actor can move the held directory itself; descriptors keep
+  operations bound to that original directory rather than following its new
+  replacement, but cannot prevent the actor moving it or undoing the output.
+- Descriptor-safe refresh requires the existing POSIX directory-open support;
+  unsupported platforms fail closed rather than fall back to path-based writes.
 - The inventory detects unreviewed changes; it does not infer natural-language
   intent or independently approve an inventory refresh. Maintainers review both
   source changes and regenerated proof data. Arbitrary edits to the gate itself
