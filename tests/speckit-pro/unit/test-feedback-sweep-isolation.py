@@ -2004,7 +2004,7 @@ class MalformedIsolationRequestTests(unittest.TestCase):
                 self.assertIsNone(stored_halt(fixture.root))
 
 
-class StaleIsolationReferenceTests(unittest.TestCase):
+class _StaleIsolationFixture(unittest.TestCase):
     """A well-formed request that names a gone session or a foreign comment.
 
     Each case runs through the runner on a fresh root with its own private store
@@ -2047,12 +2047,8 @@ class StaleIsolationReferenceTests(unittest.TestCase):
         ):
             return registry.dispatch_helper(request)
 
-    def classifier_receipt(self, state_root: Path, session_id: str) -> str:
-        session = sweep_isolation.SweepSession.open(session_id, state_root=state_root)
-        return session.submit_result("classifier", {
-            "comment_id": self.COMMENT_ID, "class": "amended", "target": "plan.md",
-            "reason": "The plan needs the requested constraint."})
 
+class StaleReferenceRecoveryTests(_StaleIsolationFixture):
     def assert_recoverable(self, fixture: GitFixture, result: dict[str, object], reason: str) -> None:
         self.assertEqual(3, result["exit_code"], result)
         self.assertEqual({"status": "blocked", "reason": reason}, result["data"]["stdout_json"], result)
@@ -2080,6 +2076,14 @@ class StaleIsolationReferenceTests(unittest.TestCase):
                       "comment_id": "RC_not_in_session", "stage": "classifier"}
             with self.subTest(host=host):
                 self.assert_recoverable(fixture, self.dispatch(fixture, state_root, inputs), "sweep_comment_unknown")
+
+
+class StaleReferenceHaltTests(_StaleIsolationFixture):
+    def classifier_receipt(self, state_root: Path, session_id: str) -> str:
+        session = sweep_isolation.SweepSession.open(session_id, state_root=state_root)
+        return session.submit_result("classifier", {
+            "comment_id": self.COMMENT_ID, "class": "amended", "target": "plan.md",
+            "reason": "The plan needs the requested constraint."})
 
     def assert_halts(self, fixture: GitFixture, result: dict[str, object]) -> None:
         self.assertEqual(3, result["exit_code"], result)
