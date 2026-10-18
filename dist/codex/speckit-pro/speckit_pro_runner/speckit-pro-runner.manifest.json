@@ -95,7 +95,7 @@
         "value": "speckit_pro_runner/blocked_work.py",
         "display": "speckit_pro_runner/blocked_work.py"
       },
-      "sha256": "af7fb9e72931a2e7ef78df12e1be8605751127f54a8a1069bef11893d182cf3f"
+      "sha256": "f4e9e75344377868c62f7f4e236397427fc59626ac2d1bd1cd96bfc761e31950"
     },
     {
       "path": {
@@ -255,7 +255,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "ade23d7e2b3470921e607a5c1a00b058b926386089ec783c8f058a9fe76a7ec2"
+      "sha256": "82dea776c1cae0b6b1b648066f988fa3af4931a4f7f092c3f6b8de67b656a2bb"
     },
     {
       "path": {

@@ -128,7 +128,9 @@ def validate_blocked_work(ledger: dict[str, Any]) -> None:
                 or entry["cause"] not in record["causes"] or entry["reason"] not in {"check_exhausted", "dependency_blocked"}
                 or (entry["reason"] == "dependency_blocked") != (not entry["attempted"])
                 or (entry["reason"] == "dependency_blocked") != bool(entry["roots"])
-                or any(root not in record["entries"] or root == key for root in entry["roots"])
+                or ("tdd_unit" in entry) != (entry["kind"] == "task")
+                or any(root not in record["entries"] or not record["entries"][root].get("attempted") or root == key
+                       for root in entry["roots"])
                 or (entry["disposition"] is not None and (
                     set(entry["disposition"]) != DISPOSITION_KEYS or entry["disposition"]["decision"] != GAP_ACCEPTED))):
             raise ValueError("invalid blocked-work entry")

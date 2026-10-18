@@ -2240,7 +2240,10 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
                                 _gate_remediation(inputs), _test_fix_request(inputs), _implementation_units(inputs))
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
-    if requests.units and blocked_units(ledger).intersection(requests.units):
+    escalation = inputs.get("escalation")
+    if (requests.units and blocked_units(ledger).intersection(requests.units)) or (
+            isinstance(escalation, dict) and escalation.get("unit_kind") == "gate_failure"
+            and blocked_check(ledger, str(escalation.get("unit")))):
         return {"reasons": ["blocked_for_uat"]}
     verifies = _verifies_request(ledger, inputs)
     reservation = inputs.get("reservation_id")
@@ -2923,7 +2926,8 @@ FAILURE_PATH_ACTIONS: dict[str, _FailurePathAction] = {
     "begin-stage-epoch": _FailurePathAction(
         lambda c: begin_stage_epoch(c.root, c.ledger, c.inputs, c.workflow, c.now)),
 }
-UNKNOWN_GUARDED_ACTIONS = frozenset({*FAILURE_PATH_ACTIONS, "begin-verification", RESERVE_RETRY_RUNG})
+UNKNOWN_GUARDED_ACTIONS = frozenset({*FAILURE_PATH_ACTIONS, "begin-verification", RESERVE_RETRY_RUNG,
+                                    BLOCK_EXHAUSTED_CHECK})
 _ACTIONS = frozenset({"start", "status", "begin-verification", "complete", "reconcile", "reconcile-unit",
                       "checkpoint", "pause", "resume", "relocate-workflow", RECORD_FINALIZE_CYCLE, RESERVE_RETRY_RUNG,
                       BLOCK_EXHAUSTED_CHECK, ACCEPT_BLOCKED_GAP,

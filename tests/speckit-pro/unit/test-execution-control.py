@@ -4056,6 +4056,22 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
         self.assertEqual({key: item for key, item in after["dispatches"].items() if "retry_ladder" in item},
                          {key: item for key, item in record["dispatches"].items() if "retry_ladder" in item})
 
+    def test_escalating_a_blocked_check_or_blocking_past_an_unknown_dispatch_is_refused(self):
+        self.invoke("reserve", dispatch_id="lost", kind="implementation")
+        self.invoke("reconcile", dispatch_id="lost")
+        held = self.block(owner_tasks=["T001"])
+        self.assertIn("unknown_dispatch_blocks_unit", held["reasons"])
+        self.assertNotIn("blocked_work", held["ledger"])
+        self.invoke("complete", dispatch_id="lost", outcome="failed", native_observation={
+            "native_event_id": "n1", "run_id": self.run_id, "dispatch_id": "lost", "action": "dispatch_result",
+            "outcome": "failed"})
+        self.block(owner_tasks=["T001"])
+        self.now += 10
+        escalation = {"unit_kind": "gate_failure", "unit": self.check, "tier": 2}
+        refused = self.invoke("reserve", dispatch_id="esc", kind="corrective", escalation=escalation)
+        self.assertEqual(refused["reasons"], ["blocked_for_uat"])
+        self.assertNotIn("esc", refused["ledger"]["dispatches"])
+
     def accept(self, key="task:T001", event_id="gap-1", **changes):
         event = dict(native_event_id=event_id, run_id=self.run_id, action="blocked_gap_accepted", entry_id=key,
                      decision="gap_accepted")
@@ -4095,6 +4111,9 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
             "a dependent without a root": lambda ledger: entries(ledger)["task:T002"].update(roots=[]),
             "a root that is not blocked": lambda ledger: entries(ledger)["task:T002"].update(roots=["task:T009"]),
             "an entry without its cause": lambda ledger: ledger["blocked_work"]["causes"].clear(),
+            "a task without its unit": lambda ledger: entries(ledger)["task:T001"].pop("tdd_unit"),
+            "a gate with a unit": lambda ledger: entries(ledger)["task:T001"].update(kind="gate", unit="T001"),
+            "a root that is itself a dependent": lambda ledger: entries(ledger)["task:T002"].update(roots=["task:T003"]),
             "a completion marker": lambda ledger: entries(ledger)["task:T001"].update(complete=True),
             "a swapped identity": lambda ledger: entries(ledger).update({"task:T009": entries(ledger).pop("task:T001")}),
             "a disposition that completes": lambda ledger: entries(ledger)["task:T001"].update(
