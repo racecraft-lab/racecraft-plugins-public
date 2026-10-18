@@ -96,6 +96,7 @@ from ..trusted_io import (
     validate_path_value,
 )
 from ..workflow_stage import (
+    normalize_status as normalize_status,
     ANALYSIS_OPEN_FINDINGS_STATUS,
     AUTOPILOT_BASIC_INFO_HEADING,
     AUTOPILOT_GATE_PHASE as AUTOPILOT_GATE_PHASE,
@@ -3955,7 +3956,7 @@ def _spec_index_scalar(text: str, field: str) -> tuple[bool, str]:
     return True, value
 
 
-def _spec_index_is_gated(text: str) -> bool:
+def spec_index_is_gated(text: str) -> bool:
     raw = _spec_index_frontmatter_raw(text, "structureVersion")
     if raw is None:
         return False
@@ -4327,7 +4328,7 @@ def _spec_index_render_home_index(
         if _spec_index_path_state(moc, "SPEC-MOC.md", repo_root) == "missing":
             continue
         moc_text = _spec_index_read_text(moc, repo_root)
-        if not _spec_index_is_gated(moc_text) or not _spec_index_home_owns(home_path, home_text, moc_text):
+        if not spec_index_is_gated(moc_text) or not _spec_index_home_owns(home_path, home_text, moc_text):
             continue
         has_id, spec_id = _spec_index_scalar(moc_text, "spec_id")
         if not has_id or not spec_id:
@@ -4351,7 +4352,7 @@ def _spec_index_render_home_index(
             branch = spec_dir.name
             moc = spec_dir / "SPEC-MOC.md"
             moc_state = _spec_index_path_state(moc, "SPEC-MOC.md", repo_root)
-            if moc_state == "regular" and _spec_index_is_gated(_spec_index_read_text(moc, repo_root)):
+            if moc_state == "regular" and spec_index_is_gated(_spec_index_read_text(moc, repo_root)):
                 continue
             if _spec_index_candidate_out_of_scope(branch):
                 continue
@@ -4500,6 +4501,23 @@ def _spec_index_rebuild_map(
     return newline.join(rebuilt) + newline
 
 
+def spec_index_progress(repo_root: Path, feature: str) -> dict[str, tuple[str, ...]]:
+    """Complete ordered feature-map bodies, including repeated and blank lines."""
+    spec_dir = repo_root / feature
+    return {
+        "index": (),
+        "prs": tuple(_spec_index_render_prs(spec_dir, repo_root)),
+        "backlinks": tuple(_spec_index_render_backlinks(spec_dir, repo_root)),
+    }
+
+
+def render_feature_spec_index(repo_root: Path, feature: str, text: str) -> str:
+    """Render one feature map through the same owner as repository regeneration."""
+    spec_dir = repo_root / feature
+    return _spec_index_rebuild_map(spec_dir / "SPEC-MOC.md", text, spec_dir,
+                                   repo_root=repo_root, specs_dir=repo_root / "specs", is_home=False)
+
+
 def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool]:
     """Render every in-scope map in memory; never mutate the repository."""
 
@@ -4526,16 +4544,9 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
         if _spec_index_path_state(moc, "SPEC-MOC.md", root) == "missing":
             continue
         original = _spec_index_read_text(moc, root)
-        if not _spec_index_is_gated(original):
+        if not spec_index_is_gated(original):
             continue
-        rebuilt = _spec_index_rebuild_map(
-            moc,
-            original,
-            spec_dir,
-            repo_root=root,
-            specs_dir=specs_dir,
-            is_home=False,
-        )
+        rebuilt = render_feature_spec_index(root, spec_dir.relative_to(root).as_posix(), original)
         rendered.append(RenderedSpecIndexMap(moc, spec_dir.name, original, rebuilt))
 
     home_dir = root / "docs" / "ai" / "specs"
@@ -4567,7 +4578,7 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
         if _spec_index_path_state(home, "roadmap-MOC home note", root) == "missing":
             continue
         original = _spec_index_read_text(home, root)
-        if not _spec_index_is_gated(original):
+        if not spec_index_is_gated(original):
             continue
         rebuilt = _spec_index_rebuild_map(
             home,
@@ -6674,24 +6685,6 @@ def child_status(root: Path, child_path: str) -> tuple[str, str]:
             return normalize_status(line.split(":", 1)[1]), "SPEC-MOC status"
     return "missing-state", "SPEC-MOC status"
 
-
-def normalize_status(raw: str) -> str:
-    value = raw.split("#", 1)[0].strip().strip("\"'").lower().replace("-", "_")
-    return {
-        "blocked": "blocked",
-        "failed": "failed",
-        "fail": "failed",
-        "in_progress": "in_progress",
-        "progress": "in_progress",
-        "active": "in_progress",
-        "pending": "pending",
-        "": "pending",
-        "complete": "complete",
-        "completed": "complete",
-        "done": "complete",
-        "archived": "archived",
-        "archive": "archived",
-    }.get(value, "missing-state")
 
 
 def rollup_status(statuses: list[str]) -> str:

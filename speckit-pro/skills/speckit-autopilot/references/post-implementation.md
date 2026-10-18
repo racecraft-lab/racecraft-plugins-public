@@ -54,7 +54,7 @@ in order; do not collapse or defer.
 | 11 | Verify Implementation | verify ext | `$speckit-verify` |
 | 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-verify-tasks` |
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
-| 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command, then every populated quality-gate slot (`COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`) with `{paths}` (space-separated) and `{paths_csv}` (comma-separated) = changed source files in `origin/main...HEAD` (when that list is empty, skip `COMPLEXITY` and `MUTATION` and record `n/a: no source files changed`); when `MUTATION` is populated, run the hardener once per spec between its run and its block decision per [Hardener Delegation](./hardener-delegation.md) (delegation gateway on `route: "auto"` when `delegate_health` is good, else the primary model; tests-only writes; stop at floor or cap; record the `Hardener` line); a populated slot that still fails blocks; record each result in the Quality Gates table |
+| 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command, then every populated quality-gate slot (`COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`) with `{paths}` (space-separated) and `{paths_csv}` (comma-separated) = changed source files in `origin/main...HEAD` (when that list is empty, skip `COMPLEXITY` and `MUTATION` and record `n/a: no source files changed`); when `MUTATION` is populated, run the hardener once per spec between its run and its block decision per [Hardener Delegation](./hardener-delegation.md) (delegation gateway on `route: "auto"` when `delegate_health` is good, else the primary model; tests-only writes; stop at floor or cap; record the `Hardener` line); a populated slot that still fails blocks; record each result using the `quality-final` and `quality-hardener` contracts in the Quality Gates table |
 | 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence, or hold PR side effects and regenerate the committed reviewability evidence |
 | 16 | PR Packet/Body Generation | final backstop proceeded | emit or refresh current `specs/<feature>/.process/pr-packets/<packet-id>.json` with `pr-packet-output` `dry_run` then `apply`; on failure, regenerate the packet from the diagnostics and revalidate |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
@@ -249,9 +249,11 @@ detection. Teammate effort follows the lead. Do not claim that subagent-only
 1. Wait for all 3 teammates to mark their tasks completed
 2. Collect each teammate's final report (read via team mailbox or
    ask the lead to summarize each teammate's findings)
-3. Write a consolidated Post-Implementation Checklist entry to the
-   workflow file with one row per task (10/11/12/13/14):
-     | Task | Status | Findings | Action Needed |
+3. Update the existing canonical Post-Implementation Checklist rows in the
+   workflow file, keeping their labels and requirements:
+     | Canonical Item | Status | Evidence |
+   Evidence contains the typed post-checklist result or its .process/ reference;
+   detailed findings and actions stay in that execution record.
 4. Request graceful teammate shutdown and confirm automatic cleanup
 5. Continue to Task 15 (Reviewability Diff Gate) — serial tail in the
    parent session
@@ -347,9 +349,11 @@ synthesizing.
 
 ```text
 1. Receive all 3 subagent results as tool responses
-2. Write a consolidated Post-Implementation Checklist entry to the
-   workflow file with one row per task (10/11/12/13/14):
-     | Task | Status | Findings | Action Needed |
+2. Update the existing canonical Post-Implementation Checklist rows in the
+   workflow file, keeping their labels and requirements:
+     | Canonical Item | Status | Evidence |
+   Evidence contains the typed post-checklist result or its .process/ reference;
+   detailed findings and actions stay in that execution record.
 3. Continue to Task 15 (Reviewability Diff Gate) — serial
 ```
 
@@ -401,11 +405,18 @@ completion but cannot replace the result. Record each result and call
 `close_agent` only when the current surface exposes it. If derived
 `subagent_slots` is lower, dispatch in cap-bounded waves rather than all at
 once. The Lead synthesizes findings
-into the workflow file's Post-Implementation Checklist, then continues the serial
+into the workflow file's existing canonical Post-Implementation Checklist rows,
+using typed `post-checklist` results and `.process/` evidence references, then continues the serial
 tail (15 → 16 → 17 → 18 → 19, with the supporting rows in plan order).
 <!-- /host -->
 
 ## Post Rules
+
+Workflow writes use the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+Keep the full finding, action, or diagnostic in its execution evidence record;
+put the typed result and evidence reference in the workflow cell. Preserve
+existing checklist requirements and planning notes. This also applies to
+integration, hardener, terms-lint, UAT, and PR-emission summaries below.
 
 <!-- host:claude: Claude runs extension commands through a subagent with a slash command -->
 - Extension commands run in a subagent with the exact `/speckit.*` command

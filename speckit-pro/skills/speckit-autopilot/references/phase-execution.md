@@ -14,65 +14,6 @@ fallback. Dispatch (with `fork_turns="none"`) means calling `spawn_agent` with t
 result.
 <!-- /host -->
 
-## Nested-mode phase driver
-
-7. **Drive a phase in nested mode.** When the parent's prompt carries `Mode: nested`, a
-   `Phase:` line and the phase brief, you are the Phase driver. The phase runs in your fresh
-   context and the parent keeps only your envelope. This overrides the opening paragraph's
-   limits on delegation, for the executors named below only; never dispatch `phase-executor`.
-   - **Specify, Plan, Tasks** (`inner_agent` null): run the skill under rules 1 and 2 yourself.
-     Plan then runs the formal-model-author and formal-check sequence of `formal-methods.md`
-     before G3. Tasks then calls `publish-tasks-output` with `brief.inputs.tasks_output`, runs
-     mandatory after_tasks hooks and every `brief.after_tasks_hooks.run` hook through
-     `read-tasks-output` with the unchanged publisher `tasks_binding`, as §Phase 5's
-     bound-consumer handoff specifies. A pathname consumer also requires `live_path`.
-     Run each selected optional hook once; skip every `brief.after_tasks_hooks.skip`
-     entry. Record each run as `optional_hook_run` and each unconfirmed skip as
-     `authority_action_skipped` through `decisions-list`, with the exact extension,
-     command, event and confirmation or its absence. No workflow-level approval
-     replaces a runner-selected run entry. Stop on a hook or binding failure and
-     return a failed or blocked envelope. Then run G5 with that same `tasks_binding`.
-     Report successful optional runs and skips in envelope `counts.optional_hooks_run`
-     and `counts.optional_hooks_skipped`. Leave other phases' optional hooks to the parent.
-   - **Clarify, Checklist, Analyze**: request `phase-brief` again with `mode=flat` and the
-     wave inputs your phase needs. Dispatch `inner_agent` (`clarify-executor`, `checklist-executor`
-     or `analyze-executor`), then the consensus agents, as its
-     `agent`, `slices` and `waves` say, and follow `skills/speckit-autopilot/references/phase-execution.md` and
-     `skills/speckit-autopilot/references/consensus-protocol.md` for answers, edits and repair.
-<!-- host:claude: Claude dispatches children with the Agent tool -->
-   Dispatch with the `Agent` tool, foreground, as that reference's template shows.
-<!-- /host -->
-<!-- host:codex: Codex dispatches children with spawn_agent and wait_agent -->
-   Dispatch with `spawn_agent` and `fork_turns="none"`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
-<!-- /host -->
-   Run the phase's gate with `validate-gate`, repair within the shared reservation, and record
-   the phase results in the workflow file.
-   Finish with one `phase-envelope/v1` JSON object and nothing else, under 2,048 bytes:
-   `schema_version`, `phase` (the parent's `Phase:`), `status` (`pass` only when every gate you ran passed; else `fail`
-   or `blocked`), `next_action`, repo-relative `artifacts`, `gates` (the phase gate and any
-   other you ran, each `pass` or `fail`), `counts` (`markers` and `task_count` as the gate
-   reports them), a `blocker` of at most 240 characters, and your `usage` counters. The runner
-   re-verifies the envelope from disk and a claim never passes a gate. If your turn budget is
-   nearly spent, return `status` `blocked` and name what remains in `blocker`.
-
-## Phase executor summary
-
-```text
-## Phase Result
-
-**Files created/modified:**
-- path/to/file.md (created/modified)
-
-**Metrics:**
-- Relevant phase metrics and counts
-
-**Markers found:**
-- [NEEDS CLARIFICATION]: N; [Gap]: N; [CRITICAL]: N (or "None" if clean)
-
-**Errors:** None (or describe any errors)
-```
-
-
 ## Contents
 
 <!-- host:claude: Claude's outline follows its per-phase sections -->
@@ -2351,9 +2292,14 @@ once, after the feedback sweep below and before the first task is dispatched.
    Read `data.baseline.implement_entry`: the helper applies recorded commands
    before selecting and ordering runnable slots, including slots absent from
    detection. Each row's `command` is ready to run.
-3. Run each row's `command` in order. Record each pass or fail in the
-   workflow file's Prerequisites table, with the test count for the
-   `UNIT_TEST` and `INTEGRATION_TEST` rows (a diagnostic; see
+3. Run each row's `command` in order. Insert a typed
+   `prerequisites-baseline` result directly after the workflow's Prerequisites
+   heading and before its first child heading (`### Constitution Validation`
+   in the shipped template),
+   with status, test counts and its `.process/` evidence reference, following
+   the [Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+   Preserve existing table rows and commands; full per-slot output goes in the
+   evidence record. Test counts remain diagnostic (see
    [Gate Validation §G7](./gate-validation.md#g7--after-implement)).
 4. If a check fails, route the failing check to the implement-executor, which
    repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
@@ -3885,6 +3831,12 @@ repository because GitHub writes require a body file. Remove the private
 session and temporary reply file on success or failure. The run report names
 only that private cleanup completed, never its absolute path or contents.
 
+After planning approval, every workflow progress write in Phase 7 uses the
+[Implement write contract](./workflow-file-protocol.md#implement-write-contract).
+Record narrative result details in the existing execution evidence file and
+append its typed result/reference to the workflow. Preserve planning notes,
+commands, criteria text, and decision definitions when updating progress.
+
 #### Phase 7 Setup: Record the Implement Checklist Gate
 
 <!-- host:claude: Claude invokes the SpecKit skill as /speckit-implement -->
@@ -3920,8 +3872,8 @@ dispatch:
 ```
 
 - **Fail closed on missing evidence.** When `checklists/` is absent or a file
-  cannot be read, write `unknown` and the reason in the Reviewer-owned items
-  cell. Never write a zero you did not count.
+  cannot be read, write the typed `implement-checklist-gate` result with `status=unknown`
+  and an `evidence` reference to the diagnostic in that cell. Never write a zero you did not count.
 
 This gate is not a stop condition and never asks the operator. The PR body
 tells the reviewer the boxes are theirs (post-implementation.md step 6).
@@ -4776,8 +4728,8 @@ Then every populated quality-gate slot on the whole diff:
     = changed source files, origin/main...HEAD;
     when that list is empty, skip COMPLEXITY and MUTATION and
     record `n/a: no source files changed`
-  Any failure blocks. Record each result in the Quality Gates table
-  next to its G0 baseline.
+  Any failure blocks. Record the result in the Quality Gates Final cell
+  using the quality-final contract; keep its command and G0 baseline unchanged.
 Then Command(DEPENDENCY_AUDIT) only when populated, which requires
   `.specify/quality-gates.json` to list it in `enforce`; a failure
   blocks. Otherwise it is `off` and never runs.
@@ -4789,7 +4741,12 @@ MUTATION run and its block decision, per
 loop to the delegation gateway on `route: "auto"` when `delegate_health` is
 good, else run it on the primary
 model; stop at the floor or the shared corrective ceiling; record the outcome on the
-Quality Gates table's `Hardener` line. Only after the hardener records its
+Quality Gates table's `Hardener` line using `Progress: quality-hardener` with
+its typed status, iterations, score, floor and `.process/` evidence reference.
+Use the canonical status forms and Hardener example in the
+[Implement write contract](./workflow-file-protocol.md#implement-write-contract);
+detailed hardener outcomes stay in the referenced evidence.
+Retain the line's template comment. Only after the hardener records its
 ending does a still-failing MUTATION block. MUTATION fails on its exit
 status: `cr-rate --fail-over` for cosmic-ray, and the chained
 `mutation-score.py` floor check for StrykerJS.
@@ -5122,7 +5079,8 @@ which is authoritative.
 After each phase completes, update the workflow file with:
 
 1. **Status table**: Change phase status from
-   `⏳ Pending` to `✅ Complete` with summary notes
+   `⏳ Pending` to `✅ Complete`; after planning approval append an
+   `overview-summary` typed result to Notes, retaining its planning text
 2. **Phase-specific results table**: Fill in metrics
    and outcomes
 3. **Files Generated checkboxes**: Check off produced

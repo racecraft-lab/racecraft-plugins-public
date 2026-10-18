@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-planning-approval",
+  "helper_id": "planning-approval",
+  "operation": "planning-approval",
+  "mode": "read_only",
+  "inputs": {
+    "action": "manifest",
+    "feature_dir": "missing-feature",
+    "workflow_file": "missing-workflow.md"
+  }
+}
