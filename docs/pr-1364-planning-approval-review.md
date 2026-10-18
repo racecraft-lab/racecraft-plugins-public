@@ -172,6 +172,12 @@ No new independent Daybreak verdict is claimed here.
   false pass. Native scaffolding places features directly under `specs/`, so
   native writers do not produce this layout. The same non-native-location
   limit already applied to maps with generated markers before this repair.
+- A feature map scaffolded from the template between the change that added
+  `structureVersion: 1` and the change that added generated markers carries
+  the version but no markers. Record preflight now refuses it until one
+  regeneration appends the zones; before this repair it recorded although the
+  map was already stale. This fails closed, the refusal names the fix, and the
+  current template ships the markers, so new maps take the marker path.
 - Typed progress cells that hold identifiers accept any identifier-shaped
   token: the sweep `author` and `comment` cells and `.process/` evidence paths
   (`planning_approval.py:73,75,130`). A value such as
