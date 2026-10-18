@@ -16,5 +16,19 @@
   a matching native failure for an unknown dispatch. The runner cannot prove
   that the host actually stopped. This remains a reachable trust limit;
   it permits at most two dispatches per rung, six per check. The missing-result
-  recovery additionally requires the runner-recorded reconciliation; a caller's
+  recovery additionally requires a recorded reconciliation; a caller's
   `interrupted=true` flag on its own cannot discard an unknown dispatch.
+  The caller issues `reconcile` itself, though, and `reconcile` also accepts a
+  dispatch the caller already completed as `unknown`. So `complete unknown`,
+  then `reconcile`, then an interrupted `complete` settles without native
+  evidence. That reaches the same state as interrupting the running dispatch
+  directly, so it adds nothing beyond this limit, and the six-per-check bound
+  holds. The pin test covers only the path without `reconcile`.
+- Same-timestamp replay (Low): `_fails_again` keeps check evidence recorded
+  at or before a rung's `reserved_at`. If a passing verification were recorded
+  at exactly the same clock reading as a later reservation, a reload would treat
+  it as earlier evidence and reject a ledger the live path wrote. Not reachable
+  in practice: the two requests run in separate, lock-serialized invocations
+  with fsync writes between them, so they cannot read the same `time.time()`
+  float. A clock coarse enough to repeat a reading (Windows on Python below
+  3.13) is the only plausible trigger.
