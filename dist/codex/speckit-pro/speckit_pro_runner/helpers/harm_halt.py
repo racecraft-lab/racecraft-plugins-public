@@ -266,7 +266,8 @@ REFUSAL = Refusal(
     "invalid_harm_halt_request",
     "Send no inputs to read; to record, action halt with a harm-halt reason, evidence and the last safe state; "
     "to clear, action clear with the one-time token shown on the owner's terminal.",
-    ["Correct the named field.", "Rerun harm-halt; nothing was written."],
+    ["Correct the named field.",
+     "Rerun harm-halt; a refused request keeps any standing record or publication lock for a human to inspect."],
 )
 
 
