@@ -374,7 +374,8 @@ class ImplementChecklistGateTests(unittest.TestCase):
                     "`[Gap]` markers are not deferred: they stay blocking through G4",
                     "`### Implement Checklist Gate`",
                     "`## Phase 7: Implement`",
-                    "`unknown`",
+                    "`status=unknown`",
+                    "`evidence` reference",
                     "never asks the operator",
                 ):
                     self.assertIn(phrase, gate)
@@ -391,7 +392,7 @@ class ImplementChecklistGateTests(unittest.TestCase):
                      CODEX / "references/workflow-file-protocol.md"):
             with self.subTest(host=path.name):
                 row = next(line for line in path.read_text().splitlines()
-                           if line.startswith("| **Implement** |"))
+                           if line.startswith("| Implement | `implement-checklist-gate` |"))
                 self.assertIn("Implement Checklist Gate", row)
 
     def test_pr_body_tells_the_reviewer_the_boxes_are_theirs(self):
