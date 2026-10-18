@@ -13,6 +13,13 @@ RUNNERS = (SOURCE / "speckit-pro", *(SOURCE / "dist" / host / "speckit-pro" for 
 LOOKALIKES = ("  - [x] Require signed release approval", "- [x] `Require signed release approval`",
               "- [x] `src/demo.py` Require signed release approval",
               "- [x] [Require signed release approval](src/demo.py)", "```text\n- [x] `src/demo.py`\n```")
+# Status ticks, by the headings they sit under, that never change a planning choice.
+PRESERVED_TICKS = {
+    "success criteria": (("## Success Criteria\n", "## Specification Context\n### Success Criteria Summary\n"),
+                         "  - [x] Contract correct"),
+    "generated path": (("## Files Generated\n", "## Phase 7: Implement\n### Files Generated\n"),
+                       "  - [x] `src/demo.py`"),
+}
 
 
 class CheckboxAssertions(WorkflowFixture):
@@ -28,6 +35,10 @@ class CheckboxAssertions(WorkflowFixture):
                             after = before.replace(f"[{checked}]", "[ ]")
                             self.assertWorkflowEdit(before, after, preserves=preserves)
 
+    def assertTicksPreserve(self, kind):
+        headings, body = PRESERVED_TICKS[kind]
+        self.assertHostsEdit(headings, (body,), preserves=True)
+
 
 class PlanningCheckboxTest(CheckboxAssertions):
     def test_implementation_progress_choices_invalidate_record(self):
@@ -39,15 +50,13 @@ class PlanningCheckboxTest(CheckboxAssertions):
                              ("- [x] Require signed release approval",))
 
     def test_success_criteria_ticks_preserve_record(self):
-        self.assertHostsEdit(("## Success Criteria\n", "## Specification Context\n### Success Criteria Summary\n"),
-                             ("  - [x] Contract correct",), preserves=True)
+        self.assertTicksPreserve("success criteria")
 
     def test_preimplementation_choices_invalidate_record(self):
         self.assertHostsEdit(("## Pre-Implementation Setup\n",), ("- [x] Require signed release approval",))
 
     def test_files_generated_path_ticks_preserve_record(self):
-        self.assertHostsEdit(("## Files Generated\n", "## Phase 7: Implement\n### Files Generated\n"),
-                             ("  - [x] `src/demo.py`",), preserves=True)
+        self.assertTicksPreserve("generated path")
 
     def test_checkbox_lookalikes_keep_choices_bound(self):
         self.assertHostsEdit(("## Files Generated\n", "## Phase 7: Implement\n### Implementation Progress\n"),

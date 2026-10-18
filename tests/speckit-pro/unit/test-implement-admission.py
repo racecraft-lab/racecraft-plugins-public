@@ -31,6 +31,14 @@ class AdmissionFixture(PlanningApprovalFixture):
     def refusal(self, reply, field):
         self.assertRefused(reply, f"planning approval field {field}:")
 
+    def assertAdmitRefusesStored(self, field, values, named):
+        """Admission names `named` for each stored `field` value written into a valid record."""
+        path, record = self.record()
+        for value in values:
+            with self.subTest(**{field: value}):
+                path.write_text(json.dumps({**record, field: value}))
+                self.refusal(self.call("admit"), named)
+
 
 class PlanApprovalAdmissionTest(AdmissionFixture):
     def test_a_valid_record_admits_implement(self):
@@ -59,18 +67,10 @@ class PlanApprovalAdmissionTest(AdmissionFixture):
         self.refusal(self.call("admit"), "record")
 
     def test_non_object_findings_names_the_record(self):
-        path, record = self.record()
-        for findings in (None, 5):
-            with self.subTest(findings=findings):
-                path.write_text(json.dumps({**record, "findings": findings}))
-                self.refusal(self.call("admit"), "record")
+        self.assertAdmitRefusesStored("findings", (None, 5), "record")
 
     def test_non_text_reviewed_evidence_names_the_record(self):
-        path, record = self.record()
-        for references in ([[1]], [{}]):
-            with self.subTest(references=references):
-                path.write_text(json.dumps({**record, "reviewed_evidence": references}))
-                self.refusal(self.call("admit"), "record")
+        self.assertAdmitRefusesStored("reviewed_evidence", ([[1]], [{}]), "record")
 
     def test_a_failed_finding_check_names_the_finding(self):
         path, record = self.record()
@@ -103,11 +103,7 @@ class RepositoryAdmissionTest(AdmissionFixture):
         self.assertEqual(self.call("admit")["status"], "ok")
 
     def test_changed_repository_identity_is_refused_by_name(self):
-        path, record = self.record()
-        for repository in ("someone-else/unrelated", None, ""):
-            with self.subTest(repository=repository):
-                path.write_text(json.dumps({**record, "repository": repository}))
-                self.refusal(self.call("admit"), "repository")
+        self.assertAdmitRefusesStored("repository", ("someone-else/unrelated", None, ""), "repository")
 
     def test_origin_identity_is_required_across_remote_spellings(self):
         self.record()
