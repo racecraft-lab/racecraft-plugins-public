@@ -9,6 +9,14 @@ from pathlib import Path
 # delete .git/objects/maintenance.lock while a fixture walks .git.
 GIT_CONFIG = (("commit.gpgsign", "false"), ("maintenance.auto", "false"), ("gc.auto", "0"))
 
+# A halt recorded by a test must never print its clear token on the developer's terminal.
+HARM_HALT_TERMINAL = ("SPECKIT_HARM_HALT_TERMINAL", "off")
+
+
+def withhold_harm_halt_tokens() -> None:
+    """Turn the owner-terminal token off for this process and every child it starts."""
+    os.environ[HARM_HALT_TERMINAL[0]] = HARM_HALT_TERMINAL[1]
+
 
 def child_environment(repo_root: Path, *, verbose: bool = False) -> dict[str, str]:
     env = os.environ.copy()
@@ -19,8 +27,7 @@ def child_environment(repo_root: Path, *, verbose: bool = False) -> dict[str, st
     for index, (key, value) in enumerate(GIT_CONFIG):
         env[f"GIT_CONFIG_KEY_{index}"] = key
         env[f"GIT_CONFIG_VALUE_{index}"] = value
-    # A halt recorded by a test must never print its clear token on the developer's terminal.
-    env["SPECKIT_HARM_HALT_TERMINAL"] = "off"
+    env[HARM_HALT_TERMINAL[0]] = HARM_HALT_TERMINAL[1]
     if verbose:
         env["VERBOSE"] = "true"
     return env
