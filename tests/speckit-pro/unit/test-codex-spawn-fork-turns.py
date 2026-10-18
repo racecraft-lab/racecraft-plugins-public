@@ -33,13 +33,13 @@ from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 FORK = 'fork_turns="none"'
-# The rule as a file states it, in call form or in key-value form.
-RULE = re.compile(r'fork_turns(?:="none"|: "none")')
+# The rule as a file states it: the call form or the key-value form, either quote.
+RULE = re.compile(r"fork_turns\s*[=:]\s*(?:\"none\"|'none')")
 MENTION = re.compile(r"\bspawn_agent\b")
 # Discover all concrete calls, independent of argument order or line wrapping.
 DISPATCH = re.compile(r"\bspawn_agent\s*\(")
-# A directory holding this notice is a vendored upstream tree (Quint references).
-VENDOR_NOTICE = "UPSTREAM-NOTICE.md"
+# Vendored upstream trees, owned by test-quint-reference-attribution.py.
+VENDORED_ROOTS = ("speckit-coach/references/quint/quint-lang", "speckit-coach/references/quint/quint-modeling")
 LOCKFILE = re.compile(r"(?:-lock\.json|-lock\.yaml|\.lock)$")
 SKILL_GATES = (
     "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none",
@@ -47,11 +47,10 @@ SKILL_GATES = (
 )
 
 
-def call_tokens(text: str) -> tuple[int, list[tokenize.TokenInfo]]:
+def call_tokens(text: str) -> list[tokenize.TokenInfo]:
     """Read one balanced call; never borrow tokens from a subsequent comment/call."""
     tokens = []
     depth = 0
-    lines = text.splitlines(keepends=True)
     try:
         for token in tokenize.generate_tokens(io.StringIO(text).readline):
             if token.type in (tokenize.NL, tokenize.NEWLINE):
@@ -65,17 +64,14 @@ def call_tokens(text: str) -> tuple[int, list[tokenize.TokenInfo]]:
             if token.type == tokenize.OP:
                 depth += int(token.string in "([{") - int(token.string in ")]}")
                 if depth == 0 and token.string == ")":
-                    row, column = token.end
-                    return sum(map(len, lines[:row - 1])) + column, tokens
+                    return tokens
     except (tokenize.TokenError, IndentationError) as error:
         raise AssertionError(f"unreadable spawn_agent call: {error}") from error
     raise AssertionError("unterminated spawn_agent call")
 
 
-def dispatch_sites(text: str) -> list[tuple[int, int, list[tokenize.TokenInfo]]]:
-    return [(match.start(), match.start() + length, tokens)
-            for match in DISPATCH.finditer(text)
-            for length, tokens in [call_tokens(text[match.start():])]]
+def dispatch_sites(text: str) -> list[tuple[int, list[tokenize.TokenInfo]]]:
+    return [(match.start(), call_tokens(text[match.start():])) for match in DISPATCH.finditer(text)]
 
 
 def call_arguments(tokens: list[tokenize.TokenInfo]) -> list[list[tokenize.TokenInfo]]:
@@ -97,7 +93,8 @@ def call_arguments(tokens: list[tokenize.TokenInfo]) -> list[list[tokenize.Token
 def passes_fork_none(tokens: list[tokenize.TokenInfo]) -> bool:
     arguments = [[token.string for token in argument] for argument in call_arguments(tokens)]
     forks = [argument for argument in arguments if argument[0] == "fork_turns"]
-    if len(forks) != 1 or any(argument[0] == "**" for argument in arguments):
+    # A `*` or `**` expansion is a dynamic argument list the gate cannot inspect.
+    if len(forks) != 1 or any(argument[0] in ("*", "**") for argument in arguments):
         return False
     fork = forks[0]
     if len(fork) != 3 or fork[1] != "=":
@@ -123,8 +120,7 @@ def is_dispatch_surface(root: Path, path: Path) -> bool:
         return False
     if path.name.endswith(".schema.json") or LOCKFILE.search(path.name):
         return False
-    return not any((root.joinpath(*relative.parts[:depth]) / VENDOR_NOTICE).is_file()
-                   for depth in range(1, len(relative.parts)))
+    return not any(relative.is_relative_to(vendored) for vendored in VENDORED_ROOTS)
 
 
 def skill_paths(root: Path) -> list[Path]:
@@ -141,7 +137,7 @@ class CodexSpawnForkTests(unittest.TestCase):
         root = host_skill_root("codex")
         sites = 0
         for path in skill_paths(root):
-            for start, _, tokens in dispatch_sites(read_surface(path)):
+            for start, tokens in dispatch_sites(read_surface(path)):
                 sites += 1
                 with self.subTest(file=str(path.relative_to(root)), offset=start):
                     self.assertTrue(passes_fork_none(tokens), f"missing literal {FORK} in call")
@@ -169,8 +165,8 @@ class CodexSpawnForkTests(unittest.TestCase):
             if MENTION.search(source):
                 checked.append(path.stem)
                 with self.subTest(agent=path.stem):
-                    self.assertIn(FORK, text)
-                    for _, _, tokens in dispatch_sites(source):
+                    self.assertRegex(text, RULE)
+                    for _, tokens in dispatch_sites(source):
                         self.assertTrue(passes_fork_none(tokens))
         self.assertGreaterEqual(len(checked), 4, checked)
 
@@ -277,6 +273,11 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                          "other/new.data"):
             with self.subTest(scanned=relative):
                 self.assert_skill_gates_reject({relative: ("", call)})
+        # A notice file cannot exempt a directory; only the pinned upstream roots are skipped.
+        with self.subTest(scanned="speckit-resolve-pr with a notice"):
+            self.assert_skill_gates_reject({
+                "speckit-resolve-pr/UPSTREAM-NOTICE.md": ("", "Vendored.\n"),
+                "speckit-resolve-pr/new.md": ("", call)})
 
     def test_unreadable_surface_or_call_fails_closed(self) -> None:
         for relative, new in (
@@ -336,6 +337,7 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         for arguments in (
             'fork_turns="all"', 'fork_turns=None', 'fork_turns=mode',
             'fork_turns="none", fork_turns="all"', 'fork_turns="none", **options',
+            '*options, fork_turns="none"',
         ):
             with self.subTest(arguments=arguments):
                 self.assert_skill_rejected(
@@ -352,7 +354,7 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             with self.subTest(snippet=snippet):
                 sites = dispatch_sites(snippet)
                 self.assertEqual(len(sites), 1)
-                self.assertTrue(passes_fork_none(sites[0][2]))
+                self.assertTrue(passes_fork_none(sites[0][1]))
 
     def test_renamed_or_new_reference_is_scanned(self) -> None:
         for relative in ("speckit-autopilot/references/new.txt", "other/new.markdown", "other/new.data"):

@@ -22,7 +22,7 @@ Token discipline applies **only** to:
   payload of an `Agent(...)` / `spawn_agent` call)
 - Orchestrator → subagent dispatch prompts (the "prompt"
   argument)
-  On Codex, `fork_turns="none"` keeps the child's context to that prompt.
+  - On Codex, `fork_turns="none"` keeps the child's context to that prompt.
 - Internal multi-agent debate transcripts (consensus rounds)
 
 Token discipline does **not** touch:

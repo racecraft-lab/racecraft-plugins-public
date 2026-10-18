@@ -8,12 +8,12 @@ so a wording edit to a Codex skill or agent needs no fixture change.
 
 - **Calls.** Every `spawn_agent(` call in a scanned file passes exactly one
   literal `fork_turns="none"`. The gate tokenizes each whole balanced call, so
-  argument order and line wrapping do not matter. A `**` expansion, a second
+  argument order and line wrapping do not matter. A `*` or `**` expansion, a second
   `fork_turns`, a dynamic value, or a marker inside another argument or a
   comment fails.
-- **Files.** Every scanned skill file that names `spawn_agent` states
-  `fork_turns="none"` (or `fork_turns: "none"`). Every agent TOML that names
-  `spawn_agent` states `fork_turns="none"` in `developer_instructions`. A new
+- **Files.** Every scanned skill file that names `spawn_agent` states the
+  rule: `fork_turns` then `=` or `:` then `"none"` or `'none'`. Every agent
+  TOML that names `spawn_agent` states it in `developer_instructions`. A new
   or renamed file that names `spawn_agent` without the rule fails.
 - **Fail closed.** A file that is not strict UTF-8, an agent TOML that does
   not parse, an unterminated or untokenizable call, and a symlink in the skill
@@ -28,8 +28,9 @@ TOML. It skips only the file kinds that cannot dispatch a Codex child agent:
 - Python files under a `scripts/` directory;
 - JSON schemas (`*.schema.json`);
 - lockfiles (`*-lock.json`, `*-lock.yaml`, `*.lock`);
-- vendored upstream trees, meaning any directory that holds an
-  `UPSTREAM-NOTICE.md` (today, the Quint references in `speckit-coach`).
+- the two verbatim upstream Quint trees, `speckit-coach/references/quint/quint-lang`
+  and `quint-modeling`, pinned by path (`test-quint-reference-attribution.py`
+  owns their provenance). An `UPSTREAM-NOTICE.md` elsewhere exempts nothing.
 
 Every other file kind stays in scope, including unknown extensions, so a
 renamed reference cannot leave the scan.
@@ -56,9 +57,18 @@ renamed reference cannot leave the scan.
   examples cannot dispatch through the current hosted tool: its schema has no
   such fields. These are the Low and Info variants in the
   [source Daybreak review](https://github.com/racecraft-lab/racecraft-plugins-public/pull/1375#issuecomment-6244445195).
-- **Vendored marker.** A contributor could add an `UPSTREAM-NOTICE.md` to hide
-  a directory from the scan. That file is itself a reviewed diff, and
-  `test-quint-reference-attribution.py` owns the one vendored tree today.
+- **The file rule is per file, not per instruction.** A file that states the
+  rule once can carry another dispatch sentence without it. Removing the
+  argument from one of several statements in, say, `post-implementation.md`
+  passes. A per-paragraph rule would need a prose heuristic; the autopilot
+  `SKILL.md` states the rule for every call, and review covers the rest. A
+  file with a single statement, such as `phase-driver.md`, is fully guarded.
+- **Skipped kinds can still print text.** A Python script under `scripts/` or
+  a schema `description` reaches an agent as text but is not scanned. Today
+  none names `spawn_agent`; review covers a new one.
+- **Prose that looks like a call fails closed.** Text such as
+  `spawn_agent (the dispatcher)` is parsed as a call and fails. Write the name
+  without a following parenthesis.
 - **Outside the gate.** Hook-emitted context, plugin-manifest text, and later
   user prompts are not scanned. The gate does not measure the canary token
   target.
