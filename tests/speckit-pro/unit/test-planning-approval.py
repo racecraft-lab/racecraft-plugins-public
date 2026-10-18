@@ -234,19 +234,17 @@ class SupersessionTest(PlanningApprovalFixture):
         self.store_supersedes(replacement, self.case_variant(first_path))
         self.assertRefused(self.call("verify"), "subsequent supersession")
 
-    def test_casefolded_recorded_reference_revokes_the_previous_revision(self):
-        # On case-sensitive filesystems, copy the bytes to exercise path-key case folding.
+    def test_recorded_case_variant_reference_revokes_the_previous_revision(self):
+        # A case variant names the record only where the filesystem folds case.
         (self.root / "CaseProbe.tmp").write_text("")
-        if (self.root / "caseprobe.tmp").exists():
-            reference = self.case_variant
-        else:
-            def case_spelled_record(record_path):
-                variant = self.case_variant(record_path)
-                (self.root / variant).write_bytes((self.root / record_path).read_bytes())
-                return variant
-
-            reference = case_spelled_record
-        self.record_superseding(reference)
+        if not (self.root / "caseprobe.tmp").exists():
+            approval = self.approval()
+            first = self.call("record", "apply", approval=approval)["data"]
+            approval["supersedes"] = self.case_variant(first["record_path"])
+            self.assertEqual(self.call("record", "apply", approval=approval)["status"], "input_error")
+            self.assertEqual(self.call("verify")["status"], "ok")
+            return
+        self.record_superseding(self.case_variant)
         self.assertRefused(self.call("verify"), "subsequent supersession")
 
 
