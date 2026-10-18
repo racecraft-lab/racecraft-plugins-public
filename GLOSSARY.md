@@ -17,7 +17,7 @@ The checklist run's account of the domain edits it applied. An interrupted run d
 _Avoid_: presumed absence
 
 **Blocked-for-UAT**:
-Work a run cannot finish or verify and hands to human review with its reason and evidence, while independent safe work continues. Accepting a documented gap does not make that work complete.
+Work a run cannot finish or verify and hands to human review with its reason and evidence, while independent safe work continues. Accepting a documented gap does not make that work complete. The runner keeps one entry per blocked task or gate in the run ledger; a dependency skip links to its roots and records no attempt of its own. If that task also owns an exhausted check, it retains its own attempt evidence alongside the dependency links.
 _Avoid_: completed with deferrals, failed run, waived completion
 
 **Canary**:
