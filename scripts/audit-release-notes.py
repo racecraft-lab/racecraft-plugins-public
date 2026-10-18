@@ -217,7 +217,7 @@ def audit_release_notes(
         if (
             isinstance(commit_count, bool)
             or not isinstance(commit_count, int)
-            or not 0 <= commit_count <= 250
+            or commit_count < 0
             or isinstance(pull_request_count, bool)
             or not isinstance(pull_request_count, int)
             or not 0 <= pull_request_count <= commit_count
