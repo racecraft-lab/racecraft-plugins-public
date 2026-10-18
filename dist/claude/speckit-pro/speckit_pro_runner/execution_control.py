@@ -859,10 +859,12 @@ def _validate_ladder_dispatch(item: dict[str, Any]) -> None:
 
 def _validate_retry_ladders(ledger: dict[str, Any]) -> None:
     """Each check's ladder dispatches ran in order, one at a time, never past the last rung."""
-    failed = {item["failing_checks"]["command_sha256"] for item in _all_dispatches(ledger) if failed_verification(item)}
     for check, items in _ladder_dispatches(ledger).items():
-        if check not in failed or not replay_rungs(items):
+        if not replay_rungs(items):
             raise ValueError("a retry-ladder dispatch runs a rung its check had not reached")
+        for index, item in enumerate(items):
+            if not _fails_again(ledger, check, items[:index], item["reserved_at"]):
+                raise ValueError("a retry-ladder dispatch requires a fresh failing check before reservation")
 
 
 _SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -872,11 +874,12 @@ def _is_digest(value: Any) -> bool:
     return isinstance(value, str) and _SHA256.fullmatch(value) is not None
 
 
-def _fails_again(ledger: dict[str, Any], check: str, earlier: list[dict[str, Any]]) -> bool:
+def _fails_again(ledger: dict[str, Any], check: str, earlier: list[dict[str, Any]], until: float) -> bool:
     """True when the check's newest verification failed after the last rung that spent an attempt."""
     spent_at = max((item["completed_at"] for item in earlier if not is_interrupted(item)), default=ledger["started_at"])
     newest = max((item["failing_checks"] for item in _all_dispatches(ledger) if "failing_checks" in item
-                  and item["failing_checks"]["command_sha256"] == check), key=lambda record: record["recorded_at"], default=None)
+                  and item["failing_checks"]["command_sha256"] == check
+                  and item["failing_checks"]["recorded_at"] <= until), key=lambda record: record["recorded_at"], default=None)
     return newest is not None and newest["failing"] != [] and newest["recorded_at"] >= spent_at
 
 
@@ -894,7 +897,7 @@ def reserve_retry_rung(ledger: dict[str, Any], inputs: dict[str, Any], now: floa
     settings = rung_settings(inputs.get("host"), rung)
     if any(item["outcome"] in {"reserved", "running"} for item in earlier):
         return {"reasons": ["retry_ladder_dispatch_open"]}
-    if not _fails_again(ledger, check, earlier):
+    if not _fails_again(ledger, check, earlier, now):
         return {"reasons": ["retry_ladder_requires_a_failing_check"]}
     ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
                                          "reservation_id": None, "reconciliations": 0,
@@ -2562,6 +2565,11 @@ def _result_refusal(ledger: dict[str, Any], item: dict[str, Any], dispatch_id: s
                     outcome: Any) -> dict[str, Any] | None:
     """The refusal a result meets, or None once an unknown dispatch's independent native result is bound."""
     if item["outcome"] == "unknown":
+        # Reconciliation recorded the lost session; discarding it claims no native result.
+        if (item["reconciliations"] == 1 and "retry_ladder" in item
+                and outcome == "failed" and inputs.get("interrupted") is True
+                and inputs.get("native_observation") is None):
+            return None
         event = inputs.get("native_observation")
         if not isinstance(event, dict) or not isinstance(event.get("native_event_id"), str) or not event["native_event_id"].strip():
             return {"reasons": ["missing_independent_native_result"]}

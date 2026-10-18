@@ -3901,6 +3901,53 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
         self.interrupt("try-1", native_observation=native)
         self.assertEqual(self.climb("try-1-again")["retry_rung"], 1)
 
+    def test_lost_ladder_results_can_be_interrupted_without_native_evidence_but_stay_bounded(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                check = self.verify_red(("python3", f"{host}.py"))
+                for attempt, rung in enumerate((1, 1, 2, 2, 3, 3)):
+                    dispatch_id = f"{host}-{attempt}"
+                    admitted = self.climb(dispatch_id, host, check)
+                    self.assertEqual(admitted["retry_rung"], rung)
+                    self.invoke("reconcile", dispatch_id=dispatch_id)
+                    refused = self.settle(dispatch_id)
+                    self.assertEqual(refused["reasons"], ["missing_independent_native_result"])
+                    settled = self.interrupt(dispatch_id)
+                    self.assertEqual(settled["reasons"], [])
+                    record = settled["ledger"]["dispatches"][dispatch_id]
+                    self.assertEqual((record["outcome"], record["interrupted"]), ("failed", True))
+                    self.assertNotIn("resolution_event_id", record)
+                    self.assert_schema_valid(settled["ledger"])
+                self.assertEqual(self.climb(f"{host}-extra", host, check)["reasons"], ["retry_ladder_exhausted"])
+
+    def test_a_caller_reported_unknown_needs_native_evidence_even_when_interrupted(self):
+        self.climb("lost")
+        self.settle("lost", "unknown")
+        before = json.loads(self.ledger_bytes())["dispatches"]
+        self.assertEqual(self.interrupt("lost")["reasons"], ["missing_independent_native_result"])
+        self.assertEqual(json.loads(self.ledger_bytes())["dispatches"], before)
+
+    def test_a_rung_before_its_first_failure_is_refused(self):
+        self.climb("rung-1")
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        self.assert_tampers_rejected(path, self.ledger_bytes(), {
+            "before the failure": lambda ledger: ledger["dispatches"]["rung-1"].update(reserved_at=1001)})
+
+    def test_a_later_rung_without_a_fresh_failure_is_refused_in_every_epoch(self):
+        self.climb("rung-1")
+        self.settle("rung-1")
+        first = self.invoke("status", mode="read_only")["ledger"]["dispatches"]["rung-1"]
+        for archived in (False, True):
+            with self.subTest(archived=archived):
+                if archived:
+                    self.open_stage_epoch()
+                path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+                valid = self.ledger_bytes()
+                self.assert_tampers_rejected(path, valid, {"no fresh failure": lambda ledger: ledger["dispatches"].update(
+                    forged={**first, "reserved_at": self.now + 1, "completed_at": self.now + 2,
+                            "retry_ladder": {"command_sha256": self.check, "rung": 2}})})
+                path.write_bytes(valid)
+
     def test_only_a_failed_ladder_dispatch_is_reported_interrupted(self):
         self.climb("rung-1")
         self.invoke("reserve", dispatch_id="plain", kind="implementation")
