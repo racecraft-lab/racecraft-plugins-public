@@ -11,6 +11,7 @@ from typing import Any
 from .. import cli_probe
 from ..cli_probe import BRANCH
 from ..envelope import diagnostic, response
+from ..github_remote import GH_STACK_FORMS, remote_urls
 
 REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
 QUALIFIED_VERSION = "0.1.1"
@@ -145,8 +146,7 @@ def qualify_tools(root: Path, skill: Any, decision: dict[str, Any]) -> bool:
 
 def qualify_repository(root: Path, repository: str, remote: str, decision: dict[str, Any]) -> bool:
     origin = probe(root, ["git", "remote", "get-url", remote])
-    allowed = {f"https://github.com/{repository}", f"https://github.com/{repository}.git", f"git@github.com:{repository}.git"}
-    if origin["exit_status"] != 0 or origin["stdout_tail"] not in allowed:
+    if origin["exit_status"] != 0 or origin["stdout_tail"] not in remote_urls(repository, GH_STACK_FORMS):
         fallback(decision, "Remote does not match the supported GitHub.com repository profile")
         return False
     repo_result = probe(root, ["gh", "api", f"repos/{repository}"])

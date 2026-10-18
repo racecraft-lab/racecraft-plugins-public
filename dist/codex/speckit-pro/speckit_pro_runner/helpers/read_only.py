@@ -304,7 +304,7 @@ def replay_command(stdin_request: dict[str, Any]) -> str:
 # A resolver reads optional keys with defaults, so a misnamed key would yield a default answer; refuse it.
 RESOLVER_INPUTS = {
     "resolve-confidence-mode": frozenset({"repo_root", "config_path", "autopilot_args"}),
-    "resolve-autopilot-stage": frozenset({"repo_root", "workflow_file", "autopilot_args", "host", "pr_observation"}),
+    "resolve-autopilot-stage": frozenset({"repo_root", "workflow_file", "feature_dir", "autopilot_args", "host", "pr_observation"}),
 }
 
 
@@ -2949,7 +2949,8 @@ def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
     is what decided it, because that is the row they must act on.
     """
     if first_open is None:
-        return "auto-detect: every planning phase and the confidence gate are terminal"
+        return ("auto-detect: every planning phase and the confidence gate are terminal; planning ends at plan review,"
+                " so implement needs an explicit --stage implement and a valid plan approval record")
     phase, status = first_open
     if status and status.endswith(ANALYSIS_OPEN_FINDINGS_STATUS):
         return (
@@ -2960,6 +2961,28 @@ def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
     # would read as a status the workflow file actually records.
     reason = f"is {status}" if status else "has no row in the status table"
     return f"auto-detect: the first non-terminal planning phase is {phase}, which {reason}"
+
+
+def choose_stage(parsed: dict[str, Any], signals: dict[str, Any], text: str, review_pending: bool) -> tuple[str, str, str]:
+    """The stage, its source and its basis. Planning ends at plan review: implement is only an explicit or resumed entry."""
+    if parsed["stage"] is not None:
+        return parsed["stage"], "argv", f"explicit --stage {parsed['stage']}"
+    if signals["planning_complete"] and review_pending:
+        return "plan", "auto-detect", "artifact review handoff is unverified; resume the plan terminal step"
+    if parsed["from_phase"] == "implement":
+        return "implement", "from-phase", "explicit --from-phase implement"
+    if implement_started(text):
+        return "implement", "auto-detect", "implement already started; resuming there"
+    return "plan", "auto-detect", auto_detect_basis(signals["first_open"])
+
+
+def admit_entry(stage: str, inputs: dict[str, Any], repo_root: Path, workflow: str) -> dict[str, Any] | None:
+    """Every implement entry, resume included, needs a valid plan approval record; raises ValueError naming the field."""
+    if stage not in ("implement", "full"):
+        return None
+    # Function-level import: planning_approval imports this module at load time.
+    from .planning_approval import admit_implement
+    return admit_implement(repo_root, inputs.get("feature_dir"), workflow)
 
 
 def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -2993,18 +3016,11 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
     except ValueError as exc:
         return make_result("", f"error: {exc}\n", 2)
     review_pending = artifact_review_resume(text, signals, review)
-    stage = parsed["stage"]
-    if stage is not None:
-        source = "argv"
-        basis = f"explicit --stage {stage}"
-    elif signals["planning_complete"] and review_pending:
-        source = "auto-detect"
-        stage = "plan"
-        basis = "artifact review handoff is unverified; resume the plan terminal step"
-    else:
-        source = "auto-detect"
-        stage = "implement" if signals["planning_complete"] else "plan"
-        basis = auto_detect_basis(signals["first_open"])
+    stage, source, basis = choose_stage(parsed, signals, text, review_pending)
+    try:
+        approval = admit_entry(stage, inputs, repo_root, workflow_raw)
+    except ValueError as exc:
+        return make_result("", f"error: {exc}\n", 2)
     # Blanked the way `workflow_stage_signals` blanks them, so a commented-out
     # row can never become evidence. `corroboration` is always present, so a run
     # that could not check stays distinguishable from one that checked and agreed.
@@ -3022,6 +3038,7 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "confidence_gate_status": signals["confidence_gate_status"],
         "from_phase": parsed["from_phase"],
         "corroboration": corroboration,
+        **({"planning_approval": approval} if approval else {}),
         **({"artifact_review": review} if review["status"] != "absent" else {}),
         **({"formal_checkpoint": formal} if formal["required"] else {}),
     }))
@@ -3036,12 +3053,16 @@ def recorded_preview_surface(host: Any, repo_root: Path) -> str:
     return preview_surface(repo_root, host)
 
 
+def implement_started(text: str) -> bool:
+    """Whether the overview already shows implement work; such a run resumes there, never backward."""
+    overview = workflow_table_rows(HTML_COMMENT_RE.sub("", text).splitlines(), AUTOPILOT_OVERVIEW_HEADING)
+    return any(len(row) >= 3 and row[0] == "Implement" and row[2] not in ("Pending", "⏳ Pending") for row in overview)
+
+
 def artifact_review_resume(text: str, signals: dict[str, Any], review: dict[str, Any]) -> bool:
     """An explicit stage still wins; existing implementation is never rolled back."""
     lines = HTML_COMMENT_RE.sub("", text).splitlines()
-    overview = workflow_table_rows(lines, AUTOPILOT_OVERVIEW_HEADING)
-    started = any(len(row) >= 3 and row[0] == "Implement" and row[2] not in ("Pending", "⏳ Pending") for row in overview)
-    if started:
+    if implement_started(text):
         return False
     if review["status"] == "absent" and signals["recorded_stage"] == "plan" and workflow_draft_pr_row(lines):
         review.update(status="unrecorded", resume_action="reconcile", reuse_artifacts=False)

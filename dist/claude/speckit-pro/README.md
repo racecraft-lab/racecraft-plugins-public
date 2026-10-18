@@ -34,7 +34,7 @@ automation, and review helpers on top of the official Spec Kit workflow.
 | PRD and roadmap authoring | `speckit-prd` turns a broad idea into a PRD and SPEC catalog. |
 | Spec scaffolding | `speckit-scaffold-spec` creates the worktree and workflow file for one SPEC. |
 | Autopilot execution | `speckit-autopilot` runs the SDD phases toward an implementation PR. |
-| Status and review helpers | `speckit-status` shows what is next; `speckit-resolve-pr` handles review comments. |
+| Status and review helpers | `speckit-status` shows what is next; `speckit-plan-review` walks a finished plan and builds a repair prompt; `speckit-resolve-pr` handles review comments. |
 | Codex agent install support | `$speckit-pro:install` copies bundled Codex custom-agent templates into Codex's agent registry. |
 
 ## Before You Install
@@ -189,6 +189,7 @@ invocations on the left or the Codex skill invocations on the right.
 | Scope a rough idea | `/speckit-pro:grill-me docs/raw-idea.md` | `$speckit-pro:grill-me docs/raw-idea.md` |
 | Create PRD and roadmap | `/speckit-pro:speckit-prd "saved searches"` | `$speckit-pro:speckit-prd "saved searches"` |
 | Check project status | `/speckit-pro:speckit-status` | `$speckit-pro:speckit-status` |
+| Review a finished plan | `/speckit-pro:speckit-plan-review specs/001-feature` | `$speckit-pro:speckit-plan-review specs/001-feature` |
 | Prepare one SPEC | `/speckit-pro:speckit-scaffold-spec SPEC-001` | `$speckit-pro:speckit-scaffold-spec SPEC-001` |
 | Run autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` | `$speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` |
 
@@ -227,6 +228,7 @@ The core idea is simple:
 | `speckit-scaffold-spec` | A SPEC exists in the roadmap and needs a worktree plus populated workflow. |
 | `speckit-autopilot` | A workflow file is ready to execute through the SDD phases. |
 | `speckit-status` | You need project status, archive-sweep state, or the next recommended SPEC. |
+| `speckit-plan-review` | Planning has finished and you want to walk its findings and build a copyable repair prompt before implementation. |
 | `speckit-resolve-pr` | A PR has review comments that should be addressed and pushed. |
 | `speckit-install` | The official SpecKit CLI is missing, or a repository needs Claude Code, Codex, or both initialized for Spec Kit. |
 | `speckit-upgrade` | An existing SpecKit installation needs a safe upgrade or migration that keeps your constitution and local template edits. |
@@ -245,6 +247,7 @@ The core idea is simple:
 | Spec scaffolding | `/speckit-pro:speckit-scaffold-spec` | `$speckit-pro:speckit-scaffold-spec` |
 | Autopilot execution | `/speckit-pro:speckit-autopilot` | `$speckit-pro:speckit-autopilot` |
 | Project status | `/speckit-pro:speckit-status` | `$speckit-pro:speckit-status` |
+| Plan review | `/speckit-pro:speckit-plan-review` | `$speckit-pro:speckit-plan-review` |
 | PR review resolution | `/speckit-pro:speckit-resolve-pr` | `$speckit-pro:speckit-resolve-pr` |
 | SpecKit CLI install | `/speckit-pro:speckit-install` | `$speckit-pro:speckit-install` |
 | SpecKit upgrade | `/speckit-pro:speckit-upgrade` | `$speckit-pro:speckit-upgrade` |
