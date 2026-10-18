@@ -50,7 +50,8 @@ def stored_halt(root: Any) -> dict[str, Any] | None:
     if path.parent.exists() and not path.parent.is_dir():
         raise SelectionError("halt storage is not a directory; a human must inspect it")
     if not path.exists():
-        if path.with_suffix(".lock").exists() or (path.parent / ".gitignore").is_dir():
+        lock = path.with_suffix(".lock")
+        if lock.exists() or lock.is_symlink() or (path.parent / ".gitignore").is_dir():
             raise SelectionError("halt publication is active, interrupted or unsafe; a human must inspect it")
         return None
     try:
@@ -64,17 +65,18 @@ def stored_halt(root: Any) -> dict[str, Any] | None:
 
 
 def record_halt(root: Any, reason: str, evidence: str, last_safe_state: str) -> dict[str, Any]:
-    """Write the halt record; the first trigger stands, so a later one never rewrites the evidence."""
+    """Validate before locking; once locked, leave either a record or a blocking lock, even on failure."""
+    reason = require_text(reason, "reason")
     if STOP_REASONS.get(reason) != HARM_HALT:
         raise SelectionError(f"reason must be a harm halt: {sorted(r for r, c in STOP_REASONS.items() if c == HARM_HALT)}")
+    record = {"schema_version": SCHEMA_VERSION, "reason": reason, "evidence": redacted(reason, require_text(evidence, "evidence")),
+              "last_safe_state": require_text(last_safe_state, "last_safe_state")[:MAX_TEXT]}
     path = confined_path(root, RECORD_PATH)
     try:
-        with exclusive_ledger(path):
+        with exclusive_ledger(path, retain_on_error=True):
             existing = stored_halt(root) if path.exists() else None
             if existing is not None:
                 raise SelectionError("a harm halt already stands; the second trigger is refused")
-            record = {"schema_version": SCHEMA_VERSION, "reason": reason, "evidence": redacted(reason, evidence),
-                      "last_safe_state": require_text(last_safe_state, "last_safe_state")[:MAX_TEXT]}
             durable_json(path, record)
     except ValueError as error:
         raise SelectionError(f"harm-halt trigger {reason} refused: {error}") from error

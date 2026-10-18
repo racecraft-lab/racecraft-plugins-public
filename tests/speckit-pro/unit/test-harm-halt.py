@@ -242,9 +242,60 @@ class HaltConcurrencyTests(MutationRequestCase):
                 self.assertEqual("first evidence", self.read_only_data()["record"]["evidence"])
 
 
+class HaltPublicationFailureTests(MutationRequestCase):
+    helper_id = harm_halt.HELPER_ID
+    files = {WORKFLOW: "# Workflow\n"}
+
+    def test_dangling_publication_lock_refuses_resume_without_touching_its_target(self) -> None:
+        lock = (self.root / RECORD).with_suffix(".lock")
+        lock.parent.mkdir(parents=True)
+        target = self.root / "absent-lock-target"
+        lock.symlink_to(target)
+        result = self.call("apply", action="halt", reason="concurrent_writer", evidence="first evidence",
+                           last_safe_state=SAFE_STATE)
+        self.assertEqual("input_error", result["status"])
+        self.assertEqual("input_error", self.call("read_only")["status"])
+        self.assertFalse(target.exists())
+        request = SimpleNamespace(schema_version="1.0", request_id="dangling-lock", helper_id="decisions-list",
+                                  operation="decisions-list", mode="apply",
+                                  inputs={"workflow_file": WORKFLOW, "entries": [ENTRY]})
+        self.assertEqual("harm_halt_active", handle_request(request)["diagnostics"][0]["code"])
+
+    def test_invalid_trigger_fields_are_rejected_before_storage_is_touched(self) -> None:
+        for field in ("reason", "evidence", "last_safe_state"):
+            with self.subTest(field=field):
+                self.setUp()
+                inputs = {"action": "halt", "reason": "concurrent_writer", "evidence": "first evidence",
+                          "last_safe_state": SAFE_STATE, field: 17}
+                self.assertEqual("input_error", self.call("apply", **inputs)["status"])
+                self.assertFalse((self.root / RECORD).parent.exists())
+                self.assertEqual("allowed", self.read_only_data()["resume"])
+
+    def test_aborted_publication_keeps_a_blocker_for_every_failure_window(self) -> None:
+        for error in (ValueError("rejected"), OSError("disk full"), RuntimeError("interrupted")):
+            for published in (False, True):
+                with self.subTest(error=type(error).__name__, published=published):
+                    self.setUp()
+                    publish = harm_halt.durable_json
+
+                    def fail(path, record, *, published=published, error=error):
+                        if published:
+                            publish(path, record)
+                        raise error
+
+                    with patch.object(harm_halt, "durable_json", side_effect=fail), self.assertRaises(type(error)):
+                        harm_halt.record_halt(self.root, "concurrent_writer", "first evidence", SAFE_STATE)
+                    self.assertTrue((self.root / RECORD).with_suffix(".lock").is_dir())
+                    request = SimpleNamespace(schema_version="1.0", request_id="after-abort", helper_id="decisions-list",
+                                              operation="decisions-list", mode="apply",
+                                              inputs={"workflow_file": WORKFLOW, "entries": [ENTRY]})
+                    self.assertEqual("harm_halt_active", handle_request(request)["diagnostics"][0]["code"])
+                    self.assertFalse((self.root / LIST_FILE).exists())
+
+
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                              for case in (HarmHaltTests, HaltDispatchTests, HaltConcurrencyTests))
+                              for case in (HarmHaltTests, HaltDispatchTests, HaltConcurrencyTests, HaltPublicationFailureTests))
 
 
 if __name__ == "__main__":

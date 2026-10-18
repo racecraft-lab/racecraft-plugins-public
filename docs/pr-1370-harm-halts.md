@@ -64,6 +64,44 @@ its closed reason without persisting a halt. Capture and launch boundary
 failures still persist one. This prevents the read-only helper fixture from
 leaving a halt that contaminates later G0 probes.
 
+## Aborting publisher repair
+
+`F1370-7a04641b` is the class **halt persistence fails open after a competing
+writer aborts**. The halt module validates every record field before acquiring
+the ledger lock. A validated publisher opts into retaining that lock on any
+exception, including a failed write or an interruption after atomic replacement.
+Other ledger clients retain their existing cleanup behavior. A contending stop
+therefore has a record or a lock that survives the competing writer's failure.
+The reader also treats a dangling lock symlink as unsafe.
+
+Plan-stage reports `halt_record_status: recorded` after publication and
+`blocked` when a record, publication lock, or unsafe storage path refuses it.
+It retains the real tamper report and stops before any commit or GitHub action.
+Both hosts use the same Python policy; generated Claude and Codex payloads carry
+it without changes to skill sources, agents, or overlays.
+
+Each test below exercises both host request shapes in
+`tests/speckit-pro/unit/test-plan-stage-terminal.py`:
+
+| Review variant | Test |
+| --- | --- |
+| Malformed competitor (`last_safe_state: 17`) | `test_malformed_competitor_cannot_discard_the_independent_tamper_halt` |
+| Valid competing publisher wins first | `test_valid_competitor_keeps_first_evidence_and_resume_refusal` |
+| Persistent lock appears after precheck | `test_lock_appearing_after_precheck_keeps_resume_refused` |
+| Record symlink appears after precheck | `test_symlink_appearing_after_precheck_keeps_resume_refused` |
+| Storage controller removes or renames a lock or symlink | `test_storage_controller_can_remove_lock_or_symlink_after_the_stop` |
+| Invalid plan reason or non-text state is unreachable | `test_real_plan_stop_supplies_registered_reason_and_text_state` |
+| Valid competitor aborts publication | `test_aborting_valid_competitor_leaves_durable_resume_refusal` |
+| File-shaped lock, live/dangling lock links, live record link | `test_linked_or_non_directory_locks_and_live_record_links_refuse_resume` |
+
+`tests/speckit-pro/unit/test-harm-halt.py` additionally checks all input fields
+before storage is touched (`test_invalid_trigger_fields_are_rejected_before_storage_is_touched`),
+ValueError, OSError, and interruption before/after atomic publication
+(`test_aborted_publication_keeps_a_blocker_for_every_failure_window`), and a
+dangling lock without touching its target
+(`test_dangling_publication_lock_refuses_resume_without_touching_its_target`).
+The regressions were run red against the unfixed implementation before repair.
+
 ## Human recovery
 
 Agent clearance remains refused. After resolving the cause, a human outside the
@@ -76,6 +114,20 @@ regular ignore marker. A regular file occupying `.specify/harm-halt` must be
 restored to a directory after inspection. Agents leave this recovery to the human; no repository field or reason string authorizes it.
 
 ## Known limits
+
+- An actor who can delete or rename halt storage can remove a lock or record
+  symlink after the stop and permit later dispatch. That actor already controls
+  the same path used for the record itself. Both removal and rename are tested;
+  defending against an actor with direct storage control is outside this fix.
+- Plan-stage cannot supply an invalid harm reason or non-text safe state on
+  the real tamper path: its reason is a registered constant and its state is
+  formatted from the initial HEAD. The real stop test verifies those values;
+  the publisher separately rejects malformed direct callers before locking.
+- Failure before lock acquisition cannot provide a durable halt when storage
+  itself cannot be created (for example, a permission or disk failure). This
+  environmental limit predates the repair. Once the lock is acquired, every
+  publication failure leaves it blocking; a concurrent refusal no longer relies
+  on another writer succeeding.
 
 - A failed Claude worker can leave an attestation file in the separate,
   owner-controlled sweep-hook store when failure precedes the explicit unlink.
