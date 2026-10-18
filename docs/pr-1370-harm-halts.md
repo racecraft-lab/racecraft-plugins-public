@@ -101,6 +101,17 @@ ValueError, OSError, and interruption before/after atomic publication
 dangling lock without touching its target
 (`test_dangling_publication_lock_refuses_resume_without_touching_its_target`).
 The regressions were run red against the unfixed implementation before repair.
+Safe and unreachable variants were red on the new explicit persistence report;
+the malformed and aborting competitors were red on missing resume refusal.
+
+Both independent review axes completed without a blocking finding. The
+standards review's conditional test-discovery concern was checked against the
+actual module loader: plan-stage uses `loadTestsFromModule`, while harm-halt's
+explicit `build_suite` includes the new class. The red run named every new
+variant, and the final rerun counted 242 plan-stage checks and 41 halt checks.
+The sweep writer uses the same `record_halt` owner with constant nonempty
+evidence and formatted text state. Generated-artifact consistency and direct
+source/payload byte comparisons verify both hosts.
 
 ## Human recovery
 
@@ -114,6 +125,24 @@ regular ignore marker. A regular file occupying `.specify/harm-halt` must be
 restored to a directory after inspection. Agents leave this recovery to the human; no repository field or reason string authorizes it.
 
 ## Known limits
+
+- A sequential duplicate trigger also retains its acquired lock when it finds
+  an existing record. This conservative refusal preserves first evidence;
+  human recovery removes the record and any retained lock together.
+- The public halt helper repeats the evidence text check before calling the
+  publisher, which validates all record fields. Both use the same
+  `strict_input.require_text` primitive, so no validation policy differs;
+  the extra call is a bounded maintenance repetition.
+- Sweep isolation retains its existing `halt_record_status: unavailable`
+  vocabulary, while plan-stage reports `recorded` or `blocked`. These are
+  reporting fields, not authorization or resume inputs; both paths use the
+  same publisher and halt reader. No consumer uses these strings to permit
+  dispatch.
+- An OSError in plan-stage's own halt publication can still propagate instead
+  of preserving the stop report. That reporting behavior predates this repair;
+  the newly retained lock now refuses subsequent dispatch. Publisher tests
+  cover OSError before and after atomic publication; the plan-stage race test
+  also covers OSError in a competing publisher.
 
 - An actor who can delete or rename halt storage can remove a lock or record
   symlink after the stop and permit later dispatch. That actor already controls
