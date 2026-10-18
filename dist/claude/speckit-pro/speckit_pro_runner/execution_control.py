@@ -23,7 +23,7 @@ from typing import Any, NamedTuple
 
 from . import BLOCKED_BY_FIELD, COMPLETED_DISPATCH_IDS_FIELD, UNKNOWN_DISPATCH_IDS_FIELD
 from .blocked_work import (ACCEPT_BLOCKED_GAP, BLOCK_EXHAUSTED_CHECK, GAP_ACCEPTED, Block, accept_gap, block_exhausted_check,
-                           blocked_check, blocked_units, disposition_event_ids, validate_blocked_work)
+                           blocked_check, blocked_scope, disposition_event_ids, validate_blocked_work)
 from .retry_ladder import RUNGS, is_interrupted, next_rung, replay_rungs, rung_settings
 from .strict_input import SelectionError, require_text as require_nonempty_text
 from .task_partition import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
@@ -2245,7 +2245,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     escalation = inputs.get("escalation")
-    if (requests.units and blocked_units(ledger).intersection(requests.units)) or (
+    if blocked_scope(ledger).intersection(_requested_scope(inputs)) or (
             isinstance(escalation, dict) and escalation.get("unit_kind") == "gate_failure"
             and blocked_check(ledger, str(escalation.get("unit")))):
         return {"reasons": ["blocked_for_uat"]}

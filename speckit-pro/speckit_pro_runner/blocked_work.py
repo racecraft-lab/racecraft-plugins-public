@@ -96,9 +96,10 @@ def _entries(ledger: dict[str, Any]) -> list[dict[str, Any]]:
     return list(ledger.get("blocked_work", {}).get("entries", {}).values())
 
 
-def blocked_units(ledger: dict[str, Any]) -> set[str]:
-    """The TDD units that hold a blocked task, which a resume must not dispatch again."""
-    return {entry["tdd_unit"] for entry in _entries(ledger) if entry["kind"] == "task"}
+def blocked_scope(ledger: dict[str, Any]) -> set[str]:
+    """The task units and gates that no request in the original run may dispatch again."""
+    return {f"unit:{entry['tdd_unit']}" if entry["kind"] == "task" else entry_id("gate", entry["unit"])
+            for entry in _entries(ledger)}
 
 
 def blocked_check(ledger: dict[str, Any], check: str) -> bool:

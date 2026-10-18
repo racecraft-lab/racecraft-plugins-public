@@ -4132,6 +4132,21 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
         self.assertEqual({key: item for key, item in after["dispatches"].items() if "retry_ladder" in item},
                          {key: item for key, item in record["dispatches"].items() if "retry_ladder" in item})
 
+    def test_remediation_requests_cannot_redispatch_blocked_work(self):
+        other = self.exhaust(("python3", "other-gate.py"))
+        self.block(owner_tasks=["T001"])
+        before = self.block(command_sha256=other, gate="G4")["ledger"]
+        requests = [(key, {"tdd_unit": unit, "paths": [f"src/{unit}"]})
+                    for key in ("review_remediation", "test_fix") for unit in ("alpha", "beta", "gamma")]
+        requests.append(("gate_remediation", {"gate": "G4", "paths": ["feature/plan.md"]}))
+        for index, (key, request) in enumerate(requests):
+            with self.subTest(request=key, target=request):
+                refused = self.remediate(key, f"blocked-fix-{index}", request)
+                self.assertEqual(refused["reasons"], ["blocked_for_uat"])
+                self.assertEqual(refused["ledger"], before)
+        free = self.review_fix("delta-review", "delta", ["src/delta"])
+        self.assertEqual((free["disposition"], free["review_allowance"]), ("continue", "increment"))
+
     def test_escalating_a_blocked_check_or_blocking_past_an_unknown_dispatch_is_refused(self):
         self.invoke("reserve", dispatch_id="lost", kind="implementation")
         self.invoke("reconcile", dispatch_id="lost")
