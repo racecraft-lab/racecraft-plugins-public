@@ -40,11 +40,11 @@ with its generator's output rather than discarded as a whole region.
 The spec-index generator encodes contributor-controlled PR fields and backlink
 labels as literal text and percent-encodes backlink destinations. Runtime names
 and PR metadata can therefore refresh canonical navigation without introducing
-Markdown structure or external links. Workflow table separators remain planning
-content: removing one or changing its columns or alignment changes the digest.
-Create required table structure before the final approval manifest.
-URL-shaped and email-shaped metadata or filenames are refused rather than
-auto-linked; keep navigation inputs as literal labels and repository paths.
+Markdown structure or external links. A complete canonical runtime table header
+and delimiter form one typed Implement write. Partial scaffolds and separator
+column or alignment changes remain bound; other workflow separators are retained.
+URL-shaped and email-shaped metadata is refused rather than auto-linked.
+Backlink labels may contain those characters inside their quoted relative links.
 
 Older projection digests may require a new approval after this change. Do not
 rewrite a prior approval record to adopt the new digest.

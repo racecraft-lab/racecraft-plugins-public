@@ -5,9 +5,10 @@ rendering seam for recorded planning approval on both hosts.
 
 ## Known limits
 
-- The autolink guard conservatively refuses any `@`, including a benign Git
-  branch or filename containing that character. This is a compatibility limit,
-  not an accepted injection path. Use literal labels and repository paths.
+- Unlinked PR metadata that looks like a URL or email address is refused rather
+  than auto-linked. Scoped package paths remain literal text. Backlink labels
+  may contain at signs or `www.` because their destinations are quoted relative
+  paths and their structural punctuation is escaped.
 - The new tests repeat the existing fixture's two-host invocation pattern.
   Those paths are fixed test inputs, not contributor-selected execution paths;
   there is no reachable runtime defect. A fixture-wide cleanup would touch the
@@ -17,16 +18,17 @@ rendering seam for recorded planning approval on both hosts.
   contributor-controlled field.
 - The scaffold predicate retains an `if` followed by `return False`. Collapsing
   that expression is a style change with identical behavior.
-- The existing `test_new_sweep_log_separator_preserves_approval` test adds a
-  header, not a separator. Its unchanged name is misleading, but its assertion
-  does not exempt table separators from the digest. The new regression tests
-  exercise separator removal, column count, and alignment directly.
+- The existing sweep-log fixture now includes the delimiter its real writer
+  emits. This is an additive test correction; the new regressions separately
+  exercise separator removal, column count, and alignment on both host runners.
 
 ## Verification interpretation
 
-The progress fixtures now create table structure before approval, then exercise
-only typed row updates. Adding or changing a separator requires a new planning
-revision, as required by this fix.
+The original progress fixtures remain unchanged: complete canonical Implement
+table creation preserves approval. Header and delimiter are projected together;
+deleting either, changing columns, or adding alignment leaves structure bound to
+the revision. Other table separators remain planning content. A standalone
+header is not a complete runtime table write.
 
 Ripwire's dynamic-call analysis labels the new unittest methods as dead code;
 the explicit unittest loader executes them in the focused VM suite. Its

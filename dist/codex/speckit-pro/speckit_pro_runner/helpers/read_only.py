@@ -4057,9 +4057,12 @@ def _spec_index_jq_text(value: Any) -> str:
     return str(value)
 
 
-def _spec_index_literal(value: str) -> str:
-    """Render metadata as one literal line, refusing GFM autolink inputs."""
-    if re.search(r"[a-z][a-z0-9+.-]*://|(?:mailto|xmpp):|www\.|@", value, re.IGNORECASE):
+def _spec_index_literal(value: str, *, link_label: bool = False) -> str:
+    """Render one literal line; guard unlinked metadata against GFM autolinks."""
+    # Backlink labels sit inside one link whose relative destination is quoted.
+    if not link_label and re.search(
+        r"[a-z][a-z0-9+.-]*://|(?:mailto|xmpp):|www\.|[\w.+-]+@[\w-]+(?:\.[\w-]+)+", value, re.IGNORECASE
+    ):
         raise SpecIndexRenderError("generated navigation requires literal text without link syntax")
     # Numeric references cannot introduce Markdown structure, including new rows.
     literal = re.sub(r"[^A-Za-z0-9 ./-]", lambda match: f"&#{ord(match[0])};", value)
@@ -4293,7 +4296,7 @@ def _spec_index_render_backlinks(spec_dir: Path, repo_root: Path) -> list[str]:
             bucket = 8
         records.append((bucket, relative.encode("utf-8"), relative))
     records.sort(key=lambda item: (item[0], item[1]))
-    return [f"- [{_spec_index_literal(relative)}]({quote(relative, safe='/')})" for _, _, relative in records]
+    return [f"- [{_spec_index_literal(relative, link_label=True)}]({quote(relative, safe='/')})" for _, _, relative in records]
 
 
 def _spec_index_repo_structure_current(repo_root: Path) -> bool:

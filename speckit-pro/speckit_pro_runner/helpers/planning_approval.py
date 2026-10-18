@@ -201,13 +201,26 @@ def progress_row(line: str, rule: ProgressWrite, root: Path, workflow: str) -> s
     return "| " + " | ".join(cells) + " |"
 
 
-def progress_scaffold(line: str, rules: list[ProgressWrite]) -> bool:
+def _progress_table_scaffold(line: str, neighbors: tuple[str, str], rules: list[ProgressWrite]) -> bool:
+    """A complete owned header/delimiter pair is one typed execution write."""
+    headers = [sweep_table_cells(item) for rule in rules for item in rule.scaffold if item.startswith("|")]
+    for header, separator in ((neighbors[0], line), (line, neighbors[1])):
+        cells = sweep_table_cells(header)
+        delimiters = sweep_table_cells(separator)
+        if header.startswith("|") and separator.startswith("|") and cells in headers and len(cells) == len(delimiters) and all(
+            re.fullmatch(r"-{3,}", cell) for cell in delimiters
+        ):
+            return True
+    return False
+
+
+def progress_scaffold(line: str, rules: list[ProgressWrite], neighbors: tuple[str, str] = ("", "")) -> bool:
+    if _progress_table_scaffold(line, neighbors, rules):
+        return True
     stripped = line.strip()
     if any(stripped == item or item.startswith("#") and
            re.fullmatch(r"#{1,6} " + re.escape(item.lstrip("# ")), stripped)
-           or stripped.startswith("|") and item.startswith("|") and
-           sweep_table_cells(stripped) == sweep_table_cells(item)
-           for rule in rules for item in rule.scaffold):
+           for rule in rules for item in rule.scaffold if not item.startswith("|")):
         return True
     if any(re.fullmatch(pattern, line.strip()) for rule in rules for pattern in rule.lines):
         return True
@@ -222,9 +235,10 @@ def hardener_progress(line: str, scope: tuple[str, ...]) -> str:
     return "**Hardener:** " + value + separator + suffix
 
 
-def progress_line(line: str, scope: tuple[str, ...], root: Path, workflow: str) -> str:
+def progress_line(line: str, scope: tuple[str, ...], root: Path, workflow: str,
+                  neighbors: tuple[str, str] = ("", "")) -> str:
     rules = [rule for rule in PROGRESS_WRITES.values() if progress_scope(rule, scope)]
-    if progress_scaffold(line, rules):
+    if progress_scaffold(line, rules, neighbors):
         return ""
     line = "|".join(progress_summary(cell, scope) for cell in line.split("|"))
     line = hardener_progress(line, scope)
@@ -240,7 +254,8 @@ def workflow_content(content: bytes, root: Path, workflow: str) -> bytes:
     kept: list[tuple[tuple[str, ...], str]] = []
     sections: list[tuple[int, str]] = []
     fence = None
-    for line in content.decode("utf-8").splitlines(keepends=True):
+    lines = ["", *content.decode("utf-8").splitlines(keepends=True), ""]
+    for index, line in enumerate(lines[1:-1], 1):
         was_fenced = fence is not None
         heading = None if fence else re.match(r"^(#{1,6}) +(.+?)\s*$", line)
         fence = next_fence(fence, line)
@@ -248,7 +263,8 @@ def workflow_content(content: bytes, root: Path, workflow: str) -> bytes:
             sections = [(level, title) for level, title in sections if level < len(heading[1])]
             sections.append((len(heading[1]), heading[2]))
         scope = tuple(title for _, title in sections)
-        result = line if was_fenced or fence else progress_line(line.rstrip("\r\n"), scope, root, workflow)
+        result = line if was_fenced or fence else progress_line(
+            line.rstrip("\r\n"), scope, root, workflow, (lines[index - 1], lines[index + 1]))
         if result.strip() or was_fenced or fence:
             kept.append((scope, result.rstrip() if not (was_fenced or fence) else result))
     return canonical_bytes(kept)

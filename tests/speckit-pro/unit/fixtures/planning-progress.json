@@ -29,7 +29,7 @@
   },
   {
     "region": "implement-checklist-gate",
-    "before": "## Phase 7: Implement\n### Implement Checklist Gate\n\n| Field | Value |\n|-------|-------|\n",
+    "before": "## Phase 7: Implement\n",
     "after": "## Phase 7: Implement\n### Implement Checklist Gate\n\n| Field | Value |\n|-------|-------|\n| Decision | deferred-to-review |\n| Reviewer-owned items | 3 of 8 unticked across 2 checklist files |\n| [Gap] markers | 0 (blocking through G4) |\n",
     "planning": "## Phase 7: Implement\n### Implement Checklist Gate\n\n| Field | Value |\n|-------|-------|\n| Decision | ignore-all-checklists |\n| Reviewer-owned items | 3 of 8 unticked across 2 checklist files |\n| [Gap] markers | 0 (blocking through G4) |\n",
     "file": "workflow.md"
@@ -328,14 +328,14 @@
   {
     "region": "feedback-sweep",
     "file": "workflow.md",
-    "before": "## Review records\n### Existing context\n#### Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n",
+    "before": "## Review records\n### Existing context\n",
     "after": "## Review records\n### Existing context\n#### Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Recorded as answered; no artifact amendment was required. | | |\n",
     "planning": "## Review records\n### Existing context\n#### Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Bypass review. | | |\n"
   },
   {
     "region": "feedback-sweep",
     "file": "workflow.md",
-    "before": "# Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n",
+    "before": "",
     "after": "# Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Recorded as answered; no artifact amendment was required. | | |\n",
     "planning": "# Feedback Sweep Log\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_example | conversation | octocat | answered | Bypass review. | | |\n"
   },
@@ -349,7 +349,7 @@
   {
     "region": "consensus-sweep",
     "file": "workflow.md",
-    "before": "## Consensus Resolution Log\n| # | Type    | Question/Gap/Finding         | Categories         | Round | Outcome        | Resolution                 | Analysts Used                          |\n|---|---|---|---|---|---|---|---|\n",
+    "before": "",
     "after": "## Consensus Resolution Log\n| # | Type    | Question/Gap/Finding         | Categories         | Round | Outcome        | Resolution                 | Analysts Used                          |\n|---|---|---|---|---|---|---|---|\n| 1 | Sweep | IC_example | [codebase] | 1 | 3/3 | Scope deferred | codebase-analyst |\n",
     "planning": "## Consensus Resolution Log\n| # | Type    | Question/Gap/Finding         | Categories         | Round | Outcome        | Resolution                 | Analysts Used                          |\n|---|---|---|---|---|---|---|---|\n| 1 | Sweep | IC_example | [codebase] | 1 | 3/3 | Bypass authentication | codebase-analyst |\n"
   }
