@@ -14,7 +14,7 @@ SOURCE = Path(__file__).resolve().parents[3]
 RUNNERS = (SOURCE / "speckit-pro", *(SOURCE / "dist" / host / "speckit-pro" for host in ("claude", "codex")))
 
 
-class NavigationPreflightTest(NavigationFixture):
+class MapAssertions(NavigationFixture):
     def withoutGeneratedBlocks(self, text):
         return re.sub(r"<!-- GENERATED:(\w+):START[^\n]*\n.*?<!-- GENERATED:\1:END -->\r?\n",
                       "", text, flags=re.DOTALL)
@@ -32,6 +32,25 @@ class NavigationPreflightTest(NavigationFixture):
                     self.assertEqual(self.map_path.read_bytes(), original)
                     self.assertFalse((self.feature / "plan-approvals").exists())
 
+    def assertMapRoundTrip(self):
+        original = self.map_path.read_bytes() if self.map_path.exists() else None
+        for runner in RUNNERS:
+            with self.subTest(runner=runner.relative_to(SOURCE).as_posix()):
+                self.runner_root = runner
+                if original is not None:
+                    self.map_path.write_bytes(original)
+                approval = self.approval()
+                self.assertEqual(self.call("record", "dry_run", approval=approval)["status"], "ok")
+                recorded = self.call("record", "apply", approval=approval)
+                self.assertEqual(recorded["status"], "ok", recorded)
+                self.assertEqual(self.call("verify")["status"], "ok")
+                (self.root / recorded["data"]["record_path"]).unlink()
+                (self.feature / "plan-approvals").rmdir()
+        if original is not None:
+            self.map_path.write_bytes(original)
+
+
+class NavigationPreflightTest(MapAssertions):
     def test_record_refuses_removing_all_generated_pairs(self):
         text = self.withoutGeneratedBlocks(self.original)
         self.assertNotIn("<!-- GENERATED:", text)
@@ -49,23 +68,6 @@ class NavigationPreflightTest(NavigationFixture):
     def test_record_refuses_missing_marker_lines_with_retained_bodies(self):
         text = "".join(line for line in self.original.splitlines(keepends=True) if "<!-- GENERATED:" not in line)
         self.assertFreshMapRefused(text)
-
-    def assertMapRoundTrip(self):
-        original = self.map_path.read_bytes() if self.map_path.exists() else None
-        for runner in RUNNERS:
-            with self.subTest(runner=runner.relative_to(SOURCE).as_posix()):
-                self.runner_root = runner
-                if original is not None:
-                    self.map_path.write_bytes(original)
-                approval = self.approval()
-                self.assertEqual(self.call("record", "dry_run", approval=approval)["status"], "ok")
-                recorded = self.call("record", "apply", approval=approval)
-                self.assertEqual(recorded["status"], "ok", recorded)
-                self.assertEqual(self.call("verify")["status"], "ok")
-                (self.root / recorded["data"]["record_path"]).unlink()
-                (self.feature / "plan-approvals").rmdir()
-        if original is not None:
-            self.map_path.write_bytes(original)
 
     def test_partial_layout_binds_removal_then_refuses_last_pair_removal(self):
         self.approval()
