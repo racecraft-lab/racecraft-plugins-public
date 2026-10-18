@@ -25,6 +25,7 @@ from speckit_pro_runner.formal.process import run_process, start_process
 from speckit_pro_runner.helpers import formal_policy
 from speckit_pro_runner.helpers.registry import dispatch_helper
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, validate_gate
+from admission_stub import stub_admission
 from test_result import run_counted
 
 RUNNER = PLUGIN_ROOT / "speckit_pro_runner"
@@ -38,6 +39,7 @@ QUINT_ROOT: str | None = None
 
 class FormalCheckerTests(unittest.TestCase):
     def setUp(self) -> None:
+        self.enterContext(stub_admission())
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).resolve()
@@ -146,7 +148,7 @@ class FormalCheckerTests(unittest.TestCase):
             self.assertEqual("pass", self.request("apply")["data"]["verdict"])
             self.assertEqual(0, validate_gate(gate, self.root)["exit_code"])
             ready = resolve_autopilot_stage({"workflow_file": "workflow.md"}, self.root)
-            self.assertEqual("implement", json.loads(ready["stdout"])["stage"])
+            self.assertEqual("plan", json.loads(ready["stdout"])["stage"])
             (self.root / "spec.md").write_text("A changed requirement\n")
             stale = resolve_autopilot_stage({"workflow_file": "workflow.md", "autopilot_args": ["--stage", "implement"]}, self.root)
             self.assertEqual(2, stale["exit_code"])

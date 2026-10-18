@@ -37,8 +37,8 @@ if str(PLUGIN_ROOT) not in sys.path:
 from runner_invocation import run_runner as invoke_runner, runner_env  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
-from speckit_pro_runner.helpers import planning_approval, read_only  # noqa: E402
-from unittest.mock import patch  # noqa: E402
+from admission_stub import stub_admission  # noqa: E402
+from speckit_pro_runner.helpers import read_only  # noqa: E402
 
 COVERAGE_VALIDATOR = (
     PLUGIN_ROOT
@@ -1028,12 +1028,11 @@ def resolve_stage(
         inputs: dict[str, object] = {
             "workflow_file": "stage-workflow.md",
             "autopilot_args": args or [],
-            "feature_dir": ".",
         }
         if observation is not OBSERVATION_ABSENT:
             inputs["pr_observation"] = observation
         # Admission has its own tests (test-implement-admission.py); these fixtures are about stage choice.
-        with patch.object(planning_approval, "admit_implement", return_value={"admitted": True}):
+        with stub_admission():
             return read_only.resolve_autopilot_stage(inputs, repo_root)
 
 

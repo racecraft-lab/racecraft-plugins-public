@@ -695,11 +695,11 @@ class NativeParityCatalogTests(_ParityCatalogFixture, unittest.TestCase):
 
             stage = run(
                 "resolve-autopilot-stage",
-                {"workflow_file": "workflow.md", "autopilot_args": ["--stage", "implement"]},
+                {"workflow_file": "workflow.md", "autopilot_args": ["--stage", "plan"]},
             )
-            self.assertEqual(stage["stage"], "implement")
+            self.assertEqual(stage["stage"], "plan")
             self.assertEqual(stage["source"], "argv")
-            self.assertEqual(stage["basis"], "explicit --stage implement")
+            self.assertEqual(stage["basis"], "explicit --stage plan")
 
             workflow = workspace / "workflow.md"
             workflow.write_text(

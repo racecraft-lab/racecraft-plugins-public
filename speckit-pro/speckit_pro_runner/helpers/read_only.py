@@ -2988,10 +2988,10 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         source = "auto-detect"
         stage = "plan"
         basis = "artifact review handoff is unverified; resume the plan terminal step"
-    elif parsed["from_phase"] == "implement":
-        source = "from-phase"
+    elif parsed["from_phase"] == "implement" or implement_started(text):
+        source = "from-phase" if parsed["from_phase"] == "implement" else "auto-detect"
         stage = "implement"
-        basis = "explicit --from-phase implement"
+        basis = "explicit --from-phase implement" if parsed["from_phase"] == "implement" else "implement already started; resuming there"
     else:
         # Planning ends at the review artifacts and draft PR; implement is only ever an explicit entry.
         source = "auto-detect"
@@ -3001,11 +3001,8 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
     if stage in ("implement", "full"):
         # Function-level import: planning_approval imports this module at load time.
         from .planning_approval import admit_implement
-        feature_dir = inputs.get("feature_dir")
-        if not isinstance(feature_dir, str) or not feature_dir:
-            return make_result("", "error: feature_dir is required to admit an implement entry\n", 2)
         try:
-            approval = admit_implement(repo_root, feature_dir, workflow_raw)
+            approval = admit_implement(repo_root, inputs.get("feature_dir"), workflow_raw)
         except ValueError as exc:
             return make_result("", f"error: {exc}\n", 2)
     # Blanked the way `workflow_stage_signals` blanks them, so a commented-out
@@ -3040,12 +3037,16 @@ def recorded_preview_surface(host: Any, repo_root: Path) -> str:
     return preview_surface(repo_root, host)
 
 
+def implement_started(text: str) -> bool:
+    """Whether the overview already shows implement work; such a run resumes there, never backward."""
+    overview = workflow_table_rows(HTML_COMMENT_RE.sub("", text).splitlines(), AUTOPILOT_OVERVIEW_HEADING)
+    return any(len(row) >= 3 and row[0] == "Implement" and row[2] not in ("Pending", "⏳ Pending") for row in overview)
+
+
 def artifact_review_resume(text: str, signals: dict[str, Any], review: dict[str, Any]) -> bool:
     """An explicit stage still wins; existing implementation is never rolled back."""
     lines = HTML_COMMENT_RE.sub("", text).splitlines()
-    overview = workflow_table_rows(lines, AUTOPILOT_OVERVIEW_HEADING)
-    started = any(len(row) >= 3 and row[0] == "Implement" and row[2] not in ("Pending", "⏳ Pending") for row in overview)
-    if started:
+    if implement_started(text):
         return False
     if review["status"] == "absent" and signals["recorded_stage"] == "plan" and workflow_draft_pr_row(lines):
         review.update(status="unrecorded", resume_action="reconcile", reuse_artifacts=False)

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Implement admission: every implement entry needs a valid plan approval record."""
-import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -13,14 +12,9 @@ from runner_invocation import run_runner
 from test_result import run_counted
 
 
-def load_fixture():
-    spec = importlib.util.spec_from_file_location("planning_approval_tests", HERE / "test-planning-approval.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.PlanningApprovalFixture
+from script_loader import load_script
 
-
-PlanningApprovalFixture = load_fixture()
+PlanningApprovalFixture = load_script("planning_approval_tests", HERE / "test-planning-approval.py").PlanningApprovalFixture
 STAGE_WORKFLOW = (HERE / "fixtures/autopilot-stage/workflow.md").read_text()
 
 
@@ -109,6 +103,12 @@ class StageAdmissionTest(AdmissionFixture):
                 envelope = reply["data"]["stdout_json"]
                 self.assertIn(envelope["stage"], ("implement", "full"))
                 self.assertTrue(envelope["planning_approval"]["admitted"])
+
+    def test_resuming_started_implementation_is_admitted_or_refused_too(self):
+        (self.feature / "workflow.md").write_text(STAGE_WORKFLOW.replace("| Implement | `/speckit-implement` | ⏳ Pending |", "| Implement | `/speckit-implement` | 🔄 In Progress |"))
+        reply = self.resolve()
+        self.assertNotEqual(reply["status"], "ok", reply)
+        self.assertIn("planning approval field record:", json.dumps(reply))
 
     def test_a_plan_stage_needs_no_record(self):
         reply = self.resolve("--stage", "plan")

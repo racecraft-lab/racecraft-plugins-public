@@ -486,8 +486,10 @@ def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, An
     return {"admitted": True, "manifest_digest": binding["manifest_digest"], "record_path": path}
 
 
-def admit_implement(root: Path, feature_dir: str, workflow_file: str) -> dict[str, Any]:
+def admit_implement(root: Path, feature_dir: Any, workflow_file: str) -> dict[str, Any]:
     """The one implement-entry check; the stage resolver calls it for every implement entry."""
+    if not isinstance(feature_dir, str) or not feature_dir:
+        raise refused("feature_dir", "the request must name the feature directory to admit")
     feature = owned_path(feature_dir, root)
     return admission(root, feature, planning_manifest(root, feature, workflow_file))
 
