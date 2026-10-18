@@ -4100,6 +4100,29 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
         self.assertEqual((cause["retained_work"], cause["unblock"]), (["src/beta"], "repair other check"))
         self.assert_schema_valid(blocked["ledger"])
 
+    def test_overlapping_exhausted_owners_keep_their_attempts_and_dependencies(self):
+        other = self.exhaust(("python3", "dependent.py"))
+        path = self.root / self.invoke("status", mode="read_only")["ledger_path"]
+        initial = path.read_bytes()
+        requests = ({"owner_tasks": ["T001"]}, {"command_sha256": other, "owner_tasks": ["T002"],
+                                                "retained_work": ["src/beta"], "unblock": "repair beta"})
+        for order in ((0, 1), (1, 0)):
+            with self.subTest(order=order):
+                path.write_bytes(initial)
+                for index in order:
+                    self.block(**requests[index])
+                result = self.invoke("status", mode="read_only")
+                self.assert_schema_valid(result["ledger"])
+                entries = self.entries(result)
+                owner = entries["task:T002"]
+                self.assertEqual((owner["reason"], owner["attempted"], owner["verification"], owner["roots"]),
+                                 ("check_exhausted", True, "failed", ["task:T001"]))
+                self.assertEqual(set(owner["causes"]), {self.check, other})
+                self.assertEqual((owner["retained_work"], owner["unblock"]), (["src/beta"], "repair beta"))
+                skipped = entries["task:T003"]
+                self.assertEqual((skipped["attempted"], skipped["roots"]), (False, ["task:T001", "task:T002"]))
+                self.assertEqual(set(skipped["causes"]), {self.check, other})
+
     def test_an_ownerless_check_blocks_its_gate_and_no_task(self):
         blocked = self.block(gate="G4")
         self.assert_schema_valid(blocked["ledger"])
@@ -4146,6 +4169,25 @@ class BlockedWorkTests(_EscalationFixture, unittest.TestCase):
                 self.assertEqual(refused["ledger"], before)
         free = self.review_fix("delta-review", "delta", ["src/delta"])
         self.assertEqual((free["disposition"], free["review_allowance"]), ("continue", "increment"))
+
+    def test_deferred_remediation_cannot_escalate_blocked_work(self):
+        other = self.exhaust(("python3", "other-gate.py"))
+        targets = (("increment", "alpha", self.review_fix, ["src/alpha"], "increment_review_allowance_exhausted"),
+                   ("gate", "G4", self.gate_fix, ["feature/plan.md"], "gate_remediation_allowance_exhausted"))
+        for _, unit, remediate, paths, reason in targets:
+            for round_number in (1, 2):
+                dispatch = f"{unit}-fix-{round_number}"
+                remediate(dispatch, unit, paths)
+                self.settle(dispatch)
+            self.assertEqual(remediate(f"{unit}-fix-3", unit, paths)["reasons"], [reason])
+        self.block(owner_tasks=["T001"])
+        before = self.block(command_sha256=other, gate="G4")["ledger"]
+        for kind, unit, _, _, _ in targets:
+            with self.subTest(kind=kind, unit=unit):
+                refused = self.escalate(f"{unit}-tier-2", 2, {"unit_kind": kind, "unit": unit})
+                self.assertEqual(refused["reasons"], ["blocked_for_uat"])
+                for field in ("blocked_work", "dispatches", "escalation_allowances", "corrective_cycles"):
+                    self.assertEqual(refused["ledger"].get(field), before.get(field))
 
     def test_escalating_a_blocked_check_or_blocking_past_an_unknown_dispatch_is_refused(self):
         self.invoke("reserve", dispatch_id="lost", kind="implementation")

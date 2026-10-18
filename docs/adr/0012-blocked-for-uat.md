@@ -27,7 +27,7 @@ Every entry carries:
 - Retained partial work, what remains unfinished, and which verification is failed, missing or not run.
 - What would unblock the work: the repair or missing prerequisite, plus the required verification or consent. This description supplies no authorization.
 
-Keep the original evidence once per cause; dependent entries link to it. Missing or unreadable evidence cannot become a successful result. Record it as unavailable and handle the failing evidence check through the existing retry and stop policies; proven tampering still triggers ADR 0010's harm halt. Public reports use redacted descriptions, repository-relative references and digests; private security evidence follows ADR 0011.
+Keep the original evidence once per cause; dependent entries link to it. A task whose own check also exhausts retains its own attempt evidence and every dependency-root link, regardless of which cause is recorded first. The dependency skip adds no attempt. Missing or unreadable evidence cannot become a successful result. Record it as unavailable and handle the failing evidence check through the existing retry and stop policies; proven tampering still triggers ADR 0010's harm halt. Public reports use redacted descriptions, repository-relative references and digests; private security evidence follows ADR 0011.
 
 ## Partial work and resume
 

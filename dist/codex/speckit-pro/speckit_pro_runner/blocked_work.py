@@ -10,7 +10,7 @@ The record lives at `ledger["blocked_work"]`:
 - `causes[check_sha256]` keeps the evidence once per cause: the check, its final failure
   every ladder attempt, retained work and the unblock note.
 - `entries["task:T003"]` or `entries["gate:G4"]` keeps one blocked unit. An exhausted unit
-  is a root. A dependent skip links to its roots and records no attempt of its own.
+  is a root and can itself depend on another root. A dependent skip records no attempt of its own.
 
 The functions take plain dicts and know nothing of the ledger file.
 """
@@ -86,9 +86,12 @@ def block_exhausted_check(record: dict[str, Any], block: Block) -> list[str]:
             entries[key] = entry
             created.append(key)
         else:
-            entries[key]["causes"] = sorted({*entries[key]["causes"], block.check})
-            if entry["reason"] == "dependency_blocked" and entries[key]["reason"] == "dependency_blocked":
-                entries[key]["roots"] = sorted({*entries[key]["roots"], *entry["roots"]})
+            current = entries[key]
+            current["causes"] = sorted({*current["causes"], block.check})
+            current["roots"] = sorted({*current["roots"], *entry["roots"]})
+            if not current["attempted"] and entry["attempted"]:
+                current.update({field: entry[field] for field in
+                                ("reason", "attempted", "retained_work", "verification", "unblock")})
     return created
 
 
@@ -135,7 +138,7 @@ def validate_blocked_work(ledger: dict[str, Any]) -> None:
                 or any(cause not in record["causes"] for cause in entry["causes"])
                 or entry["reason"] not in {"check_exhausted", "dependency_blocked"}
                 or (entry["reason"] == "dependency_blocked") != (not entry["attempted"])
-                or (entry["reason"] == "dependency_blocked") != bool(entry["roots"])
+                or (entry["reason"] == "dependency_blocked" and not entry["roots"])
                 or ("tdd_unit" in entry) != (entry["kind"] == "task")
                 or any(root not in record["entries"] or not record["entries"][root].get("attempted") or root == key
                        for root in entry["roots"])

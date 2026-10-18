@@ -2245,7 +2245,11 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
     escalation = inputs.get("escalation")
-    if blocked_scope(ledger).intersection(_requested_scope(inputs)) or (
+    scope = _requested_scope(inputs)
+    if isinstance(escalation, dict):
+        subject = {"increment": "unit", "gate": "gate"}.get(str(escalation.get("unit_kind")))
+        scope.add(f"{subject}:{escalation.get('unit')}")
+    if blocked_scope(ledger).intersection(scope) or (
             isinstance(escalation, dict) and escalation.get("unit_kind") == "gate_failure"
             and blocked_check(ledger, str(escalation.get("unit")))):
         return {"reasons": ["blocked_for_uat"]}
