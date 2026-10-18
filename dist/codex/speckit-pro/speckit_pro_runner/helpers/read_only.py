@@ -4062,7 +4062,10 @@ def _spec_index_literal(value: str) -> str:
     if re.search(r"[a-z][a-z0-9+.-]*://|(?:mailto|xmpp):|www\.|@", value, re.IGNORECASE):
         raise SpecIndexRenderError("generated navigation requires literal text without link syntax")
     # Numeric references cannot introduce Markdown structure, including new rows.
-    return re.sub(r"[^A-Za-z0-9 ./-]", lambda match: f"&#{ord(match[0])};", value)
+    literal = re.sub(r"[^A-Za-z0-9 ./-]", lambda match: f"&#{ord(match[0])};", value)
+    if re.match(r" |(?:-|[0-9]{1,9}\.)(?: |$)", value):
+        literal = f"&#{ord(value[0])};" + literal[1:]
+    return literal
 
 
 def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:

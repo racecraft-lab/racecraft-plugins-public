@@ -61,6 +61,17 @@ class NavigationInjectionTest(fixtures.NavigationFixture):
                 self.assertIn(f"- [{directory}/x&#93;&#40;evil&#41;&#91;y&#10;.md]({directory}/x%5D%28evil%29%5By%0A.md)", text)
                 self.assertNotIn("x](evil)[y", text)
 
+    def test_schema_one_slice_prefix_stays_literal_at_the_start_of_a_line(self):
+        manifest = self.feature / ".process/prs.json"
+        for value, literal in (("- injected", "&#45; injected"), ("-", "&#45;"),
+                               ("1. injected", "&#49;. injected"), ("1.", "&#49;."),
+                               ("    injected", "&#32;   injected")):
+            with self.subTest(value=value):
+                manifest.write_text(json.dumps({"schemaVersion": 1, "records": [
+                    {"slice": value, "pr": 41, "merged_sha": "a" * 40}]}))
+                text = render_spec_index(self.root)[0][0].rendered
+                self.assertIn("\n" + literal + " · PR#41 · " + "a" * 40 + "\n", text)
+
 
 class TableStructureApprovalTest(fixtures.PlanningApprovalFixture):
     def test_separator_removal_width_and_alignment_change_revision(self):
