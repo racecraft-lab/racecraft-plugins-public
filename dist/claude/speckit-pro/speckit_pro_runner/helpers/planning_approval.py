@@ -6,6 +6,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 from html import unescape
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,7 @@ from ..formal.evidence import CHECKPOINT_ROWS, read_checkpoint, record_path
 from ..formal.primitives import CATALOG_PATH
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import next_fence, require_fields, require_text, unique_object
-from ..task_execution import owned_path, task_definitions
+from ..task_execution import owned_path, path_key, task_definitions
 from ..trusted_io import trusted_tree_snapshot
 from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
 from ..sweep_export import SWEEP_LOG_HEADING, sweep_table_cells
@@ -433,7 +434,7 @@ def approval_record(root: Path, feature: str, approval: Any, binding: dict[str, 
     reviewed = [evidence(root, ref) for ref in refs]
     reviewed.append(evidence(root, confirmation["reference"]))
     if record["supersedes"] is not None:
-        evidence(root, record["supersedes"])
+        record["supersedes"] = evidence(root, record["supersedes"])["reference"]
     findings = checked_findings(root, feature, record["findings"], binding["manifest_digest"])
     reviewed.extend(evidence(root, finding["check"]["reference"]) for finding in findings.values())
     return {**record, **binding, "schema_version": "plan-approval/v1", "assurance": "recorded",
@@ -441,10 +442,12 @@ def approval_record(root: Path, feature: str, approval: Any, binding: dict[str, 
 
 
 def refuse_superseded(root: Path, path: str) -> None:
+    path = owned_path(path, root)
     for _, content in trusted_tree_snapshot((root / path).parent, root).values():
         if content is not None:
             peer = json.loads(content, object_pairs_hook=unique_object)
-            if not isinstance(peer, dict) or peer.get("supersedes") == path:
+            if not isinstance(peer, dict) or (peer.get("supersedes") is not None
+                                             and path_key(owned_path(peer["supersedes"], root)) == path_key(path)):
                 raise ValueError("approval has a subsequent supersession or unreadable history; return to plan review")
 
 
@@ -515,7 +518,12 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     return {"record": record, "record_path": path, "writes_state": mode == "apply"}
 
 
-def run_planning_approval_helper(entry: Any, request: Any) -> dict[str, Any]:
-    return run_contained_helper(entry, request, planning_approval, Refusal(
-        "invalid_planning_approval", "Correct the named planning approval field and return to plan review.",
-        ["Repair the planning inputs or review evidence.", "Retry planning-approval."]))
+run_planning_approval_helper = partial(
+    run_contained_helper,
+    work=planning_approval,
+    refusal=Refusal(
+        "invalid_planning_approval",
+        "Correct the named planning approval field and return to plan review.",
+        ["Repair the planning inputs or review evidence.", "Retry planning-approval."],
+    ),
+)

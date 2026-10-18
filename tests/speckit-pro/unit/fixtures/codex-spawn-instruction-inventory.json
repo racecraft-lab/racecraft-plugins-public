@@ -134,6 +134,8 @@
     "speckit-coach/templates/workflow-template.md": "9e4d91c3546384f6a8ac4cfc1b1aec0b3842ee7875e907dbd533e96871aba00b",
     "speckit-install/SKILL.md": "7a6b36dcccb35ad193d79b62014d13caca1394e349a626b37afde75f0f572f28",
     "speckit-install/agents/openai.yaml": "42beda0a9084e86da7f9ba7da307015ff1ffd5268d67447d4b4fb65d7bfb4517",
+    "speckit-plan-review/SKILL.md": "2eb50e5ea1a391d5e7a02d5b6e6d4f4c8225dd4f0ba29ba8596e5d63a2db147e",
+    "speckit-plan-review/agents/openai.yaml": "5dd57ec77e3b9775bac7c0cf69940bb823991f514f85d37f3f53dfc2283bb365",
     "speckit-prd/SKILL.md": "50f77973c88d3a4bb4f9ec18b16c3ff694a686a428c8dbae5a3228a927cf1f58",
     "speckit-prd/agents/openai.yaml": "e26375ed1999dc14c2524a41b972a7809eaef919f33980abef70383776b055f9",
     "speckit-prd/references/prd-authoring-protocol.md": "728348c1dc4777e349327a9cc394b1c1e7efda0c72d31b0affadc221b41ce6bd",
