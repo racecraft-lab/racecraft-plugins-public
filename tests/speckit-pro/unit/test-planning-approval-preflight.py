@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Canonical navigation preflight through the planning-approval request seam."""
 import json
+from itertools import product
 import re
 import runpy
 import unittest
@@ -336,21 +337,21 @@ class ScopeNavigationBindingTest(RuntimeNavigationCase):
             record.unlink()
 
     def test_all_canonical_prs_values_are_bound_on_each_host(self):
-        for runner in RUNNERS:
+        schemas = ((v2_records(), V2_FIELDS), (v1_records(), ("slice", "merged_sha")))
+        for runner, (base, fields) in product(RUNNERS, schemas):
             self.runner_root = runner
-            for base, fields in ((v2_records(), V2_FIELDS), (v1_records(), ("slice", "merged_sha"))):
-                record = self.recordSafeApproval(base)
-                for field in fields:
-                    prs = json.loads(json.dumps(base))
-                    index = len(prs["records"]) - 1 if field == "merged_sha" else 0
-                    prs["records"][index][field] = ["updated"] if field == "declared_files" else "updated"
-                    with self.subTest(host=runner.relative_to(SOURCE).as_posix(), schema=base["schemaVersion"], field=field):
-                        self.assertRegenerationRefused(lambda: self.writePrs(prs), lambda: self.writePrs(base))
-                with self.subTest(host=runner.relative_to(SOURCE).as_posix(), schema=base["schemaVersion"], field="records"):
-                    self.assertRegenerationRefused(
-                        lambda: self.writePrs({"schemaVersion": base["schemaVersion"], "records": []}),
-                        lambda: self.writePrs(base))
-                record.unlink()
+            record = self.recordSafeApproval(base)
+            for field in fields:
+                prs = json.loads(json.dumps(base))
+                index = len(prs["records"]) - 1 if field == "merged_sha" else 0
+                prs["records"][index][field] = ["updated"] if field == "declared_files" else "updated"
+                with self.subTest(host=runner.relative_to(SOURCE).as_posix(), schema=base["schemaVersion"], field=field):
+                    self.assertRegenerationRefused(lambda: self.writePrs(prs), lambda: self.writePrs(base))
+            with self.subTest(host=runner.relative_to(SOURCE).as_posix(), schema=base["schemaVersion"], field="records"):
+                self.assertRegenerationRefused(
+                    lambda: self.writePrs({"schemaVersion": base["schemaVersion"], "records": []}),
+                    lambda: self.writePrs(base))
+            record.unlink()
 
 
 class AdversarialNavigationBoundaryTest(RuntimeNavigationCase):
