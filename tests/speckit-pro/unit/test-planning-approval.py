@@ -829,7 +829,8 @@ class ShippedWorkflowTest(WorkflowFixture):
                     self.writeProgressCase(case, "before")
                     before = self.call()["data"]["manifest_digest"]
                     self.writeProgressCase(case, "after")
-                    self.assertEqual(self.call()["data"]["manifest_digest"], before)
+                    self.assertEqual(self.call()["data"]["manifest_digest"] == before,
+                                     case.get("preserves_revision", True))
                     self.writeProgressCase(case, "planning")
                     self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
 
