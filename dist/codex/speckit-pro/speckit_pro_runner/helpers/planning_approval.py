@@ -6,6 +6,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -480,7 +481,12 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     return {"record": record, "record_path": path, "writes_state": mode == "apply"}
 
 
-def run_planning_approval_helper(entry: Any, request: Any) -> dict[str, Any]:
-    return run_contained_helper(entry, request, planning_approval, Refusal(
-        "invalid_planning_approval", "Correct the named planning approval field and return to plan review.",
-        ["Repair the planning inputs or review evidence.", "Retry planning-approval."]))
+run_planning_approval_helper = partial(
+    run_contained_helper,
+    work=planning_approval,
+    refusal=Refusal(
+        "invalid_planning_approval",
+        "Correct the named planning approval field and return to plan review.",
+        ["Repair the planning inputs or review evidence.", "Retry planning-approval."],
+    ),
+)
