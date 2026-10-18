@@ -8,7 +8,8 @@ rendering seam for recorded planning approval on both hosts.
 - Unlinked PR metadata that looks like a URL or email address is refused rather
   than auto-linked. Scoped package paths remain literal text. Backlink labels
   may contain at signs or `www.` because their destinations are quoted relative
-  paths and their structural punctuation is escaped.
+  paths and their structural punctuation is escaped. Trailing spaces are stripped
+  from each field before encoding so a field cannot create a hard line break.
 - The new fixture centralizes runner paths and paired-host verification.
   `NavigationFixture.captureNavigation` and `assertNavigationBound` retain their
   pre-existing host loops to keep the shared test file additive. These are fixed

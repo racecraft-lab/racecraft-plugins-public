@@ -55,13 +55,23 @@ class NavigationInjectionTest(NavigationInputsFixture):
                 self.assertVerifiedNavigation(text)
 
     def test_external_links_are_refused_in_every_pr_field(self):
-        for version, field in self.injectedPrFields("[injected](https://untrusted.invalid)"):
-            with self.subTest(version=version, field=field):
-                with self.assertRaises(SpecIndexRenderError):
-                    render_spec_index(self.root)
-                for runner_root in HOST_RUNNERS.values():
-                    self.runner_root = runner_root
-                    self.assertRefused(self.call(), "literal text")
+        for payload in ("[injected](https://untrusted.invalid)",
+                        "see a" + chr(64) + ".evil.com", "a" + chr(64) + ".com",
+                        "u" + chr(64) + ".x-y.io", "a." + chr(64) + ".evil.com"):
+            for version, field in self.injectedPrFields(payload):
+                with self.subTest(payload=payload, version=version, field=field):
+                    with self.assertRaises(SpecIndexRenderError):
+                        render_spec_index(self.root)
+                    for runner_root in HOST_RUNNERS.values():
+                        self.runner_root = runner_root
+                        self.assertRefused(self.call(), "literal text")
+
+
+    def test_schema_one_merged_sha_trailing_spaces_cannot_create_a_hard_break(self):
+        manifest = self.feature / ".process/prs.json"
+        manifest.write_text(json.dumps({"schemaVersion": 1, "records": [
+            {"slice": "us1", "pr": 41, "merged_sha": "abc  "}]}))
+        self.assertIn("\nus1 · PR#41 · abc\n", render_spec_index(self.root)[0][0].rendered)
 
 
     def test_scoped_package_paths_remain_literal_metadata(self):
