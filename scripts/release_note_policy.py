@@ -28,6 +28,7 @@ SNAPSHOT_KEYS = frozenset(
     }
 )
 FAILURE_OUTCOME = "release_note_composition_failed"
+HIGHLIGHTS_HEADING = "## Highlights"
 MARKUP_BOUNDARY = "\x00"
 
 TRAILING_PR_RE = re.compile(r"\(#(?P<number>[1-9][0-9]*)\)[ \t]*$")
@@ -47,6 +48,11 @@ ATX_HEADING_RE = re.compile(r"^(?P<marker>#{1,6})(?=[ \t]|$)")
 
 class CompositionError(RuntimeError):
     """A fail-loud release-note composition error."""
+
+
+def is_composed_release_body(body: str) -> bool:
+    """Return whether a release body already carries composed Highlights."""
+    return body.startswith(f"{HIGHLIGHTS_HEADING}\n")
 
 
 @dataclass(frozen=True)

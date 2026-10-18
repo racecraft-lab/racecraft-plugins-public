@@ -40,13 +40,10 @@ CANONICAL_SCHEMA_PATHS = tuple(
         "verification-report.schema.json",
     )
 )
-# The validator imports these beside itself, so an installed copy needs them too.
+# Install the runner package so transitive validator imports stay complete.
 VALIDATOR_SUPPORT_FILES = (
-    *(PLUGIN_ROOT / "speckit_pro_runner" / name for name in (
-        "__init__.py", "json_schema.py", "atomic_write.py", "envelope.py", "strict_input.py", "trusted_io.py",
-        "helpers/__init__.py", "helpers/nesting_preflight.py",
-        "autopilot_state.py",
-    )),
+    *sorted(path for path in (PLUGIN_ROOT / "speckit_pro_runner").rglob("*")
+            if path.is_file() and "__pycache__" not in path.parts),
     *sorted(VALIDATOR.parent.glob("lib/*.py")),
 )
 MARKER_CHECKPOINT_SCHEMA = VALIDATOR.parents[1] / "contracts" / "marker-checkpoint.schema.json"
@@ -266,7 +263,7 @@ class _ValidatorRunner(object):
             shell=False,
             check=False,
         )
-        self.assertEqual(completed.stderr, "")
+        self.assertEqual(completed.stderr, "", completed.stderr)
         return completed.returncode, json.loads(completed.stdout)
 
     def run_validator(self, workflow: str, state: dict[str, object] | str, *, rule: str | None = None) -> tuple[int, dict[str, object]]:

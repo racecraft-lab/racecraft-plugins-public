@@ -21,6 +21,7 @@ from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
+from . import BLOCKED_BY_FIELD, COMPLETED_DISPATCH_IDS_FIELD, UNKNOWN_DISPATCH_IDS_FIELD
 from .strict_input import SelectionError, require_text as require_nonempty_text
 from .task_partition import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
 from .trusted_io import is_test_path, trusted_text
@@ -360,6 +361,7 @@ def _validate_marked_dispatch(dispatch_id: str, item: dict[str, Any], marker: st
 def _validate_dispatch_records(value: dict[str, Any], exception_reservation: str | None, granted: dict[str, Any]) -> None:
     """Every dispatch is well formed and draws on exactly the allowance or reservation that lists it."""
     for dispatch_id, item in value["dispatches"].items():
+        require_text(dispatch_id, "dispatch_id")
         _validate_dispatch_shape(item)
         reservation = item.get("reservation_id")
         marker = next((name for name in _MARKED_DISPATCH_REFUSALS if name in item), None)
@@ -2523,7 +2525,7 @@ def checkpoint_or_wait(ledger: dict[str, Any], inputs: dict[str, Any], now: floa
         if not completed:
             return {"reasons": ["no_completed_work_to_checkpoint"]}
         ledger["checkpoint_at"] = now
-        return {"completed_dispatch_ids": completed}
+        return {COMPLETED_DISPATCH_IDS_FIELD: completed}
     event = inputs.get("native_observation")
     if not isinstance(event, dict) or event.get("run_id") != ledger["run_id"]:
         raise ValueError("wait accounting requires an independent parent native event bound to this run")
@@ -2896,7 +2898,7 @@ def _control_result(ctl: _Control, ledger: dict[str, Any], now: float, reasons: 
             "reasons": reasons, "elapsed_seconds": elapsed(ledger, now, ledger["started_at"]),
             "checkpoint_due": elapsed(ledger, now, ledger["checkpoint_at"]) >= 2700,
             "authorization_granted": False, "writes_state": ctl.mode == "apply", **extra,
-            **({"unknown_dispatch_ids": unknown} if unknown else {})}
+            **({UNKNOWN_DISPATCH_IDS_FIELD: unknown} if unknown else {})}
 
 
 def _update_ledger(ctl: _Control) -> dict[str, Any]:
@@ -2908,7 +2910,7 @@ def _update_ledger(ctl: _Control) -> dict[str, Any]:
     blockers = _unknown_blockers(ledger, ctl.action, ctl.inputs) if ctl.action in UNKNOWN_GUARDED_ACTIONS else []
     if blockers:
         reasons.append(UNKNOWN_BLOCKED)
-        extra["blocked_by"] = blockers
+        extra[BLOCKED_BY_FIELD] = blockers
     if "clock_moved_backwards" in reasons and ctl.action not in {"status", "start"}:
         raise ValueError("clock moved backwards; preserve the ledger and reconcile time before continuing")
     extra, reasons = _run_action(ctl, ledger, now, reasons, extra)

@@ -310,6 +310,9 @@ The operator owns the session setting; the plugin does not veto it.
 
 At kickoff/resume, read [Bounded Execution and Verification](./references/execution-efficiency.md).
 Initialize/recover its durable execution-control ledger before phase dispatch.
+Leave run clock facts to the runner; after updating the one-run state, refresh
+it with the bound `execution-control action=status mode=apply` call described
+in that reference. Let in-flight workers finish before terminal publication.
 It owns task metadata, native batching, proof reuse, the shared repair
 ceilings, and the honest checkpoint rules across every phase, nested worker,
 and Post step. Agent replacement never resets budgets. A run has no
@@ -1722,7 +1725,17 @@ is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
 `unit_classification_mismatch`, re-inspect the owned paths and call once more
 with the class the paths show; never cycle the three values. Read
 `unknown_dispatch_ids` from `status` before each wave so a blocked unit is
-seldom reserved.
+seldom reserved. Compact answers carry exact IDs in bounded batches alongside
+`unknown_dispatch_count` and `blocked_by_count`. Settle the returned IDs, then
+refresh compact `status` or retry the blocked action to retrieve the next
+batch. A count larger than its returned list means unresolved IDs remain.
+Independent units may continue when the runner permits their reserve.
+To inspect IDs outside a returned batch, delegate a phase-local read-only
+`status` request with `answer_format: detailed` that parses the runner's
+stdout with `python3` before printing and returns only
+`data.unknown_dispatch_ids`: the full ledger precedes that list, so a
+truncated tool output can drop it. Preserve unresolved
+outcomes; reconcile and verify each affected unit before retrying its work.
 
 Issue capped approvals yourself when the runner proves them, instead of asking
 the operator. Pass `agent_authorized: true` and no `native_observation` to

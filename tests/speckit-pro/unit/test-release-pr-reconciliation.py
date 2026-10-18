@@ -1094,6 +1094,7 @@ class ReleaseNoteAuditTests(unittest.TestCase):
             root = Path(tmp)
             environment, snapshot_bytes, snapshot = self.make_case(root)
             composer_result, release = self.composer_success(snapshot_bytes, snapshot)
+            composer_result["commit_count"] = 309
 
             def successful_composer(argv, **kwargs):
                 self.assertEqual(

@@ -139,10 +139,15 @@ predates the structural coverage checks stays resumable.
 
 ## Reference `autopilot-state.json` Schema
 
+The runner stamps `updated_at` and refreshes the optional execution mirror.
+After changing plan rows or status, call `execution-control` with `action=status`,
+`mode=apply`, and the unchanged run binding; see
+[Bounded Execution and Verification](./execution-efficiency.md). Leave clock facts
+out of hand-written state.
+
 ```json
 {
   "workflow_file": "docs/ai/specs/SPEC-013-workflow.md",
-  "updated_at": "2026-04-10T18:00:00Z",
   "active_step": "Phase 1: Specify",
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
