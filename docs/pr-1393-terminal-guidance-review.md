@@ -48,6 +48,17 @@ Tests in `tests/speckit-pro/unit/test-plan-stage-terminal.py`:
   CLI overrides require operator action, and managed policy requires
   administrator control. These paths do not reach the guidance gate repaired
   here. This document does not claim that finding is resolved or accepted.
+- R1393-6368ea4f (Low): the completed stop report links each artifact page
+  as a CommonMark angle-bracket target (`plan_stage_terminal.py`), which
+  cannot hold `<`, `>` or a newline. Unreachable in practice: page ids and
+  titles come from the shipped gallery manifest, the feature directory is
+  checked against the plan, spec and tasks paths, and the root is a resolved
+  checkout. If hit, only the link markup degrades; the plain relative path
+  stays readable.
+- R1393-c9699449 (Info): on Windows the absolute link target would carry
+  backslashes, which CommonMark may read as escapes. Unreachable: the
+  autopilot documents no Windows host, and the Windows CI job is advisory
+  smoke only.
 - No live interactive question or tool execution is added or exercised.
   The existing rendered instructions are reviewed as the contract.
 - Linux VM coverage does not establish native macOS plugin CI or the real
