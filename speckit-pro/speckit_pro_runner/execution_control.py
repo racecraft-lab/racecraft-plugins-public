@@ -872,11 +872,16 @@ def _is_digest(value: Any) -> bool:
     return isinstance(value, str) and _SHA256.fullmatch(value) is not None
 
 
+def _newest_failing_record(ledger: dict[str, Any], check: str) -> dict[str, Any] | None:
+    """The runner's newest failing-check fingerprint for a command digest, or None when it never saw one."""
+    return max((item["failing_checks"] for item in _all_dispatches(ledger) if "failing_checks" in item
+                and item["failing_checks"]["command_sha256"] == check), key=lambda record: record["recorded_at"], default=None)
+
+
 def _fails_again(ledger: dict[str, Any], check: str, earlier: list[dict[str, Any]]) -> bool:
     """True when the check's newest verification failed after the last rung that spent an attempt."""
     spent_at = max((item["completed_at"] for item in earlier if not is_interrupted(item)), default=ledger["started_at"])
-    newest = max((item["failing_checks"] for item in _all_dispatches(ledger) if "failing_checks" in item
-                  and item["failing_checks"]["command_sha256"] == check), key=lambda record: record["recorded_at"], default=None)
+    newest = _newest_failing_record(ledger, check)
     return newest is not None and newest["failing"] != [] and newest["recorded_at"] >= spent_at
 
 
