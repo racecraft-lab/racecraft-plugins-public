@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 sys.path.insert(0, str(ROOT / "speckit-pro"))
 from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
+from structural_helpers import load_json  # noqa: E402
 import host_skill_views  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner import autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
@@ -135,6 +136,15 @@ class TerminalFixture(unittest.TestCase):
 
     def pages(self) -> list[str]:
         return sorted(path.stem for path in (self.root / FEATURE / "artifacts").glob("*.html"))
+
+    def rewrite_workflow(self, *swaps: tuple[str, str], commit: str | None = None) -> None:
+        path = self.root / WORKFLOW
+        text = path.read_text(encoding="utf-8")
+        for old, new in swaps:
+            text = text.replace(old, new)
+        path.write_text(text, encoding="utf-8")
+        if commit is not None:
+            self.git("commit", "-q", "-am", commit)
 
 
 class RunFactsTests(TerminalFixture):
@@ -859,11 +869,8 @@ class FreshnessTests(TerminalFixture):
 
 class PullRequestTests(TerminalFixture):
     def record(self, number: int = 7) -> None:
-        path = self.root / WORKFLOW
-        text = path.read_text(encoding="utf-8")
-        path.write_text(text.replace("| **Priority** | P1 |", f"| **Priority** | P1 |\n| **Draft PR** | [#{number}]({URL}) |"),
-                        encoding="utf-8")
-        self.git("commit", "-q", "-am", "seed row")
+        self.rewrite_workflow(("| **Priority** | P1 |", f"| **Priority** | P1 |\n| **Draft PR** | [#{number}]({URL}) |"),
+                              commit="seed row")
 
     def stops(self, label: str, **inputs: object) -> dict:
         result = self.finish(execution_mode="headless", **inputs)
@@ -1163,7 +1170,7 @@ class ConfidenceRecoveryTests(TerminalFixture):
                 self.assertEqual(self.finish(host=host, until="pages")["status"], "ok")
                 config.write_text("confidence_threshold: 0.95\n", encoding="utf-8")
                 self.assertEqual(self.finish(host=host, until="pages")["status"], "ok")
-                self.assertEqual(json.loads((self.root / FINDINGS).read_text()), {"confidence-composite": []})
+                self.assertEqual(load_json(self.root / FINDINGS), {"confidence-composite": []})
 
     def test_no_data_stops_with_a_documented_confidence_recovery_path(self) -> None:
         path = self.root / WORKFLOW
@@ -1188,13 +1195,11 @@ class StrictFindingsTests(TerminalFixture):
                 "- Risk assessment: 0.91\n- Completeness: 0.80\n")
 
     def strict(self, emit: str = "📊 Confidence: 0.50") -> None:
-        path = self.root / WORKFLOW
-        path.write_text(path.read_text(encoding="utf-8").replace("| Mode | advisory |", "| Mode | strict |")
-                        .replace("📊 Confidence: 0.94", emit), encoding="utf-8")
-        self.git("commit", "-q", "-am", "strict shortfall")
+        self.rewrite_workflow(("| Mode | advisory |", "| Mode | strict |"), ("📊 Confidence: 0.94", emit),
+                              commit="strict shortfall")
 
     def findings(self) -> dict:
-        return json.loads((self.root / FINDINGS).read_text(encoding="utf-8"))
+        return load_json(self.root / FINDINGS)
 
     def test_a_strict_shortfall_publishes_the_draft_pr_and_records_a_finding_on_both_hosts(self) -> None:
         for host in ("claude", "codex"):
@@ -1244,10 +1249,7 @@ class StrictFindingsTests(TerminalFixture):
 
 class GuardTests(TerminalFixture):
     def test_a_legacy_blocked_gate_row_stops_before_generation_and_writes_nothing(self) -> None:
-        path = self.root / WORKFLOW
-        path.write_text(path.read_text(encoding="utf-8").replace("| Confidence Gate | G6.5 | ✅ Complete", "| Confidence Gate | G6.5 | ⚠️ Blocked"),
-                        encoding="utf-8")
-        self.git("commit", "-q", "-am", "blocked")
+        self.rewrite_workflow(("| Confidence Gate | G6.5 | ✅ Complete", "| Confidence Gate | G6.5 | ⚠️ Blocked"), commit="blocked")
         result = self.finish(execution_mode="headless")
         self.assertEqual(result["data"]["stop_label"], LABEL)
         self.assertIn("must finish", result["data"]["report"])
@@ -1284,8 +1286,7 @@ class GuardTests(TerminalFixture):
                 self.assertFalse((self.root / FINDINGS).exists())
 
     def test_a_completed_advisory_warning_allows_pages(self) -> None:
-        path = self.root / WORKFLOW
-        path.write_text(path.read_text(encoding="utf-8").replace("📊 Confidence: 0.94", "📊 Confidence: 0.50"), encoding="utf-8")
+        self.rewrite_workflow(("📊 Confidence: 0.94", "📊 Confidence: 0.50"))
         self.assertEqual(self.finish(until="pages")["status"], "ok")
 
     def test_a_page_that_is_still_its_template_is_deleted_and_reported_as_a_gap(self) -> None:
@@ -1307,8 +1308,8 @@ class TerminalGuidanceTests(unittest.TestCase):
         # A section/phrase search can select a hidden copy or miss a negation.
         # Changes require reviewing the rendered instructions before re-pinning.
         reviewed = {
-            "claude": "4a07df7d291abc47b85c680c97c2d1e04cb9d10dbf4c24d2f10a2e7aff174108",
-            "codex": "64489e2e3bf10c2704655748f8a1282040e69c8c73a84cb053a1daef46b440c8",
+            "claude": "c0b7ea167dc7c68a4a3377f5c7ac67cfd8c2f0858d51b2423f8fda72a6abc7cf",
+            "codex": "9d50e87f55c58f7aac2989c189593206d3d28aa24f133106c1cea3998ef5abae",
         }
         for host, digest in reviewed.items():
             path = host_skill_views.host_skill_root(host) / "speckit-autopilot/references/phase-execution.md"
