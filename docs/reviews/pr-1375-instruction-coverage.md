@@ -21,7 +21,7 @@ Symlinks, missing roots, unreadable text, and missing or malformed inventories
 fail closed. Source rendering and the shipped Codex payload use the same check.
 
 The inventory is repository proof data; it is not shipped plugin policy. Its
-shared test-library owner supplies strict reads and one complete file walker
+shared repository policy owner supplies strict reads and one complete file walker
 to both validation and the repository regeneration script.
 Regenerate it from source after reviewing the instruction changes:
 
@@ -72,8 +72,9 @@ malformed review evidence. The shipped Codex skill and agent copies are tested
 too. See the security-fix PR comment for the exact variant-to-test mapping and
 commit SHAs.
 
-The refresh command is documented here and in the gate failure, rather than
-adding this PR-specific proof inventory to the always-loaded agent contract.
+The persistent inventory refresh is also documented in the merge procedure in
+[the agent runbook](../agent-runbook.md), which the agent contract already
+requires for merges. The gate failure names the same command.
 Generated references were regenerated and checked; the generator produced no
 reference changes for the initial test-only delta.
 

@@ -30,7 +30,7 @@ from unittest.mock import patch
 
 TEST_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TEST_DIR.parents[2]
-sys.path[:0] = [str(TEST_DIR.parent / "lib")]
+sys.path[:0] = [str(TEST_DIR.parent / "lib"), str(REPO_ROOT / "scripts")]
 
 from codex_instruction_review import (  # noqa: E402
     REVIEW_INVENTORY, instruction_inventory, instruction_paths, read_surface,

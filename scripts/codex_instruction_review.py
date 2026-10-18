@@ -1,11 +1,11 @@
-"""Repository-only instruction review policy shared by proof and regeneration."""
+"""Repository instruction review policy shared by validation and regeneration."""
 
 from __future__ import annotations
 
 import hashlib
 from pathlib import Path
 
-REVIEW_INVENTORY = Path(__file__).resolve().parents[1] / "unit/fixtures/codex-spawn-instruction-inventory.json"
+REVIEW_INVENTORY = Path(__file__).resolve().parents[1] / "tests/speckit-pro/unit/fixtures/codex-spawn-instruction-inventory.json"
 
 
 def read_surface(path: Path) -> str:
