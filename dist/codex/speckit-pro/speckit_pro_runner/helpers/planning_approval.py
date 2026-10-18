@@ -395,14 +395,16 @@ def evidence(root: Path, reference: str) -> dict[str, str]:
 def add_findings(root: Path, feature: str, identities: list[str]) -> None:
     """Add each new finding with no request yet and keep every recorded entry; a clean plan gets an empty map."""
     relative = f"{feature}/{FINDINGS_FILE}"
-    exists = (root / relative).exists() or (root / relative).is_symlink()
-    inventory = json.loads(captured(root, relative), object_pairs_hook=unique_object) if exists else {}
+    target = root / relative
+    snapshot = snapshot_write_target(target, root, bind_identity=True)
+    exists = snapshot["exists"]
+    inventory = json.loads(snapshot["content"], object_pairs_hook=unique_object) if exists else {}
     if not isinstance(inventory, dict):
         raise ValueError(f"{relative} must map finding ids to request lists")
     added: dict[str, list[str]] = {identity: [] for identity in identities if identity not in inventory}
     if added or not exists:
         content = json.dumps({**inventory, **added}, indent=2, ensure_ascii=False) + "\n"
-        write_bytes_atomic(root / relative, content.encode("utf-8"), trust_root=root)
+        write_bytes_atomic(target, content.encode("utf-8"), trust_root=root, expected_snapshot=snapshot)
 
 
 def checked_findings(root: Path, feature: str, findings: Any, revision: str) -> dict[str, Any]:

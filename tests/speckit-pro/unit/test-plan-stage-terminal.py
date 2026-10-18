@@ -30,7 +30,7 @@ from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
 from structural_helpers import load_json  # noqa: E402
 import host_skill_views  # noqa: E402
 from test_result import run_counted  # noqa: E402
-from speckit_pro_runner import autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
+from speckit_pro_runner import atomic_write, autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
 
@@ -1246,6 +1246,131 @@ class StrictFindingsTests(TerminalFixture):
         (self.root / FINDINGS).write_text("[]", encoding="utf-8")
         self.assertNotEqual(self.finish(until="pages")["status"], "ok")
         self.assertFalse((self.root / FEATURE / "artifacts").exists())
+
+
+class InventoryConcurrencyTests(TerminalFixture):
+    """Reviewer updates survive every publication window on both hosts."""
+
+    strict = StrictFindingsTests.strict
+    findings = StrictFindingsTests.findings
+
+    def inventory_race(self, change, *, missing=False, late=False, install=False) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host, missing=missing, late=late, install=install):
+                self.setUp()
+                self.strict()
+                target = self.root / FINDINGS
+                original = {"F1": ["original request"]}
+                if not missing:
+                    target.write_text(json.dumps(original), encoding="utf-8")
+                reviewer = {"F1": ["reviewer update"], "F2": ["new finding"]}
+                owner = plan_stage_terminal.planning_approval
+                writer = owner.write_bytes_atomic
+                fsync = atomic_write.os.fsync
+                validate = atomic_write._validate_atomic_install
+                injected = []
+
+                def mutate():
+                    if not injected:
+                        injected.append(True)
+                        change(target, reviewer)
+
+                def before_write(*args, **kwargs):
+                    mutate()
+                    return writer(*args, **kwargs)
+
+                def before_install(fd):
+                    mutate()
+                    return fsync(fd)
+
+                def after_validation(state, content, options):
+                    validate(state, content, options)
+                    mutate()
+
+                with unittest.mock.patch.object(owner, "write_bytes_atomic", side_effect=writer if late or install else before_write), \
+                        unittest.mock.patch.object(atomic_write.os, "fsync", side_effect=before_install if late else fsync), \
+                        unittest.mock.patch.object(atomic_write, "_validate_atomic_install", side_effect=after_validation if install else validate):
+                    result = self.finish(host=host, until="pages")
+                self.assertEqual(injected, [True], result)
+                self.assertEqual(self.findings(), reviewer, result)
+                self.assertNotEqual(result["status"], "ok", result)
+                self.assertFalse((self.root / FEATURE / "artifacts").exists())
+
+    def test_inventory_edit_after_capture_preserves_reviewer_requests_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)))
+
+    def test_inventory_creation_after_missing_capture_preserves_new_findings_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), missing=True)
+
+    def test_inventory_edit_during_publication_preserves_reviewer_requests_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), late=True)
+
+    def test_inventory_creation_during_publication_preserves_new_findings_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), missing=True, late=True)
+
+    def test_inventory_edit_at_atomic_install_preserves_reviewer_requests_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), install=True)
+
+    def test_inventory_creation_at_atomic_install_preserves_new_findings_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), missing=True, install=True)
+
+    def test_inventory_identical_inode_replacement_is_refused_on_both_hosts(self) -> None:
+        def replace_inode(target, value):
+            previous = target.read_bytes()
+            target.rename(target.with_name("reviewer-original.json"))
+            target.write_bytes(previous)
+            value.clear()
+            value.update(json.loads(previous))
+        self.inventory_race(replace_inode)
+
+    def test_inventory_new_hardlink_alias_is_refused_on_both_hosts(self) -> None:
+        def alias(target, value):
+            target.with_name("reviewer.json").hardlink_to(target)
+            value.clear()
+            value.update(json.loads(target.read_bytes()))
+        self.inventory_race(alias)
+
+    def test_inventory_parent_replacement_with_identical_bytes_is_refused_on_both_hosts(self) -> None:
+        def replace_parent(target, value):
+            previous = target.read_bytes()
+            target.parent.rename(target.parent.with_name("moved-feature"))
+            target.parent.mkdir()
+            target.write_bytes(previous)
+            # Same bytes must still be refused: the directory is a different authority.
+            value.clear()
+            value.update(json.loads(previous))
+        self.inventory_race(replace_parent)
+
+    def test_inventory_symlink_substitution_is_refused_on_both_hosts(self) -> None:
+        def link(target, value):
+            other = target.with_name("reviewer.json")
+            other.write_text(json.dumps(value))
+            target.unlink()
+            target.symlink_to(other.name)
+        self.inventory_race(link)
+        self.inventory_race(link, install=True)
+
+    def test_inventory_hardlink_substitution_is_refused_on_both_hosts(self) -> None:
+        def link(target, value):
+            other = target.with_name("reviewer.json")
+            other.write_text(json.dumps(value))
+            target.unlink()
+            target.hardlink_to(other)
+        self.inventory_race(link)
+        self.inventory_race(link, install=True)
+
+    def test_existing_symlink_and_hardlink_inventories_remain_refused(self) -> None:
+        for kind in ("symlink", "hardlink"):
+            with self.subTest(kind=kind):
+                self.setUp()
+                target = self.root / FINDINGS
+                other = target.with_name("reviewer.json")
+                other.write_text('{"F1": ["reviewer request"]}')
+                getattr(target, f"{kind}_to")(other)
+                with self.assertRaises((OSError, ValueError)):
+                    plan_stage_terminal.planning_approval.add_findings(self.root, FEATURE, ["confidence-composite"])
+                self.assertEqual(json.loads(other.read_bytes()), {"F1": ["reviewer request"]})
+
 
 
 class GuardTests(TerminalFixture):
