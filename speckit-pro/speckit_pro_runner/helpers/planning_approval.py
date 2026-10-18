@@ -11,6 +11,7 @@ from typing import Any
 
 from ..atomic_write import snapshot_write_target, write_bytes_atomic
 from ..canonical_json import canonical_bytes
+from ..cli_probe import probe
 from ..formal.evidence import CHECKPOINT_ROWS, read_checkpoint, record_path
 from ..formal.primitives import CATALOG_PATH
 from ..quality_gates import SHIPPED_DEFAULTS
@@ -453,6 +454,15 @@ def refused(field: str, reason: str) -> ValueError:
     return ValueError(f"planning approval field {field}: {reason}; return to plan review")
 
 
+def admit_repository(root: Path, repository: Any) -> None:
+    """Bind the portable owner/name identity to this checkout's origin without network access."""
+    origin = probe(root, ["git", "remote", "get-url", "origin"], allowed=("git",), timeout=10)
+    expected = {f"{prefix}{repository}{suffix}" for prefix in
+                ("https://github.com/", "git@github.com:", "ssh://git@github.com/") for suffix in ("", ".git")}
+    if origin["exit_status"] != 0 or origin["stdout_tail"] not in expected:
+        raise refused("repository", "the approval does not identify this checkout's origin")
+
+
 def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, Any]:
     """Admit implement only for a valid record bound to the current manifest, else name the failing field."""
     directory = root / feature / "plan-approvals"
@@ -467,6 +477,7 @@ def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, An
         raise refused("record", f"the record is not valid JSON ({error})") from error
     if not isinstance(stored, dict):
         raise refused("record", "the record is not a JSON object")
+    admit_repository(root, stored.get("repository"))
     for field, reason in (("canary_issued", "a canary-issued record never admits production"),
                           ("withdrawn_by", "the approval was withdrawn"),
                           ("superseded_by", "a later approval supersedes this record")):

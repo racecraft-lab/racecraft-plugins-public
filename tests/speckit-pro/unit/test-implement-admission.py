@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Implement admission: every implement entry needs a valid plan approval record."""
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -20,10 +21,11 @@ STAGE_WORKFLOW = (HERE / "fixtures/autopilot-stage/workflow.md").read_text()
 class AdmissionFixture(PlanningApprovalFixture):
     def setUp(self):
         super().setUp()
+        subprocess.run(["git", "-C", str(self.root), "remote", "add", "origin", "https://github.com/example/project.git"], check=True)
         (self.feature / "workflow.md").write_text(STAGE_WORKFLOW)
 
-    def record(self):
-        reply = self.call("record", "apply", approval=self.approval())
+    def record(self, **changes):
+        reply = self.call("record", "apply", approval={**self.approval(), **changes})
         self.assertEqual(reply["status"], "ok", reply)
         return self.root / reply["data"]["record_path"], reply["data"]["record"]
 
@@ -54,12 +56,15 @@ class PlanApprovalAdmissionTest(AdmissionFixture):
             with self.subTest(field=field):
                 path.write_text(json.dumps({**record, field: value}))
                 self.refusal(self.call("admit"), field)
+        path.write_text("{not json")
+        self.refusal(self.call("admit"), "record")
+
+    def test_non_object_findings_names_the_record(self):
+        path, record = self.record()
         for findings in (None, 5):
             with self.subTest(findings=findings):
                 path.write_text(json.dumps({**record, "findings": findings}))
                 self.refusal(self.call("admit"), "record")
-        path.write_text("{not json")
-        self.refusal(self.call("admit"), "record")
 
     def test_a_failed_finding_check_names_the_finding(self):
         path, record = self.record()
@@ -75,6 +80,33 @@ class PlanApprovalAdmissionTest(AdmissionFixture):
         self.assertEqual(self.call("record", "apply", approval=revised)["status"], "ok")
         (self.feature / "plan.md").write_text("A plan")
         self.refusal(self.call("admit"), "superseded_by")
+
+
+class RepositoryAdmissionTest(AdmissionFixture):
+    def test_a_foreign_repository_approval_is_refused_by_name(self):
+        self.record(repository="someone-else/unrelated")
+        self.refusal(self.call("admit"), "repository")
+
+    def test_changed_repository_identity_is_refused_by_name(self):
+        path, record = self.record()
+        for repository in ("someone-else/unrelated", None, ""):
+            with self.subTest(repository=repository):
+                path.write_text(json.dumps({**record, "repository": repository}))
+                self.refusal(self.call("admit"), "repository")
+
+    def test_origin_identity_is_required_across_remote_spellings(self):
+        self.record()
+        for remote in ("https://github.com/example/project", "git@github.com:example/project.git",
+                       "ssh://git@github.com/example/project.git"):
+            with self.subTest(remote=remote):
+                subprocess.run(["git", "-C", str(self.root), "remote", "set-url", "origin", remote], check=True)
+                self.assertEqual(self.call("admit")["status"], "ok")
+        for remote in ("https://github.com/another/project.git", "https://elsewhere.example/example/project.git"):
+            with self.subTest(remote=remote):
+                subprocess.run(["git", "-C", str(self.root), "remote", "set-url", "origin", remote], check=True)
+                self.refusal(self.call("admit"), "repository")
+        subprocess.run(["git", "-C", str(self.root), "remote", "remove", "origin"], check=True)
+        self.refusal(self.call("admit"), "repository")
 
 
 class StageAdmissionTest(AdmissionFixture):
@@ -120,5 +152,5 @@ class StageAdmissionTest(AdmissionFixture):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (PlanApprovalAdmissionTest, StageAdmissionTest))
+                               for case in (PlanApprovalAdmissionTest, RepositoryAdmissionTest, StageAdmissionTest))
     raise SystemExit(run_counted(suite, label="test-implement-admission"))
