@@ -38,9 +38,9 @@ label_names = _release_note_policy.label_names
 sanitize_fallback_subject = _release_note_policy.sanitize_fallback_subject
 sanitize_release_note = _release_note_policy.sanitize_release_note
 validate_release_note = _release_note_policy.validate_release_note
-MAX_COMPARE_COMMITS = 250
+COMPARE_PAGE_SIZE = 100
 APPENDIX_HEADING = "## Commit appendix"
-HIGHLIGHTS_HEADING = "## Highlights"
+HIGHLIGHTS_HEADING = _release_note_policy.HIGHLIGHTS_HEADING
 VALIDATION_FAILURE_OUTCOME = "release_note_validation_failed"
 VALIDATION_PASS_OUTCOME = "release_note_validation_passed"
 SNAPSHOT_MARKER_PREFIX = "<!-- release-note-composer-snapshot:v1 "
@@ -56,7 +56,7 @@ SNAPSHOT_MARKER_RE = re.compile(
     r"\n\n<!-- release-note-composer-snapshot:v1 "
     r"source_sha256=(?P<source_sha256>[0-9a-f]{64}) "
     r"payload_sha256=(?P<payload_sha256>[0-9a-f]{64}) "
-    r"compare_commit_count=(?P<compare_commit_count>0|[1-9][0-9]{0,2}) -->\Z"
+    r"compare_commit_count=(?P<compare_commit_count>0|[1-9][0-9]*) -->\Z"
 )
 @dataclass(frozen=True)
 class PersistedSnapshot:
@@ -163,7 +163,7 @@ def discover_commits(
     compare: Mapping[str, object],
     headers: Mapping[str, str],
 ) -> list[DiscoveredCommit]:
-    """Validate one complete Compare response and discover every trailing PR."""
+    """Validate a complete (possibly assembled) Compare and discover every trailing PR."""
     if _header_value(headers, "Link").strip():
         raise CompositionError("Compare API response is paginated")
 
@@ -174,11 +174,6 @@ def discover_commits(
     if total_value != len(commits_value):
         raise CompositionError(
             f"Compare API response is truncated: total_commits={total_value}, returned={len(commits_value)}"
-        )
-    if total_value > MAX_COMPARE_COMMITS:
-        raise CompositionError(
-            f"Compare API range exceeds the non-paginated {MAX_COMPARE_COMMITS}-commit limit: "
-            f"total_commits={total_value}"
         )
 
     discovered: list[DiscoveredCommit] = []
@@ -227,7 +222,7 @@ def load_persisted_snapshot(
     expected_source_sha256: str | None = None,
 ) -> PersistedSnapshot | None:
     """Load an existing composed body only when all immutable digests verify."""
-    if not release_body.startswith(f"{HIGHLIGHTS_HEADING}\n"):
+    if not _release_note_policy.is_composed_release_body(release_body):
         return None
     marker = f"\n\n{SNAPSHOT_MARKER_PREFIX}"
     if release_body.count(marker) != 1:
@@ -252,8 +247,6 @@ def load_persisted_snapshot(
         raise CompositionError("persisted release-note snapshot appendix does not match RELEASE_BODY")
 
     compare_commit_count = int(match.group("compare_commit_count"))
-    if compare_commit_count > MAX_COMPARE_COMMITS:
-        raise CompositionError("persisted release-note snapshot Compare commit count exceeds 250")
     return PersistedSnapshot(
         payload=payload,
         source_sha256=source_sha256,
@@ -338,8 +331,6 @@ def compose_release_body(
         raise CompositionError(
             "release input snapshot Compare commit count is smaller than the resolved pull set"
         )
-    if compare_commit_count > MAX_COMPARE_COMMITS:
-        raise CompositionError("release input snapshot Compare commit count exceeds 250")
     if source_sha256 is None:
         source_sha256 = _sha256_text(raw_release_body)
     if not re.fullmatch(r"[0-9a-f]{64}", source_sha256):
@@ -413,6 +404,51 @@ def canonical_snapshot_bytes(snapshot: Mapping[str, object]) -> bytes:
     return f"{encoded}\n".encode("utf-8")
 
 
+def compare_page_commits(
+    response: Mapping[str, object], first: Mapping[str, object], page: int, expected: int,
+) -> list[object]:
+    """Validate page metadata and length before adding it to the captured range."""
+    if type(response.get("total_commits")) is not int or response["total_commits"] != first["total_commits"]:
+        raise CompositionError(f"Compare API page {page} has inconsistent total_commits")
+    for key in ("base_commit", "merge_base_commit"):
+        if response.get(key) != first.get(key):
+            raise CompositionError(f"Compare API page {page} has inconsistent {key}")
+    items = response.get("commits")
+    if not isinstance(items, list) or len(items) != expected:
+        raise CompositionError(f"Compare API page {page} is truncated or inconsistent: expected {expected} commits")
+    return items
+
+
+def fetch_complete_compare(client: GitHubClient, base: str, head: str) -> dict[str, object]:
+    """Assemble paginated commits into the existing immutable Compare shape.
+
+    GitHub documents chronological pagination, with at most 100 commits per page:
+    https://docs.github.com/en/rest/commits/commits#compare-two-commits
+    """
+    path = f"/repos/{client.repository}/compare/{base}...{head}?per_page={COMPARE_PAGE_SIZE}"
+    first, _headers = client.request_json("GET", f"{path}&page=1")
+    total = first.get("total_commits")
+    if isinstance(total, bool) or not isinstance(total, int) or total < 0:
+        raise CompositionError("Compare API response has invalid total_commits")
+
+    commits: list[object] = []
+    seen_shas: set[str] = set()
+    page_count = max(1, (total + COMPARE_PAGE_SIZE - 1) // COMPARE_PAGE_SIZE)
+    for page in range(1, page_count + 1):
+        response = first
+        if page > 1:
+            response, _headers = client.request_json("GET", f"{path}&page={page}")
+        expected = min(COMPARE_PAGE_SIZE, total - len(commits))
+        items = compare_page_commits(response, first, page, expected)
+        for item in items:
+            sha = item.get("sha") if isinstance(item, dict) else None
+            if not isinstance(sha, str) or not sha.strip() or sha in seen_shas:
+                raise CompositionError(f"Compare API page {page} has a missing or duplicate commit SHA")
+            seen_shas.add(sha)
+        commits.extend(items)
+    return {**first, "commits": commits}
+
+
 def capture_release_input_snapshot(
     client: GitHubClient,
     tag: str,
@@ -423,11 +459,8 @@ def capture_release_input_snapshot(
     previous_tag = explicit_previous_tag or parse_previous_tag(raw_body, tag)
     base = urllib.parse.quote(previous_tag, safe="")
     head = urllib.parse.quote(tag, safe="")
-    compare, headers = client.request_json(
-        "GET",
-        f"/repos/{client.repository}/compare/{base}...{head}",
-    )
-    commits = discover_commits(compare, headers)
+    compare = fetch_complete_compare(client, base, head)
+    commits = discover_commits(compare, {})
     pulls: dict[str, dict[str, object]] = {}
     for commit in commits:
         try:
@@ -447,11 +480,9 @@ def capture_release_input_snapshot(
             "labels": sorted(label_names(pr)),
         }
 
-    link = _header_value(headers, "Link").strip()
-    compare_headers = {"Link": link} if link else {}
     return {
         "compare": compare,
-        "compare_headers": compare_headers,
+        "compare_headers": {},
         "previous_tag": previous_tag,
         "pulls": pulls,
         "release_body": raw_body,
