@@ -117,8 +117,15 @@ INSTALLED_PLUGIN_ROOT = Path(__file__).resolve().parents[3]
 if str(INSTALLED_PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(INSTALLED_PLUGIN_ROOT))
 from speckit_pro_runner.autopilot_state import UUID_PATTERN as STATE_UUID_PATTERN  # noqa: E402
+from speckit_pro_runner.workflow_stage import (  # noqa: E402
+    AUTOPILOT_OPEN_STATUSES,
+    AUTOPILOT_TERMINAL_STATUSES as WORKFLOW_TERMINAL_STATUSES,
+    AUTOPILOT_STATUS_VALUES as WORKFLOW_STATUS_VALUES,
+)
 from speckit_pro_runner.json_schema import json_schema_failures, json_values_equal  # noqa: E402
 from speckit_pro_runner.helpers.nesting_preflight import nesting_evidence_matches  # noqa: E402
+
+WORKFLOW_OPEN_STATUSES = AUTOPILOT_OPEN_STATUSES
 
 _LIB_DIR = str(Path(__file__).resolve().parent / "lib")
 if _LIB_DIR not in sys.path:
@@ -238,26 +245,7 @@ WORKFLOW_PHASE_GATE_IDS = {
 # terminal, but leaving one open must not make every row below it read as out of
 # order -- G6.5 is advisory by default, so Pending is its normal resting state.
 WORKFLOW_ADVISORY_PHASES = frozenset({"Confidence Gate"})
-WORKFLOW_TERMINAL_STATUSES = frozenset({
-    "Complete",
-    "✅ Complete",
-    "Skipped",
-    "✅ Skipped",
-    # U+23ED with and without the U+FE0F variation selector; both render alike.
-    "⏭ Skipped",
-    "⏭️ Skipped",
-})
-WORKFLOW_OPEN_STATUSES = frozenset({
-    "Pending",
-    "⏳ Pending",
-    "In Progress",
-    "\U0001f504 In Progress",
-    "Blocked",
-    # U+26A0 with and without the U+FE0F variation selector; both render alike.
-    "⚠ Blocked",
-    "⚠️ Blocked",
-})
-WORKFLOW_STATUS_VALUES = WORKFLOW_TERMINAL_STATUSES | WORKFLOW_OPEN_STATUSES
+
 # Markdown list, task-list, blockquote, and heading prefixes are stripped before
 # matching so a gate recorded as `- G3 gate: PASS` is evidence like any other.
 GATE_LINE_PREFIX_RE = re.compile(

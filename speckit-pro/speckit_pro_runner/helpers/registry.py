@@ -24,6 +24,7 @@ from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .g0_setup import run_g0_setup_helper
 from .harm_halt import apply_refusal as harm_halt_refusal, run_harm_halt_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
+from .planning_approval import run_planning_approval_helper
 from .plan_stage_terminal import run_plan_stage_terminal_helper
 from .quality_gates_proposal import run_quality_gates_proposal_helper
 from .readiness_record import run_feature_offers_helper, run_readiness_record_helper
@@ -499,6 +500,11 @@ HELPERS: dict[str, HelperEntry] = {
 
 
 MUTATION_HELPERS: dict[str, MutationEntry] = {
+    "planning-approval": MutationEntry(
+        "planning-approval", "planning-approval", ("read_only", "dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("planning-approval"),
+        ("planning-approval-apply",),
+    ),
     "resolve-nesting-mode": MutationEntry(
         "resolve-nesting-mode", "resolve-nesting-mode", ("apply",), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("resolve-nesting-mode"),
@@ -990,6 +996,7 @@ def finish_plan_stage(entry: MutationEntry, request: Any) -> dict[str, Any]:
 
 # The table that routes runner-owned state helper ids to their handlers.
 STATE_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "planning-approval": run_planning_approval_helper,
     "resolve-nesting-mode": apply_nesting_preflight_helper,
     "write-readiness-record": run_readiness_record_helper,
     "record-feature-offers": run_feature_offers_helper,

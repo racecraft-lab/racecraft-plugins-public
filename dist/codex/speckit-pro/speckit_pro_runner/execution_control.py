@@ -41,10 +41,6 @@ AGENT_REPLAN_APPROVAL = (AGENT_REPLAN_PREFIX, AGENT_REPLAN_CAP)
 AGENT_CONTINUATION_APPROVAL = (AGENT_CONTINUATION_PREFIX, AGENT_CONTINUATION_CAP)
 AGENT_APPROVAL_CAPS = (AGENT_RETRY_APPROVAL, AGENT_REPLAN_APPROVAL, AGENT_CONTINUATION_APPROVAL)
 UNIT_CLASSIFICATIONS = ("no_effect", "partial", "complete")
-UNKNOWN_GUARDED_ACTIONS = frozenset({"reserve", "authorize-corrective-retry", "authorize-corrective-continuation",
-                                     "authorize-corrective-exception", "reserve-class-correction",
-                                     "begin-replan-epoch", "begin-stage-epoch", "begin-verification",
-                                     "bind-invariants"})
 CORRECTIVE_REFUSALS = {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}
 CLASS_CHANGE_KINDS = {"test_timeout"}
 CLASS_FOLLOW_UP_LIMIT = 2
@@ -2710,29 +2706,71 @@ def begin_stage_epoch(root: Path, ledger: dict[str, Any], inputs: dict[str, Any]
     return {"stage_epoch_opened": True, "corrective_epoch": len(ledger["corrective_epochs"])}
 
 
-def _bind_invariants_if_requested(root: Path, inputs: dict[str, Any], spec: Path,
-                                  ledger: dict[str, Any], now: float, reasons: list[str]) -> None:
-    if inputs.get("action") != "bind-invariants":
-        return
-    if inputs.get("spec_file") is None:
+class FailurePathCall(NamedTuple):
+    """Everything a failure-path action may read; the seam passes nothing else."""
+
+    root: Path
+    ledger: dict[str, Any]
+    inputs: dict[str, Any]
+    spec: Path
+    workflow: Path
+    now: float
+    held: bool  # a clock or unknown-dispatch reason holds the run
+
+
+class _FailurePathAction(NamedTuple):
+    run: Callable[[FailurePathCall], dict[str, Any]]
+    # Refuses a malformed request even while a clock or unknown-dispatch reason holds the run.
+    check: Callable[[FailurePathCall], None] | None = None
+
+
+def _require_bind_spec(call: FailurePathCall) -> None:
+    if call.inputs.get("spec_file") is None:
         raise ValueError("bind-invariants requires an explicit spec_file")
-    if reasons:
-        return
+
+
+def _freeze_invariants(call: FailurePathCall) -> dict[str, Any]:
+    ledger = call.ledger
     if ledger["approved_invariants"] or "invariant_binding" in ledger:
         raise ValueError("invariant registry is already frozen for this run")
-    spec_bytes = spec.read_bytes()
+    spec_bytes = call.spec.read_bytes()
     ledger["approved_invariants"] = _spec_invariants(spec_bytes)
     ledger["invariant_binding"] = {
-        "spec_file": spec.relative_to(root.resolve()).as_posix(),
-        "spec_sha256": hashlib.sha256(spec_bytes).hexdigest(), "bound_at": now,
+        "spec_file": call.spec.relative_to(call.root.resolve()).as_posix(),
+        "spec_sha256": hashlib.sha256(spec_bytes).hexdigest(), "bound_at": call.now,
     }
+    return {}
 
 
-_ACTIONS = frozenset({"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry",
-                      "authorize-corrective-continuation", "authorize-corrective-exception",
-                      "reserve-class-correction", "begin-replan-epoch", "begin-stage-epoch", "begin-verification",
-                      "complete", "reconcile", "reconcile-unit", "checkpoint", "pause", "resume",
-                      "relocate-workflow", RECORD_FINALIZE_CYCLE})
+# The failure-path seam: corrective budgets and allowances, operator events, replan and stage
+# epochs, and the frozen-invariant registry. Every such action is reached only through this table.
+FAILURE_PATH_ACTIONS: dict[str, _FailurePathAction] = {
+    "bind-invariants": _FailurePathAction(_freeze_invariants, _require_bind_spec),
+    "reserve": _FailurePathAction(lambda c: reserve(c.ledger, c.inputs, c.now, c.root, c.spec)),
+    "authorize-corrective-retry": _FailurePathAction(
+        lambda c: authorize_corrective_retry(c.ledger, c.inputs, c.now)),
+    "authorize-corrective-continuation": _FailurePathAction(
+        lambda c: authorize_corrective_continuation(c.root, c.ledger, c.inputs, c.spec, c.now)),
+    "authorize-corrective-exception": _FailurePathAction(
+        lambda c: authorize_corrective_exception(c.ledger, c.inputs, c.now)),
+    "reserve-class-correction": _FailurePathAction(lambda c: reserve_class_correction(c.ledger, c.inputs, c.now)),
+    "begin-replan-epoch": _FailurePathAction(
+        lambda c: begin_replan_epoch(c.root, c.ledger, c.inputs, c.spec, c.now)),
+    "begin-stage-epoch": _FailurePathAction(
+        lambda c: begin_stage_epoch(c.root, c.ledger, c.inputs, c.workflow, c.now)),
+}
+UNKNOWN_GUARDED_ACTIONS = frozenset({*FAILURE_PATH_ACTIONS, "begin-verification"})
+_ACTIONS = frozenset({"start", "status", "begin-verification", "complete", "reconcile", "reconcile-unit",
+                      "checkpoint", "pause", "resume", "relocate-workflow", RECORD_FINALIZE_CYCLE,
+                      *FAILURE_PATH_ACTIONS})
+
+
+def run_failure_path(action: str, call: FailurePathCall, held_result: dict[str, Any]) -> dict[str, Any]:
+    """Run one failure-path action; `held_result` is what a held run reports instead."""
+    entry = FAILURE_PATH_ACTIONS[action]
+    if entry.check is not None:
+        entry.check(call)
+    return held_result if call.held else entry.run(call)
 
 
 class _Control(NamedTuple):
@@ -2814,26 +2852,11 @@ def _load_ledger(ctl: _Control, now: float) -> dict[str, Any]:
 
 
 def _guarded_action(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[str, Any]:
-    """The actions that run only while no clock or unknown-dispatch reason holds."""
-    action, inputs, root, spec = ctl.action, ctl.inputs, ctl.root, ctl.spec
-    if action == RECORD_FINALIZE_CYCLE:
-        return record_finalize_cycle(root, ledger, inputs, ctl.relative, ctl.finalizer)
-    if action == "reserve":
-        return reserve(ledger, inputs, now, root, spec)
-    if action == "authorize-corrective-retry":
-        return authorize_corrective_retry(ledger, inputs, now)
-    if action == "authorize-corrective-continuation":
-        return authorize_corrective_continuation(root, ledger, inputs, spec, now)
-    if action == "authorize-corrective-exception":
-        return authorize_corrective_exception(ledger, inputs, now)
-    if action == "reserve-class-correction":
-        return reserve_class_correction(ledger, inputs, now)
-    if action == "begin-replan-epoch":
-        return begin_replan_epoch(root, ledger, inputs, spec, now)
-    if action == "begin-stage-epoch":
-        return begin_stage_epoch(root, ledger, inputs, ctl.workflow, now)
-    if action == "begin-verification":
-        return begin_verification(ledger, inputs)
+    """The non-failure-path actions that run only while no clock or unknown-dispatch reason holds."""
+    if ctl.action == RECORD_FINALIZE_CYCLE:
+        return record_finalize_cycle(ctl.root, ledger, ctl.inputs, ctl.relative, ctl.finalizer)
+    if ctl.action == "begin-verification":
+        return begin_verification(ledger, ctl.inputs)
     return {}
 
 
@@ -2849,6 +2872,9 @@ def _run_action(ctl: _Control, ledger: dict[str, Any], now: float, reasons: list
         return record_result(ledger, ctl.inputs, now, ctl.root), clock_reasons(ledger, now)
     if action in {"checkpoint", "pause", "resume"}:
         return checkpoint_or_wait(ledger, ctl.inputs, now), clock_reasons(ledger, now)
+    if action in FAILURE_PATH_ACTIONS:
+        call = FailurePathCall(ctl.root, ledger, ctl.inputs, ctl.spec, ctl.workflow, now, bool(reasons))
+        return run_failure_path(action, call, extra), reasons
     return (extra if reasons else _guarded_action(ctl, ledger, now)), reasons
 
 
@@ -2876,7 +2902,6 @@ def _update_ledger(ctl: _Control) -> dict[str, Any]:
         extra[BLOCKED_BY_FIELD] = blockers
     if "clock_moved_backwards" in reasons and ctl.action not in {"status", "start"}:
         raise ValueError("clock moved backwards; preserve the ledger and reconcile time before continuing")
-    _bind_invariants_if_requested(ctl.root, ctl.inputs, ctl.spec, ledger, now, reasons)
     extra, reasons = _run_action(ctl, ledger, now, reasons, extra)
     reasons.extend(extra.pop("reasons", []))
     if ctl.mode == "apply":

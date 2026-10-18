@@ -20,6 +20,18 @@ description: >
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
+## Recorded planning approval
+
+The shared runner helper `planning-approval` exposes the record foundation for
+explicit plan review. It does not start implementation or supply security consent.
+Send `helper_id` and `operation` as `planning-approval`, with `inputs` containing
+`feature_dir`, `workflow_file`, and `action`. Use `manifest` or `verify` with
+`mode=read_only`; use `record` with `mode=dry_run` or `apply` and an `approval`
+object; see [record inputs](./references/planning-approval.md). The runner owns the inventory, normalization and refusal rules.
+Both hosts consume the same `data.manifest_digest`, `data.record_path` and
+record. Approval assurance is `recorded`; preserve the original confirmation
+reference. Never invent a human confirmation or write the record directly.
+
 ## Installed Runtime Contract
 
 Before the first runner call, resolve `<plugin-root>` and keep the caller's
