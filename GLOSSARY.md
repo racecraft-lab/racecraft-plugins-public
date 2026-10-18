@@ -170,6 +170,10 @@ _Avoid_: corrective budget, corrective cycle, replan epoch, escalation tier
 An advisory assessment of how much work a SPEC or one of its declared slices asks a human to review. It includes the size evidence and any unresolved uncertainty.
 _Avoid_: reviewability block, size gate
 
+**Rung**:
+One attempt on the retry ladder: the current agent, a fresh agent with a consensus diagnosis, or the strongest model at max effort. The runner picks the next rung from the ledger and returns its model and effort. An interrupted dispatch spends no rung the first time; a second interruption of the same rung spends it.
+_Avoid_: tier, escalation tier
+
 **Scaffold branch**:
 The dedicated branch scaffold derives from the roadmap's spec identity and exact title, and uses unchanged for its worktree, spec directory and workflow. The same roadmap entry gives the same branch on both hosts.
 _Avoid_: model-chosen short name, host-specific branch

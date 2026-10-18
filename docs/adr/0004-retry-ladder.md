@@ -26,7 +26,8 @@ Metadata-only task rewording survives. The runner proves it scope-neutral agains
 
 ## Consequences
 
-- Which model and effort each rung uses on each host is still open, and goes with the ladder-size ticket.
+- Rung 1 is the current agent. Rung 2 is a fresh agent with the shipped `implement-executor` model and effort (`opus` at `xhigh` on Claude Code, `gpt-6-sol` at `xhigh` on Codex). Rung 3 is the strongest shipped model at `max` effort (`opus` on Claude Code, `gpt-6-sol` on Codex). The runner holds the table in `retry_ladder.py` and returns the model and effort when it admits a rung.
+- An interruption (an analyst turn limit, a compaction, a lost session) spends no rung the first time. A second interruption of the same rung spends it, so a check never costs more than six dispatches.
 - Blocked-for-UAT storage, evidence, resume and review rendering are defined in [ADR 0012](0012-blocked-for-uat.md).
 - The mid-run stops that remain (`checkpoint_required`, ledger integrity errors, harm halts) belong to the stop-policy decision.
 - Whether a plan with a blocked planning gate can be approved belongs to the plan approval decision.
