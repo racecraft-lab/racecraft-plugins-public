@@ -1497,11 +1497,12 @@ class CodexEffectiveEffortTests(InProjectCase):
 class RetryLadderTopRungTests(unittest.TestCase):
     def test_third_rung_stays_the_strongest_model_at_max_effort(self):
         # ADR 0004: the plan-stage table lowers executor effort; a failing check still escalates to the top.
+        from speckit_pro_runner.execution_control import UnitEscalation
         from speckit_pro_runner.helpers import run_finalization
         rung = "strongest model at max effort"
         self.assertIn(rung, (REPO / "docs/adr/0004-retry-ladder.md").read_text())
         self.assertIn(rung, (REFERENCES / "stop-policy.md").read_text())
-        self.assertIn(rung, run_finalization._tier_steps("tier3"))
+        self.assertIn(rung, run_finalization._tier_steps(UnitEscalation("tier3", None, 3)))
 
 class PhaseBriefPathTests(InProjectCase):
     def test_safe_path_text_is_preserved(self):
