@@ -58,6 +58,8 @@ values are exempt from approval. Regenerated host payloads carry the same code.
 
 ## Known limits
 
+- **Low `R1373-1b7d8898`.** The `PR#-?[0-9]+` alternative in NAVIGATION_TOKEN is dead after the PRS block was bound. It only exempts a backlink to a feature-root file named PR#N; the match is whole-token and such a file is already bound by the inventory, so it cannot cause a false pass.
+
 - **Punctuation-adjacent underscores require re-approval.** A legitimate path
   such as `pkg/__init__.py` can render emphasis in a generated cell or link
   label, so it stays bound even when the contributor intended a plain filename.
@@ -97,6 +99,20 @@ values are exempt from approval. Regenerated host payloads carry the same code.
   the first assertion fails under the original projection. The dedicated
   request-seam attack tests separately record, mutate, regenerate and verify
   every reported variant on the source and both hosts.
+- **Each multi-PR slice changes the planning digest (Low).** Emission step 9
+  in `post-implementation.md` persists the slice's PRS row and regenerates
+  SPEC-MOC, so every slice PR now needs a fresh approval before `verify`
+  passes again. `workflow-file-protocol.md` still calls its table "every
+  post-approval progress write", although its `spec-map-navigation` row now
+  says the PRS block is planning. No automated step calls `verify` today
+  (`planning-approval.md`: review orchestration and admission are separate
+  work), so no run halts. When an admission gate adopts `verify`, it must
+  re-approve after each slice; the result fails closed, never a false pass.
+- **The BACKLINKS zone guard has no behavior test (Info).** Removing
+  `zone == "backlinks"` from `navigation_progress` fails only the shipped-host
+  byte checks. It cannot be reached today: PRS v2 rows start with `|`, v1 rows
+  contain `·`, and the index zone is always empty, so no PRS line matches the
+  backlink pattern.
 - **Linux is not native macOS coverage.** The isolated runner cannot cover
   native macOS plugin CI. The orchestrator runs those host checks before
   merging.
