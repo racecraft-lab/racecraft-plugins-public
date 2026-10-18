@@ -9,7 +9,7 @@ artifact edits, and logging remain authoritative. On Codex, every shared
 consensus-synthesizer step dispatches the installed
 `consensus-synthesizer`, awaits its actual result, and validates that result
 before the parent applies any edit. The parent never performs synthesis as a
-fallback. Dispatch means calling `spawn_agent` with `fork_turns="none"` and the installed
+fallback. Dispatch (with `fork_turns="none"`) means calling `spawn_agent` with the installed
 `consensus-synthesizer` role, then `wait_agent` and consuming that returned
 result.
 <!-- /host -->

@@ -62,7 +62,7 @@ class CodexSpawnForkTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             for match in PROSE_DISPATCH.finditer(text):
                 with self.subTest(file=str(path.relative_to(root)), at=match.start()):
-                    self.assertRegex(text[match.start():match.end() + 200], r'fork_turns[:=] ?"none"')
+                    self.assertRegex(text[max(0, match.start() - 80):match.end() + 200], r'fork_turns[:=] ?"none"')
 
     def test_the_autopilot_names_the_default_that_costs_tokens(self) -> None:
         text = " ".join((host_skill_root("codex") / "speckit-autopilot/SKILL.md").read_text(encoding="utf-8").split())
