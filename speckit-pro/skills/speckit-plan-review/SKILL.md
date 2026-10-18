@@ -39,8 +39,7 @@ Before recommending, enumerate the tools and skills your session actually expose
 ## Installed Runtime Contract
 
 Resolve `<plugin-root>` per [Installed runner transport](../speckit-autopilot/references/installed-runtime.md).
-Send one JSON request per runner call on stdin and read one JSON reply. Add no shell, `jq` or
-`git` step. Runner helpers follow the session's permissions; if one is denied, say so and stop that step.
+Send one JSON request per runner call on stdin and read one JSON reply. Add no shell step. Runner helpers follow the session's permissions; if one is denied, say so and stop that step.
 
 ## Invocation
 
