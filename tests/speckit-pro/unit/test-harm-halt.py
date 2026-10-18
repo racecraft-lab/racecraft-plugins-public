@@ -55,7 +55,7 @@ class QuietTerminal(MutationRequestCase):
         return dispatch_helper(request)
 
 
-class HarmHaltTests(QuietTerminal):
+class HarmHaltCase(QuietTerminal):
     helper_id = "harm-halt"
     files = {WORKFLOW: "# Workflow\n"}
 
@@ -63,6 +63,8 @@ class HarmHaltTests(QuietTerminal):
         trigger = {"reason": reason, "evidence": evidence, "last_safe_state": SAFE_STATE}
         return self.call("apply", action="halt", **trigger)
 
+
+class HarmHaltTests(HarmHaltCase):
     def test_no_record_means_resume_is_allowed_and_writes_proceed(self) -> None:
         self.assertEqual((False, "allowed"), tuple(self.read_only_data()[key] for key in ("halted", "resume")))
         self.assertEqual("ok", self.write_attempt()["status"])
@@ -118,6 +120,7 @@ class HarmHaltTests(QuietTerminal):
         self.assertEqual("harm_halt_active", self.write_attempt()["diagnostics"][0]["code"])
 
 
+class HarmHaltRecordTests(HarmHaltCase):
     def test_the_record_never_holds_the_secret(self) -> None:
         cases = (("secret_exposure", f"token={SECRET}"), ("tampering_or_forged_evidence", f"the page links {SECRET} here"))
         for reason, evidence in cases:
@@ -592,7 +595,7 @@ class OwnerTerminalGuardTests(OwnerTerminalCase):
 
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                              for case in (HarmHaltTests, HaltDispatchTests, HaltConcurrencyTests,
+                              for case in (HarmHaltTests, HarmHaltRecordTests, HaltDispatchTests, HaltConcurrencyTests,
                                            HaltPublicationFailureTests, HaltClearTokenTests, HaltTokenExposureTests,
                                            OwnerTerminalWalkTests, OwnerTerminalWriteTests, OwnerTerminalGuardTests))
 
