@@ -13,7 +13,9 @@ while `verify` still accepted the old approval.
 `map_navigation` in `helpers/planning_approval.py` now drops a generated line
 only when it is the renderer's fixed frame (the PRS notice, blank line, table
 header and rule) or a row whose every runtime value is a bounded token: ASCII
-letters, digits and `_ . + - /`, or `PR#<integer>`. A token has no whitespace,
+letters, digits and `. + - /`, or `PR#<integer>`. Underscore runs are allowed
+only between ASCII letters or digits (`demo_one.py` and `demo__one.py`), never
+next to punctuation or token boundaries. A token has no whitespace, active
 Markdown or HTML syntax, URL scheme, address, or `www.` prefix. Every other
 generated line stays in the projection, so changing it changes the digest and
 `verify` refuses. Typed progress (new PR rows, SHAs, branch names, statuses,
@@ -24,8 +26,31 @@ class `RuntimeNavigationTest`. Each records an approval, writes the variant,
 regenerates the map with the shared renderer, and calls `verify` through the
 request seam on the source runner and both shipped payloads.
 
+The underscore follow-up also covers `_word_`, `__word__`, and punctuation-
+adjacent delimiter runs. `RuntimeNavigationEdgesTest` checks every declared-
+file position and renames a safe runtime file into single- and double-
+underscore directory names under each excluded directory on all three runners.
+The earlier link, image, autolink, HTML, prose, cell-split and line-split cases
+remain in the same regression matrix. Numeric controls include schema v1 `pr`
+and schema v2 `pr_number` and `review_order`.
+
+The allowlist follows [GFM's emphasis rules](https://github.github.com/gfm/#emphasis-and-strong-emphasis):
+intraword underscores cannot open or close emphasis. This rule belongs to the
+shared planning projection; no renderer or per-host copy decides which runtime
+values are exempt from approval. Regenerated host payloads carry the same code.
+
 ## Known limits
 
+- **Punctuation-adjacent underscores require re-approval.** A legitimate path
+  such as `pkg/__init__.py` can render emphasis in a generated cell or link
+  label, so it stays bound even when the contributor intended a plain filename.
+  Adding or changing that row requires a fresh approval. This fails closed;
+  the input cannot reach an unchanged-digest false pass. Intraword names such as
+  `demo_one.py` and `run_two__parts.json` still count as progress.
+- **GFM is the rendering boundary.** Compatibility with other Markdown
+  dialects has not been verified. A review raised intraword emphasis in a
+  non-GFM renderer as a possible limit; that variant is unreachable under GFM,
+  whose underscore delimiters cannot open or close inside these ASCII words.
 - **A fuzzy linkifier may render a domain-shaped token.** A token such as
   `example.invalid/landing` is plain text under CommonMark and GitHub
   Flavored Markdown. A previewer with fuzzy linkify turned on may still show it
