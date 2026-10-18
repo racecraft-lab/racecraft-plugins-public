@@ -3834,6 +3834,10 @@ class _RetryLadderFixture(_EscalationFixture):
         self.now += 10
         return self.invoke("complete", **{"dispatch_id": dispatch_id, "outcome": "failed", "interrupted": True, **inputs})
 
+    def refusal(self, dispatch_id):
+        """The reasons the ladder gives for a rung it refuses."""
+        return self.climb(dispatch_id)["reasons"]
+
     def refail(self, dispatch_id):
         """Settle a rung as failed, then fail its check again so the next rung is admitted."""
         self.settle(dispatch_id)
@@ -3879,9 +3883,9 @@ class RetryLadderAdmissionTests(_RetryLadderFixture, unittest.TestCase):
 
     def test_one_dispatch_runs_at_a_time_and_a_dispatch_id_is_never_reused(self):
         self.climb("rung-1")
-        self.assertEqual(self.climb("rung-1-parallel")["reasons"], ["retry_ladder_dispatch_open"])
+        self.assertEqual(self.refusal("rung-1-parallel"), ["retry_ladder_dispatch_open"])
         self.refail("rung-1")
-        self.assertEqual(self.climb("rung-1")["reasons"], ["dispatch_already_reserved_no_relaunch"])
+        self.assertEqual(self.refusal("rung-1"), ["dispatch_already_reserved_no_relaunch"])
 
     def test_a_new_epoch_does_not_reset_a_checks_count(self):
         self.climb("rung-1")
