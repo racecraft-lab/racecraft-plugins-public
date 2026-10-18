@@ -1814,7 +1814,17 @@ binding into a normal fail-open page outcome. Do this before step 1.
    ends the sequence with `outcome: stopped`.
 4. The parent dispatches `artifact-preview-observer` for each page in `preview.observer_dispatches`; the isolated observer never inherits general repository tools. The list is empty, and this step is skipped, on a headless run and when the readiness record shows no preview surface.
 5. Validate and commit/push the workflow-only preview evidence. Skip this step when step 4 was skipped.
-6. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. For `outcome: stopped`, the answer's `report` is the stop report for that shape and its `stop_label` is the one marker to print instead, as the precedence rule under the stop report requires.
+6. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. For `outcome: completed`, the answer's `report` is the whole stop report: print it unchanged, then its `stop_label`. For `outcome: stopped`, the answer's `report` is the stop report for that shape and its `stop_label` is the one marker to print instead, as the precedence rule under the stop report requires.
+
+<!-- host:codex: exec_command and write_stdin are Codex tools with no Claude equivalent -->
+**Wait on the finishing call in one poll.** Step 3 commits, pushes and opens the
+pull request, so it can outlast one `exec_command` yield. Send it with
+`yield_time_ms: 30000`, the `exec_command` ceiling. An answer with a `session_id`
+and no integer `exit_code` means the helper is still running: send `write_stdin`
+with empty `chars`, that `session_id` and `yield_time_ms: 300000`. A poll returns
+as soon as the helper exits, so the long yield adds no wait; poll again only
+while the helper still runs.
+<!-- /host -->
 
 <!-- host:codex: Codex runs the preview observer through attest_codex and observe_codex under its own permission profile -->
 Dispatch step 4 through the runner, never by running the observer yourself:
@@ -2017,7 +2027,9 @@ failure shape names the step that failed, the state it left behind, and the
 resume path — one line of substance each, in the style Step 0.6c already uses, so
 the report alone is enough to hand off.
 
-- **Emission ran.** Carry the pull request URL, the artifact index, generation
+- **Emission ran.** On `outcome: completed` the helper's `report` is this
+  report; print it as step 6 says. After a preview observer ran, write it
+  yourself. Carry the pull request URL, the artifact index, generation
   gaps, per-page preview dispositions and blockers, direct local file links, and
   resume instructions. Do not report the review handoff complete while previews
   remain unverified; publication stays successful. Report any failure to commit

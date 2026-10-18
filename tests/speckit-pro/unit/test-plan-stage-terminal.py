@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 sys.path.insert(0, str(ROOT / "speckit-pro"))
 from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner import autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
@@ -301,6 +302,29 @@ class OneCallSequenceTests(TerminalFixture):
         self.assertEqual((data["outcome"], data["stop_label"]), ("preview_pending", None))
         self.assertEqual(data["preview"]["observer_dispatches"], data["pages"]["generated"])
         self.assertEqual(json.loads((self.root / STATE).read_text(encoding="utf-8"))["status"], "completed")
+
+    def test_a_completed_run_returns_the_stop_report_the_parent_prints(self) -> None:
+        """The parent prints `report` and then `stop_label`, so it reads no reference to compose the report."""
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                data = self.finish(host=host, execution_mode="headless")["data"]
+                report = data["report"]
+                self.assertIn(URL, report)
+                for page in data["pages"]["generated"]:
+                    self.assertIn(f"{FEATURE}/artifacts/{page}.html", report)
+                self.assertIn("preview unavailable", report)
+                self.assertIn(f"{plan_stage_terminal.RESUME[host]} {WORKFLOW} --stage implement", report)
+                self.assertNotIn("stop_reason:", report)
+                self.assertIn("`report`", data["next_action"])
+
+    def test_the_stop_report_names_each_generation_gap(self) -> None:
+        artifacts = self.root / FEATURE / "artifacts"
+        artifacts.mkdir()
+        shutil.copy(ROOT / "speckit-pro/artifact-gallery/templates/implementation-plan.html", artifacts / "implementation-plan.html")
+        data = self.finish(execution_mode="headless")["data"]
+        (gap,) = data["pages"]["gaps"]
+        self.assertIn(f"gap: {gap['reason']}", data["report"])
 
     def test_a_dry_run_writes_nothing(self) -> None:
         self.assertEqual(self.finish("dry_run")["status"], "ok")
@@ -1206,6 +1230,30 @@ class GuardTests(TerminalFixture):
         self.assertEqual([gap["id"] for gap in data["pages"]["gaps"]], ["implementation-plan"])
         self.assertNotIn("implementation-plan", self.pages())
         self.assertEqual(data["outcome"], "completed")
+
+
+class TerminalGuidanceTests(unittest.TestCase):
+    """The parent's terminal step costs one response per poll and per reference read (issue 1317)."""
+
+    def section(self, host: str) -> str:
+        reference = (host_skill_root(host) / "speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
+        start = reference.index("#### Draft-PR emission: the terminal-step sequence")
+        return " ".join(reference[start:reference.index("#### The `artifact-author` dispatch", start)].split())
+
+    def test_both_hosts_print_the_helper_report_on_a_completed_run(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.assertIn("For `outcome: completed`, the answer's `report` is the whole stop report", self.section(host))
+
+    def test_a_codex_parent_waits_on_the_finishing_call_in_one_long_poll(self) -> None:
+        for host in ("claude", "codex"):
+            section = self.section(host)
+            with self.subTest(host=host):
+                if host == "codex":
+                    self.assertIn("`yield_time_ms: 30000`", section)
+                    self.assertIn("`yield_time_ms: 300000`", section)
+                else:
+                    self.assertNotIn("write_stdin", section)
 
 
 class FixtureRootTests(unittest.TestCase):
