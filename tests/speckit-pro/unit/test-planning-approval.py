@@ -2,15 +2,13 @@
 """Planning approval at the portable runner request seam."""
 import json
 import re
-import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
-from runner_invocation import run_runner
+from planning_helper_support import PlanningHelperFixture
 from test_result import run_counted
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
@@ -38,24 +36,12 @@ UNRELATED_NEGATIONS = tuple((word, separator) for word in ("No", "not", "never",
                             for separator in (". ", "; ", ", ", " and ", "\n"))
 
 
-class PlanningApprovalFixture(unittest.TestCase):
-    def setUp(self):
-        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
-        subprocess.run(["git", "init", "--quiet", str(self.root)], check=True, capture_output=True)
-        (self.root / ".specify").mkdir()
-        self.runner_root = Path(__file__).resolve().parents[3] / "speckit-pro"
-        self.feature = self.root / "specs/demo"
-        self.feature.mkdir(parents=True)
-        for name, text in {"spec.md": "A feature", "plan.md": "A plan",
-                           "tasks.md": "- [ ] T001 Build a thing", "workflow.md": "## Project Commands\nTest: python3 check.py\n"}.items():
-            (self.feature / name).write_text(text)
+class PlanningApprovalFixture(PlanningHelperFixture):
+    workflow_text = "## Project Commands\nTest: python3 check.py\n"
 
     def call(self, action="manifest", mode="read_only", **extra):
-        request = dict(schema_version="1.0", helper_id="planning-approval", operation="planning-approval",
-                       mode=mode, inputs=dict(feature_dir="specs/demo", workflow_file="specs/demo/workflow.md",
-                                              action=action, **extra))
-        _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
-        return reply
+        inputs = dict(feature_dir="specs/demo", workflow_file="specs/demo/workflow.md", action=action, **extra)
+        return self.run_helper("planning-approval", inputs, mode=mode)
 
     def approval(self):
         (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"]}))
@@ -74,10 +60,6 @@ class PlanningApprovalFixture(unittest.TestCase):
         (self.feature / "artifacts/confirmation.json").write_text(json.dumps(
             {k: v for k, v in approval["confirmation"].items() if k != "reference"}))
         return approval
-
-    def assertRefused(self, reply, reason):
-        self.assertEqual(reply["status"], "input_error", reply)
-        self.assertIn(reason, reply["diagnostics"][0]["message"])
 
     def writeProgressCase(self, case, stage):
         for name, text in case.get("runtime", {}).get(stage, {}).items():

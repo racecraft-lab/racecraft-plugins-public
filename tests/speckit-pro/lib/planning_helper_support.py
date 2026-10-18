@@ -1,0 +1,37 @@
+"""Shared fixture and runner support for the planning helper tests."""
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from git_fixture import git
+from runner_invocation import run_runner
+
+
+class PlanningHelperFixture(unittest.TestCase):
+    workflow_text = "## Project Commands\n"
+    runner_root = Path(__file__).resolve().parents[3] / "speckit-pro"
+
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        git(self.root, "init", "--quiet")
+        (self.root / ".specify").mkdir()
+        self.feature = self.root / "specs/demo"
+        self.feature.mkdir(parents=True)
+        for name, text in {
+            "spec.md": "A feature",
+            "plan.md": "A plan",
+            "tasks.md": "- [ ] T001 Build a thing",
+            "workflow.md": self.workflow_text,
+        }.items():
+            (self.feature / name).write_text(text)
+
+    def run_helper(self, helper_id, inputs, mode="read_only"):
+        request = dict(schema_version="1.0", helper_id=helper_id, operation=helper_id,
+                       mode=mode, inputs=inputs)
+        _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
+        return reply
+
+    def assertRefused(self, reply, reason):
+        self.assertEqual(reply["status"], "input_error", reply)
+        self.assertIn(reason, reply["diagnostics"][0]["message"])
