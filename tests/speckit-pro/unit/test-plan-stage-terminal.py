@@ -571,8 +571,7 @@ class HaltObstructionTests(HaltPublicationFixture):
     def check_obstruction_on_both_hosts(self, kind: str) -> None:
         for host in ("claude", "codex"):
             self.setUp()
-            with self.subTest(obstruction=kind, host=host):
-                self.obstruct(kind, host)
+            self.obstruct(kind, host)
 
     def test_lock_appearing_after_precheck_keeps_resume_refused(self) -> None:
         self.check_obstruction_on_both_hosts("lock")
