@@ -903,9 +903,14 @@ class SweepSession:
         self.state_root = state_root
         self._now = now
         self.session_path = _safe_session_path(state_root, session_id)
-        if not os.path.lexists(self.session_path):
-            raise SweepSessionMissing("private sweep session does not exist")
-        if not self.session_path.is_dir() or self.session_path.is_symlink():
+        try:
+            # lstat does not follow a link, so a symlink, dangling or not, is unsafe.
+            entry = os.lstat(self.session_path)
+        except FileNotFoundError:
+            raise SweepSessionMissing("private sweep session does not exist") from None
+        except OSError as exc:
+            raise ReceiptViolation("private sweep session path is unsafe") from exc
+        if not stat.S_ISDIR(entry.st_mode):
             raise ReceiptViolation("private sweep session path is unsafe")
         self.state_path = self.session_path / "state.json"
         self.lock_path = self.session_path / "state.lock"

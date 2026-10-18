@@ -1889,8 +1889,10 @@ launch comment the session never captured. Each returns the blocked envelope
 - `sweep_comment_unknown`: the `comment_id` is not in the capture metadata.
   Launch only the comment ids that capture returned.
 
-A replayed or cross-session receipt is not one of these cases: it still returns
-`isolation_boundary_unavailable` and records the halt.
+A replayed or cross-session receipt sent to a live session is not one of these
+cases: it still returns `isolation_boundary_unavailable` and records the halt.
+The session check comes first, so any `accept` that names a gone session gets
+`sweep_session_missing`; no receipt can be accepted from it.
 
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool
