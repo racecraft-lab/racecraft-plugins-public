@@ -9,10 +9,10 @@ rendering seam for recorded planning approval on both hosts.
   than auto-linked. Scoped package paths remain literal text. Backlink labels
   may contain at signs or `www.` because their destinations are quoted relative
   paths and their structural punctuation is escaped.
-- The new tests repeat the existing fixture's two-host invocation pattern.
-  Those paths are fixed test inputs, not contributor-selected execution paths;
-  there is no reachable runtime defect. A fixture-wide cleanup would touch the
-  shared approval tests and is outside this fix.
+- The new fixture centralizes runner paths and paired-host verification.
+  `NavigationFixture.captureNavigation` and `assertNavigationBound` retain their
+  pre-existing host loops to keep the shared test file additive. These are fixed
+  test inputs, not contributor-selected execution paths or a runtime defect.
 - The row renderer calls the one literal encoder for each field explicitly.
   The repeated calls do not duplicate the validation rule or leave an unencoded
   contributor-controlled field.
