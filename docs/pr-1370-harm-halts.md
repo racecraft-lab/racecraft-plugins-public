@@ -32,3 +32,23 @@ print its reason, redacted evidence, and last safe state before the stop marker.
   acknowledgment was changed to suppress it.
 - Linux VM coverage excludes the two real macOS sandbox tests named in the PR
   verification reply. The orchestrator owns those tests and macOS plugin CI.
+- The halt check and the payload gate find the repository root in different
+  ways. `apply_refusal` uses `trusted_io.find_repo_root`, which stops at the
+  nearest `.specify/`. `gates/payloads.py` uses `path_utils.find_repo_root`,
+  which needs `tests/speckit-pro/`. A `payload-completeness` apply request with
+  `apply_dist`, sent from a directory that holds its own `.specify/`, checks for
+  a halt in that directory but rebuilds the repository `dist/`. Only test
+  fixtures hold a nested `.specify/` today, and the orchestrator runs the runner
+  from the worktree root, so supported runs do not reach this. Both root finders
+  predate this PR.
+- The sweep isolation helper runs in `read_only` mode, yet on an isolation
+  failure it writes the halt record. Its response still reports no state
+  writes. The record is the intended effect: it is the only write, it is
+  git-ignored, and it only adds a refusal.
+- When an existing halt record cannot be read, the sweep isolation failure
+  raises instead of returning its `isolation_boundary_unavailable` envelope.
+  The runner answers `internal_failure`. This still fails closed: every later
+  apply request refuses while the record stays unreadable.
+- `apply_refusal` returns no refusal when the runner cannot resolve the
+  repository root. Every dispatch path then rejects the same request for that
+  root, so no write follows.
