@@ -133,10 +133,10 @@ class PlanReviewPromptTest(unittest.TestCase):
         self.assertRefused(self.call(reviewed_revision=before), "reviewed revision changed")
 
     def test_prompt_refuses_a_missing_or_malformed_reviewed_revision(self):
-        self.assertEqual(self.call(drop=("reviewed_revision",))["status"], "input_error")
+        self.assertRefused(self.call(drop=("reviewed_revision",)), "reviewed_revision")
         for value in ("", "  ", None, 7, []):
             with self.subTest(value=value):
-                self.assertEqual(self.call(reviewed_revision=value)["status"], "input_error")
+                self.assertRefused(self.call(reviewed_revision=value), "reviewed_revision must be a non-empty string")
 
     def test_summary_newlines_cannot_forge_active_remedies(self):
         findings = copy.deepcopy(FINDINGS)

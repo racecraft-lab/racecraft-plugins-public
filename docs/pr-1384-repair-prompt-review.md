@@ -54,6 +54,8 @@ not caller-supplied display text. Both hosts ship the same Python implementation
 - Info `R1384-8aef9642`: punctuation escaping makes the display harder to read before copying; decoding restores the exact text.
 - Info `R1384-697990ff`: display-value parsing repeats in the tests; the repeated split and JSON decoding are correct as written.
 - Info `R1384-40d636f1`: active and withdrawn rendering comprehensions are near-duplicates; both correctly use the shared encoder.
+- Low: an approval recorded before supersession canonicalization, with a symlink-alias `supersedes`, now fails `verify` with "record bindings or reviewed evidence changed". This fails closed; re-record the approval to recover.
+- Info: the skill's restart branch matches the runner text "reviewed revision changed". Both sides are pinned to that phrase: the runner by the drift test in `test-plan-review-prompt.py`, the skill by the layer-1 restart test.
 - Linux verification cannot cover macOS plugin CI or
   `test_gate_hardening.py::test_pr_test_code_cannot_touch_the_host_under_the_real_sandbox`
   and `test_gate_hardening.py::test_pr_test_code_cannot_create_or_modify_any_file_in_the_clone`.
