@@ -8,7 +8,7 @@ artifact edits, and logging remain authoritative. On Codex, every shared
 consensus-synthesizer step dispatches the installed
 `consensus-synthesizer`, awaits its actual result, and validates that result
 before the parent applies any edit. The parent never performs synthesis as a
-fallback. Dispatch means calling `spawn_agent` with the installed
+fallback. Dispatch (with `fork_turns="none"`) means calling `spawn_agent` with the installed
 `consensus-synthesizer` role, then `wait_agent` and consuming that returned
 result.
 
@@ -232,7 +232,7 @@ for phase in PHASES starting from first_pending:
        Other phases: for EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
-       b. spawn_agent the resolved <executor>:
+       b. spawn_agent the resolved <executor> with fork_turns="none":
           "Run $speckit-<phase> with: <prompt>"
        c. Loop bounded wait_agent calls (timeout_ms=brief.wait.codex.timeout_ms) until this
           executor's actual summary is delivered; a status update or timeout alone is not the result. Record
@@ -1131,7 +1131,7 @@ and keeps executing independent work.
           lowest-scoring criterion (lowest numeric value among the
           5 keys).
        b. If iteration_count < 3:
-            - spawn_agent on the appropriate analyst for that target
+            - spawn_agent with fork_turns="none" on the appropriate analyst for that target
               (e.g., "task_understanding" lowest → clarify-executor
               re-pass on spec.md; "completeness" → verify artifact
               presence).
@@ -1302,7 +1302,7 @@ the generated pages with short plain text, through the same helper. The agent
 answers with one outcome per listed page:
 
 ```text
-spawn_agent("artifact-author", prompt="""
+spawn_agent("artifact-author", fork_turns="none", prompt="""
   WORKFLOW_ROOT: <canonical absolute worktree root>
   Use WORKFLOW_ROOT as the workdir for every shell call and as the base for
   every filesystem path. Write and return paths only inside WORKFLOW_ROOT.
@@ -1588,7 +1588,7 @@ original parent start result independently of the worker-owned journal. Pass
 it as `expected_partition_sha256` on every later start, inspect, or record;
 never reconstruct it from the journal's current plan. On resume, use `action=inspect` and
 reconcile retained complete/unfinished results rather than renumbering batches.
-Dispatch one `spawn_agent` per implementation or research batch; verification
+Dispatch one `spawn_agent` (`fork_turns="none"`) per implementation or research batch; verification
 routes stay orchestrator-direct with no agent. A task routes to verification
 by its leading verb: `verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`. Supply TDD only to implementation
 and project agents, up to four adjacent assigned tasks sequentially, with shared
@@ -2084,13 +2084,34 @@ does. `isolation_boundary_unavailable` is the isolation stop and names
 record before returning that isolation failure. Read and print the halt record
 with `harm-halt` in `read_only` mode before emitting the stop marker: include
 its reason, redacted evidence, and last safe state. Resume and state-changing
-requests remain refused while that record stands. Agent `clear` requests are
-refused; follow the human-inspection limit in the stop-policy reference.
+requests remain refused while that record stands. Never send a `clear`
+request: only the human holding the one-time token clears the halt (see the
+stop-policy reference).
 
 An informational `attest_claude` check instead reports
 `isolation_preflight_unavailable` without creating a halt. Record that readiness
 gap and keep the sweep unavailable; capture and launch still enforce their
 boundaries before any worker runs.
+
+A request that does not fit its surface (a missing or extra field, a malformed
+`session_id`, or an unknown surface, stage or perspective) returns
+`{"status": "invalid_request"}` with exit 2. It records no halt and changes
+nothing. Correct the request and send it again.
+
+A well-formed request can still name a session that no longer exists, or a
+launch comment the session never captured. Each returns the blocked envelope
+(exit 3) and records no halt:
+
+- `sweep_session_missing`: the session is closed, mistyped, or was never made.
+  After `close`, it means the session is already gone and nothing is left to
+  close. Anywhere else, end this run's sweep as `sweep_session_expired` does.
+- `sweep_comment_unknown`: the `comment_id` is not in the capture metadata.
+  Launch only the comment ids that capture returned.
+
+A replayed or cross-session receipt sent to a live session is not one of these
+cases: it still returns `isolation_boundary_unavailable` and records the halt.
+The session check comes first, so any `accept` that names a gone session gets
+`sweep_session_missing`; no receipt can be accepted from it.
 
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool

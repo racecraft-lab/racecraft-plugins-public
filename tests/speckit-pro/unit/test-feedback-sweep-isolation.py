@@ -1511,6 +1511,21 @@ class CaptureAndHookTests(unittest.TestCase):
         self.assertEqual("tampering_or_forged_evidence", record["reason"])
         self.assertIn("capture", record["last_safe_state"])
 
+    def test_a_recorded_isolation_halt_reports_whether_the_clear_token_was_delivered(self) -> None:
+        inputs = {"named_surface": "capture", "surface": "codex", "repository": "owner/repo",
+                  "pr_number": 498, "workflow_file": "workflow.md"}
+        for delivered, expected in ((True, "shown_on_owner_terminal"), (False, "not_delivered")):
+            with self.subTest(delivered=delivered):
+                Path(self.fixture.root, ".specify/harm-halt/halt.json").unlink(missing_ok=True)
+                with patch("speckit_pro_runner.helpers.harm_halt.show_on_owner_terminal", return_value=delivered), \
+                        patch.object(sweep_launcher, "verify_codex_boundary",
+                                     side_effect=sweep_launcher.LauncherViolation("unsupported")):
+                    result = read_only.sweep_isolation_session(inputs, self.fixture.root)
+                payload = json.loads(result["stdout"])
+                self.assertEqual(("isolation_boundary_unavailable", expected),
+                                 (payload["reason"], payload.get("clear_token")), payload)
+                self.assertNotIn("halt_record_status", payload)
+
     def test_informational_attestation_failure_writes_no_halt(self) -> None:
         with patch.object(sweep_launcher, "verify_claude_boundary",
                           side_effect=sweep_launcher.LauncherViolation("unsupported")):
@@ -1542,6 +1557,7 @@ class CaptureAndHookTests(unittest.TestCase):
         self.assertEqual(3, result["exit_code"])
         self.assertEqual("isolation_boundary_unavailable", json.loads(result["stdout"])["reason"])
         self.assertEqual("unavailable", json.loads(result["stdout"])["halt_record_status"])
+        self.assertNotIn("clear_token", json.loads(result["stdout"]), "an unrecorded halt minted no token")
         self.assertEqual("{not json", record.read_text(encoding="utf-8"))
 
     def test_capture_filters_from_committed_workflow_and_validation_failure_leaves_no_session(self) -> None:
@@ -1950,6 +1966,159 @@ class CaptureAndHookTests(unittest.TestCase):
             with patch.object(sweep_launcher.tempfile, "gettempdir", return_value=temporary):
                 with self.assertRaises(sweep_launcher.LauncherViolation):
                     sweep_launcher.verify_claude_attestation(REPO_ROOT, PLUGIN_ROOT)
+
+
+class MalformedIsolationRequestTests(unittest.TestCase):
+    def test_a_malformed_isolation_request_is_an_input_error_and_records_no_halt(self) -> None:
+        # ADR 0010 reserves tampering_or_forged_evidence for evidence that fails its
+        # hash or provenance check. A caller's typo is neither, and no agent can clear
+        # a halt, so one bad request must not stop every runner write.
+        session_id = "a" * 32
+        malformed = (
+            {"named_surface": "attest_claude", "extra": 1},
+            {"named_surface": "close"},
+            {"named_surface": "close", "session_id": session_id, "extra": 1},
+            {"named_surface": "close", "session_id": "not-a-session-id"},
+            {"named_surface": "close", "session_id": 17},
+            {"named_surface": "capture", "surface": "gemini", "repository": "owner/repo",
+             "pr_number": 498, "workflow_file": "workflow.md"},
+            {"named_surface": "capture", "surface": "codex"},
+            {"named_surface": "accept", "session_id": session_id, "receipt": "r", "stage": "synthesis"},
+            {"named_surface": "launch_codex", "session_id": session_id, "comment_id": "RC_kwDO123"},
+            {"named_surface": "launch_codex", "session_id": session_id, "comment_id": "RC_kwDO123", "stage": "bogus"},
+            {"named_surface": "launch_claude", "session_id": session_id, "comment_id": "RC_kwDO123",
+             "stage": "perspective", "perspective": "bogus"},
+        )
+        for inputs in malformed:
+            fixture = GitFixture()
+            self.addCleanup(fixture.close)
+            (fixture.root / ".specify").mkdir()
+            request = SimpleNamespace(schema_version="1.0", request_id="malformed", mode="read_only",
+                                      helper_id="sweep-isolation-session", operation="sweep-isolation-session",
+                                      inputs=inputs)
+            with self.subTest(inputs=inputs), patch.object(Path, "cwd", return_value=fixture.root):
+                result = registry.dispatch_helper(request)
+                self.assertEqual(("input_error", 2), (result["status"], result["exit_code"]), result)
+                self.assertEqual({"status": "invalid_request"}, result["data"]["stdout_json"], result)
+                self.assertFalse(result["data"]["writes_state"], result)
+                self.assertIsNone(stored_halt(fixture.root))
+
+
+class _StaleIsolationFixture(unittest.TestCase):
+    """A well-formed request that names a gone session or a foreign comment.
+
+    Each case runs through the runner on a fresh root with its own private store
+    and a session live on the real clock, so expiry cannot mask the path under test.
+    """
+
+    COMMENT_ID = "RC_kwDO123"
+
+    def live_case(self) -> tuple[GitFixture, Path, str]:
+        fixture = GitFixture()
+        self.addCleanup(fixture.close)
+        fixture.write("specs/001-safe/plan.md", "# Plan\nold text\n")
+        fixture.commit()
+        (fixture.root / ".specify").mkdir()
+        state_root = Path(fixture.temp.name) / "private-state"
+        metadata = sweep_isolation.SweepSession.create(
+            fixture.root,
+            state_root=state_root,
+            comments=[{
+                "id": self.COMMENT_ID,
+                "surface": "review_thread",
+                "author": "reviewer",
+                "author_association": "MEMBER",
+                "body": "Please update the plan.",
+                "thread_resolved": False,
+                "truncated": False,
+            }],
+        )
+        return fixture, state_root, metadata["session_id"]
+
+    def dispatch(self, fixture: GitFixture, state_root: Path, inputs: dict[str, object]) -> dict[str, object]:
+        request = SimpleNamespace(schema_version="1.0", request_id="stale", mode="read_only",
+                                  helper_id="sweep-isolation-session", operation="sweep-isolation-session",
+                                  inputs=inputs)
+        with (
+            patch.object(Path, "cwd", return_value=fixture.root),
+            patch.object(sweep_isolation, "default_state_root", return_value=state_root),
+            patch.object(sweep_launcher, "verify_codex_boundary"),
+            patch.object(sweep_launcher, "verify_claude_boundary"),
+        ):
+            return registry.dispatch_helper(request)
+
+
+class StaleReferenceRecoveryTests(_StaleIsolationFixture):
+    def assert_recoverable(self, fixture: GitFixture, result: dict[str, object], reason: str) -> None:
+        self.assertEqual(3, result["exit_code"], result)
+        self.assertEqual({"status": "blocked", "reason": reason}, result["data"]["stdout_json"], result)
+        self.assertIsNone(stored_halt(fixture.root))
+
+    def test_a_missing_session_is_recoverable_and_records_no_halt(self) -> None:
+        # A second close after the first removed the session is a realistic retry.
+        # Nothing can be accepted from a session that does not exist, so refusing
+        # it fails closed without claiming forged evidence (ADR 0010).
+        for surface in ("close", "accept", "launch_codex", "launch_claude"):
+            fixture, state_root, session_id = self.live_case()
+            sweep_isolation.SweepSession.open(session_id, state_root=state_root).invalidate()
+            inputs: dict[str, object] = {"named_surface": surface, "session_id": session_id}
+            if surface == "accept":
+                inputs.update(receipt="sweep-result:v1:" + "c" * 64, stage="classifier")
+            elif surface.startswith("launch_"):
+                inputs.update(comment_id=self.COMMENT_ID, stage="classifier")
+            with self.subTest(surface=surface):
+                self.assert_recoverable(fixture, self.dispatch(fixture, state_root, inputs), "sweep_session_missing")
+
+    def test_a_comment_outside_the_session_is_recoverable_and_records_no_halt(self) -> None:
+        for host in ("codex", "claude"):
+            fixture, state_root, session_id = self.live_case()
+            inputs = {"named_surface": f"launch_{host}", "session_id": session_id,
+                      "comment_id": "RC_not_in_session", "stage": "classifier"}
+            with self.subTest(host=host):
+                self.assert_recoverable(fixture, self.dispatch(fixture, state_root, inputs), "sweep_comment_unknown")
+
+
+class StaleReferenceHaltTests(_StaleIsolationFixture):
+    def classifier_receipt(self, state_root: Path, session_id: str) -> str:
+        session = sweep_isolation.SweepSession.open(session_id, state_root=state_root)
+        return session.submit_result("classifier", {
+            "comment_id": self.COMMENT_ID, "class": "amended", "target": "plan.md",
+            "reason": "The plan needs the requested constraint."})
+
+    def assert_halts(self, fixture: GitFixture, result: dict[str, object]) -> None:
+        self.assertEqual(3, result["exit_code"], result)
+        self.assertEqual("isolation_boundary_unavailable", result["data"]["stdout_json"]["reason"], result)
+        self.assertEqual("tampering_or_forged_evidence", stored_halt(fixture.root)["reason"])
+
+    def test_replayed_and_cross_session_receipts_still_halt(self) -> None:
+        for case in ("replayed", "cross_session"):
+            fixture, state_root, session_id = self.live_case()
+            receipt = self.classifier_receipt(state_root, session_id)
+            if case == "replayed":
+                sweep_isolation.SweepSession.open(session_id, state_root=state_root).accept_receipt(
+                    receipt, expected_stage="classifier")
+            else:
+                session_id = sweep_isolation.SweepSession.create(
+                    fixture.root, state_root=state_root, comments=[])["session_id"]
+            inputs = {"named_surface": "accept", "session_id": session_id, "receipt": receipt, "stage": "classifier"}
+            with self.subTest(case=case):
+                self.assert_halts(fixture, self.dispatch(fixture, state_root, inputs))
+
+    def test_an_unsafe_path_in_place_of_a_session_still_halts(self) -> None:
+        # Only an absent path is a missing session. Something planted where a
+        # session should be is tampering with the private store.
+        plants = {
+            "symlink_to_a_live_session": lambda path, live: path.symlink_to(live, target_is_directory=True),
+            "dangling_symlink": lambda path, live: path.symlink_to(live.with_name("f" * 32), target_is_directory=True),
+            "regular_file": lambda path, live: path.write_text("{}", encoding="utf-8"),
+        }
+        for case, plant in plants.items():
+            fixture, state_root, session_id = self.live_case()
+            planted = state_root / ("d" * 32)
+            plant(planted, state_root / session_id)
+            with self.subTest(case=case):
+                self.assert_halts(fixture, self.dispatch(
+                    fixture, state_root, {"named_surface": "close", "session_id": planted.name}))
 
 
 class WorkflowAndEvalContractTests(unittest.TestCase):

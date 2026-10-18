@@ -1866,13 +1866,34 @@ does. `isolation_boundary_unavailable` is the isolation stop and names
 record before returning that isolation failure. Read and print the halt record
 with `harm-halt` in `read_only` mode before emitting the stop marker: include
 its reason, redacted evidence, and last safe state. Resume and state-changing
-requests remain refused while that record stands. Agent `clear` requests are
-refused; follow the human-inspection limit in the stop-policy reference.
+requests remain refused while that record stands. Never send a `clear`
+request: only the human holding the one-time token clears the halt (see the
+stop-policy reference).
 
 An informational `attest_claude` check instead reports
 `isolation_preflight_unavailable` without creating a halt. Record that readiness
 gap and keep the sweep unavailable; capture and launch still enforce their
 boundaries before any worker runs.
+
+A request that does not fit its surface (a missing or extra field, a malformed
+`session_id`, or an unknown surface, stage or perspective) returns
+`{"status": "invalid_request"}` with exit 2. It records no halt and changes
+nothing. Correct the request and send it again.
+
+A well-formed request can still name a session that no longer exists, or a
+launch comment the session never captured. Each returns the blocked envelope
+(exit 3) and records no halt:
+
+- `sweep_session_missing`: the session is closed, mistyped, or was never made.
+  After `close`, it means the session is already gone and nothing is left to
+  close. Anywhere else, end this run's sweep as `sweep_session_expired` does.
+- `sweep_comment_unknown`: the `comment_id` is not in the capture metadata.
+  Launch only the comment ids that capture returned.
+
+A replayed or cross-session receipt sent to a live session is not one of these
+cases: it still returns `isolation_boundary_unavailable` and records the halt.
+The session check comes first, so any `accept` that names a gone session gets
+`sweep_session_missing`; no receipt can be accepted from it.
 
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool
