@@ -740,7 +740,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "golden_only",
         "golden_fixture",
         mutation_authoritative_request("harm-halt"),
-        rollback="Only the one-time token shown on the owner's terminal clears a halt. A refused request writes nothing.",
+        rollback="Only the one-time token shown on the owner's terminal clears a halt. A refused clear preserves any standing halt.",
     ),
     "checklist-edits": MutationEntry(
         "checklist-edits",
