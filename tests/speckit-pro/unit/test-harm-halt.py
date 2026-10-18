@@ -345,6 +345,16 @@ class HaltClearTokenTests(TokenHalt):
         self.assertFalse((self.root / RECORD).exists())
         self.assertEqual("ok", self.write_attempt()["status"])
 
+    def test_the_halt_answer_reports_whether_the_token_reached_the_terminal(self) -> None:
+        for delivered, expected in ((True, "shown_on_owner_terminal"), (False, "not_delivered")):
+            with self.subTest(delivered=delivered):
+                self.setUp()
+                with patch.object(harm_halt, "show_on_owner_terminal", return_value=delivered):
+                    result = self.call("apply", action="halt", reason="tampering_or_forged_evidence",
+                                       evidence="page hash differs", last_safe_state=SAFE_STATE)
+                self.assertEqual("ok", result["status"], result)
+                self.assertEqual(expected, result["data"]["clear_token"])
+
     def test_wrong_missing_and_reused_tokens_refuse_and_the_halt_stands(self) -> None:
         first = self.halt()
         for attempt in ({"token": first[:-1] + ("A" if first[-1] != "A" else "B")}, {"token": ""}, {},
