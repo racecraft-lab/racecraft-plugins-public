@@ -2808,6 +2808,19 @@ A request that does not fit its surface (a missing or extra field, a malformed
 `{"status": "invalid_request"}` with exit 2. It records no halt and changes
 nothing. Correct the request and send it again.
 
+A well-formed request can still name a session that no longer exists, or a
+launch comment the session never captured. Each returns the blocked envelope
+(exit 3) and records no halt:
+
+- `sweep_session_missing`: the session is closed, mistyped, or was never made.
+  After `close`, it means the session is already gone and nothing is left to
+  close. Anywhere else, end this run's sweep as `sweep_session_expired` does.
+- `sweep_comment_unknown`: the `comment_id` is not in the capture metadata.
+  Launch only the comment ids that capture returned.
+
+A replayed or cross-session receipt is not one of these cases: it still returns
+`isolation_boundary_unavailable` and records the halt.
+
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool
 was absent, the tool was unauthenticated, the tool was rate-limited, or the tool

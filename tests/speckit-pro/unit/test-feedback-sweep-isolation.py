@@ -1988,6 +1988,126 @@ class MalformedIsolationRequestTests(unittest.TestCase):
                 self.assertIsNone(stored_halt(fixture.root))
 
 
+class StaleIsolationReferenceTests(unittest.TestCase):
+    """A well-formed request that names a gone session or a foreign comment.
+
+    Each case runs through the runner on a fresh root with its own private store
+    and a session live on the real clock, so expiry cannot mask the path under test.
+    """
+
+    COMMENT_ID = "RC_kwDO123"
+
+    def live_case(self) -> tuple[GitFixture, Path, str]:
+        fixture = GitFixture()
+        self.addCleanup(fixture.close)
+        fixture.write("specs/001-safe/plan.md", "# Plan\nold text\n")
+        fixture.commit()
+        (fixture.root / ".specify").mkdir()
+        state_root = Path(fixture.temp.name) / "private-state"
+        metadata = sweep_isolation.SweepSession.create(
+            fixture.root,
+            state_root=state_root,
+            comments=[{
+                "id": self.COMMENT_ID,
+                "surface": "review_thread",
+                "author": "reviewer",
+                "author_association": "MEMBER",
+                "body": "Please update the plan.",
+                "thread_resolved": False,
+                "truncated": False,
+            }],
+        )
+        return fixture, state_root, metadata["session_id"]
+
+    def dispatch(self, fixture: GitFixture, state_root: Path, inputs: dict[str, object]) -> dict[str, object]:
+        request = SimpleNamespace(schema_version="1.0", request_id="stale", mode="read_only",
+                                  helper_id="sweep-isolation-session", operation="sweep-isolation-session",
+                                  inputs=inputs)
+        with (
+            patch.object(Path, "cwd", return_value=fixture.root),
+            patch.object(sweep_isolation, "default_state_root", return_value=state_root),
+            patch.object(sweep_launcher, "verify_codex_boundary"),
+            patch.object(sweep_launcher, "verify_claude_boundary"),
+        ):
+            return registry.dispatch_helper(request)
+
+    def classifier_receipt(self, state_root: Path, session_id: str) -> str:
+        session = sweep_isolation.SweepSession.open(session_id, state_root=state_root)
+        return session.submit_result("classifier", {
+            "comment_id": self.COMMENT_ID, "class": "amended", "target": "plan.md",
+            "reason": "The plan needs the requested constraint."})
+
+    def assert_recoverable(self, fixture: GitFixture, result: dict[str, object], reason: str) -> None:
+        self.assertEqual(3, result["exit_code"], result)
+        self.assertEqual({"status": "blocked", "reason": reason}, result["data"]["stdout_json"], result)
+        self.assertIsNone(stored_halt(fixture.root))
+
+    def test_a_missing_session_is_recoverable_and_records_no_halt(self) -> None:
+        # A second close after the first removed the session is a realistic retry.
+        # Nothing can be accepted from a session that does not exist, so refusing
+        # it fails closed without claiming forged evidence (ADR 0010).
+        for surface in ("close", "accept", "launch_codex", "launch_claude"):
+            fixture, state_root, session_id = self.live_case()
+            sweep_isolation.SweepSession.open(session_id, state_root=state_root).invalidate()
+            inputs: dict[str, object] = {"named_surface": surface, "session_id": session_id}
+            if surface == "accept":
+                inputs.update(receipt="sweep-result:v1:" + "c" * 64, stage="classifier")
+            elif surface.startswith("launch_"):
+                inputs.update(comment_id=self.COMMENT_ID, stage="classifier")
+            with self.subTest(surface=surface):
+                self.assert_recoverable(fixture, self.dispatch(fixture, state_root, inputs), "sweep_session_missing")
+
+    def test_a_comment_outside_the_session_is_recoverable_and_records_no_halt(self) -> None:
+        for host in ("codex", "claude"):
+            fixture, state_root, session_id = self.live_case()
+            inputs = {"named_surface": f"launch_{host}", "session_id": session_id,
+                      "comment_id": "RC_not_in_session", "stage": "classifier"}
+            with self.subTest(host=host):
+                self.assert_recoverable(fixture, self.dispatch(fixture, state_root, inputs), "sweep_comment_unknown")
+
+    def test_replayed_cross_session_and_unsafe_session_references_still_halt(self) -> None:
+        def replayed() -> tuple[GitFixture, Path, dict[str, object]]:
+            fixture, state_root, session_id = self.live_case()
+            receipt = self.classifier_receipt(state_root, session_id)
+            sweep_isolation.SweepSession.open(session_id, state_root=state_root).accept_receipt(
+                receipt, expected_stage="classifier")
+            return fixture, state_root, {"named_surface": "accept", "session_id": session_id,
+                                         "receipt": receipt, "stage": "classifier"}
+
+        def cross_session() -> tuple[GitFixture, Path, dict[str, object]]:
+            fixture, state_root, session_id = self.live_case()
+            receipt = self.classifier_receipt(state_root, session_id)
+            other = sweep_isolation.SweepSession.create(fixture.root, state_root=state_root, comments=[])
+            return fixture, state_root, {"named_surface": "accept", "session_id": other["session_id"],
+                                         "receipt": receipt, "stage": "classifier"}
+
+        def symlinked_session() -> tuple[GitFixture, Path, dict[str, object]]:
+            fixture, state_root, session_id = self.live_case()
+            planted = "d" * 32
+            (state_root / planted).symlink_to(state_root / session_id, target_is_directory=True)
+            return fixture, state_root, {"named_surface": "close", "session_id": planted}
+
+        def dangling_symlink() -> tuple[GitFixture, Path, dict[str, object]]:
+            fixture, state_root, _session_id = self.live_case()
+            planted = "e" * 32
+            (state_root / planted).symlink_to(state_root / ("f" * 32), target_is_directory=True)
+            return fixture, state_root, {"named_surface": "close", "session_id": planted}
+
+        def file_in_place_of_session() -> tuple[GitFixture, Path, dict[str, object]]:
+            fixture, state_root, _session_id = self.live_case()
+            planted = "0" * 32
+            (state_root / planted).write_text("{}", encoding="utf-8")
+            return fixture, state_root, {"named_surface": "close", "session_id": planted}
+
+        for build in (replayed, cross_session, symlinked_session, dangling_symlink, file_in_place_of_session):
+            fixture, state_root, inputs = build()
+            with self.subTest(case=build.__name__):
+                result = self.dispatch(fixture, state_root, inputs)
+                self.assertEqual(3, result["exit_code"], result)
+                self.assertEqual("isolation_boundary_unavailable", result["data"]["stdout_json"]["reason"], result)
+                self.assertEqual("tampering_or_forged_evidence", stored_halt(fixture.root)["reason"])
+
+
 class WorkflowAndEvalContractTests(unittest.TestCase):
     def setUp(self) -> None:
         from host_skill_views import host_skill_root
