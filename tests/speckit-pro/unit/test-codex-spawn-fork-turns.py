@@ -20,14 +20,15 @@ import json
 import os
 import re
 import runpy
-import secrets
 import shutil
 import tempfile
 import sys
 import tomllib
 import tokenize
 import unittest
+import uuid
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 TEST_DIR = Path(__file__).resolve().parent
@@ -300,7 +301,7 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         module = runpy.run_path(str(REPO_ROOT / "scripts/refresh-codex-instruction-inventory.py"))
         refresh = module["main"]
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
+            root = Path(temporary).resolve()
             (root / "speckit-pro").symlink_to(REPO_ROOT / "speckit-pro", target_is_directory=True)
             target = root / "inventory.json"
             target.write_text("stale proof data", encoding="utf-8")
@@ -604,7 +605,7 @@ class InventoryRefreshWriteTests(unittest.TestCase):
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name)
+        self.root = Path(temporary.name).resolve()
         (self.root / "speckit-pro").symlink_to(REPO_ROOT / "speckit-pro", target_is_directory=True)
         self.output = self.root / REVIEW_INVENTORY.relative_to(REPO_ROOT)
         self.output.parent.mkdir(parents=True)
@@ -625,7 +626,7 @@ class InventoryRefreshWriteTests(unittest.TestCase):
             self.target.unlink()
         destination = os.path.relpath(self.target, self.output.parent) if relative else self.target
         self.output.symlink_to(destination)
-        with self.assertRaises(OSError):
+        with self.assertRaisesRegex(OSError, "unsafe existing target"):
             self.run_refresh()
         self.assertTrue(self.output.is_symlink())
         if dangling:
@@ -655,7 +656,7 @@ class InventoryRefreshWriteTests(unittest.TestCase):
                     destination = os.path.relpath(moved, original.parent) if relative else moved
                     original.symlink_to(destination, target_is_directory=True)
                     try:
-                        with self.assertRaises(OSError):
+                        with self.assertRaisesRegex(OSError, "inventory parent"):
                             self.run_refresh()
                         self.assertEqual(list(moved.rglob("*.json")), [])
                     finally:
@@ -669,7 +670,7 @@ class InventoryRefreshWriteTests(unittest.TestCase):
         self.assertEqual(self.output.read_bytes(), REVIEW_INVENTORY.read_bytes())
         self.assertNotEqual(self.output.stat().st_ino, self.target.stat().st_ino)
 
-    def test_refresh_file_swap_cannot_redirect_write(self) -> None:
+    def test_refresh_rejects_file_swap_without_following_link(self) -> None:
         dumps = json.dumps
         for relative in (False, True):
             for dangling in (False, True):
@@ -685,10 +686,9 @@ class InventoryRefreshWriteTests(unittest.TestCase):
                         self.output.symlink_to(destination)
                         return text
 
-                    with patch.object(json, "dumps", side_effect=swap_file):
-                        self.assertEqual(self.run_refresh(), 0)
-                    self.assertFalse(self.output.is_symlink())
-                    self.assertEqual(self.output.read_bytes(), REVIEW_INVENTORY.read_bytes())
+                    with patch.object(json, "dumps", side_effect=swap_file), self.assertRaises(OSError):
+                        self.run_refresh()
+                    self.assertTrue(self.output.is_symlink())
                     if dangling:
                         self.assertFalse(self.target.exists())
                     else:
@@ -696,12 +696,13 @@ class InventoryRefreshWriteTests(unittest.TestCase):
                     self.output.unlink()
 
     def test_refresh_temporary_name_collision_cannot_follow_link(self) -> None:
-        temporary = self.output.with_name(f".{self.output.name}.collision.tmp")
+        temporary = self.output.with_name(f".{self.output.name}.tmp-{os.getpid()}-collision")
         temporary.symlink_to(self.target)
-        with patch.object(secrets, "token_hex", return_value="collision"), self.assertRaises(OSError):
+        with patch.object(uuid, "uuid4", return_value=SimpleNamespace(hex="collision")), self.assertRaises(OSError):
             self.run_refresh()
         self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
-        self.assertTrue(temporary.is_symlink())
+        # The shared writer cleans this temporary entry without following it.
+        self.assertFalse(temporary.is_symlink())
         self.assertFalse(self.output.exists())
 
     def test_refresh_serialization_failure_preserves_inventory_and_cleans_temporary(self) -> None:

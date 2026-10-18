@@ -86,8 +86,9 @@ reference changes for the initial test-only delta.
 The refresh command reuses `trusted_open_directory` to open every inventory
 parent component without following links, anchored at the repository root.
 It rejects an existing output symlink, including dangling links, and other
-non-regular entries. It creates a fresh exclusive temporary inode and atomically
-replaces the inventory entry using the held parent descriptor for creation,
+non-regular entries. It delegates to the existing `atomic_write` policy owner with a
+`WriteBinding` holding that descriptor, creates a fresh exclusive temporary inode,
+and atomically replaces the inventory entry using the held parent descriptor for creation,
 replacement, and cleanup. It never truncates an existing inode. Serialization
 and publication failures preserve the old inventory and remove the temporary
 file. These are repository tooling changes; neither host's guidance or payload
@@ -105,7 +106,7 @@ The refresh entry-point tests cover:
 | Hard-linked output preserves its other name | `test_refresh_replaces_hard_link_without_truncating_target` |
 | Parent rename and replacement with a directory or symlink during serialization | `test_refresh_parent_swap_cannot_redirect_write` |
 | Parent swap immediately before file creation | `test_refresh_parent_swap_before_creation_cannot_redirect_write` |
-| Output swapped to an absolute/relative, existing/dangling link during serialization | `test_refresh_file_swap_cannot_redirect_write` |
+| Output swapped to an absolute/relative, existing/dangling link during serialization | `test_refresh_rejects_file_swap_without_following_link` |
 | Temporary-name symlink collision | `test_refresh_temporary_name_collision_cannot_follow_link` |
 | Serialization/publication failure and temporary cleanup | `test_refresh_serialization_failure_preserves_inventory_and_cleans_temporary`, `test_refresh_publication_failure_preserves_inventory_and_cleans_temporary` |
 
@@ -125,6 +126,12 @@ counts and full fix SHAs are recorded in the security-fix PR comment.
   replacement, but cannot prevent the actor moving it or undoing the output.
 - Descriptor-safe refresh requires the existing POSIX directory-open support;
   unsupported platforms fail closed rather than fall back to path-based writes.
+- The shared atomic writer removes its temporary-name entry on a creation
+  collision without following the entry. The collision test forces a fixed
+  random value; arranging the same collision in normal use requires predicting
+  a fresh UUID-based name or concurrent local directory control. The target
+  remains untouched. Preserving that colliding entry is not part of the
+  inventory output contract.
 - The inventory detects unreviewed changes; it does not infer natural-language
   intent or independently approve an inventory refresh. Maintainers review both
   source changes and regenerated proof data. Arbitrary edits to the gate itself
