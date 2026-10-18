@@ -559,6 +559,7 @@ class NavigationFixture(PlanningApprovalFixture):
         self.blocks = {zone: block for block, zone in re.findall(
             r"(<!-- GENERATED:(PRS|BACKLINKS):START[^\n]*\n.*?<!-- GENERATED:\2:END -->\r?\n)",
             self.original, re.DOTALL)}
+        self.assertEqual(set(self.blocks), {"PRS", "BACKLINKS"}, "navigation fixture lost its generated zones")
 
     def assertNavigationBound(self, mutated):
         self.assertNotEqual(mutated, self.original)

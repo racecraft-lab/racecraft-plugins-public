@@ -10,6 +10,8 @@ NavigationFixture = fixture["NavigationFixture"]
 render_spec_index = fixture["render_spec_index"]
 render_feature_spec_index = fixture["render_feature_spec_index"]
 run_counted = fixture["run_counted"]
+SOURCE = Path(__file__).resolve().parents[3]
+RUNNERS = (SOURCE / "speckit-pro", *(SOURCE / "dist" / host / "speckit-pro" for host in ("claude", "codex")))
 
 
 class NavigationPreflightTest(NavigationFixture):
@@ -22,11 +24,10 @@ class NavigationPreflightTest(NavigationFixture):
         approval = self.approval()
         original = self.map_path.read_bytes()
         self.assertNotEqual(render_feature_spec_index(self.root, "specs/demo", text), text)
-        source = Path(__file__).resolve().parents[3]
-        for runner in (source / "speckit-pro", *(source / "dist" / host / "speckit-pro" for host in ("claude", "codex"))):
+        for runner in RUNNERS:
             self.runner_root = runner
             for mode in ("dry_run", "apply"):
-                with self.subTest(runner=runner.relative_to(source).as_posix(), mode=mode):
+                with self.subTest(runner=runner.relative_to(SOURCE).as_posix(), mode=mode):
                     self.assertRefused(self.call("record", mode, approval=approval), "regenerate")
                     self.assertEqual(self.map_path.read_bytes(), original)
                     self.assertFalse((self.feature / "plan-approvals").exists())
@@ -51,9 +52,8 @@ class NavigationPreflightTest(NavigationFixture):
 
     def assertMapRoundTrip(self):
         original = self.map_path.read_bytes() if self.map_path.exists() else None
-        source = Path(__file__).resolve().parents[3]
-        for runner in (source / "speckit-pro", *(source / "dist" / host / "speckit-pro" for host in ("claude", "codex"))):
-            with self.subTest(runner=runner.relative_to(source).as_posix()):
+        for runner in RUNNERS:
+            with self.subTest(runner=runner.relative_to(SOURCE).as_posix()):
                 self.runner_root = runner
                 if original is not None:
                     self.map_path.write_bytes(original)
