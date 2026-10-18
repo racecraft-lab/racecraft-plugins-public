@@ -270,8 +270,10 @@ def spec_map_status(match: re.Match[str]) -> str:
 NAVIGATION_COMPONENT = r"(?:[A-Za-z0-9.+-]|(?<=[A-Za-z0-9])_+(?=[A-Za-z0-9]))+"
 NAVIGATION_TOKEN = rf"(?:PR#-?[0-9]+|{NAVIGATION_COMPONENT}(?:/{NAVIGATION_COMPONENT})*)"
 NAVIGATION_ROWS = (
-    rf"\|(?: (?:{NAVIGATION_TOKEN}(?:, {NAVIGATION_TOKEN})*)? \|)+",  # PRS v2 header and rows
-    r"\|(?:-+\|)+",  # PRS v2 table rule
+    # PRS v2: seven scalar columns, a Scope list, and scalar Verification.
+    rf"\|(?: {NAVIGATION_TOKEN} \|){{7}} "
+    rf"(?:{NAVIGATION_TOKEN}(?:, {NAVIGATION_TOKEN})*)? \| {NAVIGATION_TOKEN} \|",
+    r"\|(?:-+\|){9}",  # PRS v2 table rule
     rf"{NAVIGATION_TOKEN} {SPEC_INDEX_SEPARATOR} {NAVIGATION_TOKEN} {SPEC_INDEX_SEPARATOR} {NAVIGATION_TOKEN}",  # PRS v1
     rf"- \[({NAVIGATION_TOKEN})\]\(\1\)",  # BACKLINKS
 )

@@ -1,6 +1,6 @@
 # Generated navigation binding: PR #1373
 
-Finding `F1373-a7ea4f86`: generated navigation injection.
+Findings `F1373-a7ea4f86` and `R1373-0f084266`: generated navigation injection.
 
 A feature map's generated PRS and BACKLINKS bodies are rebuilt from runtime
 inputs that the planning inventory excludes: `.process/prs.json` and the names
@@ -21,6 +21,13 @@ generated line stays in the projection, so changing it changes the digest and
 `verify` refuses. Typed progress (new PR rows, SHAs, branch names, statuses,
 runtime file names) still keeps the recorded revision.
 
+PRS-v2 rows must have exactly nine columns: seven scalar columns, a Scope
+token list, and scalar Verification. Comma-separated tokens are progress only
+in Scope. Extra table cells and comma-separated instruction words in scalar
+columns remain bound, even when every individual word is otherwise a plain
+token. This also closes `R1373-0f084266`, including its comma-list and cell-split
+strong-emphasis variants in every v2 string field on both hosts.
+
 The tests are in `tests/speckit-pro/unit/test-planning-approval-preflight.py`,
 class `RuntimeNavigationTest`. Each records an approval, writes the variant,
 regenerates the map with the shared renderer, and calls `verify` through the
@@ -33,6 +40,9 @@ underscore directory names under each excluded directory on all three runners.
 The earlier link, image, autolink, HTML, prose, cell-split and line-split cases
 remain in the same regression matrix. Numeric controls include schema v1 `pr`
 and schema v2 `pr_number` and `review_order`.
+`ScalarNavigationBoundaryTest` covers comma-separated instruction words in
+every v2 scalar string column; the main matrix also tests extra cells made of
+plain tokens and both single- and double-underscore comma lists.
 
 The allowlist follows [GFM's emphasis rules](https://github.github.com/gfm/#emphasis-and-strong-emphasis):
 intraword underscores cannot open or close emphasis. This rule belongs to the
