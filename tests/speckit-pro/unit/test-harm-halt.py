@@ -24,7 +24,7 @@ from speckit_pro_runner.helpers import harm_halt  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
 from speckit_pro_runner.__main__ import main as runner_main  # noqa: E402
 from speckit_pro_runner.sweep_isolation import RECEIPT_PREFIX  # noqa: E402
-from mutation_request_case import MutationRequestCase  # noqa: E402
+from mutation_request_case import FIXTURES, MutationRequestCase  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HARM_HALTS = ("secret_exposure", "tampering_or_forged_evidence", "identity_mismatch", "concurrent_writer")
@@ -333,9 +333,10 @@ class HaltClearTokenTests(QuietTerminal):
         self.assertFalse((self.root / RECORD).exists())
 
     def test_no_agent_readable_path_exposes_the_token(self) -> None:
+        fixture = json.loads((FIXTURES / "harm-halt.json").read_text(encoding="utf-8"))
+
         def request(mode: str, **inputs: Any) -> dict[str, Any]:
-            return {"schema_version": "1.0", "request_id": "leak", "helper_id": "harm-halt", "operation": "harm-halt",
-                    "mode": mode, "inputs": inputs}
+            return {**fixture, "mode": mode, "inputs": inputs}
 
         seen = self.run_runner(request("apply", action="halt", reason="secret_exposure", evidence="leak",
                                        last_safe_state=SAFE_STATE))

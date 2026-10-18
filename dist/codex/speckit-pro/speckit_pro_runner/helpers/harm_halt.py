@@ -86,7 +86,9 @@ def parsed_record(path: Path) -> dict[str, Any]:
 
 def public(record: dict[str, Any]) -> dict[str, Any]:
     """The record as helpers report it: never the token digest."""
-    return {key: value for key, value in record.items() if key != DIGEST_FIELD}
+    shown = dict(record)
+    shown.pop(DIGEST_FIELD, None)
+    return shown
 
 
 def digest(token: str) -> str:
