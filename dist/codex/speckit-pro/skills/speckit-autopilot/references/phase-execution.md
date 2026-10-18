@@ -198,7 +198,7 @@ Three resume forms, in order of preference:
 
 ## Main Execution Loop
 
-Read [Bounded Execution and Verification](./execution-efficiency.md).
+Follow [§Durable run ledger](./execution-efficiency.md#durable-run-ledger), read at kickoff.
 Recover the same workflow ledger, check status before advancing, reserve every
 dispatch, and feed the parent's corrective reservation into nested executors.
 
@@ -526,9 +526,9 @@ Phase 7: Implement - Pending task decomposition
 ```
 
 After Tasks completes, replace that placeholder with concrete task-group items
-from `tasks.md`. Each implement item must include the task IDs, dependencies,
-TDD protocol, `PROJECT_COMMANDS`, and `COMPLETED_TASKS` context accumulated from
-earlier work.
+from `tasks.md`, each named `Phase 7: Implement - <group>`. Each implement item
+must include the task IDs, dependencies, TDD protocol, `PROJECT_COMMANDS`, and
+`COMPLETED_TASKS` context accumulated from earlier work.
 
 Before dispatching Tasks for an enabled formal selection, reconcile and renew
 the `planning` checkpoint per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
@@ -607,7 +607,7 @@ fingerprints, or any non-size safety finding. These stops fire before Analyze or
 Implement.
 
 - no `Phase 7: Implement - Pending task decomposition` item remains
-- one or more concrete `Phase 7:` items exist
+- one or more concrete `Phase 7: Implement - <group>` items exist
 - each concrete item names one or more task IDs parsed from `tasks.md`
 
 If any check fails, repair autopilot-state.json and print the corrected checklist
@@ -819,7 +819,8 @@ stops as the per-run fragment and never proposes `auto_review.policy`. At this
 preflight, run the helper again with `scope=standing`, passing the user-level
 Codex config's current `auto_review.extra_policy` string as
 `installed_extra_policy` and Step -2's `policy_classes` verbatim as
-`derived_classes`; read that config, never write it. Without the derived
+`derived_classes`; read only that string, in the command that sends the
+request, and never print the config file or write it. Without the derived
 classes, the rendered text differs and a correctly installed policy reads as
 missing.
 

@@ -57,6 +57,11 @@ use `"answer_format": "detailed"` when they need artifact text. Omitted format
 retains the detailed interface for existing consumers. Keep artifact inspection
 and runner-source investigation in the owning phase's context; the root uses
 the returned decision and paths.
+Every line the root reads stays in its context for each later turn. Read a
+reference only when a step cites it, and only the section that step names:
+find that heading and read up to the next heading of the same level. Never
+read a whole reference, several references in one command, or a section for a
+later step or for a phase a phase driver runs.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
@@ -164,8 +169,9 @@ The operator owns the session setting; the plugin does not veto it.
 
 ## Execution Rules
 
-At kickoff/resume, read [Bounded Execution and Verification](./references/execution-efficiency.md).
-Initialize/recover its durable execution-control ledger before phase dispatch.
+At kickoff/resume, read [§Durable run ledger](./references/execution-efficiency.md#durable-run-ledger)
+through its `complete` entry. Read the rest of that reference at the step that
+cites it. Initialize/recover its durable execution-control ledger before phase dispatch.
 Leave run clock facts to the runner; after updating the one-run state, refresh
 it with the bound `execution-control action=status mode=apply` call described
 in that reference. Let in-flight workers finish before terminal publication.

@@ -344,6 +344,8 @@ class RenderEgressAuthorizationTests(unittest.TestCase):
         self.assertEqual(named, egress_authorization.STANDING_INPUTS - {"scope"})
         self.assertIn("`owner/name`", step)
         self.assertIn("`$CODEX_HOME/config.toml`", step)
+        # The canary root printed the whole config, which every later turn then carried.
+        self.assertIn("never print the config file", " ".join(step.split()))
 
     def test_fixture_request_renders(self) -> None:
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
