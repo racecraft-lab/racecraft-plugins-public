@@ -12,6 +12,7 @@ Every refused step must leave the ledger bytes unchanged.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -43,6 +44,7 @@ SCENARIOS = (
 )
 UNIT_SCENARIOS = ("unknown-dispatch-unit.json", "agent-authorized-retry.json")
 CONVERGENCE_SCENARIOS = ("convergence-go-test.json",)
+EPOCH_SCENARIOS = ("epochs.json",)
 CHECK_FIXTURES = TEST_ROOT / "unit" / "fixtures" / "failing-checks"
 APPROVAL_SCENARIOS = tuple(name for name in SCENARIOS if name != "test-fix.json")
 REFUSED = {"exit_code": 2, "status": "input_error"}
@@ -79,6 +81,8 @@ class _ReplayRunner:
         if value == "$head_sha":
             return subprocess.run(["git", "-C", str(self.root), "rev-parse", "HEAD"], check=True, text=True,
                                   capture_output=True).stdout.strip()
+        if value == "$spec_file_sha256":
+            return hashlib.sha256((self.root / SPEC).read_bytes()).hexdigest()
         if value == "$spec_sha256":
             return self.ledger["invariant_binding"]["spec_sha256"]
         if value.startswith("$reservation:"):
@@ -218,6 +222,9 @@ class CorrectiveAuthorizationReplayTests(_ReplayStaging, unittest.TestCase):
 
     def test_fixture_scenarios_replay_against_the_shipped_runner(self) -> None:
         self.replay(SCENARIOS)
+
+    def test_epoch_and_class_correction_outcomes_replay_against_the_shipped_runner(self) -> None:
+        self.replay(EPOCH_SCENARIOS)
 
     def test_test_runner_output_lets_a_converging_correction_continue_its_family(self) -> None:
         self.replay(CONVERGENCE_SCENARIOS)
