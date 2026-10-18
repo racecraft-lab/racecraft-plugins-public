@@ -863,8 +863,11 @@ def _validate_retry_ladders(ledger: dict[str, Any]) -> None:
         raise ValueError("a retry-ladder dispatch runs a rung its check had not reached")
 
 
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
 def _is_digest(value: Any) -> bool:
-    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+    return isinstance(value, str) and _SHA256.fullmatch(value) is not None
 
 
 def _fails_again(ledger: dict[str, Any], check: str, earlier: list[dict[str, Any]]) -> bool:

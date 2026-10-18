@@ -1678,14 +1678,17 @@ class _EscalationFixture(_ExecutionControlFixture):
         self.assertEqual(self.deferred["disposition"], "defer")
         self.family = {"unit_kind": "failure_family", "unit": "FR-001"}
 
-    def escalate(self, dispatch_id, tier, unit=None, **inputs):
+    def later(self, action, **inputs):
+        """Invoke an action ten seconds after the last one."""
         self.now += 10
-        return self.invoke("reserve", dispatch_id=dispatch_id, kind="corrective",
-                           escalation={**(unit or self.family), "tier": tier}, **inputs)
+        return self.invoke(action, **inputs)
 
-    def settle(self, dispatch_id, outcome="failed"):
-        self.now += 10
-        return self.invoke("complete", dispatch_id=dispatch_id, outcome=outcome)
+    def escalate(self, dispatch_id, tier, unit=None, **inputs):
+        return self.later("reserve", dispatch_id=dispatch_id, kind="corrective",
+                          escalation={**(unit or self.family), "tier": tier}, **inputs)
+
+    def settle(self, dispatch_id, outcome="failed", **inputs):
+        return self.later("complete", dispatch_id=dispatch_id, outcome=outcome, **inputs)
 
     def verify_red(self, argv):
         """A failing verification of one command, fingerprinted by the runner; returns the command digest."""
@@ -3819,18 +3822,17 @@ class RetryLadderTests(_EscalationFixture, unittest.TestCase):
     """A failing check climbs one ladder of three attempts for the whole run (ADR 0004)."""
 
     ARGV = ("python3", "gate.py")
+    check = property(lambda self: digest(list(self.ARGV)))
 
     def setUp(self):
         super().setUp()
-        self.check = self.verify_red(self.ARGV)
+        self.assertEqual(self.verify_red(self.ARGV), self.check)
 
     def climb(self, dispatch_id, host="claude", check=None):
-        self.now += 10
-        return self.invoke("reserve-retry-rung", dispatch_id=dispatch_id, host=host, command_sha256=check or self.check)
+        return self.later("reserve-retry-rung", dispatch_id=dispatch_id, host=host, command_sha256=check or self.check)
 
     def interrupt(self, dispatch_id, **inputs):
-        self.now += 10
-        return self.invoke("complete", dispatch_id=dispatch_id, outcome="failed", interrupted=True, **inputs)
+        return self.settle(dispatch_id, interrupted=True, **inputs)
 
     def ledger_bytes(self):
         return (self.root / self.invoke("status", mode="read_only")["ledger_path"]).read_bytes()

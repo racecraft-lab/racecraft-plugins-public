@@ -863,8 +863,11 @@ def _validate_retry_ladders(ledger: dict[str, Any]) -> None:
         raise ValueError("a retry-ladder dispatch runs a rung its check had not reached")
 
 
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
 def _is_digest(value: Any) -> bool:
-    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+    return isinstance(value, str) and _SHA256.fullmatch(value) is not None
 
 
 def _fails_again(ledger: dict[str, Any], check: str, earlier: list[dict[str, Any]]) -> bool:
@@ -877,7 +880,7 @@ def _fails_again(ledger: dict[str, Any], check: str, earlier: list[dict[str, Any
 
 def reserve_retry_rung(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
     """Admit a failing check's next rung as one corrective dispatch; the runner picks the rung, never the caller."""
-    dispatch_id, check = require_text(inputs.get("dispatch_id"), "dispatch_id"), inputs.get("command_sha256")
+    dispatch_id, check = require_text(inputs.get("dispatch_id"), "dispatch_id"), str(inputs.get("command_sha256"))
     if not _is_digest(check):
         raise ValueError("command_sha256 must be the digest of a command the runner fingerprinted as failing")
     if dispatch_id in _used_dispatch_ids(ledger):
