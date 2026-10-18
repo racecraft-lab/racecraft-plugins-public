@@ -668,6 +668,14 @@ class OwnerTerminalGuardTests(OwnerTerminalCase):
         self.assertEqual(0, run_counted(suite, label="probe", stream=io.StringIO(), allow_live_specs=True))
         self.assertEqual(["off"], seen)
 
+    def test_a_test_started_by_unittest_withholds_the_token(self) -> None:
+        env = {key: value for key, value in os.environ.items() if key != harm_halt.TERMINAL_SWITCH}
+        probe = (f"import os, sys; sys.path.insert(0, {str(REPO / 'tests/speckit-pro/lib')!r}); import test_result; "
+                 f"print(os.environ.get({harm_halt.TERMINAL_SWITCH!r}))")
+        shown = subprocess.run([sys.executable, "-c", probe], env=env, capture_output=True, text=True,
+                               timeout=60, check=True)
+        self.assertEqual("off", shown.stdout.strip())
+
 
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)

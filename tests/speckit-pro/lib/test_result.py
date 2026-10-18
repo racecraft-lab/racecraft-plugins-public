@@ -18,6 +18,12 @@ import unittest.case
 from pathlib import Path
 from typing import TextIO
 
+from suite_child_env import withhold_harm_halt_tokens
+
+# Every test file imports this module, so importing it withholds harm-halt clear
+# tokens however the file is started (directly, by unittest, or by the suite).
+withhold_harm_halt_tokens()
+
 # Repo root, from this file's own location: tests/speckit-pro/lib/ -> repo root.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SPECS_GUARD_INSTALLED = False
@@ -292,9 +298,7 @@ def run_counted(
     """
     import sys
 
-    from suite_child_env import withhold_harm_halt_tokens
-
-    withhold_harm_halt_tokens()
+    withhold_harm_halt_tokens()  # again, in case a test harness cleared it after import
     if not allow_live_specs:
         install_specs_read_guard()
     out = sys.stdout if stream is None else stream
