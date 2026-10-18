@@ -50,12 +50,10 @@ not caller-supplied display text. Both hosts ship the same Python implementation
 - The separate Low inventory finding `F1384-658c7e4d` remains open and outside
   this fix. Caller-supplied finding subsets and re-keyed IDs are still accepted;
   that path requires departure from the skill's full-inventory procedure.
-- The skill's step 4 list of input fields is prose, and no check ties it to the
-  helper's required field set. The gap predates this review delta and covers the
-  older fields too. A renamed field still fails closed at the runner, which names it.
-- Escaping all punctuation makes the copyable prompt harder for a person to read
-  before copying it. This is the accepted cost of the display boundary; decoding
-  each value restores its exact text.
+- Low `R1384-253ccc4b`: the skill's input-field list is not pinned to the helper's required fields; renamed fields still fail closed at the runner.
+- Info `R1384-8aef9642`: punctuation escaping makes the display harder to read before copying; decoding restores the exact text.
+- Info `R1384-697990ff`: display-value parsing repeats in the tests; the repeated split and JSON decoding are correct as written.
+- Info `R1384-40d636f1`: active and withdrawn rendering comprehensions are near-duplicates; both correctly use the shared encoder.
 - Linux verification cannot cover macOS plugin CI or
   `test_gate_hardening.py::test_pr_test_code_cannot_touch_the_host_under_the_real_sandbox`
   and `test_gate_hardening.py::test_pr_test_code_cannot_create_or_modify_any_file_in_the_clone`.

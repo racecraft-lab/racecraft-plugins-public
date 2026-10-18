@@ -204,6 +204,7 @@ class RecordedApprovalTest(PlanningApprovalFixture):
 
     def test_new_approval_supersedes_the_previous_revision(self):
         first = self.call("record", "apply", approval=self.approval())["data"]
+        (self.root / "approval-alias.json").symlink_to(first["record_path"])
         confirmation = self.feature / "artifacts/confirmation.json"
         original = confirmation.read_bytes()
         (self.feature / "plan.md").write_text("Revised plan")
@@ -211,9 +212,19 @@ class RecordedApprovalTest(PlanningApprovalFixture):
         (self.feature / "artifacts/new-confirmation.json").write_bytes(confirmation.read_bytes())
         confirmation.write_bytes(original)
         revised["confirmation"]["reference"] = "specs/demo/artifacts/new-confirmation.json"
-        revised["supersedes"] = first["record_path"]
-        self.assertEqual(self.call("record", "apply", approval=revised)["status"], "ok")
+        revised["supersedes"] = "approval-alias.json"
+        replacement = self.call("record", "apply", approval=revised)
+        self.assertEqual(replacement["status"], "ok", replacement)
+        self.assertEqual(self.call("verify")["status"], "ok")
         (self.feature / "plan.md").write_text("A plan")
+        self.assertRefused(self.call("verify"), "subsequent supersession")
+        self.assertEqual(replacement["data"]["record"]["supersedes"], first["record_path"])
+
+        # Previously stored alias references must also revoke the old approval.
+        history = self.root / replacement["data"]["record_path"]
+        stored = json.loads(history.read_text())
+        stored["supersedes"] = "approval-alias.json"
+        history.write_text(json.dumps(stored))
         self.assertRefused(self.call("verify"), "subsequent supersession")
 
 
