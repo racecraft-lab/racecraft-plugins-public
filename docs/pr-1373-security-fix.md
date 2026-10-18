@@ -58,6 +58,8 @@ values are exempt from approval. Regenerated host payloads carry the same code.
 
 ## Known limits
 
+- **Low `R1373-1b7d8898`.** The `PR#-?[0-9]+` alternative in NAVIGATION_TOKEN is dead after the PRS block was bound. It only exempts a backlink to a feature-root file named PR#N; the match is whole-token and such a file is already bound by the inventory, so it cannot cause a false pass.
+
 - **Punctuation-adjacent underscores require re-approval.** A legitimate path
   such as `pkg/__init__.py` can render emphasis in a generated cell or link
   label, so it stays bound even when the contributor intended a plain filename.
