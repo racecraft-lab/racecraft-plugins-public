@@ -18,7 +18,7 @@ from ..strict_input import next_fence, require_fields, require_text, unique_obje
 from ..task_execution import owned_path, task_definitions
 from ..trusted_io import trusted_tree_snapshot
 from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
-from ..sweep_export import SWEEP_LOG_HEADING, sweep_is_table_rule, sweep_table_cells
+from ..sweep_export import SWEEP_LOG_HEADING, sweep_table_cells
 from .read_only import (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS, SPEC_INDEX_ENDS,
                         SpecIndexRenderError, render_feature_spec_index, spec_index_is_gated, spec_index_progress)
 from .execution_requests import Refusal, run_contained_helper
@@ -211,7 +211,7 @@ def progress_scaffold(line: str, rules: list[ProgressWrite]) -> bool:
         return True
     if any(re.fullmatch(pattern, line.strip()) for rule in rules for pattern in rule.lines):
         return True
-    return any(rule.omit_row for rule in rules) and sweep_is_table_rule(sweep_table_cells(line))
+    return False
 
 
 def hardener_progress(line: str, scope: tuple[str, ...]) -> str:
@@ -297,7 +297,10 @@ def spec_map_content(content: bytes, root: Path, feature: str) -> bytes:
     if frontmatter is not None:
         normalized_frontmatter = re.sub(r"(?m)^(status:[ \t]*)([^\r\n#]*)(.*)$", spec_map_status, frontmatter[1])
         text = text[:frontmatter.start(1)] + normalized_frontmatter + text[frontmatter.end(1):]
-    expected = spec_index_progress(root, feature) if "<!-- GENERATED:" in text else {}
+    try:
+        expected = spec_index_progress(root, feature) if "<!-- GENERATED:" in text else {}
+    except SpecIndexRenderError as error:
+        raise ValueError(str(error)) from error
     return map_navigation(text, expected)
 
 

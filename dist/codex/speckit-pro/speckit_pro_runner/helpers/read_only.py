@@ -19,6 +19,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, cast
+from urllib.parse import quote
 
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..canonical_json import canonical_bytes
@@ -4056,6 +4057,14 @@ def _spec_index_jq_text(value: Any) -> str:
     return str(value)
 
 
+def _spec_index_literal(value: str) -> str:
+    """Render metadata as one literal line, refusing GFM autolink inputs."""
+    if re.search(r"[a-z][a-z0-9+.-]*://|(?:mailto|xmpp):|www\.|@", value, re.IGNORECASE):
+        raise SpecIndexRenderError("generated navigation requires literal text without link syntax")
+    # Numeric references cannot introduce Markdown structure, including new rows.
+    return re.sub(r"[^A-Za-z0-9 ./-]", lambda match: f"&#{ord(match[0])};", value)
+
+
 def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
     manifest = spec_dir / ".process" / "prs.json"
     if _spec_index_path_state(manifest, "PRS manifest", repo_root) == "missing":
@@ -4107,11 +4116,11 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
                 declared_files = raw_record.get("declared_files")
                 if not isinstance(declared_files, list):
                     raise ValueError("declared_files")
-                scope = ", ".join(_spec_index_jq_text(value) for value in declared_files)
+                scope = ", ".join(_spec_index_literal(_spec_index_jq_text(value)) for value in declared_files)
                 verification = _spec_index_required_string(raw_record, "verification_evidence")
                 row = (
-                    f"| {int(review_order)} | {slice_id} | {pr} | {status_value} | {branch} | "
-                    f"{base_branch} | {sha} | {scope} | {verification} |"
+                    f"| {int(review_order)} | {_spec_index_literal(slice_id)} | {pr} | {_spec_index_literal(status_value)} | {_spec_index_literal(branch)} | "
+                    f"{_spec_index_literal(base_branch)} | {_spec_index_literal(sha)} | {scope} | {_spec_index_literal(verification)} |"
                 )
                 rows.append((int(review_order), slice_id, row))
         except ValueError as exc:
@@ -4155,7 +4164,7 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
         if not slice_id:
             continue
         pr = int(pr_number)
-        row = f"{slice_id} {SPEC_INDEX_SEPARATOR} PR#{pr} {SPEC_INDEX_SEPARATOR} {merged_sha}"
+        row = f"{_spec_index_literal(slice_id)} {SPEC_INDEX_SEPARATOR} PR#{pr} {SPEC_INDEX_SEPARATOR} {_spec_index_literal(merged_sha)}"
         sortable.append(
             (
                 normalize_spec_identity(slice_id).encode("utf-8"),
@@ -4281,7 +4290,7 @@ def _spec_index_render_backlinks(spec_dir: Path, repo_root: Path) -> list[str]:
             bucket = 8
         records.append((bucket, relative.encode("utf-8"), relative))
     records.sort(key=lambda item: (item[0], item[1]))
-    return [f"- [{relative}]({relative})" for _, _, relative in records]
+    return [f"- [{_spec_index_literal(relative)}]({quote(relative, safe='/')})" for _, _, relative in records]
 
 
 def _spec_index_repo_structure_current(repo_root: Path) -> bool:

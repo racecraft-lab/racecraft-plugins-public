@@ -10,6 +10,8 @@ developer_instructions = """
 When an explicit plan review requests a planning revision, use the shared
 `planning-approval` helper and return its manifest digest unchanged. Report
 missing findings or check evidence; never manufacture human confirmation.
+Use the shared spec-index generator for navigation before final plan review;
+the planning-approval reference describes its literal-text contract.
 
 For runner helper calls, use the orchestrator-provided absolute launcher argv
 `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` in the bound
