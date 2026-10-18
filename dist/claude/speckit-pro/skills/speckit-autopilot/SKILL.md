@@ -475,7 +475,7 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
 6c. **Resolve the stage** — run runner helper `resolve-autopilot-stage`
    with the invocation argv as `inputs.autopilot_args`, the workflow file path
-   as `inputs.workflow_file`, and
+   as `inputs.workflow_file`, the feature directory as `inputs.feature_dir`, and
    `inputs.host` set to `claude`.
    The runner reads that host's readiness record for the preview surface. It returns one
    JSON envelope; record `stage` as `AUTOPILOT_STAGE` and keep `source`,
@@ -498,7 +498,12 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
    stages still win and started implementation is never routed backward. An explicit `--stage`
    always wins; with none given the stage is resolved from the workflow
-   file's `## Workflow Overview` table. If the operation exits 2
+   file's `## Workflow Overview` table, and a completed plan still resolves `plan`: planning
+   ends at the review artifacts and draft PR, and only an explicit `--stage implement`,
+   `--stage full` or `--from-phase implement` enters implement. The runner admits each of
+   those entries only for a valid plan approval record (`planning_approval` in the envelope) and
+   otherwise exits 2 naming the failing field; print that message, point to plan review, and
+   dispatch nothing. If the operation exits 2
    (unrecognised stage, `--stage` repeated with different values,
    `--from-phase` outside an explicitly named stage's range, `--stage`
    with no value, or an unreadable/unparseable workflow file), STOP the
