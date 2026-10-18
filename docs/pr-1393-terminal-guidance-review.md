@@ -38,6 +38,10 @@ Tests in `tests/speckit-pro/unit/test-plan-stage-terminal.py`:
   explicit expectation update. A digest is evidence of unchanged reviewed
   instructions, not an interpreter of arbitrary new prose. As with any test,
   changing the gate or its expectations requires code review.
+- The spec review notes that guidance in other rendered files is outside
+  this gate. This repair changes no instructions in those files, so it
+  introduces no reachable path through them; their coverage is not claimed
+  by the terminal-reference digest.
 - F1393-5495a8f5 is outside this repair and remains unresolved by it. The
   source review records trusted-project overrides as Low because modifying
   that config already requires trusted config access; selected profiles and
