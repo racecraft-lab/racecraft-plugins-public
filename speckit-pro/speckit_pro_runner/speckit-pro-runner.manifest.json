@@ -623,7 +623,7 @@
         "value": "speckit_pro_runner/helpers/feedback_sweep.py",
         "display": "speckit_pro_runner/helpers/feedback_sweep.py"
       },
-      "sha256": "ef0b1de6cb8673f795b63c3ff8f0c5a20ac672913837499e9eb8d49d2238f147"
+      "sha256": "67862f29846847d5454db887d4bf60499230f2aaab5f5df03b7d971fbf8c07f7"
     },
     {
       "path": {
@@ -663,7 +663,7 @@
         "value": "speckit_pro_runner/helpers/harm_halt.py",
         "display": "speckit_pro_runner/helpers/harm_halt.py"
       },
-      "sha256": "dee3d5d0c064d63374307824cef0a14d4277d373aafd623d85573135417a34e0"
+      "sha256": "7ad7788d5cef6c5507973cbd9958118062785fd77b1243e743f7df15434148ff"
     },
     {
       "path": {
@@ -719,7 +719,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "aa4e9f380142bbcdf5f0675cef33acb8dab05801fc8e3413104ae3cb7fe86b4b"
+      "sha256": "4b2ebdd8ced06223dd3c9b71ac1013f06b01007317c0fa079097ccd3e15b00a7"
     },
     {
       "path": {

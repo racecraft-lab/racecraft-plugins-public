@@ -26,10 +26,18 @@ this doc describes the current behavior.
   a clear with no standing halt are refused. A used token cannot match the next
   halt's fresh digest.
 - A `dry_run` clear returns `would_clear` and `clear_refusal` and changes
-  nothing; it does not spend the token.
-- Helper answers report `record` without the digest, and a halt answer reports
-  `clear_token: shown_on_owner_terminal | not_delivered`. Refusal text never
-  repeats the token.
+  nothing; it does not spend the token. It checks in apply's order: a held
+  publication lock beside a standing record reports `would_clear: false` with
+  the same "ledger locked" text apply refuses with (review R1380-fb74189c).
+- A second trigger refused because a halt already stands changed nothing, so
+  it releases the publication lock; the owner's token still clears the first
+  halt. An aborted publication still keeps its lock (fail closed).
+- Helper answers report `record` without the digest. Every answer that records
+  a halt reports `clear_token: shown_on_owner_terminal | not_delivered`: the
+  `harm-halt` halt action, a plan-stage stop with `halt_record_status:
+  recorded`, and the sweep isolation failure (review R1380-74e6ebf8). A
+  `blocked` or `unavailable` answer minted no token and carries none. Refusal
+  text never repeats the token.
 - `SPECKIT_HARM_HALT_TERMINAL=off` only withholds the token. The suite child
   environment sets it so a test halt never prints on a developer's terminal.
 
@@ -63,3 +71,10 @@ this doc describes the current behavior.
   it.
 - **Desktop apps and CI.** With no terminal in the ancestry (desktop apps,
   GitHub Actions), the token is withheld and manual recovery applies.
+- **Rollback text covers refused clears only (review R1380-abc624ca, Info).**
+  The registry rollback sentence for `harm-halt` (`registry.py`) says a refused
+  clear preserves any standing halt; it does not describe a refused `halt`
+  trigger. After the R1380-fb74189c fix, a refused trigger keeps a lock only
+  when its own publication aborts, which fails closed by design, and `REFUSAL`
+  in `harm_halt.py` already tells the caller a human must inspect a kept lock.
+  Not a reachable wrong result, so the sentence stays as is.

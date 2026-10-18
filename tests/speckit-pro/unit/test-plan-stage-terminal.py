@@ -562,6 +562,7 @@ class HaltObstructionTests(HaltPublicationFixture):
 
         result = self.tamper_stop(inject, host)
         self.assertEqual("blocked", result["data"]["halt_record_status"])
+        self.assertNotIn("clear_token", result["data"], "a blocked halt minted no token")
         self.assertTrue(record.is_symlink() or not record.exists())
         if kind in ("lock_symlink", "record_symlink"):
             self.assertEqual("foreign content", (self.root / "foreign-target").read_text(encoding="utf-8"))
@@ -607,6 +608,17 @@ class HaltObstructionTests(HaltPublicationFixture):
                 self.assertEqual("harm_halt", stop_policy.stop_class(record["reason"]))
                 self.assertRegex(record["last_safe_state"], r"^HEAD [a-f0-9]+ before the plan stage$")
                 self.assert_resume_refused()
+
+    def test_a_recorded_plan_stop_reports_whether_the_clear_token_was_delivered(self) -> None:
+        for host, (delivered, expected) in itertools.product(
+                ("claude", "codex"), ((True, "shown_on_owner_terminal"), (False, "not_delivered"))):
+            with self.subTest(host=host, delivered=delivered):
+                self.setUp()
+                with unittest.mock.patch.object(plan_stage_terminal.harm_halt, "show_on_owner_terminal",
+                                                return_value=delivered):
+                    result = self.tamper_stop(lambda: None, host)
+                self.assertEqual(("recorded", expected),
+                                 (result["data"]["halt_record_status"], result["data"].get("clear_token")), result)
 
 
 class ContentEvidenceTests(TerminalFixture):

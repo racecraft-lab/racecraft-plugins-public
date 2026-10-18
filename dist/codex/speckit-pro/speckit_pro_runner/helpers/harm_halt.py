@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
-from ..execution_control import confined_path, durable_json, exclusive_ledger
+from ..execution_control import LEDGER_LOCKED, confined_path, durable_json, exclusive_ledger
 from ..path_utils import find_repo_root as find_payload_root
 from ..stop_policy import HARM_HALT, STOP_REASONS
 from ..strict_input import SelectionError, require_fields, require_text, unique_object
@@ -105,6 +105,7 @@ def digest(token: str) -> str:
 def record_halt(root: Any, reason: str, evidence: str, last_safe_state: str) -> dict[str, Any]:
     """Validate before locking; once locked, leave either a record or a blocking lock, even on failure.
 
+    A trigger refused because a halt already stands changed nothing, so it releases the lock.
     Only after the record is published does the clear token go to the owner's terminal."""
     reason = require_text(reason, "reason")
     if STOP_REASONS.get(reason) != HARM_HALT:
@@ -115,10 +116,11 @@ def record_halt(root: Any, reason: str, evidence: str, last_safe_state: str) -> 
     path = confined_path(root, RECORD_PATH)
     try:
         with exclusive_ledger(path, retain_on_error=True):
-            existing = stored_halt(root) if path.exists() else None
-            if existing is not None:
-                raise SelectionError("a harm halt already stands; the second trigger is refused")
-            durable_json(path, record)
+            standing = path.exists() and stored_halt(root) is not None
+            if not standing:
+                durable_json(path, record)
+        if standing:
+            raise SelectionError("a harm halt already stands; the second trigger is refused")
     except ValueError as error:
         raise SelectionError(f"harm-halt trigger {reason} refused: {error}") from error
     shown = show_on_owner_terminal(token)
@@ -150,9 +152,13 @@ def clear_halt(root: Any, token: Any) -> None:
 
 
 def planned_clear(root: Any, token: Any) -> dict[str, Any]:
-    """What an apply clear would do with this token; it reads only and spends nothing."""
+    """What an apply clear would do with this token, checked in apply's order; it reads only and spends nothing."""
+    path = confined_path(root, RECORD_PATH)
     standing = stored_halt(root) is not None
-    refusal = clear_refusal(parsed_record(confined_path(root, RECORD_PATH)) if standing else None, token)
+    if standing and lock_held(path):
+        refusal: str | None = LEDGER_LOCKED
+    else:
+        refusal = clear_refusal(parsed_record(path) if standing else None, token)
     return {"would_clear": refusal is None, "clear_refusal": refusal}
 
 

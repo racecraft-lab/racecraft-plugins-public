@@ -42,11 +42,18 @@ reason's marker.
 Only a human clears a halt. Recording it mints a one-time clear token that the
 runner writes only to the owner's terminal, never to a file, log or helper
 answer. The `harm-halt` `clear` action succeeds only with that token; a wrong,
-used or missing token is refused and the halt stands. A `dry_run` clear reports
-`would_clear` and changes nothing. Never ask for, guess or relay the token, and
-never send a `clear` request yourself: the human runs it. When the halt answer
-says `clear_token: not_delivered`, nobody holds the token, and a human recovers
-the halt by hand outside the agent runner.
+used or missing token, or a held publication lock, is refused and the halt
+stands. A `dry_run` clear runs the same checks, reports `would_clear`, and
+changes nothing. Never ask for, guess or relay the token, and never send a
+`clear` request yourself: the human runs it.
+
+Every answer that records a halt carries `clear_token`: the `harm-halt` `halt`
+action, a plan-stage stop with `halt_record_status: recorded`, and a sweep
+isolation failure with reason `isolation_boundary_unavailable` and no
+`halt_record_status`. When it says `not_delivered`, nobody holds the token, and
+a human recovers the halt by hand outside the agent runner. A plan-stage
+`halt_record_status: blocked` or a sweep `halt_record_status: unavailable`
+recorded no halt and minted no token, so it carries no `clear_token`.
 
 While halted, the runner permits the halt helper, runtime information, and the
 pure readers explicitly listed in `helpers/harm_halt.py`. A `read_only` or
