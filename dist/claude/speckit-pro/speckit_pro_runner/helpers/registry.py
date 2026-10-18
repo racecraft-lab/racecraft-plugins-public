@@ -22,6 +22,7 @@ from .execution_requests import run_execution_helper
 from .git_write_probe import run_git_write_probe_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .g0_setup import run_g0_setup_helper
+from .harm_halt import apply_refusal as harm_halt_refusal, run_harm_halt_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
 from .planning_approval import run_planning_approval_helper
 from .plan_review_prompt import run_plan_review_prompt_helper
@@ -737,6 +738,16 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         mutation_authoritative_request("decisions-list"),
         rollback="Appends are all-or-nothing; a refused batch writes nothing, so rerun it corrected.",
     ),
+    "harm-halt": MutationEntry(
+        "harm-halt",
+        "harm-halt",
+        ("read_only", "dry_run", "apply"),
+        None,
+        "golden_only",
+        "golden_fixture",
+        mutation_authoritative_request("harm-halt"),
+        rollback="Only the one-time token shown on the owner's terminal clears a halt. A refused clear preserves any standing halt.",
+    ),
     "checklist-edits": MutationEntry(
         "checklist-edits",
         "checklist-edits",
@@ -840,6 +851,9 @@ SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
 
 
 def dispatch_helper(request: Any) -> dict[str, Any]:
+    refusal = harm_halt_refusal(request, request)
+    if refusal is not None:
+        return refusal
     entry = HELPERS.get(request.helper_id)
     if (entry is None or request.mode != "read_only") and request.helper_id in MUTATION_HELPERS:
         return dispatch_mutation_helper(MUTATION_HELPERS[request.helper_id], request)
@@ -931,7 +945,8 @@ def mutation_request_refusal(entry: MutationEntry, request: Any) -> dict[str, An
             ],
         )
 
-    return None
+    # The shared halt policy refuses state-changing dispatch in every mode.
+    return harm_halt_refusal(entry, request)
 
 
 def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, Any]:
@@ -992,6 +1007,7 @@ STATE_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "resolve-nesting-mode": apply_nesting_preflight_helper,
     "write-readiness-record": run_readiness_record_helper,
     "record-feature-offers": run_feature_offers_helper,
+    "harm-halt": run_harm_halt_helper,
 }
 # The one table that routes a PR-emission helper id to its handler.
 PR_EMISSION_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {

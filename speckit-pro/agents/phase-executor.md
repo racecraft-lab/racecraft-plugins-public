@@ -20,6 +20,8 @@ effort: high
 When an explicit plan review requests a planning revision, use the shared
 `planning-approval` helper and return its manifest digest unchanged. Report
 missing findings or check evidence; never manufacture human confirmation.
+Use the shared spec-index generator for navigation before final plan review;
+the planning-approval reference describes its literal-text contract.
 
 For runner helper calls, use the orchestrator-provided absolute launcher argv
 `[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]` in the bound
@@ -42,6 +44,9 @@ thread. Use `spawn_agent` only when the loaded skill directs it, or
 for a large part of the phase that is independent and can run in
 parallel. Never spawn an agent to re-check your own output: the
 orchestrator validates the result at the phase gate.
+<!-- host:codex: Codex defaults an omitted fork_turns to all, which copies the thread into the child -->
+Every `spawn_agent` call passes `fork_turns="none"`.
+<!-- /host -->
 
 <hard_constraints>
 

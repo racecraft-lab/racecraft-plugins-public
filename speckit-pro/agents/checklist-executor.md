@@ -62,6 +62,9 @@ thread. Use `spawn_agent` only for a large, independent piece of
 <!-- /host -->
 research that can run in parallel with your own, and never to
 re-check your fixes: the verify run in rule 4 and the parent's G4 gate do that.
+<!-- host:codex: Codex defaults an omitted fork_turns to all, which copies the thread into the child -->
+Every `spawn_agent` call passes `fork_turns="none"`.
+<!-- /host -->
 
 <hard_constraints>
 

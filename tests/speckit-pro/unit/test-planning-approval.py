@@ -2,15 +2,14 @@
 """Planning approval at the portable runner request seam."""
 import json
 import re
-import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
-from runner_invocation import run_runner
+from git_fixture import git
+from planning_helper_support import PlanningHelperFixture
 from test_result import run_counted
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
@@ -38,24 +37,15 @@ UNRELATED_NEGATIONS = tuple((word, separator) for word in ("No", "not", "never",
                             for separator in (". ", "; ", ", ", " and ", "\n"))
 
 
-class PlanningApprovalFixture(unittest.TestCase):
+class PlanningApprovalFixture(PlanningHelperFixture):
+    workflow_text = "## Project Commands\nTest: python3 check.py\n"
+
     def setUp(self):
-        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
-        subprocess.run(["git", "init", "--quiet", str(self.root)], check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(self.root), "remote", "add", "origin", "https://github.com/example/project.git"], check=True)
-        (self.root / ".specify").mkdir()
-        self.runner_root = Path(__file__).resolve().parents[3] / "speckit-pro"
-        self.feature = self.root / "specs/demo"
-        self.feature.mkdir(parents=True)
-        for name, text in {"spec.md": "A feature", "plan.md": "A plan",
-                           "tasks.md": "- [ ] T001 Build a thing", "workflow.md": "## Project Commands\nTest: python3 check.py\n"}.items():
-            (self.feature / name).write_text(text)
+        super().setUp()
+        git(self.root, "remote", "add", "origin", "https://github.com/example/project.git")
 
     def helper(self, helper_id, mode="read_only", **inputs):
-        request = dict(schema_version="1.0", helper_id=helper_id, operation=helper_id, mode=mode,
-                       inputs={"feature_dir": "specs/demo", "workflow_file": "specs/demo/workflow.md", **inputs})
-        _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
-        return reply
+        return self.run_helper(helper_id, {**self.helper_inputs(), **inputs}, mode=mode)
 
     def call(self, action="manifest", mode="read_only", **extra):
         return self.helper("planning-approval", mode, action=action, **extra)
@@ -77,10 +67,6 @@ class PlanningApprovalFixture(unittest.TestCase):
         (self.feature / "artifacts/confirmation.json").write_text(json.dumps(
             {k: v for k, v in approval["confirmation"].items() if k != "reference"}))
         return approval
-
-    def assertRefused(self, reply, reason):
-        self.assertEqual(reply["status"], "input_error", reply)
-        self.assertIn(reason, reply["diagnostics"][0]["message"])
 
     def writeProgressCase(self, case, stage):
         for name, text in case.get("runtime", {}).get(stage, {}).items():
@@ -205,7 +191,13 @@ class RecordedApprovalTest(PlanningApprovalFixture):
         self.assertRefused(self.call("record", "apply", approval=changed), "approval already exists")
         self.assertEqual(path.read_bytes(), original)
 
-    def test_new_approval_supersedes_the_previous_revision(self):
+
+class SupersessionTest(PlanningApprovalFixture):
+    def record_superseding(self, reference):
+        """Record a first approval, then a revised one whose `supersedes` is `reference(first_record_path)`.
+
+        Returns the first record's path and the replacement reply, with `plan.md` restored to the first revision.
+        """
         first = self.call("record", "apply", approval=self.approval())["data"]
         confirmation = self.feature / "artifacts/confirmation.json"
         original = confirmation.read_bytes()
@@ -214,9 +206,56 @@ class RecordedApprovalTest(PlanningApprovalFixture):
         (self.feature / "artifacts/new-confirmation.json").write_bytes(confirmation.read_bytes())
         confirmation.write_bytes(original)
         revised["confirmation"]["reference"] = "specs/demo/artifacts/new-confirmation.json"
-        revised["supersedes"] = first["record_path"]
-        self.assertEqual(self.call("record", "apply", approval=revised)["status"], "ok")
+        revised["supersedes"] = reference(first["record_path"])
+        replacement = self.call("record", "apply", approval=revised)
+        self.assertEqual(replacement["status"], "ok", replacement)
+        self.assertEqual(self.call("verify")["status"], "ok")
         (self.feature / "plan.md").write_text("A plan")
+        return first["record_path"], replacement
+
+    def store_supersedes(self, replacement, reference):
+        history = self.root / replacement["data"]["record_path"]
+        history.write_text(json.dumps({**json.loads(history.read_text()), "supersedes": reference}))
+
+    @staticmethod
+    def case_variant(record_path):
+        path = Path(record_path)
+        return (path.parent / (path.stem.upper() + path.suffix)).as_posix()
+
+    def test_new_approval_supersedes_the_previous_revision(self):
+        def alias(record_path):
+            (self.root / "approval-alias.json").symlink_to(record_path)
+            return "approval-alias.json"
+
+        first_path, replacement = self.record_superseding(alias)
+        self.assertRefused(self.call("verify"), "subsequent supersession")
+        self.assertEqual(replacement["data"]["record"]["supersedes"], first_path)
+
+        # Previously stored alias references must also revoke the old approval.
+        self.store_supersedes(replacement, "approval-alias.json")
+        self.assertRefused(self.call("verify"), "subsequent supersession")
+
+    def test_stored_case_variant_reference_revokes_the_previous_revision(self):
+        # Needs no case-insensitive filesystem: the comparison is conservative everywhere.
+        first_path, replacement = self.record_superseding(lambda path: path)
+        self.store_supersedes(replacement, self.case_variant(first_path))
+        self.assertRefused(self.call("verify"), "subsequent supersession")
+
+    def test_recorded_case_variant_reference_revokes_the_previous_revision(self):
+        # A case variant names the record only where the filesystem folds case.
+        (self.root / "CaseProbe.tmp").write_text("")
+        if not (self.root / "caseprobe.tmp").exists():
+            approval = self.approval()
+            first_reply = self.call("record", "apply", approval=approval)
+            self.assertEqual(first_reply["status"], "ok", first_reply)
+            reference = self.case_variant(first_reply["data"]["record_path"])
+            approval["supersedes"] = reference
+            reply = self.call("record", "apply", approval=approval)
+            self.assertRefused(reply, Path(reference).name)
+            self.assertEqual(reply["diagnostics"][0]["code"], "invalid_planning_approval")
+            self.assertEqual(self.call("verify")["status"], "ok")
+            return
+        self.record_superseding(self.case_variant)
         self.assertRefused(self.call("verify"), "subsequent supersession")
 
 
@@ -419,6 +458,7 @@ class DeclaredProgressTest(WorkflowFixture):
         recorded = self.call("record", "apply", approval=self.approval())
         self.assertEqual(recorded["status"], "ok", recorded)
         path.write_text(before + "\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n")
+        path.write_text(path.read_text() + "|---|---|---|---|---|---|---|---|\n")
         self.assertEqual(self.call()["data"]["manifest_digest"], recorded["data"]["record"]["manifest_digest"])
         self.assertEqual(self.call("verify")["status"], "ok")
 
@@ -758,7 +798,7 @@ class NavigationConfirmationLifecycleTest(NavigationFixture):
 
 
 class GeneratedNavigationTest(PlanningApprovalFixture):
-    def test_spec_map_writer_progress_preserves_approval_but_edited_navigation_does_not(self):
+    def test_spec_map_prs_updates_bind_approval_even_when_canonical(self):
         path = self.feature / "SPEC-MOC.md"
         path.write_text("---\nstructureVersion: 1\nstatus: pending\n---\n# Map\n")
         rendered, _ = render_spec_index(self.root)
@@ -774,7 +814,8 @@ class GeneratedNavigationTest(PlanningApprovalFixture):
         rendered, _ = render_spec_index(self.root)
         path.write_text(rendered[0].rendered)
         self.assertNotEqual(rendered[0].original, rendered[0].rendered)
-        self.assertEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+        self.assertNotEqual(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"), before)
+        before = approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md")
         for text in ("PR#42", "[spec.md]"):
             with self.subTest(text=text):
                 self.assertIn(text, rendered[0].rendered)
@@ -791,7 +832,7 @@ class InventoryProgressTest(ProgressFixture):
                 for stage in ("before", "after", "planning"):
                     self.writeProgressCase(case, stage)
                     bindings.append(approval_owner.planning_manifest(self.root, "specs/demo", "specs/demo/workflow.md"))
-                self.assertEqual(bindings[0], bindings[1])
+                self.assertEqual(bindings[0] == bindings[1], case.get("preserves_revision", True))
                 self.assertNotEqual(bindings[1], bindings[2])
 
     def test_reader_status_vocabulary_preserves_the_revision(self):
@@ -830,7 +871,8 @@ class ShippedWorkflowTest(WorkflowFixture):
                     self.writeProgressCase(case, "before")
                     before = self.call()["data"]["manifest_digest"]
                     self.writeProgressCase(case, "after")
-                    self.assertEqual(self.call()["data"]["manifest_digest"], before)
+                    self.assertEqual(self.call()["data"]["manifest_digest"] == before,
+                                     case.get("preserves_revision", True))
                     self.writeProgressCase(case, "planning")
                     self.assertNotEqual(self.call()["data"]["manifest_digest"], before)
 
@@ -844,7 +886,8 @@ class ShippedWorkflowTest(WorkflowFixture):
 
 
 if __name__ == "__main__":
-    cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, AssuranceGuardTest,
+    cases = (PlanningApprovalTest, PlanningMeaningTest, RecordedApprovalTest, SupersessionTest,
+             AssuranceGuardTest,
              WorkflowPlanningApprovalTest, DeclaredProgressTest, PlanningNeighborsTest, InventoryProgressTest,
              ProgressExamplesTest, GeneratedNavigationTest, NavigationContentTest, NavigationStructureTest,
              NavigationCompatibilityTest, NavigationApprovalLifecycleTest, NavigationConfirmationLifecycleTest,

@@ -1152,7 +1152,7 @@ runner-filled page keeps its lifted prose. Say `narrative not written` in the st
 report and send the finishing call anyway. The helper treats the files on disk as
 the truth, never the agent's report: it deletes a page that is still its template,
 carries a sample banner, or has no recorded owner, reports it as a gap, and stops
-with `stop_reason:integrity_failure` when a page carries active content or an
+with `stop_reason:tampering_or_forged_evidence` when a page carries active content or an
 invalid file cannot be removed. The author never touches `artifacts/` with a
 native tool.
 
@@ -1269,7 +1269,7 @@ append any text after its final line.
 | The recorded pull request is closed or merged | Print `stop_reason:reopen_closed_pr` |
 | The recorded pull request is missing, or several open pull requests match | Print `stop_reason:ambiguous_pr_record` |
 | The PR tool is absent or unauthenticated | Print `stop_reason:tool_unavailable` |
-| An artifact-integrity failure | Print `stop_reason:integrity_failure` |
+| An artifact-integrity failure | Print `stop_reason:tampering_or_forged_evidence` |
 | A push requires protected-branch authority | Print `stop_reason:protected_push` |
 
 Any other reason that ends the run takes its marker from the stop-policy table.
@@ -1552,7 +1552,7 @@ receipt, or capability reaches it. **List every amended comment in the final
 report** by comment id, class, artifact, and amending commit. **Keep the
 isolation-unavailable stop**: when the isolation boundary cannot be
 established, or the private session cannot be invalidated, stop with
-`stop_reason:integrity_failure` before any regeneration. A later resumed run
+`stop_reason:tampering_or_forged_evidence` before any regeneration. A later resumed run
 still repairs pages a failed regeneration left stale, because the durable
 sweep row excludes the handled comment and the freshness join reads the same
 `amended` rows.
@@ -1860,10 +1860,41 @@ runner runs `gh auth status` instead. **Branch on the `reason` the capture
 surface returns** in its `{"status": "blocked", "reason": ...}` envelope (exit
 3). `gh_unavailable` and `gh_not_authenticated` stop with
 `stop_reason:tool_unavailable`. `rate_limited`, `malformed_output`, and
-`observation_failed` do not stop the run: they end this run's sweep, so
+`observation_failed`, `sweep_process_failed`, and `sweep_session_expired` do not stop the run: they end this run's sweep, so
 proceed into task work and report the reason as the `skipped` outcome above
 does. `isolation_boundary_unavailable` is the isolation stop and names
-`stop_reason:integrity_failure`.
+`stop_reason:tampering_or_forged_evidence`. The runner persists the harm-halt
+record before returning that isolation failure. Read and print the halt record
+with `harm-halt` in `read_only` mode before emitting the stop marker: include
+its reason, redacted evidence, and last safe state. Resume and state-changing
+requests remain refused while that record stands. Never send a `clear`
+request: only the human holding the one-time token clears the halt (see the
+stop-policy reference).
+
+An informational `attest_claude` check instead reports
+`isolation_preflight_unavailable` without creating a halt. Record that readiness
+gap and keep the sweep unavailable; capture and launch still enforce their
+boundaries before any worker runs.
+
+A request that does not fit its surface (a missing or extra field, a malformed
+`session_id`, or an unknown surface, stage or perspective) returns
+`{"status": "invalid_request"}` with exit 2. It records no halt and changes
+nothing. Correct the request and send it again.
+
+A well-formed request can still name a session that no longer exists, or a
+launch comment the session never captured. Each returns the blocked envelope
+(exit 3) and records no halt:
+
+- `sweep_session_missing`: the session is closed, mistyped, or was never made.
+  After `close`, it means the session is already gone and nothing is left to
+  close. Anywhere else, end this run's sweep as `sweep_session_expired` does.
+- `sweep_comment_unknown`: the `comment_id` is not in the capture metadata.
+  Launch only the comment ids that capture returned.
+
+A replayed or cross-session receipt sent to a live session is not one of these
+cases: it still returns `isolation_boundary_unavailable` and records the halt.
+The session check comes first, so any `accept` that names a gone session gets
+`sweep_session_missing`; no receipt can be accepted from it.
 
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool
@@ -2326,7 +2357,7 @@ commits, and nothing else. Model-produced amendment text reaches it only as
 committed bytes, never as comment text, classifier reason, session state, or
 receipt, and it never runs while a private session is live. A worker that
 cannot be launched inside that boundary is the isolation-unavailable stop,
-`stop_reason:integrity_failure`.
+`stop_reason:tampering_or_forged_evidence`.
 
 **Re-selection reads the shipped gallery manifest against the amended
 record**, never the page list the previous run happened to produce. A run that

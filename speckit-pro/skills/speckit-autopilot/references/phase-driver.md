@@ -34,7 +34,7 @@ contract stays in [phase-execution.md](./phase-execution.md).
    Dispatch with the `Agent` tool, foreground, as that reference's template shows.
 <!-- /host -->
 <!-- host:codex: Codex dispatches children with spawn_agent and wait_agent -->
-   Dispatch with `spawn_agent`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
+   Dispatch with `spawn_agent` and `fork_turns="none"`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
 <!-- /host -->
    Run the phase's gate with `validate-gate`, repair within the shared reservation, and record
    the phase results in the workflow file.
@@ -45,6 +45,11 @@ contract stays in [phase-execution.md](./phase-execution.md).
    reports them), a `blocker` of at most 240 characters, and your `usage` counters. The runner
    re-verifies the envelope from disk and a claim never passes a gate. If your turn budget is
    nearly spent, return `status` `blocked` and name what remains in `blocker`.
+<!-- host:codex: a Codex child's send_message wakes the parent's wait_agent -->
+   Your envelope is your only message to the parent. Each `send_message` to it wakes the
+   parent's `wait_agent` for one more turn at its full context, so keep progress in the
+   envelope's `counts` and `blocker`, and return `blocked` when the phase needs the operator.
+<!-- /host -->
 
 ## Phase executor summary
 

@@ -6,8 +6,11 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
+from html import unescape
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 from ..atomic_write import snapshot_write_target, write_bytes_atomic
 from ..canonical_json import canonical_bytes
@@ -17,12 +20,13 @@ from ..formal.primitives import CATALOG_PATH
 from ..github_remote import remote_urls
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import next_fence, require_fields, require_text, unique_object
-from ..task_execution import owned_path, task_definitions
+from ..task_execution import owned_path, path_key, task_definitions
 from ..trusted_io import trusted_tree_snapshot
 from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
-from ..sweep_export import SWEEP_LOG_HEADING, sweep_is_table_rule, sweep_table_cells
+from ..sweep_export import SWEEP_LOG_HEADING, sweep_table_cells
 from .read_only import (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS, SPEC_INDEX_ENDS,
-                        SpecIndexRenderError, render_feature_spec_index, spec_index_is_gated, spec_index_progress)
+                        SpecIndexRenderError, render_feature_spec_index, spec_index_is_gated,
+                        spec_index_progress)
 from .execution_requests import Refusal, run_contained_helper
 
 # Inventory roots are runner-owned, never a caller-selected subset. Feature additions
@@ -205,17 +209,30 @@ def progress_row(line: str, rule: ProgressWrite, root: Path, workflow: str) -> s
     return "| " + " | ".join(cells) + " |"
 
 
-def progress_scaffold(line: str, rules: list[ProgressWrite]) -> bool:
+def _progress_table_scaffold(line: str, neighbors: tuple[str, str], rules: list[ProgressWrite]) -> bool:
+    """A complete owned header/delimiter pair is one typed execution write."""
+    headers = [sweep_table_cells(item) for rule in rules for item in rule.scaffold if item.startswith("|")]
+    for header, separator in ((neighbors[0], line), (line, neighbors[1])):
+        cells = sweep_table_cells(header)
+        delimiters = sweep_table_cells(separator)
+        if header.startswith("|") and separator.startswith("|") and cells in headers and len(cells) == len(delimiters) and all(
+            re.fullmatch(r"-{3,}", cell) for cell in delimiters
+        ):
+            return True
+    return False
+
+
+def progress_scaffold(line: str, rules: list[ProgressWrite], neighbors: tuple[str, str] = ("", "")) -> bool:
+    if _progress_table_scaffold(line, neighbors, rules):
+        return True
     stripped = line.strip()
     if any(stripped == item or item.startswith("#") and
            re.fullmatch(r"#{1,6} " + re.escape(item.lstrip("# ")), stripped)
-           or stripped.startswith("|") and item.startswith("|") and
-           sweep_table_cells(stripped) == sweep_table_cells(item)
-           for rule in rules for item in rule.scaffold):
+           for rule in rules for item in rule.scaffold if not item.startswith("|")):
         return True
     if any(re.fullmatch(pattern, line.strip()) for rule in rules for pattern in rule.lines):
         return True
-    return any(rule.omit_row for rule in rules) and sweep_is_table_rule(sweep_table_cells(line))
+    return False
 
 
 def hardener_progress(line: str, scope: tuple[str, ...]) -> str:
@@ -226,9 +243,10 @@ def hardener_progress(line: str, scope: tuple[str, ...]) -> str:
     return "**Hardener:** " + value + separator + suffix
 
 
-def progress_line(line: str, scope: tuple[str, ...], root: Path, workflow: str) -> str:
+def progress_line(line: str, scope: tuple[str, ...], root: Path, workflow: str,
+                  neighbors: tuple[str, str] = ("", "")) -> str:
     rules = [rule for rule in PROGRESS_WRITES.values() if progress_scope(rule, scope)]
-    if progress_scaffold(line, rules):
+    if progress_scaffold(line, rules, neighbors):
         return ""
     line = "|".join(progress_summary(cell, scope) for cell in line.split("|"))
     line = hardener_progress(line, scope)
@@ -244,7 +262,8 @@ def workflow_content(content: bytes, root: Path, workflow: str) -> bytes:
     kept: list[tuple[tuple[str, ...], str]] = []
     sections: list[tuple[int, str]] = []
     fence = None
-    for line in content.decode("utf-8").splitlines(keepends=True):
+    lines = ["", *content.decode("utf-8").splitlines(keepends=True), ""]
+    for index, line in enumerate(lines[1:-1], 1):
         was_fenced = fence is not None
         heading = None if fence else re.match(r"^(#{1,6}) +(.+?)\s*$", line)
         fence = next_fence(fence, line)
@@ -252,7 +271,8 @@ def workflow_content(content: bytes, root: Path, workflow: str) -> bytes:
             sections = [(level, title) for level, title in sections if level < len(heading[1])]
             sections.append((len(heading[1]), heading[2]))
         scope = tuple(title for _, title in sections)
-        result = line if was_fenced or fence else progress_line(line.rstrip("\r\n"), scope, root, workflow)
+        result = line if was_fenced or fence else progress_line(
+            line.rstrip("\r\n"), scope, root, workflow, (lines[index - 1], lines[index + 1]))
         if result.strip() or was_fenced or fence:
             kept.append((scope, result.rstrip() if not (was_fenced or fence) else result))
     return canonical_bytes(kept)
@@ -265,8 +285,23 @@ def spec_map_status(match: re.Match[str]) -> str:
     return match[1] + '""' + match[2][len(value):] + match[3]
 
 
+# Only BACKLINKS may omit bounded runtime filenames. PRS is free-form data:
+# even a list of individually plain tokens can assemble unreviewed instructions.
+# Bind the entire PRS block instead of inferring trust from rendered Markdown.
+# Underscores are literal only inside ASCII words in backlink labels.
+NAVIGATION_COMPONENT = r"(?:[A-Za-z0-9.+-]|(?<=[A-Za-z0-9])_+(?=[A-Za-z0-9]))+"
+NAVIGATION_TOKEN = rf"(?:PR#-?[0-9]+|{NAVIGATION_COMPONENT}(?:/{NAVIGATION_COMPONENT})*)"
+
+
+def navigation_progress(line: str, zone: str) -> bool:
+    """A bounded generated backlink; all other generated content stays bound."""
+    # Canonical renderers escape labels and quote destinations before this check.
+    line = unquote(unescape(line))
+    return zone == "backlinks" and "www." not in line.casefold() and re.fullmatch(rf"- \[({NAVIGATION_TOKEN})\]\(\1\)", line) is not None
+
+
 def map_navigation(content: str, expected: dict[str, tuple[str, ...]]) -> bytes:
-    """Project exact generated bodies; preserve marker identity and placement."""
+    """Project exact generated bodies; preserve marker identity, placement and untyped rows."""
     starts = {value: key for source in (SPEC_INDEX_CANONICAL_STARTS, SPEC_INDEX_LEGACY_STARTS)
               for key, value in source.items()}
     raw_lines = content.splitlines(keepends=True)
@@ -290,7 +325,7 @@ def map_navigation(content: str, expected: dict[str, tuple[str, ...]]) -> bytes:
         if zone in seen or raw_lines[index:index + len(block)] != block:
             return canonical_bytes({"raw": content})
         seen.add(zone)
-        kept.extend((raw, block[-1]))
+        kept.extend((raw, *(line for line in block[1:-1] if not navigation_progress(line.rstrip("\r\n"), zone)), block[-1]))
         index += len(block)
     return canonical_bytes({"projected": kept})
 
@@ -301,7 +336,10 @@ def spec_map_content(content: bytes, root: Path, feature: str) -> bytes:
     if frontmatter is not None:
         normalized_frontmatter = re.sub(r"(?m)^(status:[ \t]*)([^\r\n#]*)(.*)$", spec_map_status, frontmatter[1])
         text = text[:frontmatter.start(1)] + normalized_frontmatter + text[frontmatter.end(1):]
-    expected = spec_index_progress(root, feature) if "<!-- GENERATED:" in text else {}
+    try:
+        expected = spec_index_progress(root, feature) if "<!-- GENERATED:" in text else {}
+    except SpecIndexRenderError as error:
+        raise ValueError(str(error)) from error
     return map_navigation(text, expected)
 
 
@@ -401,7 +439,7 @@ def approval_record(root: Path, feature: str, approval: Any, binding: dict[str, 
     reviewed = [evidence(root, ref) for ref in refs]
     reviewed.append(evidence(root, confirmation["reference"]))
     if record["supersedes"] is not None:
-        evidence(root, record["supersedes"])
+        record["supersedes"] = evidence(root, record["supersedes"])["reference"]
     findings = checked_findings(root, feature, record["findings"], binding["manifest_digest"])
     reviewed.extend(evidence(root, finding["check"]["reference"]) for finding in findings.values())
     return {**record, **binding, "schema_version": "plan-approval/v1", "assurance": "recorded",
@@ -409,10 +447,12 @@ def approval_record(root: Path, feature: str, approval: Any, binding: dict[str, 
 
 
 def refuse_superseded(root: Path, path: str) -> None:
+    path = owned_path(path, root)
     for _, content in trusted_tree_snapshot((root / path).parent, root).values():
         if content is not None:
             peer = json.loads(content, object_pairs_hook=unique_object)
-            if not isinstance(peer, dict) or peer.get("supersedes") == path:
+            if not isinstance(peer, dict) or (peer.get("supersedes") is not None
+                                             and path_key(owned_path(peer["supersedes"], root)) == path_key(path)):
                 raise ValueError("approval has a subsequent supersession or unreadable history; return to plan review")
 
 
@@ -545,7 +585,12 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
     return {"record": record, "record_path": path, "writes_state": mode == "apply"}
 
 
-def run_planning_approval_helper(entry: Any, request: Any) -> dict[str, Any]:
-    return run_contained_helper(entry, request, planning_approval, Refusal(
-        "invalid_planning_approval", "Correct the named planning approval field and return to plan review.",
-        ["Repair the planning inputs or review evidence.", "Retry planning-approval."]))
+run_planning_approval_helper = partial(
+    run_contained_helper,
+    work=planning_approval,
+    refusal=Refusal(
+        "invalid_planning_approval",
+        "Correct the named planning approval field and return to plan review.",
+        ["Repair the planning inputs or review evidence.", "Retry planning-approval."],
+    ),
+)

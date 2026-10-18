@@ -19,6 +19,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, cast
+from urllib.parse import quote
 
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..canonical_json import canonical_bytes
@@ -263,6 +264,7 @@ def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
     exit_code = int(result["exit_code"])
     status = EXIT_STATUS.get(exit_code, "subprocess_failure")
     data = helper_result_data(entry, inputs, argv_result, repo_root, exit_code, stdout, stderr, duration_ms)
+    data["writes_state"] = result.get("writes_state", False)
     if entry.helper_id == "confidence-gate":
         classified = confidence_runner_response(request.request_id, data, exit_code, stderr)
         if classified is not None:
@@ -3914,6 +3916,11 @@ SPEC_INDEX_ENDS = {
     "backlinks": "<!-- GENERATED:BACKLINKS:END -->",
 }
 SPEC_INDEX_ZONE_ORDER = ("index", "prs", "backlinks")
+SPEC_INDEX_PRS_NOTICE = (
+    "Note: for open PR rows, `SHA` records the PR evidence snapshot head commit; for merged rows, "
+    "`SHA` records the merged commit. Open-row snapshot SHAs are not expected to equal later commits "
+    "that contain refreshed generated metadata."
+)
 
 
 class SpecIndexRenderError(RuntimeError):
@@ -4077,6 +4084,21 @@ def _spec_index_jq_text(value: Any) -> str:
     return str(value)
 
 
+def _spec_index_literal(value: str, *, link_label: bool = False) -> str:
+    """Render one literal line; guard unlinked metadata against GFM autolinks."""
+    # Backlink labels sit inside one link whose relative destination is quoted.
+    if not link_label and re.search(
+        r"[a-z][a-z0-9+.-]*://|(?:mailto|xmpp):|www\.|[\w.+-]+@[\w.-]*\w", value, re.IGNORECASE
+    ):
+        raise SpecIndexRenderError("generated navigation requires literal text without link syntax")
+    value = value.rstrip(" ")
+    # Numeric references cannot introduce Markdown structure, including new rows.
+    literal = re.sub(r"[^A-Za-z0-9 ./-]", lambda match: f"&#{ord(match[0])};", value)
+    if re.match(r" |(?:-|[0-9]{1,9}\.)(?: |$)", value):
+        literal = f"&#{ord(value[0])};" + literal[1:]
+    return literal
+
+
 def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
     manifest = spec_dir / ".process" / "prs.json"
     if _spec_index_path_state(manifest, "PRS manifest", repo_root) == "missing":
@@ -4128,11 +4150,11 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
                 declared_files = raw_record.get("declared_files")
                 if not isinstance(declared_files, list):
                     raise ValueError("declared_files")
-                scope = ", ".join(_spec_index_jq_text(value) for value in declared_files)
+                scope = ", ".join(_spec_index_literal(_spec_index_jq_text(value)) for value in declared_files)
                 verification = _spec_index_required_string(raw_record, "verification_evidence")
                 row = (
-                    f"| {int(review_order)} | {slice_id} | {pr} | {status_value} | {branch} | "
-                    f"{base_branch} | {sha} | {scope} | {verification} |"
+                    f"| {int(review_order)} | {_spec_index_literal(slice_id)} | {pr} | {_spec_index_literal(status_value)} | {_spec_index_literal(branch)} | "
+                    f"{_spec_index_literal(base_branch)} | {_spec_index_literal(sha)} | {scope} | {_spec_index_literal(verification)} |"
                 )
                 rows.append((int(review_order), slice_id, row))
         except ValueError as exc:
@@ -4143,7 +4165,7 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
             return []
         rows.sort(key=lambda item: (item[0], item[1].encode("utf-8")))
         return [
-            "Note: for open PR rows, `SHA` records the PR evidence snapshot head commit; for merged rows, `SHA` records the merged commit. Open-row snapshot SHAs are not expected to equal later commits that contain refreshed generated metadata.",
+            SPEC_INDEX_PRS_NOTICE,
             "",
             "| Order | Slice | PR | Status | Branch | Base | SHA | Scope | Verification |",
             "|---|---|---|---|---|---|---|---|---|",
@@ -4176,7 +4198,7 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
         if not slice_id:
             continue
         pr = int(pr_number)
-        row = f"{slice_id} {SPEC_INDEX_SEPARATOR} PR#{pr} {SPEC_INDEX_SEPARATOR} {merged_sha}"
+        row = f"{_spec_index_literal(slice_id)} {SPEC_INDEX_SEPARATOR} PR#{pr} {SPEC_INDEX_SEPARATOR} {_spec_index_literal(merged_sha)}"
         sortable.append(
             (
                 normalize_spec_identity(slice_id).encode("utf-8"),
@@ -4302,7 +4324,7 @@ def _spec_index_render_backlinks(spec_dir: Path, repo_root: Path) -> list[str]:
             bucket = 8
         records.append((bucket, relative.encode("utf-8"), relative))
     records.sort(key=lambda item: (item[0], item[1]))
-    return [f"- [{relative}]({relative})" for _, _, relative in records]
+    return [f"- [{_spec_index_literal(relative, link_label=True)}]({quote(relative, safe='/')})" for _, _, relative in records]
 
 
 def _spec_index_repo_structure_current(repo_root: Path) -> bool:

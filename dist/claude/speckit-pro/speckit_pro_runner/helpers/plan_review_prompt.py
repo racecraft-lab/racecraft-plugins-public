@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from functools import partial
 from pathlib import Path
 from string import punctuation
 from typing import Any
@@ -121,7 +122,12 @@ def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[st
                         for identity, item in requests.items()]}
 
 
-def run_plan_review_prompt_helper(entry: Any, request: Any) -> dict[str, Any]:
-    return run_contained_helper(entry, request, plan_review_prompt, Refusal(
-        "invalid_plan_review_prompt", "Correct the named field and rebuild the prompt.",
-        ["Fix the finding, request or withdrawal.", "Retry plan-review-prompt; nothing was written."]))
+run_plan_review_prompt_helper = partial(
+    run_contained_helper,
+    work=plan_review_prompt,
+    refusal=Refusal(
+        "invalid_plan_review_prompt",
+        "Correct the named field and rebuild the prompt.",
+        ["Fix the finding, request or withdrawal.", "Retry plan-review-prompt; nothing was written."],
+    ),
+)

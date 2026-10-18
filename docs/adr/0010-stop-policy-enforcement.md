@@ -34,6 +34,36 @@ A harm halt fires only when the next action could cause damage a later review ca
 
 On a harm halt the runner stops all dispatch at once. No commit, push, PR edit or artifact publish follows the trigger, because a PR edit could spread a leaked secret. The runner writes a local halt record (reason, redacted trigger evidence, last safe state) and prints it. Resume is refused until a human clears the record with an explicit runner command.
 
+The clear command is the `harm-halt` helper's `clear` action with a one-time
+token. Recording a halt mints the token, keeps only its SHA-256 digest in the
+record, and writes the token only to the owner's terminal: the outermost
+terminal in the runner's process ancestry, refused when the runner's own
+streams or controlling terminal use it. A wrong, used or missing token is
+refused and the halt stands; a `dry_run` clear reports `would_clear` and
+changes nothing. To clear, the human runs
+`python3 <plugin-root>/scripts/run-speckit-pro.py` from the repository root,
+where `<plugin-root>` is the installed speckit-pro plugin directory. They paste
+this request on stdin with the token in place, then end input (Ctrl-D).
+Pasting keeps the token out of shell history and files.
+
+```json
+{"schema_version": "1.0", "helper_id": "harm-halt", "operation": "harm-halt", "mode": "apply", "inputs": {"action": "clear", "token": "<token>"}}
+```
+
+Assurance limit: the token stops a clear that only follows instructions; it
+does not stop an agent that works around the runner. An agent with the
+operator's shell can delete the record, or rewrite its digest to one of its
+own tokens, by hand; neither gives it more than deleting the file, as with ADR
+0017's recorded approval. An agent also chooses how it launches the runner, so
+it can make a PTY it reads the outermost terminal (for example a detached
+`script` or tmux session, or `claude -p` inside a Codex PTY). A halt recorded
+in that launch shows the token to that agent. The owner's terminal itself can
+be read back through tmux, screen or terminal scripting until the token is
+used. When no terminal can be found, the ancestry is deeper than the walk,
+`ps` is refused, or the write fails, nobody receives the token. The halt then
+stands until a human recovers it outside the agent workflow: inspect the record
+and any abandoned publication lock before removing them.
+
 ## Former stop sites
 
 | Today | Decision |

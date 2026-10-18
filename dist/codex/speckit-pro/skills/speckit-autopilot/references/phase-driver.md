@@ -30,7 +30,7 @@ contract stays in [phase-execution.md](./phase-execution.md).
      or `analyze-executor`), then the consensus agents, as its
      `agent`, `slices` and `waves` say, and follow `skills/speckit-autopilot/references/phase-execution.md` and
      `skills/speckit-autopilot/references/consensus-protocol.md` for answers, edits and repair.
-   Dispatch with `spawn_agent`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
+   Dispatch with `spawn_agent` and `fork_turns="none"`, and wait with `wait_agent` using `brief.wait.codex.timeout_ms`.
    Run the phase's gate with `validate-gate`, repair within the shared reservation, and record
    the phase results in the workflow file.
    Finish with one `phase-envelope/v1` JSON object and nothing else, under 2,048 bytes:
@@ -40,6 +40,9 @@ contract stays in [phase-execution.md](./phase-execution.md).
    reports them), a `blocker` of at most 240 characters, and your `usage` counters. The runner
    re-verifies the envelope from disk and a claim never passes a gate. If your turn budget is
    nearly spent, return `status` `blocked` and name what remains in `blocker`.
+   Your envelope is your only message to the parent. Each `send_message` to it wakes the
+   parent's `wait_agent` for one more turn at its full context, so keep progress in the
+   envelope's `counts` and `blocker`, and return `blocked` when the phase needs the operator.
 
 ## Phase executor summary
 

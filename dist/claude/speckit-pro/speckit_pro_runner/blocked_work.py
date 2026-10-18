@@ -95,8 +95,12 @@ def block_exhausted_check(record: dict[str, Any], block: Block) -> list[str]:
     return created
 
 
+def _section(ledger: dict[str, Any], name: str) -> dict[str, Any]:
+    return ledger.get("blocked_work", {}).get(name, {})
+
+
 def _entries(ledger: dict[str, Any]) -> list[dict[str, Any]]:
-    return list(ledger.get("blocked_work", {}).get("entries", {}).values())
+    return list(_section(ledger, "entries").values())
 
 
 def blocked_scope(ledger: dict[str, Any]) -> set[str]:
@@ -106,7 +110,7 @@ def blocked_scope(ledger: dict[str, Any]) -> set[str]:
 
 
 def blocked_check(ledger: dict[str, Any], check: str) -> bool:
-    return check in ledger.get("blocked_work", {}).get("causes", {})
+    return check in _section(ledger, "causes")
 
 
 def disposition_event_ids(ledger: dict[str, Any]) -> set[str]:
@@ -115,7 +119,7 @@ def disposition_event_ids(ledger: dict[str, Any]) -> set[str]:
 
 def accept_gap(ledger: dict[str, Any], key: str, event_id: str, now: float) -> None:
     """Record a human's acceptance of one gap. Only the disposition changes; the block stays a block."""
-    entry = ledger.get("blocked_work", {}).get("entries", {}).get(key)
+    entry = _section(ledger, "entries").get(key)
     if entry is None:
         raise ValueError("no blocked entry to accept")
     if entry["disposition"] is not None:
