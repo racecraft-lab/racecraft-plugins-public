@@ -36,7 +36,9 @@ summaries while retaining existing planning notes. Success Criteria text is
 planning and its tick state is progress. Other workflow planning-choice
 checkboxes bind checked/unchecked state; `x` and `X` are equivalent spellings.
 Fences remain literal planning content. Canonical SPEC-MOC navigation is compared
-with its generator's output rather than discarded as a whole region.
+with its generator's output. The complete PRS block stays approval-bound,
+including ordinary PR updates; only bounded runtime BACKLINKS can be progress.
+Regenerate and obtain a fresh approval after changing PRS content.
 
 Older projection digests may require a new approval after this change. Do not
 rewrite a prior approval record to adopt the new digest.

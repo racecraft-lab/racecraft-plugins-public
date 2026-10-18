@@ -10,23 +10,22 @@ renderer's output. Any text the renderer echoed was therefore outside the
 approval digest, so a regenerated map could carry a link or an instruction
 while `verify` still accepted the old approval.
 
-`map_navigation` in `helpers/planning_approval.py` now drops a generated line
-only when it is the renderer's fixed frame (the PRS notice, blank line, table
-header and rule) or a row whose every runtime value is a bounded token: ASCII
-letters, digits and `. + - /`, or `PR#<integer>`. Underscore runs are allowed
-only between ASCII letters or digits (`demo_one.py` and `demo__one.py`), never
-next to punctuation or token boundaries. A token has no whitespace, active
-Markdown or HTML syntax, URL scheme, address, or `www.` prefix. Every other
-generated line stays in the projection, so changing it changes the digest and
-`verify` refuses. Typed progress (new PR rows, SHAs, branch names, statuses,
-runtime file names) still keeps the recorded revision.
+`map_navigation` in `helpers/planning_approval.py` now retains the complete
+canonical PRS block in the approval digest, for both schema versions. No PRS
+column, row, list item, separator or notice is inferred to be trusted progress
+from its rendered shape. This closes both comma-separated words inside a
+single Scope item and instructions assembled from separate Scope items.
+Scope-word lists and v1 trailing carriage returns no longer have a projection
+exemption. Adding, removing or changing a PRS row requires re-approval, including ordinary
+PR numbers, SHAs, branches and statuses. Existing approvals can require renewal;
+never rewrite an old record to adopt the new digest.
 
-PRS-v2 rows must have exactly nine columns: seven scalar columns, a Scope
-token list, and scalar Verification. Comma-separated tokens are progress only
-in Scope. Extra table cells and comma-separated instruction words in scalar
-columns remain bound, even when every individual word is otherwise a plain
-token. This also closes `R1373-0f084266`, including its comma-list and cell-split
-strong-emphasis variants in every v2 string field on both hosts.
+Only BACKLINKS can omit generated rows, and only when the complete canonical
+row is a relative link whose identical label and destination are bounded tokens.
+The existing ASCII filename grammar excludes whitespace, active Markdown/HTML,
+URL schemes, addresses, `www.` and emphasis-delimiting underscores. Other
+backlinks remain digest-bound. The exemption is scoped to BACKLINKS so a PRS
+value cannot impersonate even a syntactically safe backlink.
 
 The tests are in `tests/speckit-pro/unit/test-planning-approval-preflight.py`,
 class `RuntimeNavigationTest`. Each records an approval, writes the variant,
@@ -40,6 +39,9 @@ underscore directory names under each excluded directory on all three runners.
 The earlier link, image, autolink, HTML, prose, cell-split and line-split cases
 remain in the same regression matrix. Numeric controls include schema v1 `pr`
 and schema v2 `pr_number` and `review_order`.
+`ScopeNavigationBindingTest.test_each_scope_item_and_split_instruction_refuse_on_each_host`
+records a safe approval and checks comma-separated prose at every list position
+and the same instruction split into separate items on all three runners.
 `ScalarNavigationBoundaryTest` covers comma-separated instruction words in
 every v2 scalar string column; the main matrix also tests extra cells made of
 plain tokens and both single- and double-underscore comma lists.
@@ -49,7 +51,7 @@ the canonical-block comparison requires each renderer record to match one
 physical line, so an embedded newline makes that comparison fail before any
 line can be projected away.
 
-The allowlist follows [GFM's emphasis rules](https://github.github.com/gfm/#emphasis-and-strong-emphasis):
+The BACKLINKS allowlist follows [GFM's emphasis rules](https://github.github.com/gfm/#emphasis-and-strong-emphasis):
 intraword underscores cannot open or close emphasis. This rule belongs to the
 shared planning projection; no renderer or per-host copy decides which runtime
 values are exempt from approval. Regenerated host payloads carry the same code.
@@ -61,27 +63,22 @@ values are exempt from approval. Regenerated host payloads carry the same code.
   label, so it stays bound even when the contributor intended a plain filename.
   Adding or changing that row requires a fresh approval. This fails closed;
   the input cannot reach an unchanged-digest false pass. Intraword names such as
-  `demo_one.py` and `run_two__parts.json` still count as progress.
+  `demo_one.py` and `run_two__parts.json` still count as progress in BACKLINKS;
+  every PRS value remains bound regardless of filename spelling.
 - **GFM is the rendering boundary.** Compatibility with other Markdown
   dialects has not been verified. A review raised intraword emphasis in a
   non-GFM renderer as a possible limit; that variant is unreachable under GFM,
   whose underscore delimiters cannot open or close inside these ASCII words.
-- **Legacy v1 slice names may resemble list markers.** A slice named `-`, `+`
-  or `1.` can make the fixed v1 row a Markdown list item. This does not admit
-  inline links, emphasis, whitespace prose or URL schemes: those characters
-  remain outside the token grammar. The review classified this as Info; it
-  cannot reach the reported inline-injection path.
 - **A fuzzy linkifier may render a domain-shaped token.** A token such as
   `example.invalid/landing` is plain text under CommonMark and GitHub
   Flavored Markdown. A previewer with fuzzy linkify turned on may still show it
   as a link. Real branch names and file paths need dots and slashes, so the
   grammar keeps them. The token cannot carry a scheme, link syntax, address or
   whitespace.
-- **A token can still spell words.** A value such as
-  `skip-review-and-merge` is a valid branch or slice name, so it stays
-  progress. It cannot carry whitespace-separated prose, a link or markup, and
-  it appears only in a typed column of a generated row. A value with spaces
-  stays bound to the revision.
+- **A runtime filename can still spell a word.** Safe filenames appear as
+  relative links with identical labels and destinations. A PRS value with the
+  same spelling is now fully bound. Whitespace, comma-list prose and active
+  markup in runtime filenames cannot reach the unchanged-digest path.
 - **Markdown table separators are projected away (`F1373-ea4f0cb9`, Low).**
   Scopes with an `omit_row` progress rule drop every table separator, so
   changing a separator's column count or alignment keeps the workflow digest.
