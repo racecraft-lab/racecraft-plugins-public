@@ -90,6 +90,13 @@ values are exempt from approval. Regenerated host payloads carry the same code.
   changes the digest. `test_numeric_fields_and_map_status_reject_markup` and
   the planning-directory case of
   `test_untyped_runtime_filenames_refuse_verify_on_each_host` keep both true.
+- **The shipped-host fixture compares its final edit with the original digest.**
+  For PRS, its preceding assertion already requires the canonical update to
+  change the digest; the final assertion does not independently compare that
+  update with the next edit. This cannot hide the reported false pass because
+  the first assertion fails under the original projection. The dedicated
+  request-seam attack tests separately record, mutate, regenerate and verify
+  every reported variant on the source and both hosts.
 - **Linux is not native macOS coverage.** The isolated runner cannot cover
   native macOS plugin CI. The orchestrator runs those host checks before
   merging.
