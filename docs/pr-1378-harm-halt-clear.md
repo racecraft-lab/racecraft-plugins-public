@@ -26,8 +26,8 @@ this doc describes the current behavior.
   a clear with no standing halt are refused. A used token cannot match the next
   halt's fresh digest.
 - A `dry_run` clear returns `would_clear` and `clear_refusal` and changes
-  nothing; it does not spend the token. It checks in apply's order: a held
-  publication lock beside a standing record reports `would_clear: false` with
+  nothing; it does not spend the token. Like apply, it checks the lock before
+  the token: a held publication lock beside a standing record reports `would_clear: false` with
   the same "ledger locked" text apply refuses with (review R1380-fb74189c).
 - A second trigger refused because a halt already stands changed nothing, so
   it releases the publication lock; the owner's token still clears the first
@@ -75,6 +75,15 @@ this doc describes the current behavior.
   The registry rollback sentence for `harm-halt` (`registry.py`) says a refused
   clear preserves any standing halt; it does not describe a refused `halt`
   trigger. After the R1380-fb74189c fix, a refused trigger keeps a lock only
-  when its own publication aborts, which fails closed by design, and `REFUSAL`
+  when its own publication aborts or the standing record cannot be read, which
+  fails closed by design, and `REFUSAL`
   in `harm_halt.py` already tells the caller a human must inspect a kept lock.
   Not a reachable wrong result, so the sentence stays as is.
+- **Dry run skips the ignore-marker check (cross-host review of `cfca10bf`,
+  Low).** Apply enters `exclusive_ledger`, which refuses when
+  `.specify/harm-halt/.gitignore` is a directory; `planned_clear` checks that
+  marker only when no record stands. With a halt standing and the marker
+  replaced by a directory, a dry run reports `would_clear: true` and apply
+  refuses. Reaching it needs someone to tamper with runner-owned storage after
+  the halt, and the result fails closed: the halt stands and the refusal names
+  the marker. The guidance therefore names only the checks a dry run makes.
