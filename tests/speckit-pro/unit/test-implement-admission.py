@@ -8,7 +8,6 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "lib"))
 import unittest
 
-from runner_invocation import run_runner
 from test_result import run_counted
 
 
