@@ -3,8 +3,10 @@
 Daybreak resolved **F1375-0784f4ad**, class **false-pass gate on unmarked
 instructions**, in its re-check at `f6f93a81c`.
 Daybreak also resolved **F1375-a524ccf3**, class **unowned write through
-inventory symlink**, in its [re-check at `20a19681`](https://github.com/racecraft-lab/racecraft-plugins-public/pull/1375#issuecomment-6245725763),
-which accounts for the fix commits and reported variants.
+inventory symlink**, in its [re-check at `982956d3`](https://github.com/racecraft-lab/racecraft-plugins-public/pull/1375#issuecomment-6245524438),
+which accounts for the fix commits and reported variants. Its
+[re-check at `20a19681`](https://github.com/racecraft-lab/racecraft-plugins-public/pull/1375#issuecomment-6245725763)
+confirms the finding remains resolved.
 
 ## Rules and the review seam
 
