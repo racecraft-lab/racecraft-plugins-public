@@ -512,25 +512,22 @@ class CompetingHaltFixture(HaltPublicationFixture):
 
 
 class HaltPublisherRaceTests(CompetingHaltFixture):
-    def test_malformed_competitor_cannot_discard_the_independent_tamper_halt(self) -> None:
+    def check_competition(self, last_safe_state, competitor_status: str, halt_status: str, expected: dict) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
                 self.setUp()
-                stopped, competitor = self.competing_trigger(17, host)
-                self.assertEqual("input_error", competitor["status"])
-                self.assertEqual("recorded", stopped["data"]["halt_record_status"])
+                stopped, competitor = self.competing_trigger(last_safe_state, host)
+                self.assertEqual(competitor_status, competitor["status"])
+                self.assertEqual(halt_status, stopped["data"]["halt_record_status"])
                 record = plan_stage_terminal.harm_halt.stored_halt(self.root)
-                self.assertEqual("tampering_or_forged_evidence", record["reason"])
+                self.assertEqual(expected, {key: record[key] for key in expected})
+
+    def test_malformed_competitor_cannot_discard_the_independent_tamper_halt(self) -> None:
+        self.check_competition(17, "input_error", "recorded", {"reason": "tampering_or_forged_evidence"})
 
     def test_valid_competitor_keeps_first_evidence_and_resume_refusal(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                self.setUp()
-                stopped, competitor = self.competing_trigger("before plan", host)
-                self.assertEqual("ok", competitor["status"])
-                self.assertEqual("blocked", stopped["data"]["halt_record_status"])
-                record = plan_stage_terminal.harm_halt.stored_halt(self.root)
-                self.assertEqual(("concurrent_writer", "first evidence"), (record["reason"], record["evidence"]))
+        self.check_competition("before plan", "ok", "blocked",
+                               {"reason": "concurrent_writer", "evidence": "first evidence"})
 
     def test_aborting_valid_competitor_leaves_durable_resume_refusal(self) -> None:
         for host, error in itertools.product(("claude", "codex"), (ValueError("rejected"), OSError("disk full"))):

@@ -31,7 +31,7 @@ SECRET = "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"
 ENTRY = {"kind": "scope_answer", "option_chosen": "a", "rejected_alternative": "b", "evidence": "c", "affected_unit": "d"}
 
 
-class HarmHaltTests(MutationRequestCase):
+class HarmHaltCase(MutationRequestCase):
     helper_id = "harm-halt"
     files = {WORKFLOW: "# Workflow\n"}
 
@@ -46,6 +46,8 @@ class HarmHaltTests(MutationRequestCase):
                                   inputs={"workflow_file": WORKFLOW, "entries": [ENTRY]})
         return dispatch_helper(request)
 
+
+class HarmHaltTests(HarmHaltCase):
     def test_no_record_means_resume_is_allowed_and_writes_proceed(self) -> None:
         self.assertEqual((False, "allowed"), tuple(self.read_only_data()[key] for key in ("halted", "resume")))
         self.assertEqual("ok", self.write_attempt()["status"])
@@ -101,6 +103,7 @@ class HarmHaltTests(MutationRequestCase):
         self.assertEqual("harm_halt_active", self.write_attempt()["diagnostics"][0]["code"])
 
 
+class HarmHaltRecordTests(HarmHaltCase):
     def test_the_record_never_holds_the_secret(self) -> None:
         cases = (("secret_exposure", f"token={SECRET}"), ("tampering_or_forged_evidence", f"the page links {SECRET} here"))
         for reason, evidence in cases:
@@ -295,7 +298,7 @@ class HaltPublicationFailureTests(MutationRequestCase):
 
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                              for case in (HarmHaltTests, HaltDispatchTests, HaltConcurrencyTests, HaltPublicationFailureTests))
+                              for case in (HarmHaltTests, HarmHaltRecordTests, HaltDispatchTests, HaltConcurrencyTests, HaltPublicationFailureTests))
 
 
 if __name__ == "__main__":
