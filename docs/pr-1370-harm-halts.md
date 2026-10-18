@@ -76,10 +76,12 @@ regular ignore marker. Agents leave this recovery to the human; no repository fi
 
 ## Known limits
 
-- The standards review's failed-worker attestation note does not leave reusable
-  evidence: the entire random runtime directory is enclosed by
-  `TemporaryDirectory`, which removes the attestation on every exception exit,
-  including non-zero process exits before the explicit unlink block.
+- A failed Claude worker can leave an attestation file in the separate,
+  owner-controlled sweep-hook store when failure precedes the explicit unlink.
+  `TemporaryDirectory` removes the runtime directory, not that attestation file.
+  The attestation name hashes the random runtime path, so it cannot authorize a
+  future invocation with a different runtime path. The surviving file is a
+  bounded cleanup limit, not reusable evidence for another invocation.
 - The pure-read allowlist is manually audited policy, not a general filesystem
   sandbox for future helper implementations. The six current entries read
   registries or supplied/local text and return derived values; adding an entry
