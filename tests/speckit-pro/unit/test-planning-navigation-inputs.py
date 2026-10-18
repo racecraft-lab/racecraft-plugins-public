@@ -11,25 +11,29 @@ from speckit_pro_runner.helpers.read_only import SpecIndexRenderError, render_sp
 
 
 class NavigationInjectionTest(fixtures.NavigationFixture):
-    def test_pr_fields_render_as_literal_text_after_approval(self):
-        self.approval()
-        self.map_path.write_text(render_spec_index(self.root)[0][0].rendered)
-        self.assertEqual(self.call("record", "apply", approval=self.approval())["status"], "ok")
+    def injectedPrFields(self, payload):
         manifest = self.feature / ".process/prs.json"
         original = json.loads(manifest.read_text())
-        payload = "[injected](untrusted.invalid)\n|<b>&\\`"
-        literal = "&#91;injected&#93;&#40;untrusted.invalid&#41;&#10;&#124;&#60;b&#62;&#38;&#92;&#96;"
         for version, field in ((2, "slice_id"), (2, "status"), (2, "branch"),
                                (2, "base_branch"), (2, "head_sha"), (2, "merged_sha"),
                                (2, "declared_files"), (2, "verification_evidence"),
                                (1, "slice"), (1, "merged_sha")):
+            data = json.loads(json.dumps(original)) if version == 2 else {
+                "schemaVersion": 1, "records": [{"slice": "us1", "pr": 41, "merged_sha": "a" * 40}]}
+            data["records"][0][field] = ["src/demo.py", payload] if field == "declared_files" else payload
+            if field == "merged_sha" and version == 2:
+                data["records"][0]["status"] = "merged"
+            manifest.write_text(json.dumps(data))
+            yield version, field
+
+    def test_pr_fields_render_as_literal_text_after_approval(self):
+        self.approval()
+        self.map_path.write_text(render_spec_index(self.root)[0][0].rendered)
+        self.assertEqual(self.call("record", "apply", approval=self.approval())["status"], "ok")
+        payload = "[injected](untrusted.invalid)\n|<b>&\\`"
+        literal = "&#91;injected&#93;&#40;untrusted.invalid&#41;&#10;&#124;&#60;b&#62;&#38;&#92;&#96;"
+        for version, field in self.injectedPrFields(payload):
             with self.subTest(version=version, field=field):
-                data = json.loads(json.dumps(original)) if version == 2 else {
-                    "schemaVersion": 1, "records": [{"slice": "us1", "pr": 41, "merged_sha": "a" * 40}]}
-                data["records"][0][field] = ["src/demo.py", payload] if field == "declared_files" else payload
-                if field == "merged_sha" and version == 2:
-                    data["records"][0]["status"] = "merged"
-                manifest.write_text(json.dumps(data))
                 text = render_spec_index(self.root)[0][0].rendered
                 self.assertNotIn(payload, text)
                 self.assertIn(literal, text)
@@ -39,20 +43,8 @@ class NavigationInjectionTest(fixtures.NavigationFixture):
                     self.assertEqual(self.call("verify")["status"], "ok")
 
     def test_external_links_are_refused_in_every_pr_field(self):
-        manifest = self.feature / ".process/prs.json"
-        original = json.loads(manifest.read_text())
-        for version, field in ((2, "slice_id"), (2, "status"), (2, "branch"),
-                               (2, "base_branch"), (2, "head_sha"), (2, "merged_sha"),
-                               (2, "declared_files"), (2, "verification_evidence"),
-                               (1, "slice"), (1, "merged_sha")):
+        for version, field in self.injectedPrFields("[injected](https://untrusted.invalid)"):
             with self.subTest(version=version, field=field):
-                data = json.loads(json.dumps(original)) if version == 2 else {
-                    "schemaVersion": 1, "records": [{"slice": "us1", "pr": 41, "merged_sha": "a" * 40}]}
-                payload = "[injected](https://untrusted.invalid)"
-                data["records"][0][field] = [payload] if field == "declared_files" else payload
-                if field == "merged_sha" and version == 2:
-                    data["records"][0]["status"] = "merged"
-                manifest.write_text(json.dumps(data))
                 with self.assertRaises(SpecIndexRenderError):
                     render_spec_index(self.root)
                 for host in ("claude", "codex"):
