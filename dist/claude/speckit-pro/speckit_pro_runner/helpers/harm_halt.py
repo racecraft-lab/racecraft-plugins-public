@@ -141,7 +141,7 @@ def apply_refusal(entry: Any, request: Any) -> dict[str, Any] | None:
 REFUSAL = Refusal(
     "invalid_harm_halt_request",
     "Send no inputs to read; to record, action halt with a harm-halt reason, evidence and the last safe state. Agent clear requests are refused.",
-    ["Correct the named field.", "Rerun harm-halt; nothing was written."],
+    ["Correct the named field.", "Rerun harm-halt; a refused halt keeps any standing record or publication lock for a human to inspect."],
 )
 
 
