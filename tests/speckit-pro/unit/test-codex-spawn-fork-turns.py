@@ -43,6 +43,11 @@ def call_tokens(text: str) -> tuple[int, list[tokenize.TokenInfo]]:
         for token in tokenize.generate_tokens(io.StringIO(text).readline):
             if token.type in (tokenize.NL, tokenize.NEWLINE):
                 continue
+            if token.type not in {
+                tokenize.NAME, tokenize.NUMBER, tokenize.STRING, tokenize.OP,
+                tokenize.COMMENT, tokenize.ENDMARKER,
+            }:
+                raise AssertionError(f"unsupported call token: {token.type}")
             tokens.append(token)
             if token.type == tokenize.OP:
                 depth += int(token.string in "([{") - int(token.string in ")]}")
@@ -98,14 +103,20 @@ def prose_blocks(text: str) -> list[str]:
     Concrete calls are checked structurally and cannot supply a prose marker.
     """
     argument_text = []
+    # Keep character offsets stable even for nested/overlapping call spans.
+    # Whitespace on both sides prevents the mask from swallowing a word boundary.
+    masked = list(text)
     for start, end, tokens in reversed(dispatch_sites(text)):
         for token in tokens:
             if token.type == tokenize.STRING:
-                argument_text.append(str(ast.literal_eval(token.string)))
+                try:
+                    argument_text.append(str(ast.literal_eval(token.string)))
+                except (ValueError, SyntaxError) as error:
+                    raise AssertionError("unsupported argument string") from error
             elif token.type == tokenize.COMMENT:
                 argument_text.append(token.string)
-        text = text[:start] + "DISPATCH_CALL" + text[end:]
-    blocks = re.split(r"\n\s*\n", text) + argument_text
+        masked[start:end] = " CALL ".ljust(end - start)
+    blocks = re.split(r"\n\s*\n", "".join(masked)) + argument_text
     return [" ".join(block.split()) for block in blocks
             if re.search(r"\b(?:spawn_agent|fork_turns)\b", block)]
 
@@ -224,6 +235,35 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             with self.subTest(snippet=snippet):
                 self.assert_skill_rejected(
                     snippet, "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none")
+
+    def test_nested_calls_cannot_erase_following_prose(self) -> None:
+        self.assert_skill_rejected(
+            'spawn_agent(fork_turns="none", message=spawn_agent(fork_turns="none"))'
+            'fork_turns="all" for children.',
+            "test_every_prose_dispatch_in_the_codex_skills_passes_fork_turns_none")
+
+    def test_call_mask_cannot_hide_an_adjacent_identifier(self) -> None:
+        self.assert_skill_rejected(
+            'spawn_agent(fork_turns="none")fork_turns="all" for children.',
+            "test_every_prose_dispatch_in_the_codex_skills_passes_fork_turns_none")
+
+    def test_formatted_string_token_kinds_fail_closed(self) -> None:
+        # Model a tokenizer that splits a formatted/template string into new kinds.
+        token_kind = max(tokenize.tok_name) + 1
+        tokens = [
+            tokenize.TokenInfo(tokenize.NAME, "spawn_agent", (1, 0), (1, 11), ""),
+            tokenize.TokenInfo(tokenize.OP, "(", (1, 11), (1, 12), ""),
+            tokenize.TokenInfo(token_kind, 'fork_turns="all"', (1, 12), (1, 28), ""),
+            tokenize.TokenInfo(tokenize.OP, ")", (1, 28), (1, 29), ""),
+        ]
+        with patch.object(tokenize, "generate_tokens", return_value=iter(tokens)):
+            with self.assertRaisesRegex(AssertionError, "unsupported.*token"):
+                prose_blocks('spawn_agent(fork_turns="all")')
+
+    def test_formatted_argument_strings_fail_closed(self) -> None:
+        self.assert_skill_rejected(
+            'spawn_agent(fork_turns="none", message=f\'Use fork_turns="all" for children.\')',
+            "test_every_prose_dispatch_in_the_codex_skills_passes_fork_turns_none")
 
     def test_prompt_cannot_hide_conflicting_child_instructions(self) -> None:
         self.assert_skill_rejected(
