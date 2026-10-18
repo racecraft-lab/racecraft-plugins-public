@@ -400,6 +400,17 @@ class RerunTests(TerminalFixture):
         self.assertEqual(blocked["diagnostics"][0]["code"], "harm_halt_active", blocked)
         self.assertEqual((self.subjects(), self.cli.gh), ([], []))
 
+    def test_stale_planning_inputs_stop_with_a_registered_reason_and_no_halt(self) -> None:
+        self.finish(until="pages")
+        tasks = self.root / PLANNING["tasks_file"]
+        tasks.write_bytes(tasks.read_bytes() + b"\nA late task.\n")
+        result = self.finish(execution_mode="headless")
+        self.assertEqual(result["data"]["stop_label"], LABEL, result)
+        self.assertFalse((self.root / ".specify/harm-halt/halt.json").exists())
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+
+
+class ConcurrentHaltTests(TerminalFixture):
     def test_a_concurrent_halt_keeps_the_stop_report_and_the_first_record(self) -> None:
         page = self.root / FEATURE / "artifacts" / f"{self.finish(until='pages')['data']['pages']['generated'][0]}.html"
         page.write_text(page.read_text(encoding="utf-8") + "<!-- drift -->", encoding="utf-8")
@@ -416,15 +427,6 @@ class RerunTests(TerminalFixture):
         record = json.loads((self.root / ".specify/harm-halt/halt.json").read_text(encoding="utf-8"))
         self.assertEqual(record["reason"], "concurrent_writer")
         self.assertEqual((self.subjects(), self.cli.gh), ([], []))
-
-    def test_stale_planning_inputs_stop_with_a_registered_reason_and_no_halt(self) -> None:
-        self.finish(until="pages")
-        tasks = self.root / PLANNING["tasks_file"]
-        tasks.write_bytes(tasks.read_bytes() + b"\nA late task.\n")
-        result = self.finish(execution_mode="headless")
-        self.assertEqual(result["data"]["stop_label"], LABEL, result)
-        self.assertFalse((self.root / ".specify/harm-halt/halt.json").exists())
-        self.assertEqual(self.finish(until="pages")["status"], "ok")
 
 
 class ContentEvidenceTests(TerminalFixture):
