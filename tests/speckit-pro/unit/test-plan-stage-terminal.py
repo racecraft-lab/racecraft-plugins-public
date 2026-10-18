@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import dataclasses
 import functools
+import hashlib
 import itertools
 import json
 import os
@@ -26,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 sys.path.insert(0, str(ROOT / "speckit-pro"))
 from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
-from host_skill_views import rendered_section  # noqa: E402
+import host_skill_views  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner import autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
@@ -1239,13 +1240,96 @@ class TerminalGuidanceTests(unittest.TestCase):
     """The parent's terminal step costs one response per poll and per reference read (issue 1317)."""
 
     def test_each_host_prints_the_helper_report_and_codex_waits_in_one_long_poll(self) -> None:
-        for host, codex in (("claude", False), ("codex", True)):
-            section = rendered_section(host, "speckit-autopilot/references/phase-execution.md",
-                                       "#### Draft-PR emission: the terminal-step sequence", "#### The `artifact-author` dispatch")
+        # Bind the complete reviewed document bytes, including Markdown context.
+        # A section/phrase search can select a hidden copy or miss a negation.
+        # Changes require reviewing the rendered instructions before re-pinning.
+        reviewed = {
+            "claude": "bbcb98da134a075ef6ade89c72237bfd8e25648eda3a5ff1c606b44facaec2e7",
+            "codex": "4d40b2c47dd31d6784b0e42ac97d809dc94c4c68935c326822bdc2a330a03393",
+        }
+        for host, digest in reviewed.items():
+            path = host_skill_views.host_skill_root(host) / "speckit-autopilot/references/phase-execution.md"
             with self.subTest(host=host):
-                self.assertIn("For `outcome: completed`, the answer's `report` is the whole stop report", section)
-                self.assertEqual(("`yield_time_ms: 30000`" in section, "`yield_time_ms: 300000`" in section), (codex, codex))
-                self.assertEqual("write_stdin" in section, codex)
+                self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest,
+                                 "Review the complete rendered terminal instructions before updating this host's digest")
+
+
+class TerminalGuidanceGateMutationTests(unittest.TestCase):
+    """Mutate the rendered file, then exercise the real guidance gate."""
+
+    def assert_guidance_rejected(self, host: str, mutate) -> None:
+        relative = "speckit-autopilot/references/phase-execution.md"
+        roots = {name: host_skill_views.host_skill_root(name) for name in ("claude", "codex")}
+        original = (roots[host] / relative).read_text(encoding="utf-8")
+        changed = mutate(original)
+        self.assertNotEqual(changed, original, "mutation must reach the rendered guidance")
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / relative
+            path.parent.mkdir(parents=True)
+            path.write_text(changed, encoding="utf-8")
+            roots[host] = Path(temporary)
+            with unittest.mock.patch.object(host_skill_views, "host_skill_root", side_effect=roots.__getitem__):
+                gate = TerminalGuidanceTests("test_each_host_prints_the_helper_report_and_codex_waits_in_one_long_poll")
+                with self.assertRaises(AssertionError):
+                    gate.test_each_host_prints_the_helper_report_and_codex_waits_in_one_long_poll()
+
+    def assert_inert_report_rejected(self, host: str) -> None:
+        clause = "For `outcome: completed`, the answer's `report` is the whole stop report: print it unchanged, then its `stop_label`."
+        for replacement in ("", "For `outcome: completed`, rewrite the report before printing it."):
+            with self.subTest(host=host, replacement=replacement):
+                self.assert_guidance_rejected(host, lambda text: text.replace(clause, f"<!-- {clause} --> {replacement}"))
+
+    def test_claude_rejects_inert_completed_report(self) -> None:
+        self.assert_inert_report_rejected("claude")
+
+    def test_codex_rejects_inert_completed_report(self) -> None:
+        self.assert_inert_report_rejected("codex")
+
+    def test_each_host_rejects_missing_or_changed_final_stop_label(self) -> None:
+        for host, replacement in itertools.product(("claude", "codex"), ("", "then print a different marker")):
+            with self.subTest(host=host, replacement=replacement):
+                self.assert_guidance_rejected(host, lambda text: text.replace("then its `stop_label`", replacement))
+
+    def test_codex_rejects_inert_long_poll_instructions(self) -> None:
+        pattern = r"\*\*Wait on the finishing call in one poll\.\*\*.*?while the helper still runs\."
+        for replacement in ("Poll every second with `write_stdin` and `yield_time_ms: 1000`.", ""):
+            with self.subTest(replacement=replacement):
+                self.assert_guidance_rejected("codex", lambda text: re.sub(
+                    pattern, lambda match: f"<!-- {match[0]} --> {replacement}", text, flags=re.DOTALL))
+
+    def test_each_host_rejects_shadow_sections_and_other_inert_wrappers(self) -> None:
+        start = "#### Draft-PR emission: the terminal-step sequence"
+        end = "#### The `artifact-author` dispatch"
+        for host, wrapper in itertools.product(("claude", "codex"), ("<!--\n{}\n-->", "```text\n{}\n```", "> {}", "<template>{}</template>")):
+            with self.subTest(host=host, wrapper=wrapper):
+                def shadow(text: str) -> str:
+                    first, last = text.index(start), text.index(end, text.index(start))
+                    section = text[first:last]
+                    return text[:first] + wrapper.format(section + end) + "\n6. Skip the report and stop.\n" + text[last:]
+                self.assert_guidance_rejected(host, shadow)
+
+    def test_each_host_rejects_other_terminal_fields_and_instruction_links(self) -> None:
+        replacements = (
+            ("print it unchanged", "rewrite it"),
+            ("`outcome: completed`", "`outcome: stopped`"),
+            ("`report` is the whole stop report", "`summary` is the whole stop report"),
+            ("as the last line of your final message", "before another final line"),
+            ("6. Print the stop report", "6. [Print the stop report](https://example.invalid/skip)"),
+            ("#### Draft-PR emission: the terminal-step sequence", "#### Archived terminal-step sequence"),
+        )
+        for host, (old, new) in itertools.product(("claude", "codex"), replacements):
+            with self.subTest(host=host, old=old):
+                self.assert_guidance_rejected(host, lambda text: text.replace(old, new))
+
+    def test_codex_rejects_each_poll_field_change(self) -> None:
+        for old, new in (("yield_time_ms: 30000", "yield_time_ms: 1000"),
+                         ("yield_time_ms: 300000", "yield_time_ms: 1000"),
+                         ("`write_stdin`", "`exec_command`"),
+                         ("with empty `chars`", "with nonempty `chars`"),
+                         ("that `session_id`", "a different `session_id`"),
+                         ("no integer `exit_code`", "an integer `exit_code`")):
+            with self.subTest(old=old):
+                self.assert_guidance_rejected("codex", lambda text: text.replace(old, new))
 
 
 class FixtureRootTests(unittest.TestCase):
