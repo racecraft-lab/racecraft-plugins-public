@@ -82,9 +82,9 @@ def isolation_request_fits(inputs: dict[str, Any]) -> bool:
     from ..sweep_isolation import PERSPECTIVES, SESSION_ID_RE, STAGES
 
     surface = inputs.get("named_surface")
-    expected = ISOLATION_REQUEST_FIELDS.get(surface) if isinstance(surface, str) else None
-    if expected is None:
+    if not isinstance(surface, str) or surface not in ISOLATION_REQUEST_FIELDS:
         return False
+    expected = ISOLATION_REQUEST_FIELDS[surface]
     launch = surface.startswith("launch_")
     stage = inputs.get("stage")
     if launch and stage == "perspective":
