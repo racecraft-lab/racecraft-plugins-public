@@ -152,6 +152,10 @@ def v1_records():
                                             {"slice": "us2", "pr": 0, "merged_sha": "a" * 40}]}
 
 
+SHIPPED_PAYLOAD_NAMES = {"underscore emphasis", "underscore strong", "inline link", "mailto link",
+                         "comma strong instruction", "cell strong instruction", "typed cell split"}
+
+
 class RuntimeNavigationCase(MapAssertions):
     """Record, mutate and regenerate helpers for runtime navigation variants."""
 
@@ -185,11 +189,8 @@ class RuntimeNavigationCase(MapAssertions):
 
     def payloads(self, catalog):
         """All payloads on the source runner; a fixed named subset on each shipped host."""
-        if self.runner_root == RUNNERS[0]:
-            return catalog
-        return {name: payload for name, payload in catalog.items()
-                if name in {"underscore emphasis", "underscore strong", "inline link", "mailto link",
-                            "comma strong instruction", "cell strong instruction", "typed cell split"}}
+        shipped = {name: payload for name, payload in catalog.items() if name in SHIPPED_PAYLOAD_NAMES}
+        return catalog if self.runner_root == RUNNERS[0] else shipped
 
     def assertPrsVariantsRefused(self, base, rows, file_index=0):
         for index, field in rows:
