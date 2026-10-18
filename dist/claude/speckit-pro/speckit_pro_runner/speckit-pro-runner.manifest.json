@@ -247,7 +247,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "110f82c2dd453cb8547443dffacef0c637b218102ffeb511d8a3dd9206dc0b4b"
+      "sha256": "0006eddbf8540c86dc1fd6813225d4e18e95c106928b01e46d3a3af30ebd2be6"
     },
     {
       "path": {
@@ -663,7 +663,7 @@
         "value": "speckit_pro_runner/helpers/harm_halt.py",
         "display": "speckit_pro_runner/helpers/harm_halt.py"
       },
-      "sha256": "ab3d0a0d914874153afed032e0bcb3ef9bc66b1b2f2a67e996548b27a50f7404"
+      "sha256": "dee3d5d0c064d63374307824cef0a14d4277d373aafd623d85573135417a34e0"
     },
     {
       "path": {

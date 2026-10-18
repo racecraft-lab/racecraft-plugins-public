@@ -219,6 +219,9 @@ def durable_json(path: Path, value: dict[str, Any]) -> None:
         Path(temporary).unlink(missing_ok=True)
 
 
+LEDGER_LOCKED = "ledger locked; reconcile the prior owner before retrying"
+
+
 @contextmanager
 def exclusive_ledger(path: Path, *, retain_on_error: bool = False):
     """Never steal a stale lock; halt publishers retain theirs if publication fails."""
@@ -227,7 +230,7 @@ def exclusive_ledger(path: Path, *, retain_on_error: bool = False):
     try:
         lock.mkdir()
     except FileExistsError as exc:
-        raise ValueError("ledger locked; reconcile the prior owner before retrying") from exc
+        raise ValueError(LEDGER_LOCKED) from exc
     completed = False
     try:
         yield

@@ -66,11 +66,16 @@ def stored_halt(root: Any) -> dict[str, Any] | None:
     if path.parent.exists() and not path.parent.is_dir():
         raise SelectionError("halt storage is not a directory; a human must inspect it")
     if not path.exists():
-        lock = path.with_suffix(".lock")
-        if lock.exists() or lock.is_symlink() or (path.parent / ".gitignore").is_dir():
+        if lock_held(path) or (path.parent / ".gitignore").is_dir():
             raise SelectionError("halt publication is active, interrupted or unsafe; a human must inspect it")
         return None
     return public(parsed_record(path))
+
+
+def lock_held(path: Path) -> bool:
+    """Whether any entry, even a dangling link, holds the publication lock that `mkdir` would refuse."""
+    lock = path.with_suffix(".lock")
+    return lock.exists() or lock.is_symlink()
 
 
 def parsed_record(path: Path) -> dict[str, Any]:
