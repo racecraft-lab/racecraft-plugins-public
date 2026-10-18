@@ -112,6 +112,10 @@ _Avoid_: signing prompt, transcript proof, repository approval flag
 **Planning manifest**:
 The runner-owned inventory and content digests of authoritative planning inputs. Its digest identifies a planning revision; typed execution bookkeeping does not change it. Criterion text and planning notes remain part of that revision even when they appear beside progress; a Success Criteria tick records completion rather than a planning choice.
 
+**Planning finding**:
+A problem planning reports for plan review to close: a blocked planning gate, a strict low-confidence result, or a reviewer's own request. The feature's `planning-findings.json` lists each finding id with its requests. Planning adds a strict low-confidence finding with no request yet, and approval stays refused until each finding has a request, a correction and a passing check.
+_Avoid_: strict stop, accepted risk, warning
+
 **Plan approval record**:
 The record of a human's explicit approval of one full planning revision after all planning findings have been fixed and checked. Its assurance is `recorded`: it holds the confirmation reference without defending against an agent with the operator's file access. It permits that revision to be built but supplies neither security consent nor proof that implementation work is complete.
 _Avoid_: artifact sign-off, planning complete, implementation permission

@@ -27,9 +27,10 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 sys.path.insert(0, str(ROOT / "speckit-pro"))
 from git_fixture import commit_baseline, git, git_stdout  # noqa: E402
+from structural_helpers import load_json  # noqa: E402
 import host_skill_views  # noqa: E402
 from test_result import run_counted  # noqa: E402
-from speckit_pro_runner import autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
+from speckit_pro_runner import atomic_write, autopilot_state, artifact_review, envelope, execution_control, stop_policy  # noqa: E402
 from speckit_pro_runner.helpers import plan_stage_terminal, registry  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
 
@@ -41,6 +42,7 @@ PLANNING = {"plan_file": f"{FEATURE}/plan.md", "spec_file": f"{FEATURE}/spec.md"
 CONCEPT = "docs/ai/specs/.process/ART-007-design-concept.md"
 URL = "https://github.com/example/repo/pull/7"
 LABEL = "stop_reason:plan_stage_boundary"
+FINDINGS = f"{FEATURE}/planning-findings.json"
 EVIDENCE_ANCHOR = "Phase 1: Setup (Worktree Preflight)"
 
 
@@ -134,6 +136,15 @@ class TerminalFixture(unittest.TestCase):
 
     def pages(self) -> list[str]:
         return sorted(path.stem for path in (self.root / FEATURE / "artifacts").glob("*.html"))
+
+    def rewrite_workflow(self, *swaps: tuple[str, str], commit: str | None = None) -> None:
+        path = self.root / WORKFLOW
+        text = path.read_text(encoding="utf-8")
+        for old, new in swaps:
+            text = text.replace(old, new)
+        path.write_text(text, encoding="utf-8")
+        if commit is not None:
+            self.git("commit", "-q", "-am", commit)
 
 
 class RunFactsTests(TerminalFixture):
@@ -858,11 +869,8 @@ class FreshnessTests(TerminalFixture):
 
 class PullRequestTests(TerminalFixture):
     def record(self, number: int = 7) -> None:
-        path = self.root / WORKFLOW
-        text = path.read_text(encoding="utf-8")
-        path.write_text(text.replace("| **Priority** | P1 |", f"| **Priority** | P1 |\n| **Draft PR** | [#{number}]({URL}) |"),
-                        encoding="utf-8")
-        self.git("commit", "-q", "-am", "seed row")
+        self.rewrite_workflow(("| **Priority** | P1 |", f"| **Priority** | P1 |\n| **Draft PR** | [#{number}]({URL}) |"),
+                              commit="seed row")
 
     def stops(self, label: str, **inputs: object) -> dict:
         result = self.finish(execution_mode="headless", **inputs)
@@ -1156,12 +1164,14 @@ class ConfidenceRecoveryTests(TerminalFixture):
             with self.subTest(host=host):
                 config = self.root / f".{host}/speckit-pro.local.md"
                 config.parent.mkdir(exist_ok=True)
+                (self.root / FINDINGS).unlink(missing_ok=True)
                 config.write_text("confidence_threshold: 0.80\n", encoding="utf-8")
                 path.write_text(original.replace("| Mode | advisory |", "| Mode | **Strict** — resolved at Step 0.6b |")
                                .replace("0.94", "0.85"), encoding="utf-8")
                 self.assertEqual(self.finish(host=host, until="pages")["status"], "ok")
                 config.write_text("confidence_threshold: 0.95\n", encoding="utf-8")
-                self.assertNotEqual(self.finish(host=host, until="pages")["status"], "ok")
+                self.assertEqual(self.finish(host=host, until="pages")["status"], "ok")
+                self.assertEqual(load_json(self.root / FINDINGS), {"confidence-composite": []})
 
     def test_no_data_stops_with_a_documented_confidence_recovery_path(self) -> None:
         path = self.root / WORKFLOW
@@ -1179,15 +1189,198 @@ class ConfidenceRecoveryTests(TerminalFixture):
                 self.assertNotIn("proceed", no_data)
 
 
-class GuardTests(TerminalFixture):
-    def test_a_blocked_gate_stops_before_generation_and_writes_nothing(self) -> None:
-        path = self.root / WORKFLOW
-        path.write_text(path.read_text(encoding="utf-8").replace("| Confidence Gate | G6.5 | ✅ Complete", "| Confidence Gate | G6.5 | ⚠️ Blocked"),
-                        encoding="utf-8")
-        self.git("commit", "-q", "-am", "blocked")
-        result = self.finish(execution_mode="headless")
-        self.assertEqual(result["data"]["stop_label"], "stop_reason:strict_confidence_opt_in")
+class StrictFindingsTests(TerminalFixture):
+    """A strict confidence shortfall goes to plan review as findings; it never stops planning (ADR 0013)."""
+
+    CRITERIA = ("\n- Task understanding: 0.95\n- Approach clarity: 0.70\n- Requirements alignment: 0.92\n"
+                "- Risk assessment: 0.91\n- Completeness: 0.80\n")
+
+    def strict(self, emit: str = "📊 Confidence: 0.50") -> None:
+        self.rewrite_workflow(("| Mode | advisory |", "| Mode | strict |"), ("📊 Confidence: 0.94", emit),
+                              commit="strict shortfall")
+
+    def findings(self) -> dict:
+        return load_json(self.root / FINDINGS)
+
+    def test_a_strict_shortfall_publishes_the_draft_pr_and_records_a_finding_on_both_hosts(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.setUp()
+                self.strict()
+                result = self.finish(host=host, execution_mode="headless")
+                self.assertEqual(result["status"], "ok", result)
+                self.assertEqual((result["data"]["outcome"], result["data"]["stop_label"]), ("completed", LABEL))
+                self.assertEqual(len(self.cli.calls("create")), 1)
+                self.assertEqual(self.findings(), {"confidence-composite": []})
+                boundary = self.git("log", "--format=%H", "--grep", "close the plan stage boundary", "-1")
+                self.assertIn(FINDINGS, self.git("show", "--name-only", "--format=", boundary).splitlines())
+                self.assertEqual(self.git("status", "--porcelain"), "")
+
+    def test_each_criterion_below_threshold_is_its_own_finding(self) -> None:
+        self.strict("📊 Confidence: 0.86" + self.CRITERIA)
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(self.findings(), {"confidence-approach_clarity": [], "confidence-completeness": []})
+
+    def test_a_rerun_keeps_recorded_findings_and_their_requests(self) -> None:
+        self.strict("📊 Confidence: 0.86" + self.CRITERIA)
+        recorded = {"confidence-completeness": ["List every artifact"], "USER-1": ["Name the owner"]}
+        (self.root / FINDINGS).write_text(json.dumps(recorded), encoding="utf-8")
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(self.findings(), {**recorded, "confidence-approach_clarity": []})
+
+    def test_a_passing_gate_records_a_clean_inventory_and_never_adds_a_finding(self) -> None:
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(self.findings(), {})
+        recorded = {"confidence-composite": ["Raise the plan's confidence"]}
+        (self.root / FINDINGS).write_text(json.dumps(recorded), encoding="utf-8")
+        self.assertEqual(self.finish(until="pages")["status"], "ok")
+        self.assertEqual(self.findings(), recorded)
+
+    def test_a_dry_run_records_no_finding(self) -> None:
+        self.strict()
+        self.assertEqual(self.finish("dry_run")["status"], "ok")
+        self.assertFalse((self.root / FINDINGS).exists())
+
+    def test_an_unreadable_inventory_stops_before_any_page(self) -> None:
+        self.strict()
+        (self.root / FINDINGS).write_text("[]", encoding="utf-8")
+        self.assertNotEqual(self.finish(until="pages")["status"], "ok")
         self.assertFalse((self.root / FEATURE / "artifacts").exists())
+
+
+class InventoryConcurrencyTests(TerminalFixture):
+    """Reviewer updates survive every publication window on both hosts."""
+
+    strict = StrictFindingsTests.strict
+    findings = StrictFindingsTests.findings
+
+    def inventory_race(self, change, *, missing=False, late=False, install=False) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host, missing=missing, late=late, install=install):
+                self.setUp()
+                self.strict()
+                target = self.root / FINDINGS
+                original = {"F1": ["original request"]}
+                if not missing:
+                    target.write_text(json.dumps(original), encoding="utf-8")
+                reviewer = {"F1": ["reviewer update"], "F2": ["new finding"]}
+                owner = plan_stage_terminal.planning_approval
+                writer = owner.write_bytes_atomic
+                fsync = atomic_write.os.fsync
+                validate = atomic_write._validate_atomic_install
+                injected = []
+
+                def mutate():
+                    if not injected:
+                        injected.append(True)
+                        change(target, reviewer)
+
+                def before_write(*args, **kwargs):
+                    mutate()
+                    return writer(*args, **kwargs)
+
+                def before_install(fd):
+                    mutate()
+                    return fsync(fd)
+
+                def after_validation(state, content, options):
+                    validate(state, content, options)
+                    mutate()
+
+                with unittest.mock.patch.object(owner, "write_bytes_atomic", side_effect=writer if late or install else before_write), \
+                        unittest.mock.patch.object(atomic_write.os, "fsync", side_effect=before_install if late else fsync), \
+                        unittest.mock.patch.object(atomic_write, "_validate_atomic_install", side_effect=after_validation if install else validate):
+                    result = self.finish(host=host, until="pages")
+                self.assertEqual(injected, [True], result)
+                self.assertEqual(self.findings(), reviewer, result)
+                self.assertNotEqual(result["status"], "ok", result)
+                self.assertFalse((self.root / FEATURE / "artifacts").exists())
+
+    def test_inventory_edit_after_capture_preserves_reviewer_requests_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)))
+
+    def test_inventory_creation_after_missing_capture_preserves_new_findings_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), missing=True)
+
+    def test_inventory_edit_during_publication_preserves_reviewer_requests_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), late=True)
+
+    def test_inventory_creation_during_publication_preserves_new_findings_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), missing=True, late=True)
+
+    def test_inventory_edit_at_atomic_install_preserves_reviewer_requests_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), install=True)
+
+    def test_inventory_creation_at_atomic_install_preserves_new_findings_on_both_hosts(self) -> None:
+        self.inventory_race(lambda target, value: target.write_text(json.dumps(value)), missing=True, install=True)
+
+    def test_inventory_identical_inode_replacement_is_refused_on_both_hosts(self) -> None:
+        def replace_inode(target, value):
+            previous = target.read_bytes()
+            target.rename(target.with_name("reviewer-original.json"))
+            target.write_bytes(previous)
+            value.clear()
+            value.update(json.loads(previous))
+        self.inventory_race(replace_inode)
+
+    def test_inventory_new_hardlink_alias_is_refused_on_both_hosts(self) -> None:
+        def alias(target, value):
+            target.with_name("reviewer.json").hardlink_to(target)
+            value.clear()
+            value.update(json.loads(target.read_bytes()))
+        self.inventory_race(alias)
+
+    def test_inventory_parent_replacement_with_identical_bytes_is_refused_on_both_hosts(self) -> None:
+        def replace_parent(target, value):
+            previous = target.read_bytes()
+            target.parent.rename(target.parent.with_name("moved-feature"))
+            target.parent.mkdir()
+            target.write_bytes(previous)
+            # Same bytes must still be refused: the directory is a different authority.
+            value.clear()
+            value.update(json.loads(previous))
+        self.inventory_race(replace_parent)
+
+    def test_inventory_symlink_substitution_is_refused_on_both_hosts(self) -> None:
+        def link(target, value):
+            other = target.with_name("reviewer.json")
+            other.write_text(json.dumps(value))
+            target.unlink()
+            target.symlink_to(other.name)
+        self.inventory_race(link)
+        self.inventory_race(link, install=True)
+
+    def test_inventory_hardlink_substitution_is_refused_on_both_hosts(self) -> None:
+        def link(target, value):
+            other = target.with_name("reviewer.json")
+            other.write_text(json.dumps(value))
+            target.unlink()
+            target.hardlink_to(other)
+        self.inventory_race(link)
+        self.inventory_race(link, install=True)
+
+    def test_existing_symlink_and_hardlink_inventories_remain_refused(self) -> None:
+        for kind in ("symlink", "hardlink"):
+            with self.subTest(kind=kind):
+                self.setUp()
+                target = self.root / FINDINGS
+                other = target.with_name("reviewer.json")
+                other.write_text('{"F1": ["reviewer request"]}')
+                getattr(target, f"{kind}_to")(other)
+                with self.assertRaises((OSError, ValueError)):
+                    plan_stage_terminal.planning_approval.add_findings(self.root, FEATURE, ["confidence-composite"])
+                self.assertEqual(json.loads(other.read_bytes()), {"F1": ["reviewer request"]})
+
+
+
+class GuardTests(TerminalFixture):
+    def test_a_legacy_blocked_gate_row_stops_before_generation_and_writes_nothing(self) -> None:
+        self.rewrite_workflow(("| Confidence Gate | G6.5 | ✅ Complete", "| Confidence Gate | G6.5 | ⚠️ Blocked"), commit="blocked")
+        result = self.finish(execution_mode="headless")
+        self.assertEqual(result["data"]["stop_label"], LABEL)
+        self.assertIn("must finish", result["data"]["report"])
+        self.assertFalse((self.root / FEATURE / "artifacts").exists())
+        self.assertFalse((self.root / FINDINGS).exists())
         self.assertEqual((self.subjects(), self.cli.gh), (["blocked"], []))
 
     def test_unfinished_or_unresolved_planning_never_mutates(self) -> None:
@@ -1216,13 +1409,10 @@ class GuardTests(TerminalFixture):
                 path.write_text(original.replace("📊 Confidence: 0.94", emit), encoding="utf-8")
                 self.assertNotEqual(self.finish(until="pages")["status"], "ok")
                 self.assertFalse((self.root / FEATURE / "artifacts").exists())
-        path.write_text(original.replace("| Mode | advisory |", "| Mode | strict |").replace("0.94", "0.50"), encoding="utf-8")
-        self.assertNotEqual(self.finish(until="pages")["status"], "ok")
-        self.assertFalse((self.root / FEATURE / "artifacts").exists())
+                self.assertFalse((self.root / FINDINGS).exists())
 
     def test_a_completed_advisory_warning_allows_pages(self) -> None:
-        path = self.root / WORKFLOW
-        path.write_text(path.read_text(encoding="utf-8").replace("📊 Confidence: 0.94", "📊 Confidence: 0.50"), encoding="utf-8")
+        self.rewrite_workflow(("📊 Confidence: 0.94", "📊 Confidence: 0.50"))
         self.assertEqual(self.finish(until="pages")["status"], "ok")
 
     def test_a_page_that_is_still_its_template_is_deleted_and_reported_as_a_gap(self) -> None:
@@ -1244,8 +1434,8 @@ class TerminalGuidanceTests(unittest.TestCase):
         # A section/phrase search can select a hidden copy or miss a negation.
         # Changes require reviewing the rendered instructions before re-pinning.
         reviewed = {
-            "claude": "282e0fdb82ddfa054e596214caf7abbf10a71b7f2334fe046eda9e3632ca13ea",
-            "codex": "21f46228189a3fe66c9830685b8b268e76dda1182c320782023192f91e45f5c1",
+            "claude": "460b1687d089e61ae444e9268bf3a8a530eaf9458558e658ad54e375e15c7298",
+            "codex": "64041c57a1f770e93c0c52646ed424bd85772ee610e31e22082d88ef30fe8409",
         }
         for host, digest in reviewed.items():
             path = host_skill_views.host_skill_root(host) / "speckit-autopilot/references/phase-execution.md"

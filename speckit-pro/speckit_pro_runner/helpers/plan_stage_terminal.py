@@ -1,6 +1,6 @@
 """The runner owns the plan stage's terminal sequence (ADR 0026).
 
-One mutation helper fills the artifact pages, takes the stage-boundary commit, builds and commits the
+One mutation helper records strict low-confidence findings for plan review, fills the artifact pages, takes the stage-boundary commit, builds and commits the
 draft packet, pushes, creates or refreshes the draft pull request, records it, and writes
 `plan/completed` (state `stage: plan`, `status: completed`). A model writes only the page prose,
 through one artifact-author dispatch between the `pages` call and the finishing call (ADR 0019).
@@ -23,8 +23,8 @@ from ..envelope import RunnerRequest, diagnostic, response
 from ..execution_control import contained_workflow_file
 from ..trusted_io import resolve_repo_root, trusted_bytes
 from ..workflow_stage import AUTOPILOT_BASIC_INFO_HEADING, HTML_COMMENT_RE, workflow_stage_signals, workflow_table_rows
-from . import artifact_fill, artifact_publication, artifact_selection, harm_halt
-from .read_only import confidence_gate_inputs, corroborate_draft_pr, observation_pull_requests, workflow_draft_pr_row
+from . import artifact_fill, artifact_publication, artifact_selection, harm_halt, planning_approval
+from .read_only import confidence_findings, confidence_gate_inputs, corroborate_draft_pr, observation_pull_requests, workflow_draft_pr_row
 from .readiness_record import preview_surface
 
 Dispatch = Callable[[Any], dict[str, Any]]
@@ -70,6 +70,7 @@ class Run:
     initial_head: str = ""
     commits: list[str] = field(default_factory=list)
     artifacts: dict[str, str] = field(default_factory=dict)
+    findings: list[str] = field(default_factory=list)
 
 
 def text_of(root: Path, relative: str) -> str:
@@ -150,18 +151,19 @@ def prepare(run: Run, inputs: dict[str, Any]) -> None:
     signals = workflow_stage_signals(workflow_text(run))
     if not signals["parsed"]:
         raise ValueError("the workflow file has no parseable Workflow Overview table")
-    if "blocked" in str(signals["confidence_gate_status"]).casefold():
-        raise Stop("strict_confidence_opt_in", "the confidence gate blocked in strict mode; no pull request was opened")
     if not signals["planning_complete"] or signals["confidence_gate_status"] is None:
         raise Stop("plan_stage_boundary", "planning phases and the confidence gate must finish before publication")
     rows = workflow_table_rows(HTML_COMMENT_RE.sub("", workflow_text(run)).splitlines(), "## Phase 6.5: Confidence Gate")
     gate = {cells[0].strip("*` ").casefold(): cells[1].strip("*` ") for cells in rows if len(cells) >= 2}
     verdict = call(run, "confidence-gate", "read_only", confidence_gate_inputs(
         run.workflow, gate.get("mode", ""), run.root / f".{inputs['host']}/speckit-pro.local.md", run.root))
-    action = verdict.get("data", {}).get("stdout_json", {}).get("recommended_action")
-    if verdict["status"] != "ok" or action not in {"proceed", "continue_with_warning"}:
-        raise Stop("plan_stage_boundary", "the confidence gate must explicitly pass or warn before publication; "
-                   "rerun Analyze to record confidence, then retry finish-plan-stage")
+    result = verdict.get("data", {}).get("stdout_json", {})
+    # A strict shortfall does not stop planning: its findings go to plan review (ADR 0013).
+    shortfall = verdict["status"] == "expected_failure" and result.get("recommended_action") == "stop"
+    if not shortfall and (verdict["status"] != "ok" or result.get("recommended_action") not in {"proceed", "continue_with_warning"}):
+        raise Stop("plan_stage_boundary", "the confidence gate must explicitly pass, warn or fail in strict mode before "
+                   "publication; rerun Analyze to record confidence, then retry finish-plan-stage")
+    run.findings = confidence_findings(result) if shortfall else []
     run.branch = command(run, ["git", "branch", "--show-current"], "the branch could not be read")
     run.initial_head = command(run, ["git", "rev-parse", "HEAD"], "the initial commit could not be read")
 
@@ -524,6 +526,7 @@ def finish(run: Run, apply: bool) -> dict[str, Any]:
     if not apply:
         return {"outcome": "dry_run", "next_action": "Apply the finish-plan-stage request to run the terminal sequence.",
                 "writes_state": False}
+    planning_approval.add_findings(run.root, run.feature, run.findings)
     pages = fill_pages(run, fresh=run.inputs.get("until") == "pages")
     summary = {"pages": {"generated": pages["generated"], "gaps": pages["gaps"]}, "writes_state": True}
     if run.inputs.get("until") == "pages":

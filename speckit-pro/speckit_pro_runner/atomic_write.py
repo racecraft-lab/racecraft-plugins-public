@@ -504,11 +504,13 @@ def current_file_mode_fd(parent_fd: int, name: str) -> int | None:
     return stat.S_IMODE(file_stat.st_mode)
 
 
-def snapshot_write_target(target: Path, repo_root: Path) -> dict[str, Any]:
-    """The descriptor snapshot by path, plus the parents a write would create; it keeps no file identity."""
+def snapshot_write_target(target: Path, repo_root: Path, *, bind_identity: bool = False) -> dict[str, Any]:
+    """Capture content preconditions, optionally binding a single-link file and its existing parent."""
     created_parent_dirs = missing_parent_dirs(target, repo_root)
     opened = open_safe_parent_fd(target, repo_root, create=False)
     if opened is None:
+        if bind_identity:
+            raise WritePreconditionChanged("write target parent missing")
         return {
             "exists": False,
             "content": None,
@@ -519,10 +521,15 @@ def snapshot_write_target(target: Path, repo_root: Path) -> dict[str, Any]:
     parent_fd, target_name, _created_dirs = opened
     try:
         snapshot = snapshot_write_target_fd(parent_fd, target_name)
+        if bind_identity:
+            snapshot["parent"] = file_identity(os.fstat(parent_fd))
+            if snapshot["identity"] is not None and snapshot["identity"][2] != 1:
+                raise OSError("unsafe hard-linked write target")
     finally:
         os.close(parent_fd)
     # Path snapshots stay content preconditions, as their callers have always relied on.
-    snapshot.pop("identity")
+    if not bind_identity:
+        snapshot.pop("identity")
     return {**snapshot, "created_parent_dirs": created_parent_dirs}
 
 

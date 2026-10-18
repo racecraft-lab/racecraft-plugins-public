@@ -9404,7 +9404,7 @@
     {
       "id": "functional.speckit-autopilot.case-24",
       "layer": "functional",
-      "capability": "Explains the G6.5 behavior end-to-end: resolve-confidence-mode runs once during pre-flight and returns advisory, then confidence-gate reads the workflow emit with mode_name=advisory and threshold 0.90. Its data.exit_code is 2 with stdout_json.pass=false because 0.85 is below 0.90. The autopilot logs the breakdown, identifies Risk Assessment at 0.75, dispatches focused remediation, re-emits, and re-runs up to 3 times. Strict mode stops before Phase 7 after remediation remains below threshold.",
+      "capability": "Explains the G6.5 behavior end-to-end: resolve-confidence-mode runs once during pre-flight and returns advisory, then confidence-gate reads the workflow emit with mode_name=advisory and threshold 0.90. Its data.exit_code is 2 with stdout_json.pass=false because 0.85 is below 0.90. The autopilot logs the breakdown, identifies Risk Assessment at 0.75, dispatches focused remediation, re-emits, and re-runs up to 3 times. In strict mode planning does not stop: the remaining low-confidence findings go to plan review in planning-findings.json and the run ends at the plan boundary with the draft PR.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -9430,7 +9430,7 @@
         },
         {
           "id": "legacy-05",
-          "description": "Explains strict mode behavior: STOP before Phase 7; operator can resume with --from-phase implement"
+          "description": "Explains strict mode behavior: planning does not stop; finish-plan-stage records the low-confidence findings in planning-findings.json for plan review, and implement needs a plan approval record"
         },
         {
           "id": "legacy-06",
@@ -9446,7 +9446,7 @@
         },
         {
           "id": "legacy-09",
-          "description": "Explains strict mode behavior: STOP before Phase 7"
+          "description": "Explains strict mode behavior: planning does not stop; the low-confidence findings go to plan review in planning-findings.json"
         },
         {
           "id": "legacy-10",
@@ -9516,7 +9516,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains strict mode behavior: STOP before Phase 7; operator can resume with --from-phase implement FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains strict mode behavior: planning does not stop; finish-plan-stage records the low-confidence findings in planning-findings.json for plan review, and implement needs a plan approval record FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-06-semantic",
@@ -9540,7 +9540,7 @@
           "id": "legacy-09-semantic",
           "requirement": "legacy-09",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains strict mode behavior: STOP before Phase 7 FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains strict mode behavior: planning does not stop; the low-confidence findings go to plan review in planning-findings.json FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-10-text",

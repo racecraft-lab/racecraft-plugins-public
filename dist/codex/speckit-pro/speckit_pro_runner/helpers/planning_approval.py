@@ -34,6 +34,8 @@ from .execution_requests import Refusal, run_contained_helper
 PROJECT_INPUTS = (".specify/memory", ".specify/templates", ".specify/extensions", ".specify/presets",
                   ".specify/quality-gates.json", ".specify/config.json", ".specify/extensions.yml",
                   ".specify/scripts", CATALOG_PATH, "AGENTS.md")
+# Planning writes finding ids here; the plan review's repair fills each request list.
+FINDINGS_FILE = "planning-findings.json"
 RUNTIME = {"artifacts", "plan-approvals", ".process", "autopilot-state.json", "task-results.json",
            "execution-control.json", "verification-record.json"}
 
@@ -390,10 +392,25 @@ def evidence(root: Path, reference: str) -> dict[str, str]:
     return {"reference": owned_path(reference, root), "sha256": hashlib.sha256(captured(root, reference)).hexdigest()}
 
 
+def add_findings(root: Path, feature: str, identities: list[str]) -> None:
+    """Add each new finding with no request yet and keep every recorded entry; a clean plan gets an empty map."""
+    relative = f"{feature}/{FINDINGS_FILE}"
+    target = root / relative
+    snapshot = snapshot_write_target(target, root, bind_identity=True)
+    exists = snapshot["exists"]
+    inventory = json.loads(snapshot["content"], object_pairs_hook=unique_object) if exists else {}
+    if not isinstance(inventory, dict):
+        raise ValueError(f"{relative} must map finding ids to request lists")
+    added: dict[str, list[str]] = {identity: [] for identity in identities if identity not in inventory}
+    if added or not exists:
+        content = json.dumps({**inventory, **added}, indent=2, ensure_ascii=False) + "\n"
+        write_bytes_atomic(target, content.encode("utf-8"), trust_root=root, expected_snapshot=snapshot)
+
+
 def checked_findings(root: Path, feature: str, findings: Any, revision: str) -> dict[str, Any]:
-    inventory = json.loads(captured(root, feature + "/planning-findings.json"), object_pairs_hook=unique_object)
+    inventory = json.loads(captured(root, f"{feature}/{FINDINGS_FILE}"), object_pairs_hook=unique_object)
     if not isinstance(inventory, dict) or not isinstance(findings, dict) or set(inventory) != set(findings):
-        raise ValueError("findings must cover exactly the authoritative planning-findings.json inventory")
+        raise ValueError(f"findings must cover exactly the authoritative {FINDINGS_FILE} inventory")
     for identity, requests in inventory.items():
         require_text(identity, "finding identity")
         if not isinstance(requests, list) or not requests or len(set(requests)) != len(requests):

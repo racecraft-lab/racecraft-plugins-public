@@ -187,6 +187,20 @@ class RecordedApprovalTest(PlanningApprovalFixture):
         path.write_text(json.dumps(record))
         self.assertRefused(self.call("verify"), "missing correction or passing check")
 
+    def test_a_strict_finding_awaiting_its_request_refuses_record_by_name(self):
+        approval = self.approval()
+        (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"],
+                                                                         "confidence-composite": []}))
+        digest = self.call()["data"]["manifest_digest"]
+        approval["confirmation"]["manifest_digest"] = digest
+        (self.feature / "artifacts/confirmation.json").write_text(json.dumps(
+            {k: v for k, v in approval["confirmation"].items() if k != "reference"}))
+        check = {**approval["findings"]["F1"]["check"], "manifest_digest": digest}
+        approval["findings"] = {"F1": {**approval["findings"]["F1"], "check": check},
+                                "confidence-composite": {**approval["findings"]["F1"], "requests": [], "check": check}}
+        self.assertRefused(self.call("record", "dry_run", approval=approval),
+                           "confidence-composite: requests must be unique non-empty strings")
+
     def test_dry_run_writes_nothing_and_apply_preserves_the_original_decision(self):
         approval = self.approval()
         dry = self.call("record", "dry_run", approval=approval)

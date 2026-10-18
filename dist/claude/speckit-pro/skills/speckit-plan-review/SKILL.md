@@ -47,8 +47,10 @@ Make these runner calls, all `mode=read_only`:
 - `helper_id=decisions-list operation=decisions-list`, with `workflow_file`: the decisions list.
 
 Read the feature's `planning-findings.json` and the workflow file for the blocked
-planning gates and the strict low-confidence findings. Name each finding with a
-short id. If any source is missing, say which and what it would have shown.
+planning gates and the strict low-confidence findings. Keep each id the file lists
+(`confidence-<criterion>` for a strict finding): the approval record needs those exact
+ids. Give a short id only to a finding the file does not list. If any source is
+missing, say which and what it would have shown.
 
 ### 2. Explain, then ask
 
