@@ -66,3 +66,23 @@ agent, or overlay rule is needed.
   their shared normalized tuple/call syntax is not duplicate policy or logic.
   This advisory false positive is reported without changing the acknowledgement
   ledger or weakening either test.
+
+## Cross-host review notes
+
+These notes are accepted limits from the cross-host review at head
+`97d551cb618278532f48f92701138503cea4eec0`. They are not reachable defects.
+
+- **Bare backticked token under Files Generated (Low).** The completion-tick
+  match is shape-based. A planning choice written as a bare backticked token,
+  such as ``- [x] `require-signed-release` ``, under a heading named Files
+  Generated would count as a completion tick. No template or guidance writes a
+  planning choice in that form there, and adding such a line changes the
+  manifest, so a contributor can only toggle a line that was approved in that
+  shape.
+- **Function-level import in `read_only.py` (Low).** The stage resolver imports
+  `admit_implement` from `planning_approval` at call time because that module
+  imports the resolver's map functions. The import runs after both modules are
+  initialized, so no runtime failure is reachable. It stays a structural note
+  for a later ownership refactor.
+- **Malformed `findings` in a stored record.** A record whose `findings` is not
+  an object now refuses with the `record` field instead of an internal failure.

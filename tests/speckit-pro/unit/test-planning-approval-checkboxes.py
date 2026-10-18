@@ -9,6 +9,10 @@ WorkflowFixture = fixture["WorkflowFixture"]
 run_counted = fixture["run_counted"]
 SOURCE = Path(__file__).resolve().parents[3]
 RUNNERS = (SOURCE / "speckit-pro", *(SOURCE / "dist" / host / "speckit-pro" for host in ("claude", "codex")))
+# Checkbox lines that resemble a generated-path tick but remain planning choices.
+LOOKALIKES = ("  - [x] Require signed release approval", "- [x] `Require signed release approval`",
+              "- [x] `src/demo.py` Require signed release approval",
+              "- [x] [Require signed release approval](src/demo.py)", "```text\n- [x] `src/demo.py`\n```")
 
 
 class CheckboxAssertions(WorkflowFixture):
@@ -47,11 +51,7 @@ class PlanningCheckboxTest(CheckboxAssertions):
 
     def test_checkbox_lookalikes_keep_choices_bound(self):
         self.assertHostsEdit(("## Files Generated\n", "## Phase 7: Implement\n### Implementation Progress\n"),
-                             ("  - [x] Require signed release approval",
-                              "- [x] `Require signed release approval`",
-                              "- [x] `src/demo.py` Require signed release approval",
-                              "- [x] [Require signed release approval](src/demo.py)",
-                              "```text\n- [x] `src/demo.py`\n```"))
+                             LOOKALIKES)
 
     def test_generated_path_rename_and_link_edits_invalidate_record(self):
         for runner in RUNNERS:

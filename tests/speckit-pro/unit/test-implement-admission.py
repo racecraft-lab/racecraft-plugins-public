@@ -54,6 +54,10 @@ class PlanApprovalAdmissionTest(AdmissionFixture):
             with self.subTest(field=field):
                 path.write_text(json.dumps({**record, field: value}))
                 self.refusal(self.call("admit"), field)
+        for findings in (None, 5):
+            with self.subTest(findings=findings):
+                path.write_text(json.dumps({**record, "findings": findings}))
+                self.refusal(self.call("admit"), "record")
         path.write_text("{not json")
         self.refusal(self.call("admit"), "record")
 

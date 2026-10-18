@@ -482,7 +482,9 @@ def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, An
     except ValueError as error:
         # Finding checks word their refusal "<finding id>: ..."; other refusals carry no such prefix.
         identity, _, _ = str(error).partition(": ")
-        raise refused("findings." + identity if identity in stored.get("findings", {}) else "record", str(error)) from error
+        findings = stored.get("findings")
+        named = isinstance(findings, dict) and identity in findings
+        raise refused("findings." + identity if named else "record", str(error)) from error
     if record != stored:
         raise refused("reviewed_evidence", "record bindings or reviewed evidence changed")
     return {"admitted": True, "manifest_digest": binding["manifest_digest"], "record_path": path}
