@@ -22,11 +22,20 @@ rendering seam for recorded planning approval on both hosts.
   emits. This is an additive test correction; the new regressions separately
   exercise separator removal, column count, and alignment on both host runners.
 
+- A complete canonical Consensus Resolution Log header and delimiter remain
+  a typed write: deleting both together is digest-neutral, as it was before
+  this fix. Planning row contents remain bound. Binding the pair would also
+  reject legitimate runtime table creation; removing either line alone or
+  editing the delimiter remains detectable. This existing limit cannot inject
+  a link or change the bound planning row text.
+- The reference's phrase "typed Implement write" includes feedback and
+  consensus sweep scaffolds processed by the same runtime projection.
+
 ## Verification interpretation
 
 The original progress fixtures remain unchanged: complete canonical Implement
 table creation preserves approval. Header and delimiter are projected together;
-deleting either, changing columns, or adding alignment leaves structure bound to
+deleting either line alone, changing columns, or adding alignment leaves structure bound to
 the revision. Other table separators remain planning content. A standalone
 header is not a complete runtime table write.
 
