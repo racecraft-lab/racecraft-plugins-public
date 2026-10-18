@@ -137,13 +137,39 @@ def skill_paths(root: Path) -> list[Path]:
 
 
 
+def reviewed_instruction_inventory() -> dict[str, dict[str, str]]:
+    """Load the reviewed map from small fixture chunks without dropping entries."""
+    try:
+        manifest = json.loads(read_surface(REVIEW_INVENTORY))
+        agents = manifest["agents"]
+        parts = manifest["skills"]
+        if not isinstance(agents, dict) or not isinstance(parts, list) or not parts:
+            raise ValueError("invalid inventory fixture manifest")
+        skills = {}
+        for name in parts:
+            if not isinstance(name, str) or Path(name).name != name:
+                raise ValueError("invalid inventory fixture part")
+            part = json.loads(read_surface(REVIEW_INVENTORY.with_name(name)))
+            if not isinstance(part, dict) or skills.keys() & part.keys():
+                raise ValueError("invalid or repeated inventory fixture entries")
+            skills.update(part)
+        if not skills:
+            raise ValueError("empty skills inventory")
+        return {"agents": agents, "skills": skills}
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise AssertionError("unreadable instruction review inventory") from error
+
+
+def reviewed_inventory_bytes() -> bytes:
+    return (json.dumps(reviewed_instruction_inventory(), indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
 def assert_instruction_inventory(case: unittest.TestCase, kind: str, root: Path) -> None:
     """Require an explicit review update for every changed, added or removed file."""
-    try:
-        expected = json.loads(read_surface(REVIEW_INVENTORY))[kind]
-    except (ValueError, KeyError, TypeError) as error:
-        raise AssertionError("unreadable instruction review inventory") from error
-    case.assertEqual(instruction_inventory(root), expected, "review instruction changes, then run python3 scripts/refresh-codex-instruction-inventory.py")
+    case.assertEqual(
+        instruction_inventory(root), reviewed_instruction_inventory()[kind],
+        "review instruction changes, then run python3 scripts/refresh-codex-instruction-inventory.py",
+    )
 
 
 class CodexSpawnForkTests(unittest.TestCase):
@@ -201,11 +227,95 @@ def agent_instruction_sources() -> dict[str, str]:
     return {path.name: path.read_bytes().decode("utf-8") for path in sorted(agents.glob("*.toml"))}
 
 
-class CodexSpawnGateFaultTests(unittest.TestCase):
+def run_skill_gates(case: unittest.TestCase, edits: dict[str, tuple[str, str | bytes]]) -> unittest.TestResult:
+    """Run every skill gate on a copy of the rendered tree with `edits` applied."""
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary) / "skills"
+        shutil.copytree(host_skill_root("codex"), root)
+        control = unittest.TestResult()
+        with patch(__name__ + ".host_skill_root", return_value=root):
+            for method in SKILL_GATES:
+                CodexSpawnForkTests(method).run(control)
+        case.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
+        for relative, (old, new) in edits.items():
+            target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if isinstance(new, bytes):
+                target.write_bytes(new)
+                continue
+            text = target.read_text(encoding="utf-8") if target.exists() else ""
+            if old:
+                case.assertEqual(text.count(old), 1, relative)
+            target.write_text(text.replace(old, new, 1) if old else text + new, encoding="utf-8")
+        result = unittest.TestResult()
+        with patch(__name__ + ".host_skill_root", return_value=root):
+            for method in SKILL_GATES:
+                CodexSpawnForkTests(method).run(result)
+        return result
+
+
+def assert_skill_gates_reject(case: unittest.TestCase, edits: dict[str, tuple[str, str | bytes]]) -> None:
+    result = run_skill_gates(case, edits)
+    case.assertFalse(result.wasSuccessful(), f"gate accepted: {edits}")
+    case.assertFalse(result.errors, result.errors)
+
+
+def assert_skill_rejected(
+    case: unittest.TestCase, snippet: str, method: str, relative: str = "speckit-autopilot/SKILL.md",
+) -> None:
+    source = host_skill_root("codex") / "speckit-autopilot/SKILL.md"
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        target = root / relative
+        target.parent.mkdir(parents=True)
+        target.write_text(source.read_text(encoding="utf-8") + "\n\n" + snippet, encoding="utf-8")
+        result = unittest.TestResult()
+        with patch(__name__ + ".host_skill_root", return_value=root):
+            CodexSpawnForkTests(method).run(result)
+        case.assertFalse(result.wasSuccessful(), "gate accepted: " + snippet)
+        case.assertFalse(result.errors, result.errors)
+
+
+def assert_agent_rejected(
+    case: unittest.TestCase, sources: dict[str, str], name: str, conflict: str,
+    field: str = "developer_instructions",
+) -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        agents = root / "speckit-pro/codex-agents"
+        agents.mkdir(parents=True)
+        for filename, original in sources.items():
+            if original:
+                (agents / filename).write_bytes(original.encode("utf-8"))
+        control = unittest.TestResult()
+        with patch(__name__ + ".REPO_ROOT", root):
+            for method in AGENT_GATES:
+                CodexSpawnForkTests(method).run(control)
+        case.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
+        original = sources[name] or 'developer_instructions = """\n"""\n'
+        if field == "developer_instructions":
+            marker = 'developer_instructions = """\n'
+            case.assertEqual(original.count(marker), 1)
+            text = original.replace(marker, marker + conflict + "\n\n", 1)
+        else:
+            text, replacements = re.subn(
+                rf'(?m)^{re.escape(field)} = .*$', lambda _: f'{field} = "{conflict}"', original)
+            case.assertEqual(replacements, 1)
+        case.assertIn(conflict, tomllib.loads(text)[field])
+        (agents / name).write_bytes(text.encode("utf-8"))
+        result = unittest.TestResult()
+        with patch(__name__ + ".REPO_ROOT", root):
+            for method in AGENT_GATES:
+                CodexSpawnForkTests(method).run(result)
+        case.assertFalse(result.wasSuccessful(), "gate accepted conflicting agent instructions")
+        case.assertFalse(result.errors, result.errors)
+
+
+class CodexSpawnSkillConflictTests(unittest.TestCase):
     """Inject contributor-controlled text through the same gates as shipped files."""
 
     def test_keyword_free_skill_paragraph_requires_review(self) -> None:
-        self.assert_skill_gates_reject({"speckit-autopilot/SKILL.md": (
+        assert_skill_gates_reject(self, {"speckit-autopilot/SKILL.md": (
             "", "\n\n" + CONFLICT + "\n")})
 
     def test_keyword_free_call_fields_require_review(self) -> None:
@@ -214,15 +324,15 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                 arguments = {"task_name": "job", "agent_type": "phase-executor", "message": "work",
                              "fork_turns": "none", field: CONFLICT}
                 call = "spawn_agent(" + ", ".join(f"{key}={json.dumps(value)}" for key, value in arguments.items()) + ")"
-                self.assert_skill_gates_reject({"speckit-autopilot/SKILL.md": (
+                assert_skill_gates_reject(self, {"speckit-autopilot/SKILL.md": (
                     "", "\n" + call + "\n")})
 
     def test_keyword_free_call_comment_requires_review(self) -> None:
-        self.assert_skill_gates_reject({"speckit-autopilot/SKILL.md": (
+        assert_skill_gates_reject(self, {"speckit-autopilot/SKILL.md": (
             "", f'\nspawn_agent(task_name="job", fork_turns="none",\n# {CONFLICT}\nmessage="work")\n')})
 
     def test_explicit_conflicting_prose_requires_review(self) -> None:
-        self.assert_skill_gates_reject({"speckit-autopilot/SKILL.md": (
+        assert_skill_gates_reject(self, {"speckit-autopilot/SKILL.md": (
             "", '\nFor the next child, use `fork_turns="all"`.\n')})
 
     def test_new_or_renamed_keyword_free_skill_requires_review(self) -> None:
@@ -230,26 +340,28 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                  ("new/SKILL.md", "renamed/SKILL.md", "other/new.data")}
         for relative, edit in edits.items():
             with self.subTest(path=relative):
-                self.assert_skill_gates_reject({relative: edit})
+                assert_skill_gates_reject(self, {relative: edit})
 
     def test_borrowed_marker_requires_review(self) -> None:
         for marker in ('<!-- fork_turns="none" -->', 'An unrelated example uses `fork_turns="none"`.'):
             with self.subTest(marker=marker):
-                self.assert_skill_gates_reject({"new/SKILL.md": (
+                assert_skill_gates_reject(self, {"new/SKILL.md": (
                     "", f'Dispatch with spawn_agent.\n\n{marker}\n')})
 
+
+class CodexSpawnAgentInstructionTests(unittest.TestCase):
     def test_keyword_free_agent_instructions_require_review(self) -> None:
         sources = agent_instruction_sources()
         for name in (*sources, "new.toml", "renamed.toml"):
             with self.subTest(agent=name):
-                self.assert_agent_rejected({**sources, name: sources.get(name, "")}, name, CONFLICT)
+                assert_agent_rejected(self, {**sources, name: sources.get(name, "")}, name, CONFLICT)
 
     def test_keyword_free_agent_description_requires_review(self) -> None:
         sources = agent_instruction_sources()
         for name, source in sources.items():
             for field in sorted(tomllib.loads(source).keys() - {"developer_instructions"}):
                 with self.subTest(agent=name, field=field):
-                    self.assert_agent_rejected(sources, name, CONFLICT, field=field)
+                    assert_agent_rejected(self, sources, name, CONFLICT, field=field)
 
     def test_script_and_schema_instruction_text_requires_review(self) -> None:
         for relative, text in (
@@ -257,17 +369,17 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             ("speckit-autopilot/contracts/new.schema.json", f'{{"description": "{CONFLICT}"}}\n'),
         ):
             with self.subTest(file=relative):
-                self.assert_skill_gates_reject({relative: ("", text)})
+                assert_skill_gates_reject(self, {relative: ("", text)})
 
     def test_shipped_keyword_free_skill_instruction_requires_review(self) -> None:
         with patch(__name__ + ".host_skill_root", return_value=REPO_ROOT / "dist/codex/speckit-pro/skills"):
-            self.assert_skill_gates_reject({"speckit-autopilot/SKILL.md": ("", "\n\n" + CONFLICT + "\n")})
+            assert_skill_gates_reject(self, {"speckit-autopilot/SKILL.md": ("", "\n\n" + CONFLICT + "\n")})
 
     def test_shipped_keyword_free_agent_instruction_requires_review(self) -> None:
         agents = REPO_ROOT / "dist/codex/speckit-pro/codex-agents"
         sources = {path.name: read_surface(path) for path in sorted(agents.glob("*.toml"))}
         self.assertTrue(sources)
-        self.assert_agent_rejected(sources, "phase-executor.toml", CONFLICT)
+        assert_agent_rejected(self, sources, "phase-executor.toml", CONFLICT)
 
     def test_composed_argument_instruction_text_requires_review(self) -> None:
         for message in (
@@ -277,10 +389,12 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             'f"' + CONFLICT + '"',
         ):
             with self.subTest(message=message):
-                self.assert_skill_gates_reject({"speckit-autopilot/SKILL.md": (
+                assert_skill_gates_reject(self, {"speckit-autopilot/SKILL.md": (
                     "", '\nspawn_agent(task_name="job", agent_type="phase-executor", fork_turns="none", '
                     f'message={message})\n')})
 
+
+class CodexSpawnInventoryTests(unittest.TestCase):
     def test_instruction_inventory_detects_renames_and_removals(self) -> None:
         for kind, source, relative in (
             ("skills", host_skill_root("codex"), "speckit-coach/SKILL.md"),
@@ -309,7 +423,7 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                 sys, "argv", ["refresh-codex-instruction-inventory.py"],
             ):
                 self.assertEqual(refresh(), 0)
-            self.assertEqual(target.read_bytes(), REVIEW_INVENTORY.read_bytes())
+            self.assertEqual(target.read_bytes(), reviewed_inventory_bytes())
 
     def test_inventory_rejects_links_and_missing_roots(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -334,6 +448,8 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                     with self.assertRaises(AssertionError):
                         assert_instruction_inventory(self, "skills", host_skill_root("codex"))
 
+
+class CodexSpawnGateCoverageTests(unittest.TestCase):
     def test_structural_fault_tests_depend_on_their_own_gates(self) -> None:
         for gate, replacement, fault in (
             ("RULE", re.compile(".*"), "test_dispatch_line_without_the_rule_is_rejected"),
@@ -341,59 +457,12 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         ):
             with self.subTest(gate=gate), patch(__name__ + "." + gate, replacement):
                 result = unittest.TestResult()
-                CodexSpawnGateFaultTests(fault).run(result)
+                CodexSpawnSkillDispatchTests(fault).run(result)
                 self.assertFalse(result.wasSuccessful(), "inventory masked disabled structural gate: " + gate)
                 self.assertFalse(result.errors, result.errors)
 
-    def run_skill_gates(self, edits: dict[str, tuple[str, str | bytes]]) -> unittest.TestResult:
-        """Run every skill gate on a copy of the rendered tree with `edits` applied.
 
-        Each edit replaces one exact `old` string, or appends when `old` is empty.
-        """
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary) / "skills"
-            shutil.copytree(host_skill_root("codex"), root)
-            control = unittest.TestResult()
-            with patch(__name__ + ".host_skill_root", return_value=root):
-                for method in SKILL_GATES:
-                    CodexSpawnForkTests(method).run(control)
-            self.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
-            for relative, (old, new) in edits.items():
-                target = root / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                if isinstance(new, bytes):
-                    target.write_bytes(new)
-                    continue
-                text = target.read_text(encoding="utf-8") if target.exists() else ""
-                if old:
-                    self.assertEqual(text.count(old), 1, relative)
-                target.write_text(text.replace(old, new, 1) if old else text + new, encoding="utf-8")
-            result = unittest.TestResult()
-            with patch(__name__ + ".host_skill_root", return_value=root):
-                for method in SKILL_GATES:
-                    CodexSpawnForkTests(method).run(result)
-            return result
-
-    def assert_skill_gates_reject(self, edits: dict[str, tuple[str, str | bytes]]) -> None:
-        result = self.run_skill_gates(edits)
-        self.assertFalse(result.wasSuccessful(), f"gate accepted: {edits}")
-        self.assertFalse(result.errors, result.errors)
-
-    def assert_skill_rejected(
-        self, snippet: str, method: str, relative: str = "speckit-autopilot/SKILL.md",
-    ) -> None:
-        source = host_skill_root("codex") / "speckit-autopilot/SKILL.md"
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            target = root / relative
-            target.parent.mkdir(parents=True)
-            target.write_text(source.read_text(encoding="utf-8") + "\n\n" + snippet, encoding="utf-8")
-            result = unittest.TestResult()
-            with patch(__name__ + ".host_skill_root", return_value=root):
-                CodexSpawnForkTests(method).run(result)
-            self.assertFalse(result.wasSuccessful(), "gate accepted: " + snippet)
-            self.assertFalse(result.errors, result.errors)
-
+class CodexSpawnSkillReviewTests(unittest.TestCase):
     def test_wording_only_skill_edits_require_review(self) -> None:
         for relative, edit in (
             ("speckit-coach/SKILL.md", ("", "\nAsk one question at a time.\n")),
@@ -402,24 +471,26 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                 "and keep the orchestration in the parent session.\n")),
         ):
             with self.subTest(file=relative):
-                self.assert_skill_gates_reject({relative: edit})
+                assert_skill_gates_reject(self, {relative: edit})
 
+
+class CodexSpawnSkillDispatchTests(unittest.TestCase):
     def test_real_call_without_the_argument_is_rejected(self) -> None:
         with patch(__name__ + ".assert_instruction_inventory"):
-            self.assert_skill_gates_reject({"speckit-autopilot/references/phase-driver.md": (
+            assert_skill_gates_reject(self, {"speckit-autopilot/references/phase-driver.md": (
                 "", '\n```text\nspawn_agent(agent_type="clarify-executor", message="work")\n```\n')})
 
     def test_dispatch_line_without_the_rule_is_rejected(self) -> None:
         # The phase driver reads only its own reference at dispatch (#1369).
         with patch(__name__ + ".assert_instruction_inventory"):
-            self.assert_skill_gates_reject({"speckit-autopilot/references/phase-driver.md": (
+            assert_skill_gates_reject(self, {"speckit-autopilot/references/phase-driver.md": (
                 'Dispatch with `spawn_agent` and `fork_turns="none"`,', "Dispatch with `spawn_agent`,")})
 
     def test_new_file_that_names_spawn_agent_must_state_the_rule(self) -> None:
         for relative in ("new/SKILL.md", "speckit-autopilot/references/new.md", "other/new.data"):
             with self.subTest(file=relative), patch(__name__ + ".assert_instruction_inventory"):
-                self.assert_skill_gates_reject({relative: ("", "Dispatch with `spawn_agent`.\n")})
-                control = self.run_skill_gates({relative: ("", 'Dispatch with `spawn_agent` and `fork_turns="none"`.\n')})
+                assert_skill_gates_reject(self, {relative: ("", "Dispatch with `spawn_agent`.\n")})
+                control = run_skill_gates(self, {relative: ("", 'Dispatch with `spawn_agent` and `fork_turns="none"`.\n')})
                 self.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
 
     def test_call_scan_exclusions_still_require_content_review(self) -> None:
@@ -431,18 +502,18 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             "speckit-autopilot/scripts/new.py",
         ):
             with self.subTest(skipped=relative):
-                self.assert_skill_gates_reject({relative: ("", call)})
+                assert_skill_gates_reject(self, {relative: ("", call)})
                 with patch(__name__ + ".assert_instruction_inventory"):
-                    control = self.run_skill_gates({relative: ("", call)})
+                    control = run_skill_gates(self, {relative: ("", call)})
                     self.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
         for relative in ("speckit-coach/examples/new.py", "speckit-autopilot/contracts/new.json",
                          "speckit-autopilot/agents/openai.yaml", "speckit-autopilot/scripts/new.md",
                          "other/new.data"):
             with self.subTest(scanned=relative), patch(__name__ + ".assert_instruction_inventory"):
-                self.assert_skill_gates_reject({relative: ("", call)})
+                assert_skill_gates_reject(self, {relative: ("", call)})
         # A notice file cannot exempt a directory; only the pinned upstream roots are skipped.
         with self.subTest(scanned="speckit-resolve-pr with a notice"), patch(__name__ + ".assert_instruction_inventory"):
-            self.assert_skill_gates_reject({
+            assert_skill_gates_reject(self, {
                 "speckit-resolve-pr/UPSTREAM-NOTICE.md": ("", "Vendored.\n"),
                 "speckit-resolve-pr/new.md": ("", call)})
 
@@ -452,27 +523,21 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             ("speckit-autopilot/references/new.md", '\nspawn_agent(fork_turns="none", message="work"\n'),
         ):
             with self.subTest(content=new[:24]), patch(__name__ + ".assert_instruction_inventory"):
-                self.assert_skill_gates_reject({relative: ("", new)})
+                assert_skill_gates_reject(self, {relative: ("", new)})
 
-    def test_task_name_first_call_is_rejected(self) -> None:
-        self.assert_skill_rejected(
-            'spawn_agent(task_name="job", agent_type="phase-executor", message="work")',
-            "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none")
 
-    def test_space_after_opening_parenthesis_is_rejected(self) -> None:
-        self.assert_skill_rejected(
-            'spawn_agent( agent_type="phase-executor", message="work")',
-            "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none")
-
-    def test_multiline_call_opening_is_rejected(self) -> None:
-        self.assert_skill_rejected(
-            'spawn_agent(\n    agent_type="phase-executor", message="work")',
-            "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none")
-
-    def test_adjacent_comment_cannot_supply_the_argument(self) -> None:
-        self.assert_skill_rejected(
-            'spawn_agent(agent_type="phase-executor", message="work")\n# fork_turns="none"',
-            "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none")
+class CodexSpawnDispatchParserTests(unittest.TestCase):
+    def test_invalid_call_prefixes_are_rejected(self) -> None:
+        method = "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none"
+        snippets = (
+            ("task name first", 'spawn_agent(task_name="job", agent_type="phase-executor", message="work")'),
+            ("space after opener", 'spawn_agent( agent_type="phase-executor", message="work")'),
+            ("multiline opener", 'spawn_agent(\n    agent_type="phase-executor", message="work")'),
+            ("adjacent comment", 'spawn_agent(agent_type="phase-executor", message="work")\n# fork_turns="none"'),
+        )
+        for case, snippet in snippets:
+            with self.subTest(case=case):
+                assert_skill_rejected(self, snippet, method)
 
     def test_markers_in_other_arguments_or_calls_are_rejected(self) -> None:
         for snippet in (
@@ -484,7 +549,8 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             'spawn_agent(agent_type="phase-executor", # fork_turns="none"\n message="work")',
         ):
             with self.subTest(snippet=snippet):
-                self.assert_skill_rejected(
+                assert_skill_rejected(
+                    self,
                     snippet, "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none")
 
     def test_formatted_string_token_kinds_fail_closed(self) -> None:
@@ -507,10 +573,13 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             '*options, fork_turns="none"',
         ):
             with self.subTest(arguments=arguments):
-                self.assert_skill_rejected(
+                assert_skill_rejected(
+                    self,
                     f'spawn_agent(task_name="job", {arguments})',
                     "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none")
 
+
+class CodexSpawnDispatchSurfaceTests(unittest.TestCase):
     def test_valid_call_formatting_is_accepted(self) -> None:
         for snippet in (
             'spawn_agent(task_name="job", fork_turns="none", agent_type="phase-executor")',
@@ -525,7 +594,8 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
 
     def test_renamed_or_new_reference_is_scanned(self) -> None:
         for relative in ("speckit-autopilot/references/new.txt", "other/new.markdown", "other/new.data"):
-            self.assert_skill_rejected(
+            assert_skill_rejected(
+                self,
                 'spawn_agent(task_name="job", agent_type="phase-executor")',
                 "test_every_dispatch_example_in_the_codex_skills_passes_fork_turns_none", relative)
 
@@ -548,13 +618,15 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                 CodexSpawnForkTests(method).run(result)
         self.assertTrue(result.wasSuccessful(), (result.failures, result.errors))
 
+
+class CodexSpawnAgentGateTests(unittest.TestCase):
     def test_conflicting_agent_call_is_rejected(self) -> None:
         sources = agent_instruction_sources()
         dispatchers = [name for name, text in sources.items() if MENTION.search(text)]
         self.assertGreaterEqual(len(dispatchers), 4)
         for name in dispatchers:
             with self.subTest(agent=name), patch(__name__ + ".assert_instruction_inventory"):
-                self.assert_agent_rejected(sources, name, 'spawn_agent(task_name="child", fork_turns="all")')
+                assert_agent_rejected(self, sources, name, 'spawn_agent(task_name="child", fork_turns="all")')
 
     def test_agent_that_names_spawn_agent_must_state_the_rule(self) -> None:
         sources = agent_instruction_sources()
@@ -562,45 +634,12 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         self.assertTrue(others)
         for name in (*others, "new.toml"):
             with self.subTest(agent=name), patch(__name__ + ".assert_instruction_inventory"):
-                self.assert_agent_rejected(
+                assert_agent_rejected(
+                    self,
                     {**sources, name: sources.get(name, "")}, name, "Use `spawn_agent` for research.")
 
-    def assert_agent_rejected(
-        self, sources: dict[str, str], name: str, conflict: str, field: str = "developer_instructions",
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            agents = root / "speckit-pro/codex-agents"
-            agents.mkdir(parents=True)
-            for filename, original in sources.items():
-                if original:
-                    (agents / filename).write_bytes(original.encode("utf-8"))
-            control = unittest.TestResult()
-            with patch(__name__ + ".REPO_ROOT", root):
-                for method in AGENT_GATES:
-                    CodexSpawnForkTests(method).run(control)
-            self.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
-            original = sources[name] or 'developer_instructions = """\n"""\n'
-            if field == "developer_instructions":
-                marker = 'developer_instructions = """\n'
-                self.assertEqual(original.count(marker), 1)
-                text = original.replace(marker, marker + conflict + "\n\n", 1)
-            else:
-                text, replacements = re.subn(
-                    rf'(?m)^{re.escape(field)} = .*$', lambda _: f'{field} = "{conflict}"', original)
-                self.assertEqual(replacements, 1)
-            self.assertIn(conflict, tomllib.loads(text)[field])
-            (agents / name).write_bytes(text.encode("utf-8"))
-            result = unittest.TestResult()
-            with patch(__name__ + ".REPO_ROOT", root):
-                for method in AGENT_GATES:
-                    CodexSpawnForkTests(method).run(result)
-            self.assertFalse(result.wasSuccessful(), "gate accepted conflicting agent instructions")
-            self.assertFalse(result.errors, result.errors)
-
-
-class InventoryRefreshWriteTests(unittest.TestCase):
-    """Exercise the refresh entry point against real filesystem redirects."""
+class InventoryRefreshTestCase(unittest.TestCase):
+    """Set up an isolated output tree for inventory writer tests."""
 
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory()
@@ -634,17 +673,16 @@ class InventoryRefreshWriteTests(unittest.TestCase):
         else:
             self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
 
-    def test_refresh_rejects_absolute_inventory_symlink(self) -> None:
-        self.assert_file_link_rejected(relative=False, dangling=False)
 
-    def test_refresh_rejects_relative_inventory_symlink_to_clone_config(self) -> None:
-        self.assert_file_link_rejected(relative=True, dangling=False)
-
-    def test_refresh_rejects_dangling_absolute_inventory_symlink(self) -> None:
-        self.assert_file_link_rejected(relative=False, dangling=True)
-
-    def test_refresh_rejects_dangling_relative_inventory_symlink(self) -> None:
-        self.assert_file_link_rejected(relative=True, dangling=True)
+class InventoryRefreshSymlinkTests(InventoryRefreshTestCase):
+    def test_refresh_rejects_inventory_symlink_forms(self) -> None:
+        for relative, dangling in ((False, False), (True, False), (False, True), (True, True)):
+            with self.subTest(relative=relative, dangling=dangling):
+                self.target.write_text("preserve clone control data", encoding="utf-8")
+                try:
+                    self.assert_file_link_rejected(relative=relative, dangling=dangling)
+                finally:
+                    self.output.unlink(missing_ok=True)
 
     def test_refresh_rejects_every_linked_inventory_parent(self) -> None:
         for parent in self.output.relative_to(self.root).parents[:-1]:
@@ -667,9 +705,11 @@ class InventoryRefreshWriteTests(unittest.TestCase):
         os.link(self.target, self.output)
         self.assertEqual(self.run_refresh(), 0)
         self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
-        self.assertEqual(self.output.read_bytes(), REVIEW_INVENTORY.read_bytes())
+        self.assertEqual(self.output.read_bytes(), reviewed_inventory_bytes())
         self.assertNotEqual(self.output.stat().st_ino, self.target.stat().st_ino)
 
+
+class InventoryRefreshFileSwapTests(InventoryRefreshTestCase):
     def test_refresh_rejects_file_swap_without_following_link(self) -> None:
         dumps = json.dumps
         for relative in (False, True):
@@ -695,24 +735,37 @@ class InventoryRefreshWriteTests(unittest.TestCase):
                         self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
                     self.output.unlink()
 
-    def test_refresh_temporary_name_collision_cannot_follow_link(self) -> None:
-        temporary = self.output.with_name(f".{self.output.name}.tmp-{os.getpid()}-collision")
-        temporary.symlink_to(self.target)
-        with patch.object(uuid, "uuid4", return_value=SimpleNamespace(hex="collision")), self.assertRaises(OSError):
-            self.run_refresh()
-        self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
-        # The shared writer cleans this temporary entry without following it.
-        self.assertFalse(temporary.is_symlink())
-        self.assertFalse(self.output.exists())
 
-    def test_refresh_write_failure_preserves_inventory_and_cleans_temporary(self) -> None:
-        # Fail on the temporary's fsync, after the temporary file exists, so the cleanup check is not vacuous.
-        self.output.write_text("old inventory", encoding="utf-8")
-        with patch.object(os, "fsync", side_effect=OSError("write failed")), self.assertRaisesRegex(OSError, "write failed"):
-            self.run_refresh()
-        self.assertEqual(self.output.read_text(encoding="utf-8"), "old inventory")
-        self.assertEqual(list(self.output.parent.iterdir()), [self.output])
+class InventoryRefreshFailureTests(InventoryRefreshTestCase):
+    def test_refresh_failures_preserve_inventory_and_clean_temporary(self) -> None:
+        for failure in ("temporary collision", "write", "publication"):
+            with self.subTest(failure=failure):
+                if failure == "temporary collision":
+                    temporary = self.output.with_name(f".{self.output.name}.tmp-{os.getpid()}-collision")
+                    temporary.symlink_to(self.target)
+                    with patch.object(uuid, "uuid4", return_value=SimpleNamespace(hex="collision")):
+                        with self.assertRaises(OSError):
+                            self.run_refresh()
+                    self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
+                    # The shared writer cleans this temporary entry without following it.
+                    self.assertFalse(temporary.is_symlink())
+                    self.assertFalse(self.output.exists())
+                    continue
 
+                self.output.write_text("old inventory", encoding="utf-8")
+                operation, message = ("fsync", "write failed") if failure == "write" else ("replace", "publication failed")
+                with patch.object(os, operation, side_effect=OSError(message)):
+                    if failure == "write":
+                        with self.assertRaisesRegex(OSError, "write failed"):
+                            self.run_refresh()
+                    else:
+                        with self.assertRaises(OSError):
+                            self.run_refresh()
+                self.assertEqual(self.output.read_text(encoding="utf-8"), "old inventory")
+                self.assertEqual(list(self.output.parent.iterdir()), [self.output])
+
+
+class InventoryRefreshParentSwapTests(InventoryRefreshTestCase):
     def test_refresh_parent_swap_cannot_redirect_write(self) -> None:
         dumps = json.dumps
         for link in (False, True):
@@ -734,7 +787,7 @@ class InventoryRefreshWriteTests(unittest.TestCase):
                         self.assertEqual(self.run_refresh(), 0)
                     redirected = self.target.parent if link else parent
                     self.assertFalse((redirected / self.output.name).exists())
-                    self.assertEqual((moved / self.output.name).read_bytes(), REVIEW_INVENTORY.read_bytes())
+                    self.assertEqual((moved / self.output.name).read_bytes(), reviewed_inventory_bytes())
                 finally:
                     if link:
                         parent.unlink()
@@ -765,14 +818,7 @@ class InventoryRefreshWriteTests(unittest.TestCase):
         with patch.object(io, "open", side_effect=file_open), patch.object(os, "open", side_effect=fd_open):
             self.assertEqual(self.run_refresh(), 0)
         self.assertFalse((self.target.parent / self.output.name).exists())
-        self.assertEqual((moved / self.output.name).read_bytes(), REVIEW_INVENTORY.read_bytes())
-
-    def test_refresh_publication_failure_preserves_inventory_and_cleans_temporary(self) -> None:
-        self.output.write_text("old inventory", encoding="utf-8")
-        with patch.object(os, "replace", side_effect=OSError("publication failed")), self.assertRaises(OSError):
-            self.run_refresh()
-        self.assertEqual(self.output.read_text(encoding="utf-8"), "old inventory")
-        self.assertEqual(list(self.output.parent.iterdir()), [self.output])
+        self.assertEqual((moved / self.output.name).read_bytes(), reviewed_inventory_bytes())
 
 
 if __name__ == "__main__":
