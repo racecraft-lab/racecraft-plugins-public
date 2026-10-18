@@ -2,7 +2,7 @@
 
 Status: accepted
 
-Implementation status: planning decision; this ticket changes no plugin runtime behavior. The ledger, renderers, resume behavior and host parity described here require implementation and verification.
+Implementation status: the ledger record, the resume guard and the human disposition are built (`blocked_work.py`, execution-control v2). The PR body and UAT runbook renderers, the repair-run link and the handoff counts are not built yet.
 
 Decision: [Blocked-for-UAT in the ledger, PR body and UAT runbook](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1023), part of [Wayfinder: speckit-pro health program](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1006).
 
@@ -27,7 +27,7 @@ Every entry carries:
 - Retained partial work, what remains unfinished, and which verification is failed, missing or not run.
 - What would unblock the work: the repair or missing prerequisite, plus the required verification or consent. This description supplies no authorization.
 
-Keep the original evidence once per cause; dependent entries link to it. Missing or unreadable evidence cannot become a successful result. Record it as unavailable and handle the failing evidence check through the existing retry and stop policies; proven tampering still triggers ADR 0010's harm halt. Public reports use redacted descriptions, repository-relative references and digests; private security evidence follows ADR 0011.
+Keep the original evidence once per cause; dependent entries link to it. A task whose own check also exhausts retains its own attempt evidence and every dependency-root link, regardless of which cause is recorded first. The dependency skip adds no attempt. Missing or unreadable evidence cannot become a successful result. Record it as unavailable and handle the failing evidence check through the existing retry and stop policies; proven tampering still triggers ADR 0010's harm halt. Public reports use redacted descriptions, repository-relative references and digests; private security evidence follows ADR 0011.
 
 ## Partial work and resume
 

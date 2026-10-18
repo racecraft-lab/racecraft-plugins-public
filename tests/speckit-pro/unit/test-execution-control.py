@@ -1692,6 +1692,12 @@ class _EscalationFixture(_ExecutionControlFixture):
         self.verify(unittest_output("test_a"), argv=argv)
         return digest(list(argv))
 
+    def ledger_path(self):
+        return self.root / self.invoke("status", mode="read_only")["ledger_path"]
+
+    def ledger_bytes(self):
+        return self.ledger_path().read_bytes()
+
 
 class EscalationAllowanceTests(_EscalationFixture, unittest.TestCase):
     """A failed unit climbs tier 2 then tier 3 outside the corrective budget before it is exhausted (issue 829)."""
@@ -3849,12 +3855,6 @@ class _RetryLadderFixture(_EscalationFixture):
         self.interrupt(first)
         return self.climb(again)
 
-    def ledger_path(self):
-        return self.root / self.invoke("status", mode="read_only")["ledger_path"]
-
-    def ledger_bytes(self):
-        return self.ledger_path().read_bytes()
-
 
 class RetryLadderAdmissionTests(_RetryLadderFixture, unittest.TestCase):
     """A failing check climbs one ladder of three attempts for the whole run (ADR 0004)."""
@@ -4035,6 +4035,266 @@ class RetryLadderForgeryTests(_RetryLadderFixture, unittest.TestCase):
                 extra={**dispatch(ledger), "reserved_at": self.now + 1}),
         }
         self.assert_forgeries_fail_closed(self.ledger_path(), valid, tampers)
+
+
+class _BlockedWorkFixture(_EscalationFixture):
+    """Shared fixture for the blocked-work tests: four tasks, one exhausted check and the block call."""
+
+    ARGV = ("python3", "gate.py")
+    TASKS = "".join(f"- [ ] T00{n} Build part {n}\n" for n in range(1, 5))
+    DEPENDS = {"T001": [], "T002": ["T001"], "T003": ["T002"], "T004": []}
+    UNITS = {"T001": "alpha", "T002": "beta", "T003": "gamma", "T004": "delta"}
+
+    def setUp(self):
+        super().setUp()
+        feature = self.root / "feature"
+        (feature / ".process").mkdir(exist_ok=True)
+        (feature / "plan.md").write_text("plan\n")
+        (feature / "tasks.md").write_text(self.TASKS)
+        tasks = {task: {"capability_group": "stories", "depends_on": deps, "owns": [f"src/{self.UNITS[task]}"],
+                        "tdd_unit": self.UNITS[task]} for task, deps in self.DEPENDS.items()}
+        (feature / ".process/task-execution.json").write_text(json.dumps({
+            "schema_version": "task-execution.v1", "tasks": tasks,
+            "fingerprints": fingerprints((feature / "spec.md").read_text(), "plan\n", self.TASKS)}))
+        self.check = self.exhaust(self.ARGV)
+
+    def exhaust(self, argv, rungs=3):
+        """Fail a check, then spend `rungs` of its ladder, each followed by a fresh failure; returns its digest."""
+        check = self.verify_red(argv)
+        for rung in range(1, rungs + 1):
+            self.now += 10
+            self.invoke("reserve-retry-rung", dispatch_id=f"{argv[1]}-{rung}", host="claude", command_sha256=check)
+            self.settle(f"{argv[1]}-{rung}")
+            self.verify_red(argv)
+        return check
+
+    def block(self, mode="apply", **request):
+        self.now += 10
+        request = {"command_sha256": self.check, "unblock": "fix the check", "retained_work": ["src/alpha"], **request}
+        return self.invoke_for_spec("block-exhausted-check", mode, **request)
+
+    def entries(self, result):
+        return result["ledger"].get("blocked_work", {}).get("entries", {})
+
+
+class BlockedWorkRecordTests(_BlockedWorkFixture, unittest.TestCase):
+    """A check that spends its ladder blocks its owners and their transitive dependents for UAT (ADR 0012)."""
+
+    def test_exhaustion_blocks_the_owners_and_their_transitive_dependents(self):
+        blocked = self.block(owner_tasks=["T001"])
+        self.assert_schema_valid(blocked["ledger"])
+        entries = self.entries(blocked)
+        self.assertEqual(sorted(entries), ["task:T001", "task:T002", "task:T003"])
+        root, near, far = (entries[f"task:T00{n}"] for n in (1, 2, 3))
+        self.assertEqual((root["attempted"], root["roots"], root["reason"]), (True, [], "check_exhausted"))
+        for dependent in (near, far):
+            self.assertEqual((dependent["attempted"], dependent["roots"], dependent["reason"]),
+                             (False, ["task:T001"], "dependency_blocked"))
+            self.assertEqual(dependent["causes"], root["causes"])
+        cause = blocked["ledger"]["blocked_work"]["causes"][self.check]
+        self.assertEqual([attempt["rung"] for attempt in cause["attempts"]], [1, 2, 3])
+        self.assertEqual((root["retained_work"], root["unblock"], root["verification"]),
+                         (["src/alpha"], "fix the check", "failed"))
+        self.assertIn("- [ ] T001", (self.root / "feature/tasks.md").read_text())
+
+    def test_json_task_order_does_not_hide_transitive_dependents(self):
+        path = self.root / "feature/.process/task-execution.json"
+        metadata = json.loads(path.read_text())
+        metadata["tasks"] = dict(reversed(list(metadata["tasks"].items())))
+        path.write_text(json.dumps(metadata))
+        blocked = self.block(owner_tasks=["T001"])
+        self.assertEqual(sorted(self.entries(blocked)), ["task:T001", "task:T002", "task:T003"])
+
+    def test_multiple_checks_preserve_each_cause_for_the_same_work(self):
+        other = self.exhaust(("python3", "other.py"))
+        self.block(owner_tasks=["T001"])
+        blocked = self.block(command_sha256=other, owner_tasks=["T001"],
+                             retained_work=["src/beta"], unblock="repair other check")
+        entry = self.entries(blocked)["task:T001"]
+        self.assertEqual(set(entry["causes"]), {self.check, other})
+        cause = blocked["ledger"]["blocked_work"]["causes"][other]
+        self.assertEqual((cause["retained_work"], cause["unblock"]), (["src/beta"], "repair other check"))
+        self.assert_schema_valid(blocked["ledger"])
+
+    def test_an_ownerless_check_blocks_its_gate_and_no_task(self):
+        blocked = self.block(gate="G4")
+        self.assert_schema_valid(blocked["ledger"])
+        self.assertEqual(list(self.entries(blocked)), ["gate:G4"])
+        self.assertEqual(blocked["ledger"]["blocked_work"]["entries"]["gate:G4"]["roots"], [])
+
+
+class BlockedWorkBoundaryTests(_BlockedWorkFixture, unittest.TestCase):
+    """Blocking waits for a spent ladder, keeps every cause, and refuses a malformed request."""
+
+    def test_a_final_attempt_needs_fresh_failure_evidence_before_blocking(self):
+        argv = ("python3", "fresh.py")
+        check = self.exhaust(argv, rungs=2)
+        self.now += 10
+        self.invoke("reserve-retry-rung", dispatch_id="fresh-3", host="claude", command_sha256=check)
+        self.settle("fresh-3")
+        result = self.block(command_sha256=check, owner_tasks=["T001"])
+        self.assertEqual(result["reasons"], ["retry_ladder_not_exhausted"])
+        self.assertNotIn("blocked_work", result["ledger"])
+
+    def test_a_check_with_ladder_left_or_a_malformed_request_blocks_nothing(self):
+        short = self.exhaust(("python3", "short.py"), rungs=1)
+        self.assertEqual(self.block(command_sha256=short, owner_tasks=["T001"])["reasons"],
+                         ["retry_ladder_not_exhausted"])
+        before = (self.ledger_path()).read_bytes()
+        for request in ({}, {"owner_tasks": ["T001"], "gate": "G4"}, {"owner_tasks": ["T999"]}, {"gate": ""}):
+            with self.subTest(request=request), self.assertRaises(ValueError):
+                self.block(**request)
+        self.assertEqual((self.ledger_path()).read_bytes(), before)
+
+    def test_overlapping_exhausted_owners_keep_their_attempts_and_dependencies(self):
+        other = self.exhaust(("python3", "dependent.py"))
+        path = self.ledger_path()
+        initial = path.read_bytes()
+        requests = ({"owner_tasks": ["T001"]}, {"command_sha256": other, "owner_tasks": ["T002"],
+                                                "retained_work": ["src/beta"], "unblock": "repair beta"})
+        for order in ((0, 1), (1, 0)):
+            with self.subTest(order=order):
+                path.write_bytes(initial)
+                for index in order:
+                    self.block(**requests[index])
+                result = self.invoke("status", mode="read_only")
+                self.assert_schema_valid(result["ledger"])
+                entries = self.entries(result)
+                owner = entries["task:T002"]
+                self.assertEqual((owner["reason"], owner["attempted"], owner["verification"], owner["roots"]),
+                                 ("check_exhausted", True, "failed", ["task:T001"]))
+                self.assertEqual(set(owner["causes"]), {self.check, other})
+                self.assertEqual((owner["retained_work"], owner["unblock"]), (["src/beta"], "repair beta"))
+                skipped = entries["task:T003"]
+                self.assertEqual((skipped["attempted"], skipped["roots"]), (False, ["task:T001", "task:T002"]))
+                self.assertEqual(set(skipped["causes"]), {self.check, other})
+
+
+class BlockedWorkResumeTests(_BlockedWorkFixture, unittest.TestCase):
+    """A resumed run keeps its blocks and never dispatches blocked work again."""
+
+    def test_resume_keeps_blocks_and_never_redispatches_blocked_work(self):
+        self.block(owner_tasks=["T001"])
+        record = self.invoke("status", mode="read_only")["ledger"]
+        self.invoke("start")
+        self.now += 10
+        again = self.invoke("reserve-retry-rung", dispatch_id="gate-4", host="claude", command_sha256=self.check)
+        self.assertEqual(again["reasons"], ["blocked_for_uat"])
+        redo = self.invoke("reserve", dispatch_id="redo-beta", kind="implementation", tdd_units=["beta"])
+        self.assertEqual(redo["reasons"], ["blocked_for_uat"])
+        free = self.invoke("reserve", dispatch_id="do-delta", kind="implementation", tdd_units=["delta"])
+        self.assertEqual(free["disposition"], "continue")
+        after = self.invoke("status", mode="read_only")["ledger"]
+        self.assertEqual(after["blocked_work"], record["blocked_work"])
+        self.assertEqual({key: item for key, item in after["dispatches"].items() if "retry_ladder" in item},
+                         {key: item for key, item in record["dispatches"].items() if "retry_ladder" in item})
+
+    def test_escalating_a_blocked_check_or_blocking_past_an_unknown_dispatch_is_refused(self):
+        self.invoke("reserve", dispatch_id="lost", kind="implementation")
+        self.invoke("reconcile", dispatch_id="lost")
+        held = self.block(owner_tasks=["T001"])
+        self.assertIn("unknown_dispatch_blocks_unit", held["reasons"])
+        self.assertNotIn("blocked_work", held["ledger"])
+        self.invoke("complete", dispatch_id="lost", outcome="failed", native_observation={
+            "native_event_id": "n1", "run_id": self.run_id, "dispatch_id": "lost", "action": "dispatch_result",
+            "outcome": "failed"})
+        self.block(owner_tasks=["T001"])
+        self.now += 10
+        escalation = {"unit_kind": "gate_failure", "unit": self.check, "tier": 2}
+        refused = self.invoke("reserve", dispatch_id="esc", kind="corrective", escalation=escalation)
+        self.assertEqual(refused["reasons"], ["blocked_for_uat"])
+        self.assertNotIn("esc", refused["ledger"]["dispatches"])
+
+
+class BlockedWorkRemediationTests(_BlockedWorkFixture, unittest.TestCase):
+    """Remediation and escalation requests cannot reach blocked work."""
+
+    def test_remediation_requests_cannot_redispatch_blocked_work(self):
+        other = self.exhaust(("python3", "other-gate.py"))
+        self.block(owner_tasks=["T001"])
+        before = self.block(command_sha256=other, gate="G4")["ledger"]
+        requests = [(key, {"tdd_unit": unit, "paths": [f"src/{unit}"]})
+                    for key in ("review_remediation", "test_fix") for unit in ("alpha", "beta", "gamma")]
+        requests.append(("gate_remediation", {"gate": "G4", "paths": ["feature/plan.md"]}))
+        for index, (key, request) in enumerate(requests):
+            with self.subTest(request=key, target=request):
+                refused = self.remediate(key, f"blocked-fix-{index}", request)
+                self.assertEqual(refused["reasons"], ["blocked_for_uat"])
+                self.assertEqual(refused["ledger"], before)
+        free = self.review_fix("delta-review", "delta", ["src/delta"])
+        self.assertEqual((free["disposition"], free["review_allowance"]), ("continue", "increment"))
+
+    def test_deferred_remediation_cannot_escalate_blocked_work(self):
+        other = self.exhaust(("python3", "other-gate.py"))
+        targets = (("increment", "alpha", self.review_fix, ["src/alpha"], "increment_review_allowance_exhausted"),
+                   ("gate", "G4", self.gate_fix, ["feature/plan.md"], "gate_remediation_allowance_exhausted"))
+        for _, unit, remediate, paths, reason in targets:
+            for round_number in (1, 2):
+                dispatch = f"{unit}-fix-{round_number}"
+                remediate(dispatch, unit, paths)
+                self.settle(dispatch)
+            self.assertEqual(remediate(f"{unit}-fix-3", unit, paths)["reasons"], [reason])
+        self.block(owner_tasks=["T001"])
+        before = self.block(command_sha256=other, gate="G4")["ledger"]
+        for kind, unit, _, _, _ in targets:
+            with self.subTest(kind=kind, unit=unit):
+                refused = self.escalate(f"{unit}-tier-2", 2, {"unit_kind": kind, "unit": unit})
+                self.assertEqual(refused["reasons"], ["blocked_for_uat"])
+                for field in ("blocked_work", "dispatches", "escalation_allowances", "corrective_cycles"):
+                    self.assertEqual(refused["ledger"].get(field), before.get(field))
+
+
+class BlockedWorkDispositionTests(_BlockedWorkFixture, unittest.TestCase):
+    """A human accepts a gap with one event bound to one entry; the block stays a block."""
+
+    def accept(self, key="task:T001", event_id="gap-1", **changes):
+        event = dict(native_event_id=event_id, run_id=self.run_id, action="blocked_gap_accepted", entry_id=key,
+                     decision="gap_accepted")
+        return self.invoke("accept-blocked-gap", entry_id=key, native_observation=event | changes)
+
+    def test_accepting_a_gap_changes_only_the_disposition(self):
+        before = self.entries(self.block(owner_tasks=["T001"]))
+        after = self.entries(self.accept())
+        self.assertEqual(after["task:T001"]["disposition"]["decision"], "gap_accepted")
+        for key in before:
+            stripped = {name: value for name, value in after[key].items() if name != "disposition"}
+            self.assertEqual(stripped, {name: value for name, value in before[key].items() if name != "disposition"})
+        self.assertIsNone(after["task:T002"]["disposition"])
+        self.assertIn("- [ ] T001", (self.root / "feature/tasks.md").read_text())
+        self.assert_schema_valid(self.invoke("status", mode="read_only")["ledger"])
+
+    def test_a_disposition_needs_one_human_event_bound_to_this_entry(self):
+        self.block(owner_tasks=["T001"])
+        self.accept()
+        for name, call in {"replayed event": lambda: self.accept("task:T002"),
+                           "second disposition": lambda: self.accept(event_id="gap-2"),
+                           "another run": lambda: self.accept("task:T002", "gap-3", run_id="other"),
+                           "another entry": lambda: self.accept("task:T002", "gap-4", entry_id="task:T003"),
+                           "unknown entry": lambda: self.accept("task:T009", "gap-5"),
+                           "no event": lambda: self.invoke("accept-blocked-gap", entry_id="task:T002")}.items():
+            with self.subTest(case=name), self.assertRaises(ValueError):
+                call()
+
+    def test_forged_blocked_work_records_fail_closed(self):
+        self.block(owner_tasks=["T001"])
+        path = self.ledger_path()
+        valid = path.read_bytes()
+        entries = lambda ledger: ledger["blocked_work"]["entries"]
+        tampers = {
+            "a dependent with an attempt": lambda ledger: entries(ledger)["task:T002"].update(attempted=True),
+            "a root without an attempt": lambda ledger: entries(ledger)["task:T001"].update(attempted=False),
+            "a dependent without a root": lambda ledger: entries(ledger)["task:T002"].update(roots=[]),
+            "a root that is not blocked": lambda ledger: entries(ledger)["task:T002"].update(roots=["task:T009"]),
+            "an entry without its cause": lambda ledger: ledger["blocked_work"]["causes"].clear(),
+            "a task without its unit": lambda ledger: entries(ledger)["task:T001"].pop("tdd_unit"),
+            "a gate with a unit": lambda ledger: entries(ledger)["task:T001"].update(kind="gate", unit="T001"),
+            "a root that is itself a dependent": lambda ledger: entries(ledger)["task:T002"].update(roots=["task:T003"]),
+            "a completion marker": lambda ledger: entries(ledger)["task:T001"].update(complete=True),
+            "a swapped identity": lambda ledger: entries(ledger).update({"task:T009": entries(ledger).pop("task:T001")}),
+            "a disposition that completes": lambda ledger: entries(ledger)["task:T001"].update(
+                disposition={"decision": "complete", "event_id": "e", "recorded_at": 1}),
+        }
+        self.assert_forgeries_fail_closed(path, valid, tampers)
 
 
 if __name__ == "__main__":

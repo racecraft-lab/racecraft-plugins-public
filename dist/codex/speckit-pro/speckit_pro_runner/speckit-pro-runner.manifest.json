@@ -92,6 +92,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/blocked_work.py",
+        "display": "speckit_pro_runner/blocked_work.py"
+      },
+      "sha256": "2aa0a1e4139177ce21ad048fb0cac170ac4989da62375f3f251beb2a41901454"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/canonical_json.py",
         "display": "speckit_pro_runner/canonical_json.py"
       },
@@ -159,7 +167,7 @@
         "value": "speckit_pro_runner/contracts/execution-control.schema.json",
         "display": "speckit_pro_runner/contracts/execution-control.schema.json"
       },
-      "sha256": "87546d278c87c58f95e13cedcd57d5e6688220020e5fb78996a53f1270a75267"
+      "sha256": "cbf623817aca6644b4a81c39a001382761d086a5a625d6fc6bc14e9af954b87d"
     },
     {
       "path": {
@@ -247,7 +255,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "e2e1528ded64c749764d17719bd1601d21f250f39147ea6c8d0babccfeec2eeb"
+      "sha256": "fd750257315a0fa9086139e7f002160def2e0a4d317924e1f967c1b452ff7ca9"
     },
     {
       "path": {
