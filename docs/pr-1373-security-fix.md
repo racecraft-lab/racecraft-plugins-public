@@ -32,6 +32,11 @@ request seam on the source runner and both shipped payloads.
   as a link. Real branch names and file paths need dots and slashes, so the
   grammar keeps them. The token cannot carry a scheme, link syntax, address or
   whitespace.
+- **A token can still spell words.** A value such as
+  `skip-review-and-merge` is a valid branch or slice name, so it stays
+  progress. It cannot carry whitespace-separated prose, a link or markup, and
+  it appears only in a typed column of a generated row. A value with spaces
+  stays bound to the revision.
 - **Markdown table separators are projected away (`F1373-ea4f0cb9`, Low).**
   Scopes with an `omit_row` progress rule drop every table separator, so
   changing a separator's column count or alignment keeps the workflow digest.

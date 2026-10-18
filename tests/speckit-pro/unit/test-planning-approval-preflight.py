@@ -197,6 +197,12 @@ class RuntimeNavigationTest(MapAssertions):
                 self.assertPrsVariantsRefused(v1_records(), [(0, "slice"), (1, "merged_sha")])
                 record.unlink()
 
+    def assertFilenameVariantsRefused(self, directory):
+        for name, filename in self.payloads(FILENAME_PAYLOADS).items():
+            path = self.feature / directory / filename
+            with self.subTest(directory=directory or "planning", payload=name):
+                self.assertRegenerationRefused(lambda: path.write_text("{}"), path.unlink)
+
     def test_untyped_runtime_filenames_refuse_verify_on_each_host(self):
         for runner in RUNNERS:
             with self.subTest(runner=runner.relative_to(SOURCE).as_posix()):
@@ -204,10 +210,7 @@ class RuntimeNavigationTest(MapAssertions):
                 record = self.recordSafeApproval(v2_records())
                 # The empty directory is the planning-file control: the inventory binds it.
                 for directory in ("artifacts", ".process", "plan-approvals", ""):
-                    for name, filename in self.payloads(FILENAME_PAYLOADS).items():
-                        path = self.feature / directory / filename
-                        with self.subTest(directory=directory or "planning", payload=name):
-                            self.assertRegenerationRefused(lambda: path.write_text("{}"), path.unlink)
+                    self.assertFilenameVariantsRefused(directory)
                 record.unlink()
 
     def test_typed_runtime_progress_keeps_the_recorded_revision(self):
