@@ -180,6 +180,7 @@
         { "path": "tests/speckit-pro/unit/test-plain-ci-entry-points.py", "label": "test-plain-ci-entry-points" },
         { "path": "tests/speckit-pro/unit/test-plan-stage-terminal.py", "label": "test-plan-stage-terminal" },
         { "path": "tests/speckit-pro/unit/test-plan-terminal-step-requests.py", "label": "test-plan-terminal-step-requests" },
+        { "path": "tests/speckit-pro/unit/test-plan-review-prompt.py", "label": "test-plan-review-prompt" },
         { "path": "tests/speckit-pro/unit/test-planning-approval.py", "label": "test-planning-approval" },
         { "path": "tests/speckit-pro/unit/test-planning-approval-preflight.py", "label": "test-planning-approval-preflight" },
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference" },

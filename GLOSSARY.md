@@ -97,6 +97,10 @@ _Avoid_: artifact sign-off, planning complete, implementation permission
 The human interview between planning and implementation that examines the proposed work, closes gaps through revisions, and establishes whether the final planning revision is approved.
 _Avoid_: planning pause, implement preflight, artifact delivery
 
+**Repair prompt**:
+The copyable text a plan review builds for the planning agent. It names the reviewed revision and carries every finding with each active requested remedy or custom instruction. A withdrawn custom instruction stays listed as withdrawn, never as active. The runner builds it with `plan-review-prompt`; building or copying it sends nothing and starts no planning, repair or implementation.
+_Avoid_: handoff message, approval request, launch command
+
 **Plan stage**:
 The part of an autopilot run that takes a SPEC from specify through analyze and ends when the review artifacts and the draft PR are ready. The other stages are implement and full.
 _Avoid_: planning run, planning phase

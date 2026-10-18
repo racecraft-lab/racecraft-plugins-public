@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-plan-review-prompt",
+  "helper_id": "plan-review-prompt",
+  "operation": "plan-review-prompt",
+  "mode": "read_only",
+  "inputs": {
+    "feature_dir": "missing-feature",
+    "workflow_file": "missing-workflow.md",
+    "findings": [{"id": "F1", "summary": "Example finding."}],
+    "requests": [{"id": "R1", "finding": "F1", "kind": "custom", "instruction": "Example instruction."}],
+    "withdrawals": []
+  }
+}
