@@ -26,8 +26,11 @@ Symlinks, missing roots, unreadable text, and missing or malformed inventories
 fail closed. Source rendering and the shipped Codex payload use the same check.
 
 The inventory is repository proof data; it is not shipped plugin policy. Its
-shared repository policy owner supplies strict reads and one complete file walker
-to both validation and the repository regeneration script.
+shared repository policy owner supplies strict reads, one complete file walker,
+and the chunked fixture format to validation and regeneration. The sorted skill
+map uses sequential `skills-N` chunks of 50 entries to keep the proof fixture
+readable; tests verify the reader rejects malformed chunks and the generator
+reproduces the committed fixture byte for byte.
 Regenerate it from source after reviewing the instruction changes:
 
 ```text
@@ -100,17 +103,14 @@ The refresh entry-point tests cover:
 
 | Variant | Test in `test-codex-spawn-fork-turns.py` |
 | --- | --- |
-| Existing absolute output symlink | `test_refresh_rejects_absolute_inventory_symlink` |
-| Relative output symlink to clone control data | `test_refresh_rejects_relative_inventory_symlink_to_clone_config` |
-| Dangling absolute output symlink | `test_refresh_rejects_dangling_absolute_inventory_symlink` |
-| Dangling relative output symlink | `test_refresh_rejects_dangling_relative_inventory_symlink` |
+| Existing or dangling output symlink, absolute or relative | `test_refresh_rejects_inventory_symlink_forms` |
 | Every parent position, absolute and relative symlinks | `test_refresh_rejects_every_linked_inventory_parent` |
 | Hard-linked output preserves its other name | `test_refresh_replaces_hard_link_without_truncating_target` |
 | Parent rename and replacement with a directory or symlink during serialization | `test_refresh_parent_swap_cannot_redirect_write` |
 | Parent swap immediately before file creation | `test_refresh_parent_swap_before_creation_cannot_redirect_write` |
 | Output swapped to an absolute/relative, existing/dangling link during serialization | `test_refresh_rejects_file_swap_without_following_link` |
-| Temporary-name symlink collision | `test_refresh_temporary_name_collision_cannot_follow_link` |
-| Temporary write/publication failure and temporary cleanup | `test_refresh_write_failure_preserves_inventory_and_cleans_temporary`, `test_refresh_publication_failure_preserves_inventory_and_cleans_temporary` |
+| Temporary-name symlink collision | `test_refresh_failures_preserve_inventory_and_clean_temporary` (`temporary collision` subtest) |
+| Temporary write/publication failure and temporary cleanup | `test_refresh_failures_preserve_inventory_and_clean_temporary` (`write` and `publication` subtests) |
 
 The initial red run accepted every reported category (207/222 checks passed;
 15 failed). The expanded suite is also tested against the pre-fix writer to

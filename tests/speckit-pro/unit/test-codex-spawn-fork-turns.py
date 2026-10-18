@@ -36,7 +36,7 @@ REPO_ROOT = TEST_DIR.parents[2]
 sys.path[:0] = [str(TEST_DIR.parent / "lib"), str(REPO_ROOT / "scripts")]
 
 from codex_instruction_review import (  # noqa: E402
-    REVIEW_INVENTORY, instruction_inventory, instruction_paths, read_surface,
+    REVIEW_INVENTORY, instruction_inventory, instruction_paths, read_review_inventory, read_surface,
 )
 from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
@@ -137,43 +137,10 @@ def skill_paths(root: Path) -> list[Path]:
 
 
 
-def reviewed_instruction_inventory() -> dict[str, dict[str, str]]:
-    """Load the reviewed map from small fixture chunks without dropping entries."""
-    try:
-        manifest = json.loads(read_surface(REVIEW_INVENTORY))
-        if not isinstance(manifest, dict):
-            raise ValueError("invalid inventory fixture manifest")
-        agents = manifest["agents"]
-        chunk_names = {name for name in manifest if name.startswith("skills-")}
-        expected_names = {f"skills-{index}" for index in range(1, len(chunk_names) + 1)}
-        if (
-            not isinstance(agents, dict)
-            or not chunk_names
-            or chunk_names != expected_names
-            or set(manifest) != {"agents", *chunk_names}
-        ):
-            raise ValueError("invalid inventory fixture manifest")
-        skills = {}
-        for name in (f"skills-{index}" for index in range(1, len(chunk_names) + 1)):
-            part = manifest[name]
-            if not isinstance(part, dict) or not part or skills.keys() & part.keys():
-                raise ValueError("invalid or repeated inventory fixture entries")
-            skills.update(part)
-        if not skills:
-            raise ValueError("empty skills inventory")
-        return {"agents": agents, "skills": skills}
-    except (OSError, ValueError, KeyError, TypeError) as error:
-        raise AssertionError("unreadable instruction review inventory") from error
-
-
-def reviewed_inventory_bytes() -> bytes:
-    return REVIEW_INVENTORY.read_bytes()
-
-
 def assert_instruction_inventory(case: unittest.TestCase, kind: str, root: Path) -> None:
     """Require an explicit review update for every changed, added or removed file."""
     case.assertEqual(
-        instruction_inventory(root), reviewed_instruction_inventory()[kind],
+        instruction_inventory(root), read_review_inventory(REVIEW_INVENTORY)[kind],
         "review instruction changes, then run python3 scripts/refresh-codex-instruction-inventory.py",
     )
 
@@ -420,6 +387,7 @@ class CodexSpawnInventoryTests(unittest.TestCase):
     def test_inventory_refresh_reproduces_reviewed_fixture(self) -> None:
         module = runpy.run_path(str(REPO_ROOT / "scripts/refresh-codex-instruction-inventory.py"))
         refresh = module["main"]
+        fixture_bytes = REVIEW_INVENTORY.read_bytes()
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
             (root / "speckit-pro").symlink_to(REPO_ROOT / "speckit-pro", target_is_directory=True)
@@ -429,7 +397,7 @@ class CodexSpawnInventoryTests(unittest.TestCase):
                 sys, "argv", ["refresh-codex-instruction-inventory.py"],
             ):
                 self.assertEqual(refresh(), 0)
-            self.assertEqual(target.read_bytes(), reviewed_inventory_bytes())
+            self.assertEqual(target.read_bytes(), fixture_bytes)
 
     def test_inventory_rejects_links_and_missing_roots(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -448,20 +416,34 @@ class CodexSpawnInventoryFixtureTests(unittest.TestCase):
     def test_unreadable_review_inventory_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             inventory = Path(temporary) / "inventory.json"
-            for content in (
-                None, b"\xff", b"{", b"{}", b"[]", b'null',
-                b'{"agents": {}}',
-                b'{"agents": {}, "skills-1": {}}',
-                b'{"agents": {}, "skills-1": null}',
-                b'{"agents": {}, "skills-2": {"one": "hash"}}',
-                b'{"agents": {}, "skills-1": {"one": "hash"}, "skills-2": {"one": "hash"}}',
-                b'{"agents": {}, "skills-1": {"one": "hash"}, "other": {}}',
-            ):
-                with self.subTest(content=content), patch(__name__ + ".REVIEW_INVENTORY", inventory):
-                    if content is not None:
+            reviewed = json.loads(REVIEW_INVENTORY.read_text(encoding="utf-8"))
+            missing_first_chunk = {name: value for name, value in reviewed.items() if name != "skills-1"}
+            duplicate = json.loads(json.dumps(reviewed))
+            duplicate_path, duplicate_digest = next(iter(duplicate["skills-1"].items()))
+            duplicate["skills-2"][duplicate_path] = duplicate_digest
+            cases = (
+                ("missing", None),
+                ("invalid utf8", b"\xff"),
+                ("malformed json", b"{"),
+                ("non-object", b"[]"),
+                ("missing agents", {name: value for name, value in reviewed.items() if name != "agents"}),
+                ("invalid agents", {**reviewed, "agents": []}),
+                ("missing first chunk", missing_first_chunk),
+                ("empty chunk", {**reviewed, "skills-1": {}}),
+                ("null chunk", {**reviewed, "skills-1": None}),
+                ("overlapping skill path", duplicate),
+                ("unknown field", {**reviewed, "other": {}}),
+            )
+            for name, content in cases:
+                with self.subTest(case=name):
+                    if content is None:
+                        inventory.unlink(missing_ok=True)
+                    elif isinstance(content, bytes):
                         inventory.write_bytes(content)
-                    with self.assertRaises(AssertionError):
-                        assert_instruction_inventory(self, "skills", host_skill_root("codex"))
+                    else:
+                        inventory.write_text(json.dumps(content), encoding="utf-8")
+                    with self.assertRaisesRegex(AssertionError, "unreadable instruction review inventory"):
+                        read_review_inventory(inventory)
 
     def test_review_inventory_with_a_missing_chunk_entry_fails_closed(self) -> None:
         manifest = json.loads(REVIEW_INVENTORY.read_text(encoding="utf-8"))
@@ -675,6 +657,7 @@ class InventoryRefreshTestCase(unittest.TestCase):
         self.output.parent.mkdir(parents=True)
         module = runpy.run_path(str(REPO_ROOT / "scripts/refresh-codex-instruction-inventory.py"))
         self.refresh = module["main"]
+        self.inventory_bytes = REVIEW_INVENTORY.read_bytes()
         self.target = self.root / ".git/config"
         self.target.parent.mkdir()
         self.target.write_text("preserve clone control data", encoding="utf-8")
@@ -730,7 +713,7 @@ class InventoryRefreshSymlinkTests(InventoryRefreshTestCase):
         os.link(self.target, self.output)
         self.assertEqual(self.run_refresh(), 0)
         self.assertEqual(self.target.read_text(encoding="utf-8"), "preserve clone control data")
-        self.assertEqual(self.output.read_bytes(), reviewed_inventory_bytes())
+        self.assertEqual(self.output.read_bytes(), self.inventory_bytes)
         self.assertNotEqual(self.output.stat().st_ino, self.target.stat().st_ino)
 
 
@@ -812,7 +795,7 @@ class InventoryRefreshParentSwapTests(InventoryRefreshTestCase):
                         self.assertEqual(self.run_refresh(), 0)
                     redirected = self.target.parent if link else parent
                     self.assertFalse((redirected / self.output.name).exists())
-                    self.assertEqual((moved / self.output.name).read_bytes(), reviewed_inventory_bytes())
+                    self.assertEqual((moved / self.output.name).read_bytes(), self.inventory_bytes)
                 finally:
                     if link:
                         parent.unlink()
@@ -843,7 +826,7 @@ class InventoryRefreshParentSwapTests(InventoryRefreshTestCase):
         with patch.object(io, "open", side_effect=file_open), patch.object(os, "open", side_effect=fd_open):
             self.assertEqual(self.run_refresh(), 0)
         self.assertFalse((self.target.parent / self.output.name).exists())
-        self.assertEqual((moved / self.output.name).read_bytes(), reviewed_inventory_bytes())
+        self.assertEqual((moved / self.output.name).read_bytes(), self.inventory_bytes)
 
 
 if __name__ == "__main__":

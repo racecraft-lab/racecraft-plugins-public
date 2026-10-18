@@ -9,21 +9,17 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
-from codex_instruction_review import REVIEW_INVENTORY, instruction_inventory
+from codex_instruction_review import REVIEW_INVENTORY, instruction_inventory, review_inventory_document
 from speckit_pro_runner.atomic_write import AtomicWriteOptions, WriteBinding, write_bytes_atomic_with_options  # noqa: E402
 from speckit_pro_runner.host_skills import render_host_skills  # noqa: E402
 from speckit_pro_runner.trusted_io import trusted_open_directory  # noqa: E402
 
 
-SKILL_CHUNK_SIZE = 50
-
-
-def write_inventory(inventory: dict[str, Any]) -> None:
+def write_inventory(inventory: dict[str, dict[str, str]]) -> None:
     """Replace only the inventory entry, relative to a held, unlinked parent.
 
     Never truncate an existing inode: even a hard link must leave its other
@@ -48,12 +44,10 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as temporary:
         skills = Path(temporary) / "skills"
         render_host_skills(REPO_ROOT / "speckit-pro", "codex", skills)
-        skill_entries = sorted(instruction_inventory(skills).items())
-        inventory = {"agents": instruction_inventory(REPO_ROOT / "speckit-pro/codex-agents")}
-        inventory.update({
-            f"skills-{index // SKILL_CHUNK_SIZE + 1}": dict(skill_entries[index:index + SKILL_CHUNK_SIZE])
-            for index in range(0, len(skill_entries), SKILL_CHUNK_SIZE)
-        })
+        inventory = review_inventory_document(
+            instruction_inventory(REPO_ROOT / "speckit-pro/codex-agents"),
+            instruction_inventory(skills),
+        )
     write_inventory(inventory)
     print("Wrote instruction inventory. Review source changes and the inventory diff together.")
     return 0
