@@ -71,6 +71,12 @@ _Avoid_: confirmed live output
 The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must clear it before resume.
 _Avoid_: integrity failure, hard stop
 
+**Sweep process failure**:
+An isolated feedback worker timed out, failed to start, or exited unsuccessfully. It blocks that sweep attempt without establishing tampering (`sweep_process_failed`).
+
+**Sweep session expiry**:
+The private feedback snapshot outlived its allowed lifetime. A fresh capture is required; elapsed time alone is not forged evidence (`sweep_session_expired`).
+
 **Terminal state**:
 Where a run may end without a harm halt: planning ready for review, or ready for UAT. The runner owns the closed list and answers "may this run end now?" from it.
 _Avoid_: stop reason, finish

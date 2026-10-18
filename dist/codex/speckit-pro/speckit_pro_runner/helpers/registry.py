@@ -839,6 +839,9 @@ SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
 
 
 def dispatch_helper(request: Any) -> dict[str, Any]:
+    refusal = harm_halt_refusal(request, request)
+    if refusal is not None:
+        return refusal
     entry = HELPERS.get(request.helper_id)
     if (entry is None or request.mode != "read_only") and request.helper_id in MUTATION_HELPERS:
         return dispatch_mutation_helper(MUTATION_HELPERS[request.helper_id], request)

@@ -38,6 +38,7 @@ from .sweep_isolation import (
 
 MINIMUM_CODEX_VERSION = (0, 138, 0)
 MINIMUM_CLAUDE_VERSION = (2, 1, 245)
+
 CODEX_VERSION_RE = re.compile(r"(?:codex-cli\s+)?([0-9]+)\.([0-9]+)\.([0-9]+)")
 CLAUDE_VERSION_RE = re.compile(r"([0-9]+)\.([0-9]+)\.([0-9]+)(?:\s+\(Claude Code\))?")
 CLAUDE_BROKER_TOOLS = tuple(
@@ -51,6 +52,12 @@ CLAUDE_RECEIPT_OUTPUT_SCHEMA = {
     for key, value in json.loads(RECEIPT_SCHEMA_PATH.read_text(encoding="utf-8")).items()
     if key != "$schema"
 }
+
+
+class SweepProcessFailure(LauncherViolation):
+    """The isolated process could not finish; this supplies no evidence of tampering."""
+
+    reason = "sweep_process_failed"
 
 
 def claude_executable() -> Path:
@@ -442,9 +449,9 @@ def run_codex_sweep(
                 env=os.environ.copy(),
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
-            raise LauncherViolation("isolated Codex sweep invocation failed") from exc
+            raise SweepProcessFailure("isolated Codex sweep invocation failed") from exc
         if completed.returncode != 0:
-            raise LauncherViolation("isolated Codex sweep invocation returned a failure")
+            raise SweepProcessFailure("isolated Codex sweep invocation returned a failure")
         verify_codex_event_trace(completed.stdout, stage=stage)
         try:
             parsed = json.loads(output_path.read_text(encoding="utf-8"))
@@ -664,7 +671,9 @@ def run_claude_sweep(
                 environment=environment,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
-            raise LauncherViolation("isolated Claude sweep invocation failed") from exc
+            raise SweepProcessFailure("isolated Claude sweep invocation failed") from exc
+        if completed.returncode != 0:
+            raise SweepProcessFailure("isolated Claude sweep invocation returned a failure")
         try:
             verify_claude_attestation(runtime_root, plugin_root, max_age_seconds=300)
             payload = json.loads(completed.stdout)
@@ -682,8 +691,7 @@ def run_claude_sweep(
                 # A failed-closed invocation may have removed the attestation already.
                 pass
         if (
-            completed.returncode != 0
-            or payload.get("is_error") is not False
+            payload.get("is_error") is not False
             or payload.get("permission_denials")
             or not isinstance(stats, dict)
             or stats.get("spawned") != 1

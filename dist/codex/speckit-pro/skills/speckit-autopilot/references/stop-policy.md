@@ -35,9 +35,16 @@ A harm halt fires when the next action could cause damage a later review cannot
 undo. On a harm halt the runner stops all dispatch: no commit, push, PR edit or
 publish follows the trigger, because a PR edit could spread a leaked secret. It
 writes a local halt record (reason, redacted evidence, last safe state) and
-prints it. Resume refuses until a human clears the record with the `harm-halt`
-helper (`action` `clear`). On resume, run `harm-halt` in `read_only` mode first;
+prints it. Resume refuses while the record stands. The `harm-halt` helper
+refuses agent `clear` requests: the existing operator-event fields do not
+authenticate a human halt-clear decision. A human must inspect the record
+outside the agent runner. On resume, run `harm-halt` in `read_only` mode first;
 a `halted` answer ends the run with the recorded reason's marker.
+
+While halted, the runner permits the halt helper, runtime information, and the
+pure readers explicitly listed in `helpers/harm_halt.py`. A `read_only` or
+`dry_run` label alone grants no exception: sweep sessions, agent launches,
+probes, and failure-record writes remain refused.
 
 ## Escalation tiers
 

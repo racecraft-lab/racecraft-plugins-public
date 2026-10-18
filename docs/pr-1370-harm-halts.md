@@ -15,6 +15,41 @@ The follow-up spec note about printing the record is addressed in the shared
 phase reference: read the existing `harm-halt` helper in `read_only` mode and
 print its reason, redacted evidence, and last safe state before the stop marker.
 
+## Review repair at the runner seam
+
+- `F1370-b9241f5a`: a standing halt uses an explicit pure-read allowlist,
+  rather than treating `read_only` or `dry_run` as evidence of no side effects.
+  Sweep capture, launch, acceptance and close are refused before dispatch.
+- `F1370-f201596b`: halt publication reuses the execution-control exclusive
+  ledger lock and atomic JSON writer. A concurrent second trigger is refused;
+  the first reason and evidence remain intact, including same-reason races.
+  An interrupted publication lock also refuses dispatch and resume.
+- `F1370-06475426`: agent `clear` requests remain refused. ADR 0004 removes
+  operator-event paths; the remaining `execution_control._operator_event`
+  validates a caller-supplied event shape, run binding and single use. It does
+  not authenticate a human halt-clear signal. Other owner decisions likewise
+  carry observations supplied by the orchestrator. None can safely authorize
+  halt clearance from attacker-controlled repository content, so no new trust
+  channel or reason-as-authorization substitute was added. Human inspection
+  outside the agent runner remains necessary.
+- `R1370-9009d152`: ordinary process timeout, launch failure and non-zero exit
+  return `sweep_process_failed`; TTL expiry returns `sweep_session_expired`.
+  Both refuse that sweep attempt without recording tampering. Boundary failure
+  and invalid, replayed or cross-session receipts retain the halt.
+- `R1370-126d65ed`: payload requests check the same root the payload gate uses,
+  including invocation beneath a nested `.specify` fixture.
+- `R1370-4403eb13`: sweep state effects propagate into `writes_state`, including
+  an isolation-failure halt record.
+- `R1370-eddc3522`: an unreadable prior record remains untouched and the sweep
+  returns the closed isolation failure with `halt_record_status: unavailable`.
+
+The halt module remains the deep policy module: runner and helper dispatch use
+its refusal at the public request seam. The launchers classify operational
+failures where they originate; the receipt owner classifies expiry. Both host
+payloads render the same guidance and ship the same Python policy. No skill
+entrypoint, agent source or Codex-only overlay changed in this repair, so no
+trigger-eval draft requires rebinding.
+
 ## Known limits
 
 - The standards re-review noted that `SchemaViolation` has no `reason`, so an
@@ -32,23 +67,6 @@ print its reason, redacted evidence, and last safe state before the stop marker.
   acknowledgment was changed to suppress it.
 - Linux VM coverage excludes the two real macOS sandbox tests named in the PR
   verification reply. The orchestrator owns those tests and macOS plugin CI.
-- The halt check and the payload gate find the repository root in different
-  ways. `apply_refusal` uses `trusted_io.find_repo_root`, which stops at the
-  nearest `.specify/`. `gates/payloads.py` uses `path_utils.find_repo_root`,
-  which needs `tests/speckit-pro/`. A `payload-completeness` apply request with
-  `apply_dist`, sent from a directory that holds its own `.specify/`, checks for
-  a halt in that directory but rebuilds the repository `dist/`. Only test
-  fixtures hold a nested `.specify/` today, and the orchestrator runs the runner
-  from the worktree root, so supported runs do not reach this. Both root finders
-  predate this PR.
-- The sweep isolation helper runs in `read_only` mode, yet on an isolation
-  failure it writes the halt record. Its response still reports no state
-  writes. The record is the intended effect: it is the only write, it is
-  git-ignored, and it only adds a refusal.
-- When an existing halt record cannot be read, the sweep isolation failure
-  raises instead of returning its `isolation_boundary_unavailable` envelope.
-  The runner answers `internal_failure`. This still fails closed: every later
-  apply request refuses while the record stays unreadable.
 - `apply_refusal` returns no refusal when the runner cannot resolve the
   repository root. Every dispatch path then rejects the same request for that
   root, so no write follows.

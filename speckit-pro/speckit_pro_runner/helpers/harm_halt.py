@@ -2,8 +2,9 @@
 
 A harm halt means the next action could cause damage a later review cannot undo, so after
 the trigger no commit, push, PR edit or publish may follow. The runner writes one record
-(reason, redacted evidence, last safe state) and refuses every apply-mode helper until the
-`clear` action runs with the recorded reason. The record sits in a runner-owned directory
+(reason, redacted evidence, last safe state) and refuses state-changing dispatch.
+Agent clear requests are refused until the host can authenticate an operator.
+The record sits in a runner-owned directory
 that git ignores, so it can never be committed or pushed.
 """
 
@@ -11,10 +12,12 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
-from ..execution_control import confined_path, durable_json
+from ..execution_control import confined_path, durable_json, exclusive_ledger
+from ..path_utils import find_repo_root as find_payload_root
 from ..stop_policy import HARM_HALT, STOP_REASONS
 from ..strict_input import SelectionError, require_fields, require_text, unique_object
 from ..trusted_io import resolve_repo_root
@@ -28,6 +31,10 @@ WITHHELD = "withheld: the evidence may hold the secret"
 # A key=value pair that names a credential, or any long unbroken token (keys, hashes, URLs with tokens).
 SECRET_SHAPES = re.compile(r"(?i)\b(?:token|secret|password|passwd|api[_-]?key)\b\s*[:=]\s*\S+|[A-Za-z0-9_+/=-]{32,}")
 RECORD_FIELDS = {"schema_version", "reason", "evidence", "last_safe_state"}
+# Audited pure reads only. Other nominal read/dry-run paths can launch processes,
+# create sessions or probes, repair state, or persist failure records.
+HALTED_READ_HELPERS = frozenset({"helper-registry-dispatch", "mutation-registry-dispatch",
+                                 "count-markers", "parse-consensus-categories", "aggregate-crl", "sweep-pr-feedback"})
 
 
 def redacted(reason: str, evidence: str) -> str:
@@ -41,6 +48,8 @@ def stored_halt(root: Any) -> dict[str, Any] | None:
     """The active record, None when there is none; an unreadable or malformed record raises, so callers fail closed."""
     path = confined_path(root, RECORD_PATH)
     if not path.exists():
+        if path.with_suffix(".lock").exists():
+            raise SelectionError("halt publication is active or interrupted; a human must inspect it")
         return None
     try:
         record = require_fields(json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object),
@@ -56,23 +65,24 @@ def record_halt(root: Any, reason: str, evidence: str, last_safe_state: str) -> 
     """Write the halt record; the first trigger stands, so a later one never rewrites the evidence."""
     if STOP_REASONS.get(reason) != HARM_HALT:
         raise SelectionError(f"reason must be a harm halt: {sorted(r for r, c in STOP_REASONS.items() if c == HARM_HALT)}")
-    existing = stored_halt(root)
-    if existing is not None:
-        return existing
-    record = {"schema_version": SCHEMA_VERSION, "reason": reason, "evidence": redacted(reason, evidence),
-              "last_safe_state": require_text(last_safe_state, "last_safe_state")[:MAX_TEXT]}
-    durable_json(confined_path(root, RECORD_PATH), record)
+    path = confined_path(root, RECORD_PATH)
+    try:
+        with exclusive_ledger(path):
+            existing = stored_halt(root) if path.exists() else None
+            if existing is not None:
+                raise SelectionError("a harm halt already stands; the second trigger is refused")
+            record = {"schema_version": SCHEMA_VERSION, "reason": reason, "evidence": redacted(reason, evidence),
+                      "last_safe_state": require_text(last_safe_state, "last_safe_state")[:MAX_TEXT]}
+            durable_json(path, record)
+    except ValueError as error:
+        raise SelectionError(f"harm-halt trigger {reason} refused: {error}") from error
     return record
 
 
 def clear_halt(root: Any, confirm_reason: str) -> None:
-    """Remove the record, once the caller names the recorded reason."""
-    existing = stored_halt(root)
-    if existing is None:
-        raise SelectionError("there is no harm-halt record to clear")
-    if confirm_reason != existing["reason"]:
-        raise SelectionError(f"confirm_reason must name the recorded reason, {existing['reason']}")
-    confined_path(root, RECORD_PATH).unlink()
+    """Refuse until the host can authenticate an operator; reason matching is not authorization."""
+    raise SelectionError("agent clear is refused: no authenticated operator halt-clear event is available; "
+                         "a human must inspect the halt outside the agent runner")
 
 
 def harm_halt(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
@@ -97,10 +107,15 @@ def harm_halt(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
 
 
 def apply_refusal(entry: Any, request: Any) -> dict[str, Any] | None:
-    """The refusal for an apply-mode helper while a halt stands, or None. A record that cannot be read refuses too."""
-    if request.mode != "apply" or entry.helper_id == HELPER_ID:
+    """Refuse dispatch unless its code path is an audited pure read or the halt helper itself."""
+    if entry.helper_id == HELPER_ID:
+        return None
+    if request.mode == "read_only" and (entry.helper_id in HALTED_READ_HELPERS or
+                                        (entry.helper_id == "runner" and request.operation == "runtime-info")):
         return None
     root = resolve_repo_root(request.inputs)
+    if entry.helper_id == "payload-gate":
+        root = find_payload_root(Path.cwd()) or root
     if isinstance(root, dict):
         return None
     try:
@@ -113,13 +128,13 @@ def apply_refusal(entry: Any, request: Any) -> dict[str, Any] | None:
         message = f"a harm halt ({record['reason']}) stands: {record['evidence']}"
     return response("expected_failure", request_id=request.request_id, diagnostics=[diagnostic(
         "harm_halt_active", message, details={"helper_id": entry.helper_id},
-        remediation_summary="Nothing was written. A human clears the halt with the harm-halt helper, action clear.",
-        remediation_actions=["Read the record with harm-halt in read_only mode.", "Resolve the cause, then clear the halt."])])
+        remediation_summary="Nothing was written. A human must inspect the halt outside the agent runner.",
+        remediation_actions=["Read the record with harm-halt in read_only mode.", "Resolve the cause; agent clear requests are refused."])])
 
 
 REFUSAL = Refusal(
     "invalid_harm_halt_request",
-    "Send no inputs to read; to record, action halt with a harm-halt reason, evidence and the last safe state; to clear, action clear with confirm_reason.",
+    "Send no inputs to read; to record, action halt with a harm-halt reason, evidence and the last safe state. Agent clear requests are refused.",
     ["Correct the named field.", "Rerun harm-halt; nothing was written."],
 )
 

@@ -2842,14 +2842,15 @@ runner runs `gh auth status` instead. **Branch on the `reason` the capture
 surface returns** in its `{"status": "blocked", "reason": ...}` envelope (exit
 3). `gh_unavailable` and `gh_not_authenticated` stop with
 `stop_reason:tool_unavailable`. `rate_limited`, `malformed_output`, and
-`observation_failed` do not stop the run: they end this run's sweep, so
+`observation_failed`, `sweep_process_failed`, and `sweep_session_expired` do not stop the run: they end this run's sweep, so
 proceed into task work and report the reason as the `skipped` outcome above
 does. `isolation_boundary_unavailable` is the isolation stop and names
 `stop_reason:tampering_or_forged_evidence`. The runner persists the harm-halt
 record before returning that isolation failure. Read and print the halt record
 with `harm-halt` in `read_only` mode before emitting the stop marker: include
-its reason, redacted evidence, and last safe state. Resume and apply-mode
-requests remain refused until a human clears the recorded reason with `harm-halt`.
+its reason, redacted evidence, and last safe state. Resume and state-changing
+requests remain refused while that record stands. Agent `clear` requests are
+refused; follow the human-inspection limit in the stop-policy reference.
 
 **The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool

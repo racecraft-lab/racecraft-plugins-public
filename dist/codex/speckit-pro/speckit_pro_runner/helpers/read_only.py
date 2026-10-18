@@ -262,6 +262,7 @@ def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
     exit_code = int(result["exit_code"])
     status = EXIT_STATUS.get(exit_code, "subprocess_failure")
     data = helper_result_data(entry, inputs, argv_result, repo_root, exit_code, stdout, stderr, duration_ms)
+    data["writes_state"] = result.get("writes_state", False)
     if entry.helper_id == "confidence-gate":
         classified = confidence_runner_response(request.request_id, data, exit_code, stderr)
         if classified is not None:
