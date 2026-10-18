@@ -55,8 +55,8 @@ from typing import Any
 
 from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
-from ..execution_control import (ESCALATION_TIER3_CAP, confined_path, escalation_key, escalation_progress,
-                                 failed_verification, finalize_observation_key, require_text, validate_ledger)
+from ..execution_control import (UnitEscalation, confined_path, failed_verification, finalize_observation_key,
+                                 require_text, unit_escalation, validate_ledger)
 from ..pr_contract import DEFERRED_ITEM_FIELDS, require_one_line
 from ..stop_policy import ALL_TIERS_FAILED, AUTHORITY, EXHAUSTED, TIER3_CAP_REACHED, stop_class
 from ..sweep_isolation import HEX_OBJECT_RE
@@ -131,18 +131,17 @@ def _derived_status(ledger: dict[str, Any], gate: dict[str, Any], field: str) ->
     return "failed" if failed_verification(item) else "passed"
 
 
-def _gate_progress(ledger: dict[str, Any], gate: dict[str, Any]) -> str:
-    """The next step for a failed gate: `tier2`, `tier3`, `open`, `rerun` when its result predates the last retry, or `exhausted`."""
-    unit = gate_command_digest(gate["command"])
-    progress = escalation_progress(ledger, "gate_failure", unit)
-    record = ledger.get("escalation_allowances", {}).get(escalation_key("gate_failure", unit))
-    if record is not None and progress != "open":
+def _gate_escalation(ledger: dict[str, Any], gate: dict[str, Any]) -> UnitEscalation:
+    """A failed gate's escalation; its progress is `rerun` when its result predates the last retry."""
+    escalation = unit_escalation(ledger, "gate_failure", gate_command_digest(gate["command"]))
+    record = escalation.record
+    if record is not None and escalation.progress != "open":
         last = ledger["dispatches"][record["dispatches"][-1]["dispatch_id"]]
         # A completed retry changed the code, so a result recorded before it is stale. A failed one did not.
         if (last["outcome"] == "completed"
                 and ledger["dispatches"][gate["dispatch_id"]]["failing_checks"]["recorded_at"] < last["completed_at"]):
-            return "rerun"
-    return progress
+            return escalation._replace(progress="rerun")
+    return escalation
 
 
 def _records(value: Any, name: str, fields: tuple[str, ...]) -> list[dict[str, str]]:
@@ -261,9 +260,17 @@ def _missing(prs: list[dict[str, Any]], gates: list[dict[str, Any]]) -> list[dic
             if (pr["head_sha"], name) not in reported]
 
 
+def _reached(ledger: dict[str, Any], unit_kind: str, unit: str) -> dict[str, Any]:
+    """The escalation record of a unit that reached a tier; a unit with none fails closed."""
+    record = unit_escalation(ledger, unit_kind, unit).record
+    if record is None:
+        raise ValueError(f"{unit_kind} {unit} has no escalation record")
+    return record
+
+
 def _exhausted_reason(ledger: dict[str, Any], unit_kind: str, unit: str) -> str:
     """`all_tiers_failed` after tier 3, `tier3_cap_reached` when the run's cap kept the unit from tier 3."""
-    record = ledger["escalation_allowances"][escalation_key(unit_kind, unit)]
+    record = _reached(ledger, unit_kind, unit)
     return ALL_TIERS_FAILED if record["tier"] == 3 else TIER3_CAP_REACHED
 
 
@@ -276,7 +283,7 @@ def _exhausted_stop(ledger: dict[str, Any], unit_kind: str, unit: str) -> dict[s
 def _decision(ledger: dict[str, Any], entry: dict[str, Any], resume_command: str) -> dict[str, str]:
     """An exhausted ledger unit as a decision for the owner, with the ledger evidence that shows it."""
     unit = str(entry["unit"])
-    record = ledger["escalation_allowances"][escalation_key(entry["unit_kind"], unit)]
+    record = _reached(ledger, entry["unit_kind"], unit)
     reached = ", ".join(f"tier {step['tier']} dispatch {step['dispatch_id']}" for step in record["dispatches"])
     return {
         "unit": f"{UNIT_LABELS.get(entry['unit_kind'], entry['unit_kind'])} {unit}",
@@ -289,29 +296,29 @@ def _decision(ledger: dict[str, Any], entry: dict[str, Any], resume_command: str
     }
 
 
-def _tier_steps(tier: str) -> str:
-    if tier == "tier3":
+def _tier_steps(escalation: UnitEscalation) -> str:
+    if escalation.progress == "tier3":
         return ("tier 3: dispatch the strongest model at max effort with the full failure history, as one "
-                f"implement-executor retry reserved with `escalation` tier 3 (the run allows {ESCALATION_TIER3_CAP})")
+                f"implement-executor retry reserved with `escalation` tier 3 (the run allows {escalation.tier3_cap})")
     return ("tier 2: dispatch a fresh agent with a different approach, guided by the consensus analysts' diagnosis of "
             "the failure evidence, as one implement-executor retry reserved with `escalation` tier 2")
 
 
-def _unit_pending(entry: dict[str, Any], progress: str) -> str:
+def _unit_pending(entry: dict[str, Any], escalation: UnitEscalation) -> str:
     unit = f"{UNIT_LABELS.get(entry['unit_kind'], entry['unit_kind'])} {entry['unit']}"
-    if progress == "open":
+    if escalation.progress == "open":
         return f"Finish the escalation retry for {unit}, then run finalize-run again."
-    return (f"Escalate {unit} to {_tier_steps(progress)}, unit_kind {entry['unit_kind']} and unit "
+    return (f"Escalate {unit} to {_tier_steps(escalation)}, unit_kind {entry['unit_kind']} and unit "
             f"{entry['unit']}. ({entry['reason']})")
 
 
-def _gate_pending(where: dict[str, Any], gate: dict[str, Any], progress: str) -> str:
+def _gate_pending(where: dict[str, Any], gate: dict[str, Any], escalation: UnitEscalation) -> str:
     label = f"gate {gate['gate']} at head {gate['head_sha']} of PR #{where['pull_request']}"
-    if progress == "open":
+    if escalation.progress == "open":
         return f"Finish the escalation retry for {label}, then rerun it at the PR's head."
-    if progress == "rerun":
+    if escalation.progress == "rerun":
         return f"Rerun {label} after its escalation retry: {gate['command']}"
-    return (f"Escalate failed {label} to {_tier_steps(progress)}, unit_kind gate_failure and unit "
+    return (f"Escalate failed {label} to {_tier_steps(escalation)}, unit_kind gate_failure and unit "
             f"{gate_command_digest(gate['command'])}, then rerun it: {gate['command']}")
 
 
@@ -372,11 +379,11 @@ def _units(ledger: dict[str, Any], resume_command: str) -> tuple[list[dict[str, 
     decisions: list[dict[str, str]] = []
     pending: list[str] = []
     for entry in _ledger_deferrals(ledger):
-        progress = escalation_progress(ledger, entry["unit_kind"], entry["unit"])
-        if progress == "exhausted":
+        escalation = unit_escalation(ledger, entry["unit_kind"], entry["unit"])
+        if escalation.progress == "exhausted":
             decisions.append(_decision(ledger, entry, resume_command))
         else:
-            pending.append(_unit_pending(entry, progress))
+            pending.append(_unit_pending(entry, escalation))
     return decisions, pending
 
 
@@ -416,11 +423,11 @@ def _gate_findings(ledger: dict[str, Any], gates: list[dict[str, Any]], numbers:
         where = {"gate": gate["gate"], "command": gate["command"], "pull_request": numbers[gate["head_sha"]],
                  "head_sha": gate["head_sha"]}
         if gate["status"] == "failed":
-            progress = _gate_progress(ledger, gate)
-            if progress == "exhausted":
+            escalation = _gate_escalation(ledger, gate)
+            if escalation.progress == "exhausted":
                 failed.append({**where, **_exhausted_stop(ledger, "gate_failure", gate_command_digest(gate["command"]))})
             else:
-                pending.append(_gate_pending(where, gate, progress))
+                pending.append(_gate_pending(where, gate, escalation))
         elif gate["status"] == "harness_error":
             key = finalize_observation_key("harness_error", gate["head_sha"], gate["gate"])
             if "environment_change" in gate and counted.get(key, 0) >= 1:
