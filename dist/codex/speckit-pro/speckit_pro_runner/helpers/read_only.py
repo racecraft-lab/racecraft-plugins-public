@@ -2949,6 +2949,28 @@ def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
     return f"auto-detect: the first non-terminal planning phase is {phase}, which {reason}"
 
 
+def choose_stage(parsed: dict[str, Any], signals: dict[str, Any], text: str, review_pending: bool) -> tuple[str, str, str]:
+    """The stage, its source and its basis. Planning ends at plan review: implement is only an explicit or resumed entry."""
+    if parsed["stage"] is not None:
+        return parsed["stage"], "argv", f"explicit --stage {parsed['stage']}"
+    if signals["planning_complete"] and review_pending:
+        return "plan", "auto-detect", "artifact review handoff is unverified; resume the plan terminal step"
+    if parsed["from_phase"] == "implement":
+        return "implement", "from-phase", "explicit --from-phase implement"
+    if implement_started(text):
+        return "implement", "auto-detect", "implement already started; resuming there"
+    return "plan", "auto-detect", auto_detect_basis(signals["first_open"])
+
+
+def admit_entry(stage: str, inputs: dict[str, Any], repo_root: Path, workflow: str) -> dict[str, Any] | None:
+    """Every implement entry, resume included, needs a valid plan approval record; raises ValueError naming the field."""
+    if stage not in ("implement", "full"):
+        return None
+    # Function-level import: planning_approval imports this module at load time.
+    from .planning_approval import admit_implement
+    return admit_implement(repo_root, inputs.get("feature_dir"), workflow)
+
+
 def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     """Resolve the autopilot stage once, for both distributions.
 
@@ -2980,31 +3002,11 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
     except ValueError as exc:
         return make_result("", f"error: {exc}\n", 2)
     review_pending = artifact_review_resume(text, signals, review)
-    stage = parsed["stage"]
-    if stage is not None:
-        source = "argv"
-        basis = f"explicit --stage {stage}"
-    elif signals["planning_complete"] and review_pending:
-        source = "auto-detect"
-        stage = "plan"
-        basis = "artifact review handoff is unverified; resume the plan terminal step"
-    elif parsed["from_phase"] == "implement" or implement_started(text):
-        source = "from-phase" if parsed["from_phase"] == "implement" else "auto-detect"
-        stage = "implement"
-        basis = "explicit --from-phase implement" if parsed["from_phase"] == "implement" else "implement already started; resuming there"
-    else:
-        # Planning ends at the review artifacts and draft PR; implement is only ever an explicit entry.
-        source = "auto-detect"
-        stage = "plan"
-        basis = auto_detect_basis(signals["first_open"])
-    approval = None
-    if stage in ("implement", "full"):
-        # Function-level import: planning_approval imports this module at load time.
-        from .planning_approval import admit_implement
-        try:
-            approval = admit_implement(repo_root, inputs.get("feature_dir"), workflow_raw)
-        except ValueError as exc:
-            return make_result("", f"error: {exc}\n", 2)
+    stage, source, basis = choose_stage(parsed, signals, text, review_pending)
+    try:
+        approval = admit_entry(stage, inputs, repo_root, workflow_raw)
+    except ValueError as exc:
+        return make_result("", f"error: {exc}\n", 2)
     # Blanked the way `workflow_stage_signals` blanks them, so a commented-out
     # row can never become evidence. `corroboration` is always present, so a run
     # that could not check stays distinguishable from one that checked and agreed.

@@ -50,12 +50,14 @@ class PlanningApprovalFixture(unittest.TestCase):
                            "tasks.md": "- [ ] T001 Build a thing", "workflow.md": "## Project Commands\nTest: python3 check.py\n"}.items():
             (self.feature / name).write_text(text)
 
-    def call(self, action="manifest", mode="read_only", **extra):
-        request = dict(schema_version="1.0", helper_id="planning-approval", operation="planning-approval",
-                       mode=mode, inputs=dict(feature_dir="specs/demo", workflow_file="specs/demo/workflow.md",
-                                              action=action, **extra))
+    def helper(self, helper_id, mode="read_only", **inputs):
+        request = dict(schema_version="1.0", helper_id=helper_id, operation=helper_id, mode=mode,
+                       inputs={"feature_dir": "specs/demo", "workflow_file": "specs/demo/workflow.md", **inputs})
         _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
         return reply
+
+    def call(self, action="manifest", mode="read_only", **extra):
+        return self.helper("planning-approval", mode, action=action, **extra)
 
     def approval(self):
         (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"]}))

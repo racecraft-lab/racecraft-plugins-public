@@ -1646,17 +1646,16 @@ class OpenAnalysisFindingTests(unittest.TestCase):
         signals = read_only.workflow_stage_signals(OPEN_FINDING_WORKFLOW)
         self.assertEqual(signals["first_open"], ("Analyze", "1 open CRITICAL/HIGH findings"))
 
-    def test_a_resolved_row_lets_planning_complete(self) -> None:
-        text = OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, RESOLVED_FINDING_ROW)
-        envelope = resolve_envelope(text)
-        self.assertEqual(envelope["stage"], "plan")
-        self.assertTrue(envelope["planning_complete"])
-
-    def test_a_legacy_workflow_without_the_table_still_resolves_plan(self) -> None:
-        text = OPEN_FINDING_WORKFLOW.split("## Analysis Results", 1)[0]
-        envelope = resolve_envelope(text)
-        self.assertEqual(envelope["stage"], "plan")
-        self.assertTrue(envelope["planning_complete"])
+    def test_planning_completes_with_a_resolved_row_or_a_legacy_workflow_and_still_resolves_plan(self) -> None:
+        texts = {
+            "resolved row": OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, RESOLVED_FINDING_ROW),
+            "legacy workflow without the table": OPEN_FINDING_WORKFLOW.split("## Analysis Results", 1)[0],
+        }
+        for label, text in texts.items():
+            with self.subTest(case=label):
+                envelope = resolve_envelope(text)
+                self.assertEqual(envelope["stage"], "plan")
+                self.assertTrue(envelope["planning_complete"])
 
     def test_a_commented_out_open_row_is_not_evidence(self) -> None:
         text = OPEN_FINDING_WORKFLOW.replace(OPEN_FINDING_ROW, f"<!-- {OPEN_FINDING_ROW} -->")

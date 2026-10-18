@@ -29,8 +29,7 @@ class AdmissionFixture(PlanningApprovalFixture):
         return self.root / reply["data"]["record_path"], reply["data"]["record"]
 
     def refusal(self, reply, field):
-        self.assertEqual(reply["status"], "input_error", reply)
-        self.assertIn(f"planning approval field {field}:", reply["diagnostics"][0]["message"])
+        self.assertRefused(reply, f"planning approval field {field}:")
 
 
 class PlanApprovalAdmissionTest(AdmissionFixture):
@@ -76,12 +75,8 @@ class PlanApprovalAdmissionTest(AdmissionFixture):
 
 
 class StageAdmissionTest(AdmissionFixture):
-    def resolve(self, *args):
-        request = dict(schema_version="1.0", helper_id="resolve-autopilot-stage", operation="resolve-autopilot-stage",
-                       mode="read_only", inputs=dict(workflow_file="specs/demo/workflow.md", feature_dir="specs/demo",
-                                                     autopilot_args=list(args)))
-        _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
-        return reply
+    def resolve(self, *args, feature_dir="specs/demo"):
+        return self.helper("resolve-autopilot-stage", autopilot_args=list(args), feature_dir=feature_dir)
 
     def test_planning_complete_never_selects_implement_on_its_own(self):
         self.record()
@@ -115,12 +110,9 @@ class StageAdmissionTest(AdmissionFixture):
         self.assertEqual(reply["status"], "ok", reply)
 
     def test_implement_without_a_feature_directory_is_refused(self):
-        request = dict(schema_version="1.0", helper_id="resolve-autopilot-stage", operation="resolve-autopilot-stage",
-                       mode="read_only", inputs=dict(workflow_file="specs/demo/workflow.md",
-                                                     autopilot_args=["--stage", "implement"]))
-        _, reply, _ = run_runner(request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
+        reply = self.resolve("--stage", "implement", feature_dir=None)
         self.assertNotEqual(reply["status"], "ok", reply)
-        self.assertIn("feature_dir", json.dumps(reply))
+        self.assertIn("planning approval field feature_dir:", json.dumps(reply))
 
 
 if __name__ == "__main__":

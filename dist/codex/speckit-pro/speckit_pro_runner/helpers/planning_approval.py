@@ -494,27 +494,29 @@ def admit_implement(root: Path, feature_dir: Any, workflow_file: str) -> dict[st
     return admission(root, feature, planning_manifest(root, feature, workflow_file))
 
 
+def verified_record(root: Path, feature: str, path: str, binding: dict[str, Any]) -> dict[str, Any]:
+    refuse_superseded(root, path)
+    stored = json.loads(captured(root, path), object_pairs_hook=unique_object)
+    computed = {"manifest", "manifest_digest", "schema_version", "assurance", "feature_dir", "evidence"}
+    record = approval_record(root, feature, {k: v for k, v in stored.items() if k not in computed}, binding)
+    if record != stored:
+        raise ValueError("record bindings or reviewed evidence changed; return to plan review")
+    return record
+
+
 def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     action = inputs.get("action")
     required = {"feature_dir", "workflow_file", "action"} | ({"approval"} if action == "record" else set())
     fields = require_fields({k: v for k, v in inputs.items() if k != "repo_root"}, required, "planning approval inputs")
     feature = owned_path(fields["feature_dir"], root)
     binding = planning_manifest(root, feature, fields["workflow_file"])
-    if action == "manifest" and mode == "read_only":
-        return {**binding, "writes_state": False}
-    if action == "admit" and mode == "read_only":
-        return {**admission(root, feature, binding), "writes_state": False}
+    if mode == "read_only" and action in ("manifest", "admit"):
+        return {**(binding if action == "manifest" else admission(root, feature, binding)), "writes_state": False}
     path = feature + "/plan-approvals/" + binding["manifest_digest"] + ".json"
     target = root / path
     snapshot = snapshot_write_target(target, root)
     if action == "verify" and mode == "read_only":
-        refuse_superseded(root, path)
-        stored = json.loads(captured(root, path), object_pairs_hook=unique_object)
-        computed = {"manifest", "manifest_digest", "schema_version", "assurance", "feature_dir", "evidence"}
-        candidate = {k: v for k, v in stored.items() if k not in computed}
-        record = approval_record(root, feature, candidate, binding)
-        if record != stored:
-            raise ValueError("record bindings or reviewed evidence changed; return to plan review")
+        record = verified_record(root, feature, path, binding)
     elif action == "record" and mode in {"dry_run", "apply"}:
         map_state = approval_map_snapshot(root, feature)
         record = approval_record(root, feature, fields["approval"], binding)
