@@ -405,7 +405,7 @@ def add_findings(root: Path, feature: str, identities: list[str]) -> None:
     inventory = json.loads(captured(root, relative), object_pairs_hook=unique_object) if exists else {}
     if not isinstance(inventory, dict):
         raise ValueError(f"{relative} must map finding ids to request lists")
-    added = {identity: [] for identity in identities if identity not in inventory}
+    added: dict[str, list[str]] = {identity: [] for identity in identities if identity not in inventory}
     if added or not exists:
         content = json.dumps({**inventory, **added}, indent=2, ensure_ascii=False) + "\n"
         write_bytes_atomic(root / relative, content.encode("utf-8"), trust_root=root)
