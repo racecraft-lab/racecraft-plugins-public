@@ -247,7 +247,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "5db5bed2447c7fbfe408db8175de3a32415cd2b1e3b1757fadf90ecc39d4f6e1"
+      "sha256": "b657419db8c0f188121a02553411ba2b4dca6be6b5f3245a1a23194fb08b7cd5"
     },
     {
       "path": {
@@ -663,7 +663,11 @@
         "value": "speckit_pro_runner/helpers/harm_halt.py",
         "display": "speckit_pro_runner/helpers/harm_halt.py"
       },
+<<<<<<< HEAD
       "sha256": "03aa7f6b340d6f9443c0b6801072b64694e2d80b160777aa67d38e6a536dbec8"
+=======
+      "sha256": "5865c1f34048dfc24cbb19716f3c31877d3805dd752c6c503768f88a1269f9cc"
+>>>>>>> origin/feat-stop-registry-harm-halts
     },
     {
       "path": {
@@ -719,7 +723,7 @@
         "value": "speckit_pro_runner/helpers/plan_stage_terminal.py",
         "display": "speckit_pro_runner/helpers/plan_stage_terminal.py"
       },
-      "sha256": "676a2f12712cfa6f8dd2b71d3209559ddf29975c5fe7916b6e1ff79907ff7d09"
+      "sha256": "aa4e9f380142bbcdf5f0675cef33acb8dab05801fc8e3413104ae3cb7fe86b4b"
     },
     {
       "path": {
