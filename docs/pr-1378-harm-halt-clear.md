@@ -33,15 +33,20 @@ this doc describes the current behavior.
 
 ## Known limits
 
-- **Same-login agents.** The token protects the runner command, not the files.
-  An agent with the operator's shell can delete `halt.json` by hand. This
-  matches the `recorded` assurance level of ADR 0017.
-- **Nested agent terminals.** When an agent's own PTY is the outermost terminal
-  (for example `claude -p` started inside a Codex PTY with piped stdio, or a
-  detached tmux pane an agent started), that agent can read the token. The
-  standard-stream guard does not catch it, and no process-tree check can tell
-  an agent's PTY from a human's. Reaching it needs a halt recorded under that
-  dispatch shape; a halt already shown to the owner cannot be re-shown.
+- **Same-login agents.** The token stops a clear that only follows
+  instructions, not an agent that works around the runner. An agent with the
+  operator's shell can delete `halt.json`, or rewrite its digest to one of its
+  own tokens, by hand; neither gives more than deleting the file. This matches
+  the `recorded` assurance level of ADR 0017. The owner's terminal can also be
+  read back through tmux, screen or terminal scripting until the token is used.
+- **Agent-steered terminals.** The agent chooses how it launches the runner.
+  A planted instruction can ask it to wrap runner calls in a PTY it reads and
+  detach that PTY from the owner's terminal (a detached `script` or tmux
+  session, or `claude -p` inside a Codex PTY). A halt recorded in that launch
+  then shows the token to that agent. The standard-stream guard does not catch
+  it, and no process-tree check can tell an agent's PTY from a human's. A halt
+  already shown to the owner is never re-shown, and an ancestry deeper than the
+  64-process walk withholds the token (review finding, fixed red-first).
 - **Codex sandbox.** The Codex macOS sandbox is reported to refuse `ps`. Then
   the token is withheld: the halt records and blocks, and only manual human
   recovery clears it. Not exercised live; the probe was refused in this session.

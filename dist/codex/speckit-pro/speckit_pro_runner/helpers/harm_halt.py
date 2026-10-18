@@ -172,16 +172,18 @@ def runner_terminals() -> set[int]:
 
 
 def outermost_terminal() -> str | None:
-    """The terminal of the farthest ancestor that has one: the human's, when agents run beneath it."""
+    """The terminal of the farthest ancestor that has one: the human's, when agents run beneath it.
+
+    An ancestry deeper than the walk returns None: the farthest terminal seen may not be the outermost."""
     outermost, pid = None, os.getpid()
     for _ in range(MAX_ANCESTORS):
         parent, name = process_row(pid)
         if TERMINAL_NAME.fullmatch(name):
             outermost = "/dev/" + name
         if parent <= 1:
-            break
+            return outermost
         pid = parent
-    return outermost
+    return None
 
 
 def show_on_owner_terminal(token: str) -> bool:

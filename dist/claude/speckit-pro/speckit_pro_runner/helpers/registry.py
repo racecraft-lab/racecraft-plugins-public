@@ -734,7 +734,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "golden_only",
         "golden_fixture",
         mutation_authoritative_request("harm-halt"),
-        rollback="Agent clear is refused; a human inspects the halt outside the agent runner. A refused request writes nothing.",
+        rollback="Only the one-time token shown on the owner's terminal clears a halt. A refused request writes nothing.",
     ),
     "checklist-edits": MutationEntry(
         "checklist-edits",

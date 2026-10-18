@@ -8,6 +8,7 @@ import io
 import json
 import os
 import select
+import subprocess
 import sys
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -46,6 +47,13 @@ class QuietTerminal(MutationRequestCase):
         quiet.start()
         self.addCleanup(quiet.stop)
 
+    def write_attempt(self) -> dict[str, Any]:
+        """Any other apply-mode helper stands for a commit, push, PR edit or publish."""
+        request = SimpleNamespace(schema_version="1.0", request_id="attempt", helper_id="decisions-list",
+                                  operation="decisions-list", mode="apply",
+                                  inputs={"workflow_file": WORKFLOW, "entries": [ENTRY]})
+        return dispatch_helper(request)
+
 
 class HarmHaltTests(QuietTerminal):
     helper_id = "harm-halt"
@@ -54,13 +62,6 @@ class HarmHaltTests(QuietTerminal):
     def halt(self, reason: str = "tampering_or_forged_evidence", evidence: str = "page hash differs") -> dict[str, Any]:
         trigger = {"reason": reason, "evidence": evidence, "last_safe_state": SAFE_STATE}
         return self.call("apply", action="halt", **trigger)
-
-    def write_attempt(self) -> dict[str, Any]:
-        """Any other apply-mode helper stands for a commit, push, PR edit or publish."""
-        request = SimpleNamespace(schema_version="1.0", request_id="attempt", helper_id="decisions-list",
-                                  operation="decisions-list", mode="apply",
-                                  inputs={"workflow_file": WORKFLOW, "entries": [ENTRY]})
-        return dispatch_helper(request)
 
     def test_no_record_means_resume_is_allowed_and_writes_proceed(self) -> None:
         self.assertEqual((False, "allowed"), tuple(self.read_only_data()[key] for key in ("halted", "resume")))
@@ -342,7 +343,7 @@ class HaltClearTokenTests(TokenHalt):
         self.assertEqual("ok", cleared["status"], cleared)
         self.assertEqual((False, "allowed"), (cleared["data"]["halted"], cleared["data"]["resume"]))
         self.assertFalse((self.root / RECORD).exists())
-        self.assertEqual("ok", HarmHaltTests.write_attempt(self)["status"])
+        self.assertEqual("ok", self.write_attempt()["status"])
 
     def test_wrong_missing_and_reused_tokens_refuse_and_the_halt_stands(self) -> None:
         first = self.halt()
@@ -357,7 +358,7 @@ class HaltClearTokenTests(TokenHalt):
         self.assertNotEqual(first, second)
         self.assertEqual("input_error", self.clear(token=first)["status"])
         self.assertEqual("second trigger", self.read_only_data()["record"]["evidence"])
-        self.assertEqual("harm_halt_active", HarmHaltTests.write_attempt(self)["diagnostics"][0]["code"])
+        self.assertEqual("harm_halt_active", self.write_attempt()["diagnostics"][0]["code"])
 
     def test_dry_run_clear_reports_without_changing_state(self) -> None:
         token = self.halt()
@@ -385,15 +386,22 @@ class HaltClearTokenTests(TokenHalt):
                     self.assertEqual("input_error", self.clear(mode, token="anything")["status"])
                 self.assertTrue((self.root / RECORD).exists())
 
+
 class HaltTokenExposureTests(TokenHalt):
     """The documented human request clears, and no agent-readable output or file holds the token."""
 
     def test_the_documented_clear_request_clears(self) -> None:
         adr = (REPO / "docs/adr/0010-stop-policy-enforcement.md").read_text(encoding="utf-8")
+        self.assertIn("`python3 <plugin-root>/scripts/run-speckit-pro.py`", adr)
+        self.assertTrue((REPO / "speckit-pro/scripts/run-speckit-pro.py").is_file())
         documented = json.loads(adr.split("```json\n", 1)[1].split("\n```", 1)[0])
         token = self.halt()
         documented["inputs"]["token"] = token
-        self.assertIn('"resume":"allowed"', self.run_runner(documented))
+        launched = subprocess.run([sys.executable, str(REPO / "speckit-pro/scripts/run-speckit-pro.py")],
+                                  input=json.dumps(documented), capture_output=True, text=True, cwd=self.root,
+                                  env={**os.environ, harm_halt.TERMINAL_SWITCH: "off"}, timeout=60, check=False)
+        self.assertIn('"resume":"allowed"', launched.stdout, launched.stderr)
+        self.assertNotIn(token, launched.stdout + launched.stderr)
         self.assertFalse((self.root / RECORD).exists())
 
     def test_no_agent_readable_path_exposes_the_token(self) -> None:
@@ -471,6 +479,35 @@ class OwnerTerminalTests(unittest.TestCase):
                 with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=own):
                     self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
                 self.assertNotIn(b"tok-123", self.drained(outer))
+
+    def test_an_ancestry_deeper_than_the_walk_withholds_the_token(self) -> None:
+        owner, owner_path = self.terminal()
+        agent, agent_path = self.terminal()
+        depth = harm_halt.MAX_ANCESTORS + 6
+        rows = {os.getpid(): (1000, "??")}
+        rows.update({1000 + step: (1001 + step, agent_path.removeprefix("/dev/")) for step in range(depth)})
+        rows[1000 + depth] = (1, owner_path.removeprefix("/dev/"))
+        with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=set()):
+            self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
+        self.assertNotIn(b"tok-123", self.drained(agent) + self.drained(owner))
+
+    def test_the_runner_counts_its_own_terminal_streams(self) -> None:
+        _, path = self.terminal()
+        saved = os.dup(2)
+        stream = os.open(path, os.O_WRONLY | os.O_NOCTTY)
+        try:
+            os.dup2(stream, 2)
+            seen = harm_halt.runner_terminals()
+        finally:
+            os.dup2(saved, 2)
+            os.close(saved)
+            os.close(stream)
+        self.assertIn(os.stat(path).st_rdev, seen)
+
+    def test_suite_children_withhold_the_token(self) -> None:
+        from suite_child_env import child_environment
+
+        self.assertEqual("off", child_environment(REPO)[harm_halt.TERMINAL_SWITCH])
 
     def test_no_terminal_or_an_unreadable_process_table_delivers_nothing(self) -> None:
         for rows in ({os.getpid(): (1, "??")}, {}, {os.getpid(): (10, "../etc/passwd"), 10: (1, "??")}):

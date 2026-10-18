@@ -40,22 +40,29 @@ record, and writes the token only to the owner's terminal: the outermost
 terminal in the runner's process ancestry, refused when the runner's own
 streams or controlling terminal use it. A wrong, used or missing token is
 refused and the halt stands; a `dry_run` clear reports `would_clear` and
-changes nothing. To clear, the human runs `python3 -m speckit_pro_runner` from
-the repository root, pastes this request on stdin with the token in place, then
-ends input (Ctrl-D). Pasting keeps the token out of shell history and files.
+changes nothing. To clear, the human runs
+`python3 <plugin-root>/scripts/run-speckit-pro.py` from the repository root,
+where `<plugin-root>` is the installed speckit-pro plugin directory. They paste
+this request on stdin with the token in place, then end input (Ctrl-D).
+Pasting keeps the token out of shell history and files.
 
 ```json
 {"schema_version": "1.0", "helper_id": "harm-halt", "operation": "harm-halt", "mode": "apply", "inputs": {"action": "clear", "token": "<token>"}}
 ```
 
-Assurance limit: the token defends the runner command, not the files. An agent
-with the operator's shell can still delete the record by hand, as with ADR
-0017's recorded approval. A terminal that another agent controls (for example
-`claude -p` started inside a Codex PTY, or an agent-started tmux pane) can be
-the outermost one and would show that agent the token. When no terminal can be
-found, `ps` is refused, or the write fails, nobody receives the token. The
-halt then stands until a human recovers it outside the agent workflow: inspect
-the record and any abandoned publication lock before removing them.
+Assurance limit: the token stops a clear that only follows instructions; it
+does not stop an agent that works around the runner. An agent with the
+operator's shell can delete the record, or rewrite its digest to one of its
+own tokens, by hand; neither gives it more than deleting the file, as with ADR
+0017's recorded approval. An agent also chooses how it launches the runner, so
+it can make a PTY it reads the outermost terminal (for example a detached
+`script` or tmux session, or `claude -p` inside a Codex PTY). A halt recorded
+in that launch shows the token to that agent. The owner's terminal itself can
+be read back through tmux, screen or terminal scripting until the token is
+used. When no terminal can be found, the ancestry is deeper than the walk,
+`ps` is refused, or the write fails, nobody receives the token. The halt then
+stands until a human recovers it outside the agent workflow: inspect the record
+and any abandoned publication lock before removing them.
 
 ## Former stop sites
 
