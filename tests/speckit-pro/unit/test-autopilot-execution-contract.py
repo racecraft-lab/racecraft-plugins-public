@@ -75,6 +75,70 @@ class LiveCanaryRegressionTests(unittest.TestCase):
             self.assertIn(boundary, skill_audit)
 
 
+class RootReferenceReadTests(unittest.TestCase):
+    """The root carries every reference line it reads into each later turn (issue 1317).
+
+    Canary round 4's Codex root began by reading three whole references
+    (truncated, then reread) and read later phase sections while drivers ran.
+    """
+
+    def test_kickoff_reads_only_the_ledger_core(self):
+        for host, root in (("claude", SHARED), ("codex", CODEX)):
+            with self.subTest(host=host):
+                rules = _flat(root / "SKILL.md").split("## Execution Rules", 1)[1].split(" ## ", 1)[0]
+                self.assertNotIn("read [Bounded Execution and Verification](./references/execution-efficiency.md).", rules)
+                self.assertIn("At kickoff/resume, read [§Durable run ledger](./references/execution-efficiency.md#durable-run-ledger) "
+                              "through its `complete` entry.", rules)
+                policy = (root / "references/execution-efficiency.md").read_text()
+                self.assertIn("At kickoff/resume, read §Durable run ledger through its `complete` entry.", " ".join(policy.split()))
+                core = policy.split("## Durable run ledger", 1)[1].split("\n- `reconcile`", 1)[0]
+                self.assertIn("\n- `complete`", core)
+                for fact in ("`action=status mode=apply`", "`expected_run_id`", "`ledger_path`", "- `start`",
+                             "- `reserve`", "`dispatch_id`", "`kind="):
+                    self.assertIn(fact, core)
+                self.assertIn("Read each later section only at the step that cites it.", " ".join(policy.split()))
+
+    def test_the_codex_main_loop_cites_the_ledger_section_read_at_kickoff(self):
+        loop = _flat(CODEX / "references/phase-execution.md")
+        self.assertIn("Follow [§Durable run ledger](./execution-efficiency.md#durable-run-ledger), read at kickoff. "
+                      "Recover the same workflow ledger,", loop)
+        self.assertNotIn("Read [Bounded Execution and Verification](./execution-efficiency.md). Recover", loop)
+
+    def test_the_root_lists_preset_templates_without_reading_their_bodies(self):
+        """Canary round 4's Codex root printed every preset template body during preflight (issue 1317)."""
+        for host, root in (("claude", SHARED), ("codex", CODEX)):
+            with self.subTest(host=host):
+                step = _flat(root / "references/prerequisites.md").split("## Step 0.12: Preset and Extension Detection", 1)[1]
+                step = step.split("If no presets AND no extensions", 1)[0]
+                self.assertIn("Never read a template body in the orchestrator", step)
+                self.assertNotIn("Read each preset's overridden templates", step)
+        claude = _flat(SHARED / "references/phase-execution.md").split("### Preset-Aware Phase Execution", 1)[1]
+        claude = claude.split("## PR Creation Protocol", 1)[0]
+        self.assertIn("without reading the template bodies", claude)
+        self.assertNotIn("Read preset templates", claude)
+
+    def test_the_root_reads_a_reference_section_when_its_step_starts(self):
+        for host, root in (("claude", SHARED), ("codex", CODEX)):
+            with self.subTest(host=host):
+                contract = _flat(root / "SKILL.md").split("## Installed Runtime Contract", 1)[1].split("## Scope", 1)[0]
+                for rule in ("Read a reference only when a step cites it, and only the section that step names",
+                             "Never read a whole reference, several references in one command, or a section for a later "
+                             "step or for a phase a phase driver runs."):
+                    self.assertIn(rule, contract)
+
+    def test_codex_phase_7_items_keep_the_prefix_the_coverage_guard_requires(self):
+        """The audit said `Phase 7:`, the guard wants `Phase 7: Implement`, so the root renamed every item."""
+        guard = load_script("speckit_autopilot_phase_coverage_prefixes",
+                            PLUGIN / "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py")
+        (prefix,) = [item for item in guard.STATE_PREFIXES if item.startswith("Phase 7:")]
+        audit = _flat(CODEX / "references/phase-execution.md").split("After G5 passes, the placeholder is invalid.", 1)[1]
+        audit = audit.split("If any check fails, repair autopilot-state.json", 1)[0]
+        self.assertIn(f"- one or more concrete `{prefix} - <group>` items exist", audit)
+        self.assertNotIn("concrete `Phase 7:` items", audit)
+        canonical = _flat(CODEX / "references/task-list-canonical.md")
+        self.assertIn(f"concrete task-group items named `{prefix} - <group>`", canonical)
+
+
 class ExecutionContractTests(unittest.TestCase):
     def test_both_hosts_load_one_durable_contract(self):
         for root in (SHARED, CODEX):
@@ -421,7 +485,7 @@ class ImplementChecklistGateTests(unittest.TestCase):
 if __name__ == "__main__":
     raise SystemExit(run_counted(
         unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                           for case in (LiveCanaryRegressionTests, ExecutionContractTests,
+                           for case in (LiveCanaryRegressionTests, RootReferenceReadTests, ExecutionContractTests,
                                         ExecutionMirrorTests,
                                         NativeRequestContractTests,
                                         ImplementChecklistGateTests)),

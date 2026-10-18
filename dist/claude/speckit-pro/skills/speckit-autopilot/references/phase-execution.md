@@ -3807,12 +3807,13 @@ for each phase:
 If presets are installed (detected in Step 0.11), the autopilot
 should understand what the presets enforce:
 
-1. **Read preset templates** at startup (Step 0.11) to learn
-   what conventions the project uses (TDD mandates, architecture
-   patterns, test requirements, etc.)
+1. **List preset templates** at startup (Step 0.12): record each
+   preset's name and its resolved template paths as PRESET_CONVENTIONS,
+   without reading the template bodies
 2. **Pass conventions to subagents** — include PRESET_CONVENTIONS
    in the implement-executor and other subagent prompts so they
-   follow the project's patterns without hardcoding
+   read the project's patterns (TDD mandates, architecture patterns,
+   test requirements, etc.) from those paths without hardcoding
 3. **Expect different artifact structure** — if a preset overrides
    `tasks-template.md`, the generated tasks will have different
    sections than core defaults. The autopilot's task parsing

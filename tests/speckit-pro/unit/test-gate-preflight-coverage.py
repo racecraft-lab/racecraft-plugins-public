@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -148,6 +149,20 @@ class GatePreflightCoverageTests(unittest.TestCase):
         claude = guide_text("skills/speckit-autopilot/references/phase-execution.md", "claude")
         for phrase in ("declared pre-PR command", "`check-gate-preflight-coverage`"):
             self.assertIn(phrase, claude)
+
+    def test_step_minus_two_names_each_gate_entry_key_the_helper_accepts(self) -> None:
+        """An unnamed entry shape cost the canary root two refused requests (issue 1317)."""
+        from host_skill_views import host_skill_root
+
+        text = (host_skill_root("codex") / "speckit-autopilot/references/prerequisites.md").read_text(encoding="utf-8")
+        step = " ".join(text[text.index("1. **Derive the classes.**"):text.index("2. **Check the standing policy.**")].split())
+        named = set(re.findall(r'"([a-z_]+)"', step))
+        self.assertEqual(named, {"gate", "command", "needs", "category", "target"})
+        need = {"category": "external_side_effect", "target": "api.example.com model service"}
+        result = check({"gates": [{"gate": "G1", "command": "validate-gate G1", "needs": []},
+                                  {"gate": "Post: Live Evaluation", "command": "python3 eval.py", "needs": [need]}],
+                        "inventory_actions": [{"action_id": "eval", **need}]})
+        self.assertTrue(result["covered"], result)
 
     def test_runner_reports_a_gap_as_an_expected_failure(self) -> None:
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
