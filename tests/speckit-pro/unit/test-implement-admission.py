@@ -66,6 +66,13 @@ class PlanApprovalAdmissionTest(AdmissionFixture):
                 path.write_text(json.dumps({**record, "findings": findings}))
                 self.refusal(self.call("admit"), "record")
 
+    def test_non_text_reviewed_evidence_names_the_record(self):
+        path, record = self.record()
+        for references in ([[1]], [{}]):
+            with self.subTest(references=references):
+                path.write_text(json.dumps({**record, "reviewed_evidence": references}))
+                self.refusal(self.call("admit"), "record")
+
     def test_a_failed_finding_check_names_the_finding(self):
         path, record = self.record()
         record["findings"]["F1"]["check"]["status"] = "failed"

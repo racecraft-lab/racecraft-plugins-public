@@ -86,3 +86,7 @@ These notes are accepted limits from the cross-host review at head
   for a later ownership refactor.
 - **Malformed `findings` in a stored record.** A record whose `findings` is not
   an object now refuses with the `record` field instead of an internal failure.
+- **Non-text `reviewed_evidence` entries in a stored record.** A record whose
+  `reviewed_evidence` holds a list or object now refuses with the `record` field
+  instead of an internal failure (cross-host review at head
+  `08c5592008fe76b39a94c1dc0c2ab25b586727bc`).

@@ -394,7 +394,8 @@ def approval_record(root: Path, feature: str, approval: Any, binding: dict[str, 
     if supplied != {k: v for k, v in confirmation.items() if k != "reference"}:
         raise ValueError("confirmation reference does not match the recorded decision")
     refs = record["reviewed_evidence"]
-    if not isinstance(refs, list) or not refs or len(set(refs)) != len(refs):
+    if (not isinstance(refs, list) or not refs or not all(isinstance(ref, str) for ref in refs)
+            or len(set(refs)) != len(refs)):
         raise ValueError("reviewed_evidence requires unique repository-relative references")
     reviewed = [evidence(root, ref) for ref in refs]
     reviewed.append(evidence(root, confirmation["reference"]))
