@@ -19,6 +19,8 @@ def child_environment(repo_root: Path, *, verbose: bool = False) -> dict[str, st
     for index, (key, value) in enumerate(GIT_CONFIG):
         env[f"GIT_CONFIG_KEY_{index}"] = key
         env[f"GIT_CONFIG_VALUE_{index}"] = value
+    # A halt recorded by a test must never print its clear token on the developer's terminal.
+    env["SPECKIT_HARM_HALT_TERMINAL"] = "off"
     if verbose:
         env["VERBOSE"] = "true"
     return env

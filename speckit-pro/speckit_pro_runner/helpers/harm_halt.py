@@ -3,15 +3,24 @@
 A harm halt means the next action could cause damage a later review cannot undo, so after
 the trigger no commit, push, PR edit or publish may follow. The runner writes one record
 (reason, redacted evidence, last safe state) and refuses state-changing dispatch.
-Agent clear requests are refused until the host can authenticate an operator.
+Recording a halt mints a one-time clear token. The record keeps only its SHA-256 digest, and the
+token goes only to the owner's terminal: the outermost terminal in the runner's process ancestry,
+never one the runner's own streams use. A clear needs that token. When no such terminal exists,
+nobody receives it and the halt stands until a human recovers it by hand.
 The record sits in a runner-owned directory
 that git ignores, so it can never be committed or pushed.
 """
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
+import os
 import re
+import secrets
+import stat
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +39,13 @@ MAX_TEXT = 300
 WITHHELD = "withheld: the evidence may hold the secret"
 # A key=value pair that names a credential, or any long unbroken token (keys, hashes, URLs with tokens).
 SECRET_SHAPES = re.compile(r"(?i)\b(?:token|secret|password|passwd|api[_-]?key)\b\s*[:=]\s*\S+|[A-Za-z0-9_+/=-]{32,}")
-RECORD_FIELDS = {"schema_version", "reason", "evidence", "last_safe_state"}
+DIGEST_FIELD = "clear_token_sha256"
+RECORD_FIELDS = {"schema_version", "reason", "evidence", "last_safe_state", DIGEST_FIELD}
+# A terminal name as `ps` prints it: ttys001 on macOS, pts/3 on Linux; anything else is no terminal.
+TERMINAL_NAME = re.compile(r"(?:tty[A-Za-z0-9]+|pts/[0-9]+)")
+MAX_ANCESTORS = 64
+# "off" only withholds the token (test suites set it); no setting can send it anywhere else.
+TERMINAL_SWITCH = "SPECKIT_HARM_HALT_TERMINAL"
 # Audited pure reads only. Other nominal read/dry-run paths can launch processes,
 # create sessions or probes, repair state, or persist failure records.
 HALTED_READ_HELPERS = frozenset({"helper-registry-dispatch", "mutation-registry-dispatch",
@@ -53,59 +68,161 @@ def stored_halt(root: Any) -> dict[str, Any] | None:
         if path.with_suffix(".lock").exists() or (path.parent / ".gitignore").is_dir():
             raise SelectionError("halt publication is active, interrupted or unsafe; a human must inspect it")
         return None
+    return public(parsed_record(path))
+
+
+def parsed_record(path: Path) -> dict[str, Any]:
+    """The full stored record, digest included; only the halt owner reads the digest."""
     try:
         record = require_fields(json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object),
                                 RECORD_FIELDS, "halt record")
     except (ValueError, OSError) as error:
         raise SelectionError(f"the harm-halt record is unreadable; a human must inspect it: {error}") from error
-    if record["schema_version"] != SCHEMA_VERSION or STOP_REASONS.get(record["reason"]) != HARM_HALT:
+    if (record["schema_version"] != SCHEMA_VERSION or STOP_REASONS.get(record["reason"]) != HARM_HALT
+            or not isinstance(record[DIGEST_FIELD], str)):
         raise SelectionError("the harm-halt record is malformed; a human must inspect it")
     return record
 
 
+def public(record: dict[str, Any]) -> dict[str, Any]:
+    """The record as helpers report it: never the token digest."""
+    return {key: value for key, value in record.items() if key != DIGEST_FIELD}
+
+
+def digest(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 def record_halt(root: Any, reason: str, evidence: str, last_safe_state: str) -> dict[str, Any]:
-    """Write the halt record; the first trigger stands, so a later one never rewrites the evidence."""
+    """Write the halt record, then show its clear token on the owner's terminal; the first trigger stands."""
     if STOP_REASONS.get(reason) != HARM_HALT:
         raise SelectionError(f"reason must be a harm halt: {sorted(r for r, c in STOP_REASONS.items() if c == HARM_HALT)}")
     path = confined_path(root, RECORD_PATH)
+    token = secrets.token_urlsafe(32)
     try:
         with exclusive_ledger(path):
             existing = stored_halt(root) if path.exists() else None
             if existing is not None:
                 raise SelectionError("a harm halt already stands; the second trigger is refused")
             record = {"schema_version": SCHEMA_VERSION, "reason": reason, "evidence": redacted(reason, evidence),
-                      "last_safe_state": require_text(last_safe_state, "last_safe_state")[:MAX_TEXT]}
+                      "last_safe_state": require_text(last_safe_state, "last_safe_state")[:MAX_TEXT],
+                      DIGEST_FIELD: digest(token)}
             durable_json(path, record)
     except ValueError as error:
         raise SelectionError(f"harm-halt trigger {reason} refused: {error}") from error
-    return record
+    shown = show_on_owner_terminal(token)
+    return {**public(record), "clear_token": "shown_on_owner_terminal" if shown else "not_delivered"}
 
 
-def clear_halt(root: Any, confirm_reason: str) -> None:
-    """Refuse until the host can authenticate an operator; reason matching is not authorization."""
-    raise SelectionError("agent clear is refused: no authenticated operator halt-clear event is available; "
-                         "a human must inspect the halt outside the agent runner")
+def clear_refusal(record: dict[str, Any] | None, token: Any) -> str | None:
+    """Why this token cannot clear the halt, or None when it can; the text never repeats the token."""
+    if record is None:
+        return "no harm halt stands, so there is nothing to clear; a used token clears nothing"
+    if not isinstance(token, str) or not token:
+        return "a clear needs the one-time token shown on the owner's terminal; the halt stands"
+    if not hmac.compare_digest(digest(token), record[DIGEST_FIELD]):
+        return "the clear token does not match the standing halt; the halt stands"
+    return None
+
+
+def clear_halt(root: Any, token: Any) -> None:
+    """Remove the record only for its own token; the check and the removal hold the publication lock."""
+    path = confined_path(root, RECORD_PATH)
+    try:
+        with exclusive_ledger(path):
+            refusal = clear_refusal(parsed_record(path) if path.exists() else None, token)
+            if refusal is not None:
+                raise SelectionError(refusal)
+            path.unlink()
+    except ValueError as error:
+        raise SelectionError(f"harm-halt clear refused: {error}") from error
+
+
+def planned_clear(root: Any, token: Any) -> dict[str, Any]:
+    """What an apply clear would do with this token; it reads only and spends nothing."""
+    standing = stored_halt(root) is not None
+    refusal = clear_refusal(parsed_record(confined_path(root, RECORD_PATH)) if standing else None, token)
+    return {"would_clear": refusal is None, "clear_refusal": refusal}
+
+
+def process_row(pid: int) -> tuple[int, str]:
+    """One process's parent and terminal name, read with the system `ps`; a failure raises."""
+    shown = subprocess.run(["/bin/ps", "-o", "ppid=,tty=", "-p", str(pid)], capture_output=True, text=True,
+                           timeout=5, check=True).stdout.split()
+    return int(shown[0]), shown[1]
+
+
+def runner_terminals() -> set[int]:
+    """Terminal devices the runner's own streams or controlling terminal use; output there is agent-visible."""
+    devices = {os.fstat(fd).st_rdev for fd in (0, 1, 2) if os.isatty(fd)}
+    try:
+        descriptor = os.open("/dev/tty", os.O_RDONLY | os.O_NOCTTY)
+    except OSError:
+        return devices
+    try:
+        return devices | {os.fstat(descriptor).st_rdev}
+    finally:
+        os.close(descriptor)
+
+
+def outermost_terminal() -> str | None:
+    """The terminal of the farthest ancestor that has one: the human's, when agents run beneath it."""
+    outermost, pid = None, os.getpid()
+    for _ in range(MAX_ANCESTORS):
+        parent, name = process_row(pid)
+        if TERMINAL_NAME.fullmatch(name):
+            outermost = "/dev/" + name
+        if parent <= 1:
+            break
+        pid = parent
+    return outermost
+
+
+def show_on_owner_terminal(token: str) -> bool:
+    """Write the token to the owner's terminal only; True when written. Any doubt withholds it."""
+    if os.environ.get(TERMINAL_SWITCH) == "off":
+        return False
+    try:
+        path = outermost_terminal()
+        if path is None:
+            return False
+        descriptor = os.open(path, os.O_WRONLY | os.O_NOCTTY | os.O_NOFOLLOW)
+        try:
+            device = os.fstat(descriptor)
+            if not stat.S_ISCHR(device.st_mode) or device.st_rdev in runner_terminals():
+                return False
+            os.write(descriptor, ("\r\n\r\nspeckit-pro harm halt: one-time clear token (shown once, only here):\r\n"
+                                  f"{token}\r\n\r\n").encode("ascii"))
+        finally:
+            os.close(descriptor)
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+        return False
+    return True
 
 
 def harm_halt(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
-    """Report the halt or record it in apply mode; agent clearance is refused."""
+    """Report the halt, record it, or clear it with its one-time token; dry_run changes nothing."""
     request = {key: value for key, value in inputs.items() if key != "repo_root"}
+    extra: dict[str, Any] = {}
     if mode == "read_only":
         require_fields(request, set(), "inputs")
     else:
         action = request.get("action")
-        fields = {"halt": {"action", "reason", "evidence", "last_safe_state"}, "clear": {"action", "confirm_reason"}}
+        fields = {"halt": {"action", "reason", "evidence", "last_safe_state"}, "clear": {"action", "token"}}
         if action not in fields:
             raise SelectionError(f"action must be one of {sorted(fields)}")
         request = require_fields(request, fields[action], "inputs")
-        if mode == "apply":
-            if action == "halt":
-                record_halt(root, request["reason"], require_text(request["evidence"], "evidence"), request["last_safe_state"])
-            else:
-                clear_halt(root, request["confirm_reason"])
+        if mode == "apply" and action == "halt":
+            recorded = record_halt(root, request["reason"], require_text(request["evidence"], "evidence"),
+                                   request["last_safe_state"])
+            extra["clear_token"] = recorded["clear_token"]
+        elif mode == "apply":
+            clear_halt(root, request["token"])
+        elif action == "clear":
+            extra = planned_clear(root, request["token"])
     record = stored_halt(root)
     return {"halted": record is not None, "resume": "refused" if record else "allowed", "record": record,
-            "writes_state": mode == "apply"}
+            "writes_state": mode == "apply", **extra}
 
 
 def apply_refusal(entry: Any, request: Any) -> dict[str, Any] | None:
@@ -133,12 +250,14 @@ def apply_refusal(entry: Any, request: Any) -> dict[str, Any] | None:
     return response(status, request_id=request.request_id, diagnostics=[diagnostic(
         "harm_halt_active", message, details={"helper_id": entry.helper_id},
         remediation_summary="Nothing was written. A human must inspect the halt outside the agent runner.",
-        remediation_actions=["Read the record with harm-halt in read_only mode.", "Resolve the cause; agent clear requests are refused."])])
+        remediation_actions=["Read the record with harm-halt in read_only mode.",
+                             "Resolve the cause; only the one-time token shown on the owner's terminal clears it."])])
 
 
 REFUSAL = Refusal(
     "invalid_harm_halt_request",
-    "Send no inputs to read; to record, action halt with a harm-halt reason, evidence and the last safe state. Agent clear requests are refused.",
+    "Send no inputs to read; to record, action halt with a harm-halt reason, evidence and the last safe state; "
+    "to clear, action clear with the one-time token shown on the owner's terminal.",
     ["Correct the named field.", "Rerun harm-halt; nothing was written."],
 )
 

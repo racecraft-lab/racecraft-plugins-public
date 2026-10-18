@@ -71,6 +71,10 @@ _Avoid_: confirmed live output
 The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must resolve and clear it before resume. Agents cannot authorize its clearance.
 _Avoid_: integrity failure, hard stop
 
+**Clear token**:
+The one-time secret that clears one harm halt. The runner mints it when it records the halt, keeps only its digest, and shows it only on the owner's terminal. A wrong, used or missing token clears nothing (`clear_token`, `clear_token_sha256`).
+_Avoid_: confirm reason, approval
+
 **Sweep process failure**:
 An isolated feedback worker timed out, failed to start, or exited unsuccessfully. It blocks that sweep attempt without establishing tampering (`sweep_process_failed`).
 

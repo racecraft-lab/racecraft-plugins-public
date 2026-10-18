@@ -3,7 +3,11 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
+import os
+import select
 import sys
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -18,6 +22,7 @@ sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from speckit_pro_runner.helpers import harm_halt  # noqa: E402
 from speckit_pro_runner.runtime import handle_request  # noqa: E402
+from speckit_pro_runner.__main__ import main as runner_main  # noqa: E402
 from speckit_pro_runner.sweep_isolation import RECEIPT_PREFIX  # noqa: E402
 from mutation_request_case import MutationRequestCase  # noqa: E402
 from test_result import run_counted  # noqa: E402
@@ -31,7 +36,18 @@ SECRET = "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"
 ENTRY = {"kind": "scope_answer", "option_chosen": "a", "rejected_alternative": "b", "evidence": "c", "affected_unit": "d"}
 
 
-class HarmHaltTests(MutationRequestCase):
+class QuietTerminal(MutationRequestCase):
+    """Tests never write a clear token to the terminal of whoever runs the suite."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.shown: list[str] = []
+        quiet = patch.object(harm_halt, "show_on_owner_terminal", side_effect=self.shown.append)
+        quiet.start()
+        self.addCleanup(quiet.stop)
+
+
+class HarmHaltTests(QuietTerminal):
     helper_id = "harm-halt"
     files = {WORKFLOW: "# Workflow\n"}
 
@@ -130,11 +146,11 @@ class HarmHaltTests(MutationRequestCase):
     def test_dry_run_and_clear_without_a_record_write_nothing(self) -> None:
         planned = self.call("dry_run", action="halt", reason="secret_exposure", evidence="e", last_safe_state="s")
         self.assertEqual(("ok", False), (planned["status"], planned["data"]["halted"]))
-        self.assertEqual("input_error", self.call("apply", action="clear", confirm_reason="secret_exposure")["status"])
+        self.assertEqual("input_error", self.call("apply", action="clear", token="guess")["status"])
         self.assertFalse((self.root / RECORD).exists())
 
 
-class HaltDispatchTests(MutationRequestCase):
+class HaltDispatchTests(QuietTerminal):
     helper_id = harm_halt.HELPER_ID
     files = {WORKFLOW: "# Workflow\n"}
 
@@ -184,7 +200,7 @@ class HaltDispatchTests(MutationRequestCase):
         gate.assert_not_called()
 
 
-class HaltConcurrencyTests(MutationRequestCase):
+class HaltConcurrencyTests(QuietTerminal):
     helper_id = harm_halt.HELPER_ID
     files = {WORKFLOW: "# Workflow\n"}
 
@@ -242,9 +258,168 @@ class HaltConcurrencyTests(MutationRequestCase):
                 self.assertEqual("first evidence", self.read_only_data()["record"]["evidence"])
 
 
+class HaltClearTokenTests(QuietTerminal):
+    """Only the one-time token shown on the owner's terminal clears a standing halt (#1378)."""
+
+    helper_id = harm_halt.HELPER_ID
+    files = {WORKFLOW: "# Workflow\n"}
+
+    def halt(self, evidence: str = "page hash differs") -> str:
+        result = self.call("apply", action="halt", reason="tampering_or_forged_evidence", evidence=evidence,
+                           last_safe_state=SAFE_STATE)
+        self.assertEqual("ok", result["status"], result)
+        return self.shown[-1]
+
+    def clear(self, mode: str = "apply", **token: str) -> dict[str, Any]:
+        return self.call(mode, action="clear", **token)
+
+    def test_clear_with_the_right_token_resumes(self) -> None:
+        token = self.halt()
+        self.assertGreaterEqual(len(token), 40)
+        cleared = self.clear(token=token)
+        self.assertEqual("ok", cleared["status"], cleared)
+        self.assertEqual((False, "allowed"), (cleared["data"]["halted"], cleared["data"]["resume"]))
+        self.assertFalse((self.root / RECORD).exists())
+        self.assertEqual("ok", HarmHaltTests.write_attempt(self)["status"])
+
+    def test_wrong_missing_and_reused_tokens_refuse_and_the_halt_stands(self) -> None:
+        first = self.halt()
+        for attempt in ({"token": first[:-1] + ("A" if first[-1] != "A" else "B")}, {"token": ""}, {},
+                        {"confirm_reason": "tampering_or_forged_evidence"}, {"token": 7}):
+            with self.subTest(attempt=sorted(attempt)):
+                self.assertEqual("input_error", self.clear(**attempt)["status"])
+                self.assertEqual("refused", self.read_only_data()["resume"])
+        self.assertEqual("ok", self.clear(token=first)["status"])
+        self.assertEqual("input_error", self.clear(token=first)["status"], "a used token clears nothing")
+        second = self.halt("second trigger")
+        self.assertNotEqual(first, second)
+        self.assertEqual("input_error", self.clear(token=first)["status"])
+        self.assertEqual("second trigger", self.read_only_data()["record"]["evidence"])
+        self.assertEqual("harm_halt_active", HarmHaltTests.write_attempt(self)["diagnostics"][0]["code"])
+
+    def test_dry_run_clear_reports_without_changing_state(self) -> None:
+        token = self.halt()
+        before = (self.root / RECORD).read_bytes()
+        for candidate, expected in ((token, True), ("wrong", False)):
+            with self.subTest(expected=expected):
+                planned = self.clear("dry_run", token=candidate)
+                self.assertEqual("ok", planned["status"], planned)
+                self.assertEqual((expected, True, "refused"), (planned["data"]["would_clear"],
+                                 planned["data"]["halted"], planned["data"]["resume"]))
+                self.assertEqual(before, (self.root / RECORD).read_bytes())
+        self.assertEqual("ok", self.clear(token=token)["status"], "a dry run does not spend the token")
+
+    def test_a_record_without_a_token_digest_refuses_every_clear(self) -> None:
+        self.halt()
+        record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
+        record.pop("clear_token_sha256")
+        (self.root / RECORD).write_text(json.dumps(record), encoding="utf-8")
+        self.assertEqual("input_error", self.clear(token="anything")["status"])
+        self.assertTrue((self.root / RECORD).exists())
+
+    def run_runner(self, request: dict[str, Any]) -> str:
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with patch.object(sys, "stdin", io.StringIO(json.dumps(request))), \
+                contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            runner_main([])
+        return stdout.getvalue() + stderr.getvalue()
+
+    def test_the_documented_clear_request_clears(self) -> None:
+        adr = (REPO / "docs/adr/0010-stop-policy-enforcement.md").read_text(encoding="utf-8")
+        documented = json.loads(adr.split("```json\n", 1)[1].split("\n```", 1)[0])
+        token = self.halt()
+        documented["inputs"]["token"] = token
+        self.assertIn('"resume":"allowed"', self.run_runner(documented))
+        self.assertFalse((self.root / RECORD).exists())
+
+    def test_no_agent_readable_path_exposes_the_token(self) -> None:
+        def request(mode: str, **inputs: Any) -> dict[str, Any]:
+            return {"schema_version": "1.0", "request_id": "leak", "helper_id": "harm-halt", "operation": "harm-halt",
+                    "mode": mode, "inputs": inputs}
+
+        seen = self.run_runner(request("apply", action="halt", reason="secret_exposure", evidence="leak",
+                                       last_safe_state=SAFE_STATE))
+        token = self.shown[-1]
+        seen += self.run_runner(request("read_only"))
+        seen += self.run_runner(request("apply", action="clear", token=token + "x"))
+        seen += self.run_runner(request("dry_run", action="clear", token=token))
+        seen += self.run_runner(request("dry_run", action="clear", token=token + "x"))
+        seen += self.run_runner({**request("apply", action="clear", token=token), "helper_id": "decisions-list"})
+        stored = [path.read_bytes() for path in self.root.rglob("*") if path.is_file()]
+        self.assertNotIn(token, seen)
+        self.assertNotIn("clear_token_sha256", seen)
+        self.assertFalse([blob for blob in stored if token.encode() in blob])
+        self.assertIn("refused", seen)
+        seen = self.run_runner(request("apply", action="clear", token=token))
+        self.assertNotIn(token, seen)
+        self.assertIn('"resume":"allowed"', seen)
+        self.assertFalse([path for path in self.root.rglob("*") if path.is_file() and token.encode() in path.read_bytes()])
+
+
+class OwnerTerminalTests(unittest.TestCase):
+    """The token goes only to the outermost ancestor terminal, never to one the runner's own streams use."""
+
+    def setUp(self) -> None:
+        switch = patch.dict(os.environ)
+        switch.start()
+        self.addCleanup(switch.stop)
+        os.environ.pop(harm_halt.TERMINAL_SWITCH, None)
+
+    def terminal(self) -> tuple[int, str]:
+        master, slave = os.openpty()
+        self.addCleanup(os.close, master)
+        self.addCleanup(os.close, slave)
+        return master, os.ttyname(slave)
+
+    def drained(self, master: int) -> bytes:
+        received = b""
+        while select.select([master], [], [], 0.2)[0]:
+            received += os.read(master, 4096)
+        return received
+
+    def table(self, rows: dict[int, tuple[int, str]]) -> Any:
+        def row(pid: int) -> tuple[int, str]:
+            if pid not in rows:
+                raise OSError("ps could not read the process")
+            return rows[pid]
+
+        return patch.object(harm_halt, "process_row", side_effect=row)
+
+    def test_the_outermost_ancestor_terminal_receives_the_token(self) -> None:
+        outer, outer_path = self.terminal()
+        inner, inner_path = self.terminal()
+        rows = {os.getpid(): (10, "??"), 10: (11, inner_path.removeprefix("/dev/")),
+                11: (12, outer_path.removeprefix("/dev/")), 12: (1, "??")}
+        with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=set()):
+            self.assertTrue(harm_halt.show_on_owner_terminal("tok-123"))
+        self.assertIn(b"tok-123", self.drained(outer))
+        self.assertNotIn(b"tok-123", self.drained(inner))
+
+    def test_a_terminal_the_runner_streams_use_is_never_written(self) -> None:
+        outer, outer_path = self.terminal()
+        rows = {os.getpid(): (10, outer_path.removeprefix("/dev/")), 10: (1, "??")}
+        with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value={os.stat(outer_path).st_rdev}):
+            self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
+        self.assertNotIn(b"tok-123", self.drained(outer))
+
+    def test_the_suite_switch_withholds_the_token(self) -> None:
+        outer, outer_path = self.terminal()
+        os.environ[harm_halt.TERMINAL_SWITCH] = "off"
+        rows = {os.getpid(): (10, "??"), 10: (1, outer_path.removeprefix("/dev/"))}
+        with self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=set()):
+            self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
+        self.assertNotIn(b"tok-123", self.drained(outer))
+
+    def test_no_terminal_or_an_unreadable_process_table_delivers_nothing(self) -> None:
+        for rows in ({os.getpid(): (1, "??")}, {}, {os.getpid(): (10, "../etc/passwd"), 10: (1, "??")}):
+            with self.subTest(rows=rows), self.table(rows), patch.object(harm_halt, "runner_terminals", return_value=set()):
+                self.assertFalse(harm_halt.show_on_owner_terminal("tok-123"))
+
+
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                              for case in (HarmHaltTests, HaltDispatchTests, HaltConcurrencyTests))
+                              for case in (HarmHaltTests, HaltDispatchTests, HaltConcurrencyTests,
+                                           HaltClearTokenTests, OwnerTerminalTests))
 
 
 if __name__ == "__main__":

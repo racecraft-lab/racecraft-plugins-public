@@ -34,11 +34,28 @@ A harm halt fires only when the next action could cause damage a later review ca
 
 On a harm halt the runner stops all dispatch at once. No commit, push, PR edit or artifact publish follows the trigger, because a PR edit could spread a leaked secret. The runner writes a local halt record (reason, redacted trigger evidence, last safe state) and prints it. Resume is refused until a human clears the record with an explicit runner command.
 
-Implementation limit: an authenticated operator halt-clear command is not yet
-available. ADR 0004 removes the old approval paths, and their caller-supplied
-event fields cannot authenticate a human. The runner therefore refuses every
-agent clear request. Human recovery happens outside the agent workflow; the
-record and any abandoned publication lock must both be inspected before resume.
+The clear command is the `harm-halt` helper's `clear` action with a one-time
+token. Recording a halt mints the token, keeps only its SHA-256 digest in the
+record, and writes the token only to the owner's terminal: the outermost
+terminal in the runner's process ancestry, refused when the runner's own
+streams or controlling terminal use it. A wrong, used or missing token is
+refused and the halt stands; a `dry_run` clear reports `would_clear` and
+changes nothing. To clear, the human runs `python3 -m speckit_pro_runner` from
+the repository root, pastes this request on stdin with the token in place, then
+ends input (Ctrl-D). Pasting keeps the token out of shell history and files.
+
+```json
+{"schema_version": "1.0", "helper_id": "harm-halt", "operation": "harm-halt", "mode": "apply", "inputs": {"action": "clear", "token": "<token>"}}
+```
+
+Assurance limit: the token defends the runner command, not the files. An agent
+with the operator's shell can still delete the record by hand, as with ADR
+0017's recorded approval. A terminal that another agent controls (for example
+`claude -p` started inside a Codex PTY, or an agent-started tmux pane) can be
+the outermost one and would show that agent the token. When no terminal can be
+found, `ps` is refused, or the write fails, nobody receives the token. The
+halt then stands until a human recovers it outside the agent workflow: inspect
+the record and any abandoned publication lock before removing them.
 
 ## Former stop sites
 
