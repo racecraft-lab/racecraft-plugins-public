@@ -84,7 +84,7 @@ def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[st
     if mode != "read_only":
         raise ValueError("plan-review-prompt runs in read_only mode and writes nothing")
     fields = require_fields({k: v for k, v in inputs.items() if k != "repo_root"},
-                            {"feature_dir", "workflow_file", "findings", "requests", "withdrawals"}, "plan review inputs")
+                            {"feature_dir", "workflow_file", "reviewed_revision", "findings", "requests", "withdrawals"}, "plan review inputs")
     findings = _findings(fields["findings"])
     requests = _requests(fields["requests"], findings)
     withdrawn = _withdrawn(fields["withdrawals"], requests)
@@ -93,6 +93,8 @@ def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[st
         if not any(item["finding"] == identity for item in active):
             raise SelectionError(f"{identity} needs an active request; a withdrawn instruction needs a replacement")
     revision = planning_manifest(root, fields["feature_dir"], fields["workflow_file"])["manifest_digest"]
+    if require_text(fields["reviewed_revision"], "reviewed_revision") != revision:
+        raise SelectionError("reviewed revision changed; restart the plan review before building its prompt")
     body = [line for identity, summary in findings.items()
             for line in _section(identity, summary, [r for r in requests.values() if r["finding"] == identity], withdrawn)]
     prompt = "\n".join([*PREAMBLE, f"Reviewed revision: {revision}", *body])

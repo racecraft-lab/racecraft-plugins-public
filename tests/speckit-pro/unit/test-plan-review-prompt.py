@@ -39,8 +39,12 @@ class PlanReviewPromptTest(unittest.TestCase):
             (feature / name).write_text(text)
 
     def call(self, **extra):
+        manifest_request = dict(schema_version="1.0", helper_id="planning-approval", operation="planning-approval",
+                                mode="read_only", inputs=dict(action="manifest", feature_dir="specs/demo",
+                                                              workflow_file="specs/demo/workflow.md"))
+        _, manifest, _ = run_runner(manifest_request, cwd=self.root, extra_env={"PYTHONPATH": str(self.runner_root)})
         inputs = dict(feature_dir="specs/demo", workflow_file="specs/demo/workflow.md", findings=copy.deepcopy(FINDINGS),
-                      requests=copy.deepcopy(REQUESTS), withdrawals=[])
+                      reviewed_revision=manifest["data"]["manifest_digest"], requests=copy.deepcopy(REQUESTS), withdrawals=[])
         inputs.update(extra)
         request = dict(schema_version="1.0", helper_id="plan-review-prompt", operation="plan-review-prompt",
                        mode="read_only", inputs=inputs)
@@ -117,17 +121,18 @@ class PlanReviewPromptTest(unittest.TestCase):
     def test_a_clean_plan_has_nothing_to_repair(self):
         self.assertRefused(self.call(findings=[], requests=[]), "no findings")
 
-    def test_revision_follows_the_planning_manifest(self):
+    def test_prompt_refuses_a_revision_changed_during_the_interview(self):
         before = self.call()["data"]["revision"]
         (self.root / "specs/demo/plan.md").write_text("A changed plan")
-        self.assertNotEqual(self.call()["data"]["revision"], before)
+        self.assertRefused(self.call(reviewed_revision=before), "reviewed revision changed")
 
 
 class HostPayloadTest(unittest.TestCase):
     def test_both_host_payloads_answer_the_same_request(self):
         for host in ("claude", "codex"):
             for name in ("test_prompt_carries_every_finding_and_its_remedy",
-                         "test_withdrawal_keeps_history_and_leaves_the_instruction_out_of_the_active_queue"):
+                         "test_withdrawal_keeps_history_and_leaves_the_instruction_out_of_the_active_queue",
+                         "test_prompt_refuses_a_revision_changed_during_the_interview"):
                 with self.subTest(host=host, check=name):
                     case = PlanReviewPromptTest(name)
                     case.runner_root = PAYLOADS[host]

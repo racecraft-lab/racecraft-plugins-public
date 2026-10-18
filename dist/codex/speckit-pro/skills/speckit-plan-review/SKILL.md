@@ -35,7 +35,7 @@ $speckit-pro:speckit-plan-review <feature-dir>
 ## What to Do
 
 Run this even when planning reported no findings. A clean plan still gets a
-review. With no findings, say so and stop at the end of step 2.
+review. Finish the interview in step 2 before deciding whether a repair prompt is needed.
 
 ### 1. Gather the material
 
@@ -53,6 +53,9 @@ short id. If any source is missing, say which and what it would have shown.
 ### 2. Explain, then ask
 
 Open with the revision, the count of findings and the decisions list in plain words.
+Walk through each decision and check the user's understanding of its impact and
+alternatives, one question at a time. Then ask for the user's own change requests,
+even when there are no reported findings. Wait for those answers.
 Then take the findings one at a time: every blocked gate, every strict low-confidence
 finding, and each request the user raises themselves (give those the id `USER-1`, `USER-2`).
 For each finding:
@@ -66,6 +69,9 @@ Record each answer as a request: an `id` (`R1`, `R2`), the `finding`, a `kind`
 choice, an acceptance of risk or silence closes nothing. Every finding needs a
 request.
 
+After those answers, if there are no findings or requests, say that no repair
+prompt is needed and stop. This records no approval.
+
 ### 3. Withdraw an instruction
 
 If the user changes their mind about a custom instruction, show its exact text,
@@ -76,7 +82,8 @@ required, so ask for a replacement request.
 ### 4. Build the repair prompt
 
 Call `helper_id=plan-review-prompt operation=plan-review-prompt mode=read_only` with
-`feature_dir`, `workflow_file`, `findings` (`id`, `summary`), `requests` (all of them, in order,
+`feature_dir`, `workflow_file`, `reviewed_revision` (the `manifest_digest` captured in step 1),
+`findings` (`id`, `summary`), `requests` (all of them, in order,
 withdrawn ones included) and `withdrawals` (`request`, `finding`, `instruction`; an empty list when none).
 
 If the runner refuses, read its message, fix the named field with the user and call again.

@@ -1392,6 +1392,14 @@ class ValidatePlanReviewSkill(unittest.TestCase):
                 self.assertIn('sends nothing', body)
                 self.assertIn('starts no planning', body)
 
+    def test_clean_plan_still_interviews_the_reviewer(self) -> None:
+        for host, view in self.hosts():
+            text = _read(view / PLAN_REVIEW_SKILL / "SKILL.md")
+            with self.subTest(host=host):
+                self.assertIn("Walk through each decision", text)
+                self.assertIn("ask for the user's own change requests", text)
+                self.assertIn("After those answers, if there are no findings or requests", text)
+
     def test_codex_policy_is_explicit_invocation_only(self) -> None:
         sidecar = PLUGIN_ROOT / 'codex-skills' / PLAN_REVIEW_SKILL / 'agents' / 'openai.yaml'
         self.assertEqual(['false'], _allow_implicit_values(sidecar.read_text(encoding='utf-8')))
