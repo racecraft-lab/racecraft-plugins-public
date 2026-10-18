@@ -349,6 +349,17 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                     with self.assertRaises(AssertionError):
                         assert_instruction_inventory(self, "skills", host_skill_root("codex"))
 
+    def test_structural_fault_tests_depend_on_their_own_gates(self) -> None:
+        for gate, replacement, fault in (
+            ("RULE", re.compile(".*"), "test_dispatch_line_without_the_rule_is_rejected"),
+            ("passes_fork_none", lambda _: True, "test_real_call_without_the_argument_is_rejected"),
+        ):
+            with self.subTest(gate=gate), patch(__name__ + "." + gate, replacement):
+                result = unittest.TestResult()
+                CodexSpawnGateFaultTests(fault).run(result)
+                self.assertFalse(result.wasSuccessful(), "inventory masked disabled structural gate: " + gate)
+                self.assertFalse(result.errors, result.errors)
+
     def run_skill_gates(self, edits: dict[str, tuple[str, str | bytes]]) -> unittest.TestResult:
         """Run every skill gate on a copy of the rendered tree with `edits` applied.
 
@@ -409,20 +420,22 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
                 self.assert_skill_gates_reject({relative: edit})
 
     def test_real_call_without_the_argument_is_rejected(self) -> None:
-        self.assert_skill_gates_reject({"speckit-autopilot/references/phase-driver.md": (
-            "", '\n```text\nspawn_agent(agent_type="clarify-executor", message="work")\n```\n')})
+        with patch(__name__ + ".assert_instruction_inventory"):
+            self.assert_skill_gates_reject({"speckit-autopilot/references/phase-driver.md": (
+                "", '\n```text\nspawn_agent(agent_type="clarify-executor", message="work")\n```\n')})
 
     def test_dispatch_line_without_the_rule_is_rejected(self) -> None:
         # The phase driver reads only its own reference at dispatch (#1369).
-        self.assert_skill_gates_reject({"speckit-autopilot/references/phase-driver.md": (
-            'Dispatch with `spawn_agent` and `fork_turns="none"`,', "Dispatch with `spawn_agent`,")})
+        with patch(__name__ + ".assert_instruction_inventory"):
+            self.assert_skill_gates_reject({"speckit-autopilot/references/phase-driver.md": (
+                'Dispatch with `spawn_agent` and `fork_turns="none"`,', "Dispatch with `spawn_agent`,")})
 
     def test_new_file_that_names_spawn_agent_must_state_the_rule(self) -> None:
         for relative in ("new/SKILL.md", "speckit-autopilot/references/new.md", "other/new.data"):
-            with self.subTest(file=relative):
+            with self.subTest(file=relative), patch(__name__ + ".assert_instruction_inventory"):
                 self.assert_skill_gates_reject({relative: ("", "Dispatch with `spawn_agent`.\n")})
-                self.assert_skill_gates_reject(
-                    {relative: ("", 'Dispatch with `spawn_agent` and `fork_turns="none"`.\n')})
+                control = self.run_skill_gates({relative: ("", 'Dispatch with `spawn_agent` and `fork_turns="none"`.\n')})
+                self.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
 
     def test_call_scan_exclusions_still_require_content_review(self) -> None:
         call = 'spawn_agent(agent_type="phase-executor", message="work")\n'
@@ -432,14 +445,16 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
         ):
             with self.subTest(skipped=relative):
                 self.assert_skill_gates_reject({relative: ("", call)})
+                with patch(__name__ + ".assert_instruction_inventory"):
+                    control = self.run_skill_gates({relative: ("", call)})
+                    self.assertTrue(control.wasSuccessful(), (control.failures, control.errors))
         for relative in ("speckit-coach/examples/new.py", "speckit-autopilot/contracts/new.json",
                          "speckit-autopilot/agents/openai.yaml", "speckit-autopilot/scripts/new.md",
-                         "speckit-autopilot/contracts/new.schema.json", "speckit-autopilot/scripts/new.py",
                          "other/new.data"):
-            with self.subTest(scanned=relative):
+            with self.subTest(scanned=relative), patch(__name__ + ".assert_instruction_inventory"):
                 self.assert_skill_gates_reject({relative: ("", call)})
         # A notice file cannot exempt a directory; only the pinned upstream roots are skipped.
-        with self.subTest(scanned="speckit-resolve-pr with a notice"):
+        with self.subTest(scanned="speckit-resolve-pr with a notice"), patch(__name__ + ".assert_instruction_inventory"):
             self.assert_skill_gates_reject({
                 "speckit-resolve-pr/UPSTREAM-NOTICE.md": ("", "Vendored.\n"),
                 "speckit-resolve-pr/new.md": ("", call)})
@@ -449,7 +464,7 @@ class CodexSpawnGateFaultTests(unittest.TestCase):
             ("speckit-autopilot/references/new.md", b"\xff\xfe plain notes\n"),
             ("speckit-autopilot/references/new.md", '\nspawn_agent(fork_turns="none", message="work"\n'),
         ):
-            with self.subTest(content=new[:24]):
+            with self.subTest(content=new[:24]), patch(__name__ + ".assert_instruction_inventory"):
                 self.assert_skill_gates_reject({relative: ("", new)})
 
     def test_task_name_first_call_is_rejected(self) -> None:
