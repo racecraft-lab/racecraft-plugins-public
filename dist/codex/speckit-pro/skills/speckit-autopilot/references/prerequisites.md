@@ -102,9 +102,12 @@ Step 0.11 never asks about them. The contract is in
    either lies outside the writable roots. Phase 6.5 adds only what the ratified
    plan newly names, such as a live evaluation.
 2. **Check the standing policy.** Run `render-egress-authorization` with
-   `scope=standing`, the repository, its default branch, the user-level Codex
-   config's `auto_review.extra_policy` as `installed_extra_policy` (read it,
-   never write it), and step 1's `policy_classes` verbatim as `derived_classes`.
+   exactly these inputs: `scope=standing`; `repository`, the GitHub
+   `owner/name` of the `origin` remote (never a path); `default_branch`;
+   `installed_extra_policy`, the `auto_review.extra_policy` string from
+   `$CODEX_HOME/config.toml` (`~/.codex/config.toml` when `CODEX_HOME` is unset;
+   read it, never write it); and step 1's `policy_classes` verbatim as
+   `derived_classes`.
    `installed=false` means the policy was never installed or a new gate need
    changed its text. Either way the install text is the helper's
    `extra_policy_fragment`.
