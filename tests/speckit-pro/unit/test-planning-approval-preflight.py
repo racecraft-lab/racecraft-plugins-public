@@ -140,8 +140,8 @@ def v1_records():
                                             {"slice": "us2", "pr": 0, "merged_sha": "a" * 40}]}
 
 
-class RuntimeNavigationTest(MapAssertions):
-    """A recorded approval must not verify after runtime data adds untyped navigation."""
+class RuntimeNavigationCase(MapAssertions):
+    """Record, mutate and regenerate helpers for runtime navigation variants."""
 
     def writePrs(self, payload):
         (self.feature / ".process/prs.json").write_text(json.dumps(payload))
@@ -181,6 +181,16 @@ class RuntimeNavigationTest(MapAssertions):
                 with self.subTest(schema=base["schemaVersion"], field=field, payload=name):
                     self.assertRegenerationRefused(lambda: self.writePrs(prs), lambda: self.writePrs(base))
 
+    def assertFilenameVariantsRefused(self, directory):
+        for name, filename in self.payloads(FILENAME_PAYLOADS).items():
+            path = self.feature / directory / filename
+            with self.subTest(directory=directory or "planning", payload=name):
+                self.assertRegenerationRefused(lambda: path.write_text("{}"), path.unlink)
+
+
+class RuntimeNavigationTest(RuntimeNavigationCase):
+    """A recorded approval must not verify after runtime data adds untyped navigation."""
+
     def test_untyped_prs_fields_refuse_verify_on_each_host(self):
         base = v2_records()
         merged = len(base["records"]) - 1
@@ -196,12 +206,6 @@ class RuntimeNavigationTest(MapAssertions):
                 self.assertEqual(self.call("verify")["status"], "ok")
                 self.assertPrsVariantsRefused(v1_records(), [(0, "slice"), (1, "merged_sha")])
                 record.unlink()
-
-    def assertFilenameVariantsRefused(self, directory):
-        for name, filename in self.payloads(FILENAME_PAYLOADS).items():
-            path = self.feature / directory / filename
-            with self.subTest(directory=directory or "planning", payload=name):
-                self.assertRegenerationRefused(lambda: path.write_text("{}"), path.unlink)
 
     def test_untyped_runtime_filenames_refuse_verify_on_each_host(self):
         for runner in RUNNERS:
