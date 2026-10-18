@@ -89,6 +89,21 @@ class FailurePathSeamTests(unittest.TestCase):
                         if _name(node) in handlers and id(node) not in inside]
         self.assertEqual(outside, [])
 
+    def test_escalation_reads_cross_the_seam_not_the_internals(self) -> None:
+        internals = {"escalation_key", "escalation_progress", "ESCALATION_TIER3_CAP"}
+        outside = []
+        for path in sorted(SOURCE.parent.rglob("*.py")):
+            if path == SOURCE:
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            outside += [f"{path.name}:{node.lineno} {_name(node)}" for node in ast.walk(tree)
+                        if _name(node) in internals]
+        self.assertEqual(outside, [])
+
+    def test_a_unit_with_no_escalation_record_is_at_tier_two(self) -> None:
+        view = control.unit_escalation(self.ledger, "gate_failure", "abc")
+        self.assertEqual((view.progress, view.record, view.tier3_cap), ("tier2", None, control.ESCALATION_TIER3_CAP))
+
 
 def _is_table(statement: ast.stmt) -> bool:
     return isinstance(statement, ast.AnnAssign) and ast.unparse(statement.target) == "FAILURE_PATH_ACTIONS"
