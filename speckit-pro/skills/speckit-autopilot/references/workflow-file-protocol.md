@@ -136,6 +136,11 @@ Progress: quality-hardener; status=complete; iterations=2; score=85; floor=80; e
 ```
 
 Success Criteria text is planning; its checked/unchecked state records progress.
+Files Generated completion ticks apply only to bare backticked paths containing
+letters, digits, underscores, dots, slashes or hyphens, with no appended prose
+or Markdown link wrapper. The path itself remains planning content.
+Implementation Progress uses typed table counts and summaries; checkbox state
+there remains bound to approval.
 Other planning-choice checkboxes keep their state. Code fences remain literal
 planning content. The existing typed Checklist Gate and checkpoint writer rows
 continue to work without converting them into summaries.

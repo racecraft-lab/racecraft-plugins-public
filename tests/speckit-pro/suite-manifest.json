@@ -182,6 +182,7 @@
         { "path": "tests/speckit-pro/unit/test-plan-terminal-step-requests.py", "label": "test-plan-terminal-step-requests" },
         { "path": "tests/speckit-pro/unit/test-plan-review-prompt.py", "label": "test-plan-review-prompt" },
         { "path": "tests/speckit-pro/unit/test-planning-approval.py", "label": "test-planning-approval" },
+        { "path": "tests/speckit-pro/unit/test-planning-approval-checkboxes.py", "label": "test-planning-approval-checkboxes" },
         { "path": "tests/speckit-pro/unit/test-planning-approval-preflight.py", "label": "test-planning-approval-preflight" },
         { "path": "tests/speckit-pro/unit/test-implement-admission.py", "label": "test-implement-admission" },
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference" },

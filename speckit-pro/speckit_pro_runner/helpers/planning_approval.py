@@ -48,7 +48,7 @@ class ProgressWrite:
     width: int = 0
     omit_row: bool = False
     scaffold: tuple[str, ...] = ()
-    checkbox: bool = False
+    checkbox: str = ""
     lines: tuple[str, ...] = ()
     key_index: int = 0
 
@@ -93,10 +93,12 @@ PROGRESS_WRITES = {
     "implement-checklist-gate": ProgressWrite((("Phase 7: Implement", "Implement Checklist Gate"),),
         r"(?:Decision|Reviewer-owned items|\[Gap\] markers)", ((1, "gate"),), 2, True,
         ("### Implement Checklist Gate", "| Field | Value |")),
-    "implementation-progress": ProgressWrite(IMPLEMENT, r".+", ((1, "count"), (2, "count")), 4, checkbox=True),
-    "files-generated": ProgressWrite((("Phase 7: Implement", "Files Generated"), ("Files Generated",)), checkbox=True),
+    "implementation-progress": ProgressWrite(IMPLEMENT, r".+", ((1, "count"), (2, "count")), 4),
+    "files-generated": ProgressWrite((("Phase 7: Implement", "Files Generated"), ("Files Generated",)),
+        checkbox=r"\s*-\s+\[[ xX]\]\s+`[A-Za-z0-9_./-]+`\s*"),
     "post-checklist": ProgressWrite(POST, r"Post: .+", ((1, "phase"), (2, "evidence")), 3),
-    "success-criteria": ProgressWrite((("Success Criteria",), ("Specification Context", "Success Criteria Summary")), checkbox=True),
+    "success-criteria": ProgressWrite((("Success Criteria",), ("Specification Context", "Success Criteria Summary")),
+        checkbox=r"\s*-\s+\[[ xX]\].*"),
     "prerequisites-baseline": ProgressWrite((("Prerequisites",),)),
     "constitution-final": ProgressWrite((("Prerequisites", "Constitution Validation"),)),
     "quality-final": ProgressWrite(QUALITY, r"(?:COMPLEXITY|MUTATION|DEPENDENCY_RULES|DEPENDENCY_AUDIT)", ((6, "result"),), 7),
@@ -231,7 +233,7 @@ def progress_line(line: str, scope: tuple[str, ...], root: Path, workflow: str) 
     for rule in rules:
         if rule.row and line.startswith("|"):
             line = progress_row(line, rule, root, workflow)
-    if any(rule.checkbox for rule in rules):
+    if any(rule.checkbox and re.fullmatch(rule.checkbox, line) for rule in rules):
         return re.sub(r"^(\s*-\s+\[)[ xX](\])", r"\1 \2", line)
     return re.sub(r"^(\s*-\s+\[)[xX](\])", r"\1x\2", line)
 

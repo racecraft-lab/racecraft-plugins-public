@@ -352,8 +352,7 @@ class WorkflowPlanningApprovalTest(WorkflowFixture):
     def test_execution_rows_preserve_approval_but_not_a_choice_flip(self):
         rows = (("## Basic Information\n| **Stage** | plan |\n", "plan", "implement"),
                 ("## Basic Information\n| **Draft PR** | [#42](https://github.com/org/repo/pull/42) |\n", "42", "43"))
-        sections = (("## Implementation Progress\n- [ ] Work\n", "[ ]", "[x]"),)
-        for before, old, new in (*rows, *sections):
+        for before, old, new in rows:
             with self.subTest(workflow=before):
                 self.assertWorkflowEdit(before, before.replace(old, new), preserves=True)
 
