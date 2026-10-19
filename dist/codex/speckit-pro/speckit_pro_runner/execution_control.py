@@ -3081,8 +3081,12 @@ def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> list[s
     """
     pinned = ledger.get("planning_binding")
     if pinned is None:
-        text = trusted_text(ctl.workflow, ctl.root) if "tdd_units" in ctl.inputs else None
-        if text is None or not workflow_stage_signals(text)["planning_complete"]:
+        if "tdd_units" not in ctl.inputs:
+            return []
+        # Admission needs a record file, so every admitted implement entry pins whatever the workflow table shows.
+        text = trusted_text(ctl.workflow, ctl.root)
+        planned = text is not None and workflow_stage_signals(text)["planning_complete"]
+        if not planned and not any((ctl.spec.parent / "plan-approvals").glob("*.json")):
             return []
     if ctl.planning is None:
         raise ValueError("an implement task dispatch needs the planning-approval binding")
