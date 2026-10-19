@@ -2207,6 +2207,8 @@ def _nested_correction(ctx: _Reserve, reservation: str) -> dict[str, Any] | None
 def _new_correction(ctx: _Reserve, note: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
     """A new run-budget correction: an admission or deferral, or the fresh reservation the caller records."""
     ledger, dispatch_id, now = ctx.ledger, ctx.dispatch_id, ctx.now
+    if planning_drifted(ledger):
+        return {"reasons": ["blocked_for_uat"]}, None
     invariant = ctx.inputs.get("failure_invariant")
     family = str(invariant) if invariant in ledger["approved_invariants"] else _untagged_family(ledger, now)
     refusal = _corrective_refusal(ledger, family)

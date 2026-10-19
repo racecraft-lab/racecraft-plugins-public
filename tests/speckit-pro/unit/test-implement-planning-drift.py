@@ -192,6 +192,26 @@ class DriftBlockTest(DriftFixture):
                 self.assertBlocked(self.control(action, dispatch_id=f"unscoped-{action}", **inputs))
         self.assertContinues(self.control("reserve", dispatch_id="verify", kind="verification"))
 
+    def test_ineligible_independent_remediation_cannot_fall_back_to_unscoped_work_after_drift(self):
+        self.assertContinues(self.dispatch("delta"))
+        self.write_tasks(TASKS.replace("Build part 1", "Build part 1 twice"))
+        requests = {"review_remediation": ["src/alpha"], "test_fix": ["tests/delta.py"]}
+        for field, paths in requests.items():
+            with self.subTest(field=field):
+                reply = self.control("reserve", mode="dry_run", dispatch_id=field, kind="corrective",
+                                     failure_invariant="FR-001", spec_file="specs/demo/spec.md",
+                                     **{field: {"tdd_unit": "delta", "paths": paths}})
+                self.assertBlocked(reply)
+        for field, paths in requests.items():
+            reply = self.control("reserve", dispatch_id=field, kind="corrective", failure_invariant="FR-001",
+                                 spec_file="specs/demo/spec.md", **{field: {"tdd_unit": "delta", "paths": paths}})
+            self.assertBlocked(reply)
+            self.assertNotIn(field, self.ledger()["dispatches"])
+        self.assertEqual(self.ledger()["corrective_cycles"], 0)
+        self.assertContinues(self.control("reserve", dispatch_id="independent-review", kind="corrective",
+                                         spec_file="specs/demo/spec.md",
+                                         review_remediation={"tdd_unit": "delta", "paths": ["src/delta"]}))
+
 
 class FeatureOwnerDriftTest(DriftFixture):
     """T004 owns the whole feature directory; that ownership never covers the plan's own inputs."""

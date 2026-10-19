@@ -3,13 +3,17 @@
 ## Reachable findings
 
 - **F1400-88a90e72 (Medium):** dispatched task ownership filtered authoritative planning inputs out of the manifest comparison. Removed the ownership exemption for every manifest input. Exact feature inputs, workflow and contract subtrees, project inputs, instructions, catalog inputs, path aliases, additions, removals and renames remain visible. Ordinary outputs outside the manifest still proceed.
-- **R1400-0ddc406b (Medium):** corrective retry, continuation, exception and failure-class follow-up actions bypassed the planning guard. All dispatch-creating routes now check drift before admission; follow-ups cannot claim a task scope or verification kind that their recorded dispatch does not carry.
+- **R1400-0ddc406b (Medium):** corrective retry, continuation, exception and failure-class follow-up actions bypassed the planning guard. All dispatch-creating routes now check drift before admission; follow-ups cannot claim a task scope or verification kind that their recorded dispatch does not carry. The independent standards review also found ordinary review/test-fix requests falling back to unscoped run-wide correction after their claimed allowance was rejected; that fallback now checks drift before spending budget or recording work.
 
 ## Regression evidence
 
 Both findings were reproduced through the portable `execution-control` helper before the corresponding fix. The ownership regression run failed five cases. The corrective-route run failed each of the four eligible routes, including forged verification-kind and independent-unit claims; each request had first succeeded against the unchanged approved plan in dry-run mode. The corrected routes are checked in dry-run and apply mode, including persistence and continued dispatch of the independent task.
 
 ## Known limits
+
+- **Low (spec review):** escalation, gate-remediation and corrective follow-ups wait after drift when the planning guard cannot establish independent task-unit authority from their request/record shape. This conservatively withholds work rather than admitting changed planning authority. Independent ordinary implementation and eligible scoped review/test-fix reserves still continue; verification remains available.
+
+- **Info (standards review):** the `Drift.dispatched_units` tuple field remains unused after removal of the ownership filter, and the `named == []` branch is unreachable because `drifted_tasks` no longer returns that value. These are inert compatibility/cleanup remnants; neither can remove drift or admit work. They remain outside the behavioral repair.
 
 - **Info (security review):** whole-feature ownership and undispatched ownership already granted no exemption. These controls were unreachable bypasses before the fix and remain covered by regression tests.
 - **Info (security review):** a dispatched task may write non-authoritative outputs without causing drift. This remains reachable for ordinary source outputs and runner-classified execution bookkeeping outside the approval manifest. A manifest input such as `quickstart.md` is authoritative even if a task owns it, so editing it now blocks remaining work.
