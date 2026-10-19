@@ -110,7 +110,6 @@ class Selection:
     requests: dict[str, dict[str, str]]
     withdrawn: set[str]
 
-    @property
     def active(self) -> list[dict[str, str]]:
         return [item for identity, item in self.requests.items() if identity not in self.withdrawn]
 
@@ -150,7 +149,7 @@ def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[st
     reply = {"prompt": prompt, "revision": selection.revision, "writes_state": mode == "apply", "sends": False, "starts_work": False,
              "required_findings": [{"finding": identity, "summary": summary} for identity, summary in findings.items()],
              "active": [{"request": item["id"], "finding": item["finding"], "kind": item["kind"],
-                         "instruction": item["instruction"]} for item in selection.active],
+                         "instruction": item["instruction"]} for item in selection.active()],
              "history": [{"request": identity, "finding": item["finding"], "kind": item["kind"],
                           "instruction": item["instruction"],
                           "disposition": "withdrawn" if identity in withdrawn else "active"}

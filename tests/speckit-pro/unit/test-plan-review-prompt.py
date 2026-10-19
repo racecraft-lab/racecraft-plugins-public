@@ -129,9 +129,7 @@ class PlanReviewPromptRevisionTest(PlanReviewPromptFixture):
                 self.assertRefused(self.call(reviewed_revision=value), "reviewed_revision must be a non-empty string")
 
 
-class PlanReviewRequestRecordTest(PlanReviewPromptFixture):
-    """Applying a review records each active request in the feature's findings inventory."""
-
+class InventoryFixture(PlanReviewPromptFixture):
     def seed(self, text):
         (self.feature / "planning-findings.json").write_text(text)
 
@@ -141,6 +139,10 @@ class PlanReviewRequestRecordTest(PlanReviewPromptFixture):
 
     def inventory(self):
         return json.loads(self.inventory_bytes())
+
+
+class PlanReviewRequestRecordTest(InventoryFixture):
+    """Applying a review records each active request in the feature's findings inventory."""
 
     def test_apply_records_each_active_instruction_under_its_finding(self):
         self.seed(json.dumps({"F1": [], "F2": []}))
@@ -174,6 +176,21 @@ class PlanReviewRequestRecordTest(PlanReviewPromptFixture):
         self.assertEqual(self.inventory(), {"confidence-composite": [], "F1": [REQUESTS[0]["instruction"]],
                                             "F2": [REQUESTS[1]["instruction"]]})
 
+    def test_a_changed_revision_or_an_unanswered_finding_writes_nothing(self):
+        before = self.call()["data"]["revision"]
+        (self.feature / "plan.md").write_text("A changed plan")
+        self.assertRefused(self.call(mode="apply", reviewed_revision=before), "reviewed revision changed")
+        self.assertRefused(self.call(mode="apply", requests=REQUESTS[:1]), "F2")
+        self.assertIsNone(self.inventory_bytes())
+
+    def test_other_modes_are_refused(self):
+        self.assertEqual(self.call(mode="bogus")["status"], "input_error")
+        self.assertIsNone(self.inventory_bytes())
+
+
+class PlanReviewRequestRerunTest(InventoryFixture):
+    """A rerun of the review keeps what was recorded unless it withdraws it."""
+
     def test_a_rerun_replaces_a_withdrawn_instruction_with_its_replacement(self):
         self.seed(json.dumps({"F1": [], "F2": []}))
         self.assertEqual(self.call(mode="apply")["status"], "ok")
@@ -197,23 +214,12 @@ class PlanReviewRequestRecordTest(PlanReviewPromptFixture):
         self.assertRefused(self.call(mode="apply", requests=[*REQUESTS, twin]), "F1")
         self.assertIsNone(self.inventory_bytes())
 
-    def test_a_changed_revision_or_an_unanswered_finding_writes_nothing(self):
-        before = self.call()["data"]["revision"]
-        (self.feature / "plan.md").write_text("A changed plan")
-        self.assertRefused(self.call(mode="apply", reviewed_revision=before), "reviewed revision changed")
-        self.assertRefused(self.call(mode="apply", requests=REQUESTS[:1]), "F2")
-        self.assertIsNone(self.inventory_bytes())
-
     def test_a_malformed_inventory_is_refused_and_left_alone(self):
         for text in ("[]", '{"F1": "Use bounded retries"}', '{"F1": [], "F1": []}', "not json"):
             with self.subTest(text=text):
                 self.seed(text)
                 self.assertEqual(self.call(mode="apply")["status"], "input_error")
                 self.assertEqual(self.inventory_bytes(), text.encode())
-
-    def test_other_modes_are_refused(self):
-        self.assertEqual(self.call(mode="bogus")["status"], "input_error")
-        self.assertIsNone(self.inventory_bytes())
 
 
 class PlanReviewApprovalTest(PlanningApprovalFixture):
