@@ -82,10 +82,10 @@ FEATURE COMPLETE
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
-| TACD-002 | Capability Discovery Directive and Agent Updates | Complete | [.process/TACD-002-workflow.md](.process/TACD-002-workflow.md) | Archived after PRs #221-#226; use the shared directive and marker-emission hardening as TACD-003/TACD-004 inputs |
-| TACD-003 | Prerequisite and Documentation Messaging | Complete | [.process/TACD-003-workflow.md](.process/TACD-003-workflow.md) | Archived after PR #230; use the generic advisory and active guidance updates as TACD-004 inputs |
-| TACD-004 | Verification Coverage | Complete | [.process/TACD-004-workflow.md](.process/TACD-004-workflow.md) | Archived after PR #240; the vendor-neutral verification guards, the `strip_codex_guard` payload fix, rebuilt payloads, and rewritten evals now live in source/generator/test paths |
+| TACD-001 | Platform Mechanics Spike | Complete | `.process/TACD-001-workflow.md` | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
+| TACD-002 | Capability Discovery Directive and Agent Updates | Complete | `.process/TACD-002-workflow.md` | Archived after PRs #221-#226; use the shared directive and marker-emission hardening as TACD-003/TACD-004 inputs |
+| TACD-003 | Prerequisite and Documentation Messaging | Complete | `.process/TACD-003-workflow.md` | Archived after PR #230; use the generic advisory and active guidance updates as TACD-004 inputs |
+| TACD-004 | Verification Coverage | Complete | `.process/TACD-004-workflow.md` | Archived after PR #240; the vendor-neutral verification guards, the `strip_codex_guard` payload fix, rebuilt payloads, and rewritten evals now live in source/generator/test paths |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -312,7 +312,7 @@ When breaking this feature into specs:
 ## References
 
 - **Source PRD:** [../../prd-tool-agnostic-capability-discovery.md](../../prd-tool-agnostic-capability-discovery.md)
-- **Design concept:** [tool-agnostic-capability-discovery-design-concept.md](tool-agnostic-capability-discovery-design-concept.md)
+- **Design concept:** `tool-agnostic-capability-discovery-design-concept.md`
 - **Roadmap MOC:** [tool-agnostic-capability-discovery-roadmap-MOC.md](tool-agnostic-capability-discovery-roadmap-MOC.md)
 - **TACD-001 spike report:** [../research/tool-agnostic-capability-discovery-spike.md](../research/tool-agnostic-capability-discovery-spike.md)
 - **TACD-001 archive report:** [../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md)

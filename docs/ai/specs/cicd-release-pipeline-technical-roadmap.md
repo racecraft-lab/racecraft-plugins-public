@@ -78,10 +78,10 @@ SPEC-001 (Repository Foundation)
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| SPEC-001 | Repository Foundation | ✅ Complete | [.process/SPEC-001-workflow.md](.process/SPEC-001-workflow.md) | PR #1 merged |
-| SPEC-002 | PR Checks Workflow | ✅ Complete | [SPEC-002-workflow.md](SPEC-002-workflow.md) | PR #2 merged |
-| SPEC-003 | Release Automation | ✅ Complete | [SPEC-003-workflow.md](SPEC-003-workflow.md) | PR #3 merged |
-| SPEC-004 | Integration & Verification | ✅ Complete | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Complete; SPEC-005 unblocked |
+| SPEC-001 | Repository Foundation | ✅ Complete | `.process/SPEC-001-workflow.md` | PR #1 merged |
+| SPEC-002 | PR Checks Workflow | ✅ Complete | `SPEC-002-workflow.md` | PR #2 merged |
+| SPEC-003 | Release Automation | ✅ Complete | `SPEC-003-workflow.md` | PR #3 merged |
+| SPEC-004 | Integration & Verification | ✅ Complete | `SPEC-004-workflow.md` | Complete; SPEC-005 unblocked |
 | SPEC-005 | Skill Trigger Quality | ✅ Complete | — | PRs #89, #91 merged 2026-05-26 |
 | SPEC-006 | Clean Platform Plugin Payloads | ✅ Complete | — | PR #124 merged; release 2.8.1 verified |
 
