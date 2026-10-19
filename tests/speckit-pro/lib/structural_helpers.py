@@ -4,9 +4,21 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import tomllib
 from collections.abc import Iterator
 from pathlib import Path
+
+
+
+def tracked_files(repo_root: Path) -> list[str]:
+    """Every path in the git index; raises when git cannot answer."""
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "ls-files", "-z"],
+        capture_output=True,
+        check=True,
+    )
+    return [name for name in proc.stdout.decode("utf-8").split("\0") if name]
 
 
 # Keywords whose value is itself a schema, a list of schemas, or a mapping of

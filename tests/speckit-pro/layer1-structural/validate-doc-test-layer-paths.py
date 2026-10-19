@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -15,6 +14,7 @@ LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
+from structural_helpers import tracked_files
 from test_result import run_counted
 
 CITED_PATH = re.compile(r"tests/speckit-pro/layer\d+-")
@@ -24,16 +24,6 @@ CITATION_TOKEN = re.compile(
     r"|(?P<bare>tests/speckit-pro/layer\d+-[^\s`]+)",
     re.DOTALL,
 )
-
-
-def tracked_files(repo_root: Path) -> list[str]:
-    """Every path in the git index; raises when git cannot answer."""
-    proc = subprocess.run(
-        ["git", "-C", str(repo_root), "ls-files", "-z"],
-        capture_output=True,
-        check=True,
-    )
-    return [name for name in proc.stdout.decode("utf-8").split("\0") if name]
 
 
 def is_cited_doc(path: str) -> bool:
