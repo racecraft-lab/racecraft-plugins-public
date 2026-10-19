@@ -87,6 +87,13 @@ class PinnedRevisionTest(DriftFixture):
         self.assertEqual(pinned["manifest_digest"], self.approved["manifest_digest"])
         self.assertEqual(sorted(pinned["tasks"]), sorted(DEPENDS))
 
+    def test_an_approved_run_pins_even_when_the_workflow_shows_planning_open(self):
+        workflow = self.feature / "workflow.md"
+        workflow.write_text(workflow.read_text().replace("| Confidence Gate | G6.5 | ✅ Complete |",
+                                                         "| Confidence Gate | G6.5 | 🔄 In Progress |"))
+        self.assertContinues(self.dispatch("alpha"))
+        self.assertEqual(self.ledger()["planning_binding"]["manifest_digest"], self.approved["manifest_digest"])
+
     def test_a_task_dispatch_without_a_valid_approval_is_refused_by_name(self):
         for path in self.feature.glob("plan-approvals/*.json"):
             path.unlink()
