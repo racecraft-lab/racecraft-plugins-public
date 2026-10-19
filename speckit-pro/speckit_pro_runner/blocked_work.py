@@ -72,7 +72,6 @@ def block_exhausted_check(record: dict[str, Any], block: Block) -> list[str]:
     """Record the block and return the entry IDs it created. A blocked unit stays blocked; a repeat adds cause and root links."""
     record["causes"].setdefault(block.check, {**block.cause, "retained_work": block.retained_work,
                                             "unblock": block.unblock})
-    entries = record["entries"]
     if block.gate is not None:
         roots = {entry_id("gate", block.gate): _entry(block, "gate", block.gate)}
     else:
@@ -80,14 +79,20 @@ def block_exhausted_check(record: dict[str, Any], block: Block) -> list[str]:
     skipped = {entry_id("task", task): _entry(block, "task", task, reason="dependency_blocked", attempted=False,
                                               roots=sorted(roots), verification="not_run")
                for task in dependents(block.depends_on, block.owners)}
+    return merge_entries(record, block.check, {**roots, **skipped})
+
+
+def merge_entries(record: dict[str, Any], cause: str, blocked: dict[str, dict[str, Any]]) -> list[str]:
+    """Add each new entry, or link an existing one to the cause and roots; return the IDs added."""
+    entries = record["entries"]
     created = []
-    for key, entry in {**roots, **skipped}.items():
+    for key, entry in blocked.items():
         if key not in entries:
             entries[key] = entry
             created.append(key)
         else:
             current = entries[key]
-            current["causes"] = sorted({*current["causes"], block.check})
+            current["causes"] = sorted({*current["causes"], cause})
             current["roots"] = sorted({*current["roots"], *entry["roots"]})
             if not current["attempted"] and entry["attempted"]:
                 current.update({field: entry[field] for field in
