@@ -95,7 +95,7 @@
         "value": "speckit_pro_runner/blocked_work.py",
         "display": "speckit_pro_runner/blocked_work.py"
       },
-      "sha256": "2aa0a1e4139177ce21ad048fb0cac170ac4989da62375f3f251beb2a41901454"
+      "sha256": "07ac47e9ca514cceb240d789283a790f233a587d5c33bc623a42b79047a0ef0e"
     },
     {
       "path": {
@@ -167,7 +167,7 @@
         "value": "speckit_pro_runner/contracts/execution-control.schema.json",
         "display": "speckit_pro_runner/contracts/execution-control.schema.json"
       },
-      "sha256": "cbf623817aca6644b4a81c39a001382761d086a5a625d6fc6bc14e9af954b87d"
+      "sha256": "d07cd5a3d0612f7b27b6a2500807005f9071653c4f811390214cdd28c6acbb97"
     },
     {
       "path": {
@@ -255,7 +255,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "fd750257315a0fa9086139e7f002160def2e0a4d317924e1f967c1b452ff7ca9"
+      "sha256": "4e162781c4f55d5a0f104813b837245cd95f0cbed196f482dfe56e01a6d148de"
     },
     {
       "path": {
@@ -623,7 +623,7 @@
         "value": "speckit_pro_runner/helpers/execution_requests.py",
         "display": "speckit_pro_runner/helpers/execution_requests.py"
       },
-      "sha256": "ed520d4c0b4a6f24e526ccbab6472f5e0243cd4edddb1fec906bab2f2f12072d"
+      "sha256": "57f1268be339e0d2a46296fa3a86dbf33776c4e9e97a0a9bef68f117a1f512c1"
     },
     {
       "path": {
@@ -751,7 +751,7 @@
         "value": "speckit_pro_runner/helpers/planning_approval.py",
         "display": "speckit_pro_runner/helpers/planning_approval.py"
       },
-      "sha256": "cb480a75af89515c4d9151b6079e9fba2b924500825d450bf003cc0599380d0e"
+      "sha256": "3109b5e1bf34336f073341fabb1a353f5e2ef2c0c828b6043be7ca7978fb9f07"
     },
     {
       "path": {
@@ -839,7 +839,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "2e7456c4e3c1b98dbea9048143a220c63a7d6f2ef95faf6f0e3c695a4dcd911e"
+      "sha256": "0dc276240a1c2bf57122c2f7e77112628ec627a7b4ba02517d16c68235ba8ed2"
     },
     {
       "path": {
@@ -1111,7 +1111,7 @@
         "value": "speckit_pro_runner/task_execution.py",
         "display": "speckit_pro_runner/task_execution.py"
       },
-      "sha256": "b9cb149db43b005fe44babe2b276b2098d652de31b74ea05ef4f7092bd2080f2"
+      "sha256": "283174800f76c66275fb906235167314cb19240836f0117ec085e8178f48168a"
     },
     {
       "path": {

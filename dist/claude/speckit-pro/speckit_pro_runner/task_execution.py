@@ -15,6 +15,7 @@ import unicodedata
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from .canonical_json import canonical_bytes
 from .strict_input import SelectionError, unique_object
 
 
@@ -33,6 +34,29 @@ def fingerprints(spec: str, plan: str, tasks: str) -> dict[str, str]:
     return {name: hashlib.sha256(text.encode("utf-8")).hexdigest() for name, text in (
         ("spec_sha256", spec), ("plan_sha256", plan), ("tasks_sha256", definitions)
     )}
+
+
+TASK_LINE = re.compile(r"(?m)^\s*-\s+\[[ xX]\]\s+(T[0-9]{3,})\b.*$")
+
+
+def task_digests(tasks: str, sidecar: Any) -> dict[str, Any]:
+    """Digest each task's line with its sidecar entry, and separately the layout: the rest, task lines as bare IDs.
+
+    An edit confined to some task lines or entries leaves the layout digest unchanged, so it names exactly those tasks.
+    """
+    definitions = task_definitions(tasks)
+    entries = sidecar.get("tasks") if isinstance(sidecar, dict) else None
+    lines = {match.group(1): match.group(0) for match in TASK_LINE.finditer(definitions)}
+    if not isinstance(entries, dict) or set(entries) != set(lines) or not all(
+            isinstance(entry, dict) and isinstance(entry.get("tdd_unit"), str) for entry in entries.values()):
+        raise TaskExecutionError("task dispatch metadata must cover exactly the tasks.md task IDs")
+    rest = {key: value for key, value in sidecar.items() if key not in {"tasks", "fingerprints"}}
+    def digest(value: Any) -> str:
+        return hashlib.sha256(canonical_bytes(value)).hexdigest()
+    return {"layout": digest([TASK_LINE.sub(lambda match: match.group(1), definitions), rest]), "tasks": {
+        task_id: {"digest": digest([lines[task_id], entry]), "tdd_unit": entry["tdd_unit"],
+                  "depends_on": string_list(entry.get("depends_on"), f"{task_id}.depends_on")}
+        for task_id, entry in entries.items()}}
 
 
 def owned_path(value: Any, root: Path) -> str:
