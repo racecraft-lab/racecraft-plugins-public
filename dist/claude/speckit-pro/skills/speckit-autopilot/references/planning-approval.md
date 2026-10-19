@@ -87,5 +87,10 @@ backlinks to include the new record. Commit the refreshed map with the record.
 `verify` rebuilds the manifest and evidence bindings and refuses a missing,
 changed, withdrawn, superseded or canary-issued record. Assurance is `recorded`:
 the record does not defend against an agent with the operator's file access.
+`apply` and `verify` also return `data.implement_prompt`: `prompt`, the copyable text that
+invokes `speckit-autopilot` with `--stage implement` for this workflow, revision and record,
+plus `sends=false` and `starts_work=false`. It is text only. Approval never starts implement;
+the human pastes the prompt into a session, and the implement entry check runs then.
+`dry_run` returns no prompt. A missing or invalid record returns none.
 This helper supplies no protected human-presence proof, security consent or
-implementation dispatch. Review orchestration and admission are separate work.
+implementation dispatch. The `speckit-plan-review` skill drives the interview that ends in `record`.

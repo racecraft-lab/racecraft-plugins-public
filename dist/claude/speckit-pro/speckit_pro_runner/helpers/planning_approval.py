@@ -622,6 +622,19 @@ def verified_record(root: Path, feature: str, path: str, binding: dict[str, Any]
     return record
 
 
+def implement_prompt(workflow: str, record_path: str, manifest_digest: str) -> dict[str, Any]:
+    """The copyable text that invokes implement for one approved revision; it sends nothing and starts no work."""
+    prompt = "\n".join((
+        "Run the speckit-autopilot skill with these arguments to implement the approved plan.",
+        f"Arguments: {workflow} --stage implement",
+        f"Approved revision: {manifest_digest}",
+        f"Approval record: {record_path}",
+        "Implement starts only while the planning inputs still match that revision; if they changed, stop and return to plan review.",
+        "The approval grants no security consent; the run asks for any action consent it needs.",
+    ))
+    return {"prompt": prompt, "sends": False, "starts_work": False}
+
+
 def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     action = inputs.get("action")
     required = {"feature_dir", "workflow_file", "action"} | ({"approval"} if action == "record" else set())
@@ -645,7 +658,10 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
             write_approval(root, target, record, snapshot, map_state)
     else:
         raise ValueError("use manifest/verify in read_only, or record in dry_run/apply")
-    return {"record": record, "record_path": path, "writes_state": mode == "apply"}
+    reply = {"record": record, "record_path": path, "writes_state": mode == "apply"}
+    if action == "verify" or mode == "apply":
+        reply["implement_prompt"] = implement_prompt(owned_path(fields["workflow_file"], root), path, binding["manifest_digest"])
+    return reply
 
 
 run_planning_approval_helper = partial(

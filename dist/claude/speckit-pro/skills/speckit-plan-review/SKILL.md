@@ -1,6 +1,6 @@
 ---
 name: speckit-plan-review
-description: "Use only when the user explicitly asks to review a finished SpecKit plan with you before implementation: walk through the decisions list, every blocked planning gate, every low-confidence finding and the user's own change requests, one at a time, then build one copyable prompt that asks the planning agent for a repair. Triggers on: plan review, review the plan, review the planning findings, walk me through the plan, build the repair prompt, withdraw an instruction. Sends nothing and starts no planning or implementation. Do NOT use to run planning or implement (use speckit-autopilot), to scaffold a spec (use speckit-scaffold-spec), or to read project status (use speckit-status)."
+description: "Use only when the user explicitly asks to review a finished SpecKit plan with you before implementation: walk through the decisions list, every blocked planning gate, every low-confidence finding and the user's own change requests, one at a time, then build one copyable prompt that asks the planning agent for a repair, or, once every finding is fixed and checked, record your approval of the final revision and prepare a separate implement prompt. Triggers on: plan review, review the plan, review the planning findings, walk me through the plan, build the repair prompt, withdraw an instruction, approve the plan, prepare the implement prompt. Sends nothing and starts no planning or implementation. Do NOT use to run planning or implement (use speckit-autopilot), to scaffold a spec (use speckit-scaffold-spec), or to read project status (use speckit-status)."
 argument-hint: "[feature directory or SPEC-ID]"
 user-invocable: true
 disable-model-invocation: true
@@ -14,10 +14,10 @@ An interview between planning and implement. The user decides what to fix. You
 guide the interview and call runner helpers. The runner owns every rule about
 revisions and findings.
 
-This skill builds a repair prompt for the user to copy. It sends nothing and
-starts no planning, repair or implementation. It records no approval. Its one
-write is the user's active requests, which the runner records in the feature's
-`planning-findings.json` so a later approval can check them.
+This skill builds a repair prompt, or an implement prompt, for the user to copy. It sends nothing and
+starts no planning, repair or implementation. It records an approval only after the user explicitly
+approves the final revision with every finding fixed and checked (step 5). Its writes are the user's
+active requests, which the runner records in the feature's `planning-findings.json`, and that one approval.
 
 ## Capability discovery & grounding
 
@@ -75,7 +75,7 @@ choice, an acceptance of risk or silence closes nothing. Every finding needs a
 request.
 
 After those answers, if there are no findings or requests, say that no repair
-prompt is needed and stop. This records no approval.
+prompt is needed and go to step 5 for the final approval.
 
 ### 3. Withdraw an instruction
 
@@ -104,7 +104,34 @@ On success, show `data.prompt` in a fenced text block and tell the user:
 - To change a request later, run this skill again with the full request list. The runner keeps
   every recorded request unless that list withdraws it, and only a custom request can be withdrawn.
 
-### 5. Stop
+### 5. Approve the final revision
 
-Do not run the repair. Do not start planning or implementation. Do not tell the user
-the plan is approved: this skill records no approval, and a revised plan needs a new review.
+Reach this step when the planning agent has returned a repaired revision, or when the plan had no findings
+and the interview in step 2 asked for no repair. Step 1 captured that revision's `manifest_digest`.
+
+1. Put each finding side by side: the request the user made, the correction that came back, and its
+   planning check result with the evidence reference. Use `planning-findings.json` for the ids and requests.
+   The correction and the passing check for every finding must exist for this exact revision.
+2. If any finding lacks a correction or a passing check, name it and stop. Offer a new repair prompt
+   (step 4). Do not ask for approval. Accepting a risk, a chosen remedy and silence close no finding.
+3. Otherwise ask once: does the user approve this whole final revision, named by its `manifest_digest`?
+   One explicit yes covers the whole revision. Silence, a generic "looks good", elapsed time, your own
+   assessment and an earlier approval of another revision are not approval; ask again, or stop.
+4. On an explicit yes, build the `approval` object and its confirmation file as
+   [Recorded planning approval helper](../speckit-autopilot/references/planning-approval.md) describes,
+   in the order it gives. The confirmation holds `decision=approve`, the `manifest_digest`, the `approver`
+   the user named and the decision `time` with a timezone. Keep the user's words out of it.
+5. Call `helper_id=planning-approval operation=planning-approval`, `action=record`, with the `approval`
+   object, first with `mode=dry_run`, then with `mode=apply`. The runner refuses a missing, failed or
+   mismatched check, a missing or generic confirmation and a revision that moved. Read the message
+   and fix the named field with the user; a refusal writes nothing.
+6. On success, show `data.implement_prompt.prompt` in a fenced text block and tell the user:
+   - The approval is recorded, not protected. It grants no security consent.
+   - Copy the prompt into their current Claude Code or Codex session when they want to implement. Preparing
+     it sent nothing and started nothing.
+   - Any later change to the planning inputs needs a new review and approval.
+
+### 6. Stop
+
+Do not run the repair. Do not start planning or implementation. Tell the user the plan is approved only after
+the runner records the approval in step 5. A plan with an open finding or a changed revision is not approved.

@@ -136,6 +136,10 @@ _Avoid_: planning pause, implement preflight, artifact delivery
 The copyable text a plan review builds for the planning agent. It names the reviewed revision and carries every finding with each active requested remedy or custom instruction. A withdrawn custom instruction stays listed as withdrawn, never as active. The runner builds it with `plan-review-prompt`, which in `apply` mode also records each active request in `planning-findings.json`; building or copying it sends nothing and starts no planning, repair or implementation.
 _Avoid_: handoff message, approval request, launch command
 
+**Implement prompt**:
+The copyable text a plan approval prepares for the human to start implement in a separate invocation. It names the workflow, the approved revision and the approval record, and asks `speckit-autopilot` for `--stage implement`. The runner returns it from `planning-approval` on `record` in `apply` mode and on `verify`; preparing or copying it sends nothing and starts no work, and implement still checks the record at entry.
+_Avoid_: launch command, approval request, auto-start
+
 **Plan stage**:
 The part of an autopilot run that takes a SPEC from specify through analyze and ends when the review artifacts and the draft PR are ready. The other stages are implement and full.
 _Avoid_: planning run, planning phase
