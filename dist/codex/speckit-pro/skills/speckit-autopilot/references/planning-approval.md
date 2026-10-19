@@ -31,7 +31,12 @@ runs it for every implement entry.
   `finish-plan-stage` writes it: `{}` for a clean plan, and on a strict confidence
   shortfall one `confidence-<criterion>` ID per criterion below the threshold
   (`confidence-composite` when none is), each with an empty request array. It
-  keeps recorded entries. An empty array refuses `record` until the repair fills it.
+  keeps recorded entries. An empty array refuses `record` until plan review fills it:
+  `plan-review-prompt` in `apply` mode records each finding's active request
+  instructions in review order and adds a finding the file did not list. It never
+  drops a recorded request unless the review withdraws it, and it refuses two active
+  requests with the same instruction. A rerun replaces a withdrawn instruction with
+  its replacement.
 
 The runner inventories feature files, workflow, task dispatch metadata, project
 planning configuration and declared formal inputs. It normalizes task completion

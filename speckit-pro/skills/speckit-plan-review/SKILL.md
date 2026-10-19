@@ -25,7 +25,9 @@ guide the interview and call runner helpers. The runner owns every rule about
 revisions and findings.
 
 This skill builds a repair prompt for the user to copy. It sends nothing and
-starts no planning, repair or implementation. It records no approval.
+starts no planning, repair or implementation. It records no approval. Its one
+write is the user's active requests, which the runner records in the feature's
+`planning-findings.json` so a later approval can check them.
 
 ## Capability discovery & grounding
 
@@ -104,10 +106,13 @@ required, so ask for a replacement request.
 
 ### 4. Build the repair prompt
 
-Call `helper_id=plan-review-prompt operation=plan-review-prompt mode=read_only` with
+Call `helper_id=plan-review-prompt operation=plan-review-prompt mode=apply` with
 `feature_dir`, `workflow_file`, `reviewed_revision` (the `manifest_digest` captured in step 1),
 `findings` (`id`, `summary`), `requests` (all of them, in order,
 withdrawn ones included) and `withdrawals` (`request`, `finding`, `instruction`; an empty list when none).
+The runner builds the prompt and, in the same call, records each active request under its finding
+in `planning-findings.json`. A refusal writes nothing. `mode=dry_run` checks the same inputs and
+writes nothing.
 
 If the runner says the reviewed revision changed, the plan moved during the review:
 restart at step 1 with the new revision and repeat the interview. For any other refusal,
@@ -116,7 +121,8 @@ On success, show `data.prompt` in a fenced text block and tell the user:
 
 - Copy it into their current Claude Code or Codex session. Preparing it sent nothing.
 - The planning agent repairs the plan and returns a revised bundle for a new review.
-- To change a request later, run this skill again with the full request list.
+- To change a request later, run this skill again with the full request list. The runner keeps
+  every recorded request unless that list withdraws it, and only a custom request can be withdrawn.
 
 ### 5. Stop
 
