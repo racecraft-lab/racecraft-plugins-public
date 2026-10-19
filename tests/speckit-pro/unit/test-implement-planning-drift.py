@@ -9,6 +9,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "lib"))
 sys.path.insert(0, str(HERE.parents[2] / "speckit-pro"))
 
+from guide_text import GuidePhrases, assert_guides_document
 from script_loader import load_script
 from test_result import run_counted
 from speckit_pro_runner.helpers.read_only import json_schema_failures
@@ -157,7 +158,15 @@ class DriftBlockPersistenceTest(DriftFixture):
         self.assertNotIn("planning_binding", self.ledger())
 
 
+class DriftGuidanceTest(unittest.TestCase):
+    def test_both_hosts_skip_blocked_units_and_keep_independent_work_going(self):
+        assert_guides_document(self, GuidePhrases(("`planning_binding`", "`planning_drift`", "`blocked_for_uat`")),
+                               GuidePhrases(("Planning drift during implement", "`blocked_for_uat`: skip that batch",
+                                             "Ready for UAT with blocked work", "opens no changed task")))
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (PinnedRevisionTest, DriftBlockTest, DriftBlockPersistenceTest))
+                               for case in (PinnedRevisionTest, DriftBlockTest, DriftBlockPersistenceTest,
+                                            DriftGuidanceTest))
     raise SystemExit(run_counted(suite, label="test-implement-planning-drift"))
