@@ -439,7 +439,7 @@ def record_requests(root: Path, feature: str, active: dict[str, list[str]], reti
 
     Findings the inventory lists but the review did not name keep their entries. A dry run (`apply=False`) writes nothing.
     """
-    return update_inventory(root, feature, lambda inventory: requests_recorded(inventory, active, retired), apply)
+    return update_inventory(root, feature, partial(requests_recorded, active=active, retired=retired), apply)
 
 
 def checked_findings(root: Path, feature: str, findings: Any, revision: str) -> dict[str, Any]:
