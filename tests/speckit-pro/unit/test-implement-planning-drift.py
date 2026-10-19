@@ -27,6 +27,8 @@ SCHEMA = json.loads((HERE.parents[2] / "speckit-pro/speckit_pro_runner/contracts
 class DriftFixture(AdmissionFixture):
     """An approved four-task feature whose implement run has started; T002 and T003 depend on T001."""
 
+    OWNS = OWNS
+
     def setUp(self):
         super().setUp()
         self.write_tasks(TASKS)
@@ -39,7 +41,7 @@ class DriftFixture(AdmissionFixture):
         (self.feature / ".process").mkdir(exist_ok=True)
         sidecar = {"schema_version": "task-execution.v1",
                    "fingerprints": fingerprints("A feature", "A plan", text),
-                   "tasks": {task: {"capability_group": "stories", "depends_on": deps, "owns": OWNS.get(task, [f"src/{UNITS[task]}"]),
+                   "tasks": {task: {"capability_group": "stories", "depends_on": deps, "owns": self.OWNS.get(task, [f"src/{UNITS[task]}"]),
                                     "tdd_unit": UNITS[task]} for task, deps in DEPENDS.items()}}
         (self.feature / ".process/task-execution.json").write_text(json.dumps(sidecar))
 
@@ -132,7 +134,7 @@ class DriftBlockTest(DriftFixture):
 
     def test_an_added_task_blocks_all_remaining_work_and_is_never_dispatched(self):
         self.assertBlocksAllRemainingWork(lambda: self.write_tasks(TASKS + "- [ ] T005 Build part 5\n"))
-        self.assertRefused(self.dispatch("epsilon"), "tdd_units names a TDD unit the approved plan does not define")
+        self.assertRefused(self.dispatch("epsilon"), "names a TDD unit the approved plan does not define")
 
     def test_a_changed_heading_blocks_all_remaining_work(self):
         self.assertBlocksAllRemainingWork(lambda: self.write_tasks(TASKS.replace("Phase 3", "Phase 4")))
@@ -149,16 +151,40 @@ class DriftBlockTest(DriftFixture):
         self.assertContinues(self.dispatch("alpha"))
         self.assertNotIn("blocked_work", self.ledger())
 
+    def test_a_planning_file_owned_by_an_undispatched_task_is_drift(self):
+        self.assertContinues(self.dispatch("alpha"))
+        (self.feature / "quickstart.md").write_text("Run part 4\n")
+        self.assertBlocked(self.dispatch("delta"))
+
+    def test_a_unit_the_approved_plan_does_not_define_is_refused_in_any_request(self):
+        self.assertContinues(self.dispatch("alpha"))
+        reply = self.control("reserve", dispatch_id="fix", kind="corrective", failure_invariant="FR-001",
+                             spec_file="specs/demo/spec.md",
+                             review_remediation={"tdd_unit": "epsilon", "paths": ["src/epsilon"]})
+        self.assertRefused(reply, "names a TDD unit the approved plan does not define")
+
     def test_unscoped_work_waits_after_drift(self):
         self.assertContinues(self.dispatch("delta"))
         self.write_tasks(TASKS.replace("Build part 1", "Build part 1 twice"))
         self.assertContinues(self.dispatch("delta"))
         for action, inputs in (("reserve", {"kind": "implementation"}),
                                ("reserve", {"kind": "corrective", "failure_invariant": "FR-001"}),
+                               ("reserve", {"kind": "infrastructure"}),
                                ("reserve-retry-rung", {"host": "claude", "command_sha256": "a" * 64})):
             with self.subTest(action=action, kind=inputs.get("kind")):
                 self.assertBlocked(self.control(action, dispatch_id=f"unscoped-{action}", **inputs))
         self.assertContinues(self.control("reserve", dispatch_id="verify", kind="verification"))
+
+
+class FeatureOwnerDriftTest(DriftFixture):
+    """T004 owns the whole feature directory; that ownership never covers the plan's own inputs."""
+
+    OWNS = {"T004": ["src/delta", "specs/demo"]}
+
+    def test_owning_the_feature_directory_exempts_no_planning_file(self):
+        self.assertContinues(self.dispatch("delta"))
+        (self.feature / "data-model.md").write_text("A new entity\n")
+        self.assertBlocked(self.dispatch("delta"))
 
 
 class DriftBlockPersistenceTest(DriftFixture):
@@ -192,6 +218,6 @@ class DriftGuidanceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (PinnedRevisionTest, DriftBlockTest, DriftBlockPersistenceTest,
+                               for case in (PinnedRevisionTest, DriftBlockTest, FeatureOwnerDriftTest, DriftBlockPersistenceTest,
                                             DriftGuidanceTest))
     raise SystemExit(run_counted(suite, label="test-implement-planning-drift"))
