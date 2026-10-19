@@ -9,15 +9,18 @@ from typing import Any, NamedTuple
 
 from ..autopilot_state import mirror_execution_result
 from ..envelope import diagnostic, response
-from ..execution_control import execution_control
+from ..execution_control import PlanningBinding, execution_control
 from ..task_results import task_results
 from ..trusted_io import canonicalize_inputs, resolve_repo_root, validate_bounded_inputs
 from ..verification_records import execute_verification
 from .run_finalization import finalize_run
 
 
-def run_execution_helper(entry: Any, request: Any) -> dict[str, Any]:
-    """Existing runner envelope adapter; apply remains a host-authorized action."""
+def run_execution_helper(entry: Any, request: Any, planning: PlanningBinding | None = None) -> dict[str, Any]:
+    """Existing runner envelope adapter; apply remains a host-authorized action.
+
+    The registry passes `planning`, the planning-approval binding, because that helper imports this module.
+    """
     root = resolve_repo_root(request.inputs)
     if isinstance(root, dict):
         return response("input_error", request_id=request.request_id, diagnostics=[root])
@@ -27,7 +30,7 @@ def run_execution_helper(entry: Any, request: Any) -> dict[str, Any]:
     inputs = canonicalize_inputs(entry.helper_id, request.inputs, root)
     try:
         handlers: dict[str, Callable[[Path, dict[str, Any], str], dict[str, Any]]] = {
-            "execution-control": partial(execution_control, finalizer=finalize_run),
+            "execution-control": partial(execution_control, finalizer=finalize_run, planning=planning),
             "execute-verification": execute_verification, "task-results": task_results}
         result = handlers[entry.helper_id](root, inputs, request.mode)
     except (ValueError, OSError, TypeError) as exc:

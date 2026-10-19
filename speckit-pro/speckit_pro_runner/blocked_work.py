@@ -11,6 +11,8 @@ The record lives at `ledger["blocked_work"]`:
   every ladder attempt, retained work and the unblock note.
 - `entries["task:T003"]` or `entries["gate:G4"]` keeps one blocked unit. An exhausted unit
   is a root and can itself depend on another root. A dependent skip records no attempt of its own.
+- Planning drift during implement (ADR 0013) is a cause keyed by the changed manifest digest.
+  It blocks the remaining tasks it reaches, unattempted, against the revision the run pinned.
 
 The functions take plain dicts and know nothing of the ledger file.
 """
@@ -22,6 +24,11 @@ from typing import Any, NamedTuple
 BLOCK_EXHAUSTED_CHECK = "block-exhausted-check"
 ACCEPT_BLOCKED_GAP = "accept-blocked-gap"
 GAP_ACCEPTED = "gap_accepted"
+PLANNING_DRIFT = "planning_drift"
+REASONS = {"check_exhausted", "dependency_blocked", PLANNING_DRIFT}
+# The only planning files whose change can be confined to named tasks; any other change reaches every task.
+TASK_SCOPED_FILES = ("tasks.md", ".process/task-execution.json")
+DRIFT_UNBLOCK = "Review and approve the changed planning revision, then start a linked implement run (ADR 0013)"
 
 ENTRY_KEYS = {"kind", "unit", "reason", "causes", "roots", "attempted", "retained_work", "verification", "unblock",
               "plan_sha256", "blocked_at", "disposition"}
@@ -80,6 +87,44 @@ def block_exhausted_check(record: dict[str, Any], block: Block) -> list[str]:
                                               roots=sorted(roots), verification="not_run")
                for task in dependents(block.depends_on, block.owners)}
     return merge_entries(record, block.check, {**roots, **skipped})
+
+
+class Drift(NamedTuple):
+    """The planning revision an implement run pinned, the current one, and the TDD units the run already completed."""
+
+    pinned: dict[str, Any]
+    current: dict[str, Any]
+    feature: str
+    completed_units: set[str]
+    now: float
+
+
+def drifted_tasks(drift: Drift) -> tuple[list[str], list[str] | None]:
+    """The changed planning files and the tasks they change, or None when the change cannot be confined to tasks."""
+    pinned, current = drift.pinned, drift.current
+    changed = sorted(name for name in {*pinned["files"], *current["files"]}
+                     if pinned["files"].get(name) != current["files"].get(name))
+    if (not changed or not set(changed) <= {f"{drift.feature}/{name}" for name in TASK_SCOPED_FILES}
+            or pinned["layout"] != current["layout"] or set(pinned["tasks"]) != set(current["tasks"])):
+        return changed, None
+    named = sorted(task for task, entry in pinned["tasks"].items() if current["tasks"][task]["digest"] != entry["digest"])
+    return changed, named or None
+
+
+def block_planning_drift(record: dict[str, Any], drift: Drift) -> list[str]:
+    """Block the remaining tasks a planning change reaches: the changed tasks and their dependents, else every task."""
+    changed, named = drifted_tasks(drift)
+    tasks, approved, cause = drift.pinned["tasks"], drift.pinned["manifest_digest"], drift.current["manifest_digest"]
+    reached = set(tasks) if named is None else {*named, *dependents(
+        {task: entry["depends_on"] for task, entry in tasks.items()}, named)}
+    record["causes"].setdefault(cause, {"approved_manifest_digest": approved, "changed_files": changed,
+                                        "drifted_tasks": named, "recorded_at": drift.now, "retained_work": [],
+                                        "unblock": DRIFT_UNBLOCK})
+    return merge_entries(record, cause, {entry_id("task", task): {
+        "kind": "task", "unit": task, "tdd_unit": tasks[task]["tdd_unit"], "reason": PLANNING_DRIFT, "causes": [cause],
+        "roots": [], "attempted": False, "retained_work": [], "verification": "not_run", "unblock": DRIFT_UNBLOCK,
+        "plan_sha256": approved, "blocked_at": drift.now, "disposition": None}
+        for task in sorted(reached) if tasks[task]["tdd_unit"] not in drift.completed_units})
 
 
 def merge_entries(record: dict[str, Any], cause: str, blocked: dict[str, dict[str, Any]]) -> list[str]:
@@ -145,8 +190,8 @@ def validate_blocked_work(ledger: dict[str, Any]) -> None:
                 or key != entry_id(str(entry["kind"]), str(entry["unit"])) or entry["kind"] not in {"task", "gate"}
                 or not isinstance(entry["causes"], list) or not entry["causes"]
                 or any(cause not in record["causes"] for cause in entry["causes"])
-                or entry["reason"] not in {"check_exhausted", "dependency_blocked"}
-                or (entry["reason"] == "dependency_blocked") != (not entry["attempted"])
+                or entry["reason"] not in REASONS
+                or entry["attempted"] != (entry["reason"] == "check_exhausted")
                 or (entry["reason"] == "dependency_blocked" and not entry["roots"])
                 or ("tdd_unit" in entry) != (entry["kind"] == "task")
                 or any(root not in record["entries"] or not record["entries"][root].get("attempted") or root == key

@@ -20,7 +20,7 @@ from ..formal.primitives import CATALOG_PATH
 from ..github_remote import remote_urls
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import next_fence, require_fields, require_text, unique_object
-from ..task_execution import owned_path, path_key, task_definitions
+from ..task_execution import owned_path, path_key, task_definitions, task_digests
 from ..trusted_io import trusted_tree_snapshot
 from ..workflow_stage import AUTOPILOT_PLANNING_PREDICATE_PHASES, AUTOPILOT_STAGES, AUTOPILOT_STATUS_VALUES, normalize_status
 from ..sweep_export import SWEEP_LOG_HEADING, sweep_table_cells
@@ -564,6 +564,24 @@ def admit_implement(root: Path, feature_dir: Any, workflow_file: str) -> dict[st
         raise refused("feature_dir", "the request must name the feature directory to admit")
     feature = owned_path(feature_dir, root)
     return admission(root, feature, planning_manifest(root, feature, workflow_file))
+
+
+def implement_binding(root: Path, feature_dir: str, workflow_file: str, admit: bool) -> dict[str, Any]:
+    """The planning revision an implement run pins once admitted, or the current one it is compared against.
+
+    The pinned revision needs readable task metadata; a current one without it has no layout, so it names no task.
+    """
+    feature = owned_path(feature_dir, root)
+    binding = planning_manifest(root, feature, workflow_file)
+    pinned = {"record_path": admission(root, feature, binding)["record_path"]} if admit else {}
+    try:
+        sidecar = json.loads(captured(root, feature + "/.process/task-execution.json"), object_pairs_hook=unique_object)
+        tasks = task_digests(captured(root, feature + "/tasks.md").decode("utf-8"), sidecar)
+    except ValueError:
+        if admit:
+            raise
+        tasks = {"layout": None, "tasks": {}}
+    return {"manifest_digest": binding["manifest_digest"], "files": binding["manifest"]["files"], **tasks, **pinned}
 
 
 def verified_record(root: Path, feature: str, path: str, binding: dict[str, Any]) -> dict[str, Any]:
