@@ -121,7 +121,7 @@ A change to the planning manifest after an implement run pinned its approved rev
 _Avoid_: re-plan, stale approval
 
 **Planning finding**:
-A problem planning reports for plan review to close: a blocked planning gate, a strict low-confidence result, or a reviewer's own request. The feature's `planning-findings.json` lists each finding id with its requests. Planning adds a strict low-confidence finding with no request yet, and approval stays refused until each finding has a request, a correction and a passing check.
+A problem planning reports for plan review to close: a blocked planning gate, a strict low-confidence result, or a reviewer's own request. The feature's `planning-findings.json` lists each finding id with its requests. Planning adds a strict low-confidence finding with no request yet; plan review records each active request there, and approval stays refused until each finding has a request, a correction and a passing check.
 _Avoid_: strict stop, accepted risk, warning
 
 **Plan approval record**:
@@ -133,7 +133,7 @@ The human interview between planning and implementation that examines the propos
 _Avoid_: planning pause, implement preflight, artifact delivery
 
 **Repair prompt**:
-The copyable text a plan review builds for the planning agent. It names the reviewed revision and carries every finding with each active requested remedy or custom instruction. A withdrawn custom instruction stays listed as withdrawn, never as active. The runner builds it with `plan-review-prompt`; building or copying it sends nothing and starts no planning, repair or implementation.
+The copyable text a plan review builds for the planning agent. It names the reviewed revision and carries every finding with each active requested remedy or custom instruction. A withdrawn custom instruction stays listed as withdrawn, never as active. The runner builds it with `plan-review-prompt`, which in `apply` mode also records each active request in `planning-findings.json`; building or copying it sends nothing and starts no planning, repair or implementation.
 _Avoid_: handoff message, approval request, launch command
 
 **Plan stage**:

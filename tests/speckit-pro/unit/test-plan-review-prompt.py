@@ -8,8 +8,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from planning_helper_support import PlanningHelperFixture
+from script_loader import load_script
 from test_result import run_counted
 
+HERE = Path(__file__).resolve().parent
+PlanningApprovalFixture = load_script("planning_approval_tests", HERE / "test-planning-approval.py").PlanningApprovalFixture
 REPO = Path(__file__).resolve().parents[3]
 PAYLOADS = {"claude": REPO / "dist/claude/speckit-pro", "codex": REPO / "dist/codex/speckit-pro"}
 
@@ -24,7 +27,7 @@ REQUESTS = [
 
 
 class PlanReviewPromptFixture(PlanningHelperFixture):
-    def call(self, drop=(), **extra):
+    def call(self, drop=(), mode="read_only", **extra):
         manifest = self.run_helper("planning-approval", self.helper_inputs(action="manifest"))
         inputs = self.helper_inputs(
             findings=copy.deepcopy(FINDINGS),
@@ -35,7 +38,7 @@ class PlanReviewPromptFixture(PlanningHelperFixture):
         inputs.update(extra)
         for key in drop:
             inputs.pop(key)
-        return self.run_helper("plan-review-prompt", inputs)
+        return self.run_helper("plan-review-prompt", inputs, mode=mode)
 
 
 class PlanReviewPromptRenderingTest(PlanReviewPromptFixture):
@@ -124,6 +127,124 @@ class PlanReviewPromptRevisionTest(PlanReviewPromptFixture):
         for value in ("", "  ", None, 7, []):
             with self.subTest(value=value):
                 self.assertRefused(self.call(reviewed_revision=value), "reviewed_revision must be a non-empty string")
+
+
+class PlanReviewRequestRecordTest(PlanReviewPromptFixture):
+    """Applying a review records each active request in the feature's findings inventory."""
+
+    def seed(self, text):
+        (self.feature / "planning-findings.json").write_text(text)
+
+    def inventory_bytes(self):
+        path = self.feature / "planning-findings.json"
+        return path.read_bytes() if path.exists() else None
+
+    def inventory(self):
+        return json.loads(self.inventory_bytes())
+
+    def test_apply_records_each_active_instruction_under_its_finding(self):
+        self.seed(json.dumps({"F1": [], "F2": []}))
+        reply = self.call(mode="apply")
+        self.assertEqual(reply["status"], "ok", reply)
+        expected = {"F1": [REQUESTS[0]["instruction"]], "F2": [REQUESTS[1]["instruction"]]}
+        self.assertEqual(self.inventory(), expected)
+        self.assertEqual(reply["data"]["inventory"], expected)
+        self.assertTrue(reply["data"]["writes_state"])
+        self.assertFalse(reply["data"]["sends"] or reply["data"]["starts_work"])
+        self.assertIn("Reviewed revision: ", reply["data"]["prompt"])
+
+    def test_read_only_and_dry_run_write_nothing(self):
+        self.seed(json.dumps({"F1": [], "F2": []}))
+        before = self.inventory_bytes()
+        self.assertNotIn("inventory", self.call()["data"])
+        planned = self.call(mode="dry_run")
+        self.assertEqual(planned["status"], "ok", planned)
+        self.assertFalse(planned["data"]["writes_state"])
+        self.assertEqual(planned["data"]["inventory"]["F2"], [REQUESTS[1]["instruction"]])
+        self.assertEqual(self.inventory_bytes(), before)
+
+    def test_apply_creates_the_inventory_when_the_plan_stage_left_none(self):
+        self.assertIsNone(self.inventory_bytes())
+        self.assertEqual(self.call(mode="apply")["status"], "ok")
+        self.assertEqual(sorted(self.inventory()), ["F1", "F2"])
+
+    def test_apply_keeps_findings_the_review_did_not_name(self):
+        self.seed(json.dumps({"confidence-composite": [], "F1": []}))
+        self.assertEqual(self.call(mode="apply")["status"], "ok")
+        self.assertEqual(self.inventory(), {"confidence-composite": [], "F1": [REQUESTS[0]["instruction"]],
+                                            "F2": [REQUESTS[1]["instruction"]]})
+
+    def test_a_rerun_replaces_a_withdrawn_instruction_with_its_replacement(self):
+        self.seed(json.dumps({"F1": [], "F2": []}))
+        self.assertEqual(self.call(mode="apply")["status"], "ok")
+        replacement = {"id": "R3", "finding": "F2", "kind": "alternative", "instruction": "Generate one immutable report."}
+        withdrawal = {"request": "R2", "finding": "F2", "instruction": REQUESTS[1]["instruction"]}
+        reply = self.call(mode="apply", requests=[*REQUESTS, replacement], withdrawals=[withdrawal])
+        self.assertEqual(reply["status"], "ok", reply)
+        self.assertEqual(self.inventory()["F2"], [replacement["instruction"]])
+        self.assertEqual(self.inventory()["F1"], [REQUESTS[0]["instruction"]])
+
+    def test_a_rerun_cannot_drop_a_recorded_request_that_it_does_not_withdraw(self):
+        self.seed(json.dumps({"F1": [], "F2": []}))
+        self.assertEqual(self.call(mode="apply")["status"], "ok")
+        before = self.inventory_bytes()
+        swapped = [{**REQUESTS[0], "id": "R3", "kind": "alternative", "instruction": "Replace history with a fresh run."}, REQUESTS[1]]
+        self.assertRefused(self.call(mode="apply", requests=swapped), "F1")
+        self.assertEqual(self.inventory_bytes(), before)
+
+    def test_two_identical_instructions_for_one_finding_are_refused(self):
+        twin = {**REQUESTS[0], "id": "R3", "kind": "custom"}
+        self.assertRefused(self.call(mode="apply", requests=[*REQUESTS, twin]), "F1")
+        self.assertIsNone(self.inventory_bytes())
+
+    def test_a_changed_revision_or_an_unanswered_finding_writes_nothing(self):
+        before = self.call()["data"]["revision"]
+        (self.feature / "plan.md").write_text("A changed plan")
+        self.assertRefused(self.call(mode="apply", reviewed_revision=before), "reviewed revision changed")
+        self.assertRefused(self.call(mode="apply", requests=REQUESTS[:1]), "F2")
+        self.assertIsNone(self.inventory_bytes())
+
+    def test_a_malformed_inventory_is_refused_and_left_alone(self):
+        for text in ("[]", '{"F1": "Use bounded retries"}', '{"F1": [], "F1": []}', "not json"):
+            with self.subTest(text=text):
+                self.seed(text)
+                self.assertEqual(self.call(mode="apply")["status"], "input_error")
+                self.assertEqual(self.inventory_bytes(), text.encode())
+
+    def test_other_modes_are_refused(self):
+        self.assertEqual(self.call(mode="bogus")["status"], "input_error")
+        self.assertIsNone(self.inventory_bytes())
+
+
+class PlanReviewApprovalTest(PlanningApprovalFixture):
+    """A plan whose findings were reviewed, corrected and checked is approved on one host and admitted on the other."""
+
+    def review(self):
+        reply = self.helper("plan-review-prompt", "apply", reviewed_revision=self.call()["data"]["manifest_digest"],
+                            findings=[{"id": "F1", "summary": "Retries are unbounded."}],
+                            requests=[{"id": "R1", "finding": "F1", "kind": "custom", "instruction": "Use bounded retries"}],
+                            withdrawals=[])
+        self.assertEqual(reply["status"], "ok", reply)
+
+    def approve_and_admit(self, writer, reader):
+        (self.feature / "planning-findings.json").write_text(json.dumps({"F1": []}))
+        self.runner_root = PAYLOADS[writer]
+        approval = self.approval(write_inventory=False)
+        self.assertRefused(self.call("record", "dry_run", approval=approval), "F1")
+        self.review()
+        approval = self.approval(write_inventory=False)
+        recorded = self.call("record", "apply", approval=approval)
+        self.assertEqual(recorded["status"], "ok", recorded)
+        self.runner_root = PAYLOADS[reader]
+        admitted = self.call("admit")
+        self.assertEqual(admitted["status"], "ok", admitted)
+        self.assertEqual(admitted["data"]["manifest_digest"], recorded["data"]["record"]["manifest_digest"])
+
+    def test_an_approval_made_on_claude_admits_implement_on_codex(self):
+        self.approve_and_admit("claude", "codex")
+
+    def test_an_approval_made_on_codex_admits_implement_on_claude(self):
+        self.approve_and_admit("codex", "claude")
 
 
 class PlanReviewPromptSummaryDisplayTest(PlanReviewPromptFixture):
@@ -266,5 +387,5 @@ class HostPayloadTest(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (*_plan_review_test_cases(), HostPayloadTest))
+                               for case in (*_plan_review_test_cases(), PlanReviewApprovalTest, HostPayloadTest))
     raise SystemExit(run_counted(suite, label="test-plan-review-prompt"))

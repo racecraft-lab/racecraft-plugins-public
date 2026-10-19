@@ -417,6 +417,30 @@ def add_findings(root: Path, feature: str, identities: list[str]) -> None:
     update_inventory(root, feature, lambda inventory: {**inventory, **{identity: [] for identity in identities if identity not in inventory}})
 
 
+def record_requests(root: Path, feature: str, active: dict[str, list[str]], retired: dict[str, list[str]],
+                    apply: bool = True) -> dict[str, list[str]]:
+    """Record each named finding's active request instructions; a recorded request leaves only by withdrawal.
+
+    `active` maps a finding to its instructions in review order, `retired` to its withdrawn ones. Findings the
+    inventory lists but the review did not name keep their entries. A dry run (`apply=False`) writes nothing.
+    """
+    def change(inventory: dict[str, Any]) -> dict[str, Any]:
+        updated = dict(inventory)
+        for identity, instructions in active.items():
+            if len(set(instructions)) != len(instructions):
+                raise ValueError(f"{identity}: two active requests carry the same instruction")
+            recorded = inventory.get(identity, [])
+            if not isinstance(recorded, list):
+                raise ValueError(f"{FINDINGS_FILE}: {identity} must list its requests")
+            lost = [request for request in recorded if request not in instructions and request not in retired.get(identity, [])]
+            if lost:
+                raise ValueError(f"{identity}: the recorded request {lost[0]!r} is missing from the full request list and was not withdrawn")
+            updated[identity] = list(instructions)
+        return updated
+
+    return update_inventory(root, feature, change, apply)
+
+
 def checked_findings(root: Path, feature: str, findings: Any, revision: str) -> dict[str, Any]:
     inventory = json.loads(captured(root, f"{feature}/{FINDINGS_FILE}"), object_pairs_hook=unique_object)
     if not isinstance(inventory, dict) or not isinstance(findings, dict) or set(inventory) != set(findings):
