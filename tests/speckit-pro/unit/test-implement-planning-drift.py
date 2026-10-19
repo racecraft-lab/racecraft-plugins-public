@@ -90,7 +90,8 @@ class PinnedRevisionTest(DriftFixture):
         (self.feature / ".process/task-results").mkdir(exist_ok=True)
         (self.feature / ".process/task-results/run.json").write_text("{}")
         (self.feature / "workflow.md").write_text((self.feature / "workflow.md").read_text().replace(
-            "| Implement | `/speckit-implement` | ⏳ Pending |", "| Implement | `/speckit-implement` | 🔄 In Progress |"))
+            "| Implement | `/speckit-implement` | ⏳ Pending |", "| Implement | `/speckit-implement` | 🔄 In Progress |").replace(
+            "| **Stage** | plan |", "| **Stage** | implement |"))
         (self.root / "src").mkdir()
         (self.root / "src/alpha.py").write_text("PART = 1\n")
         self.assertContinues(self.dispatch("beta"))
