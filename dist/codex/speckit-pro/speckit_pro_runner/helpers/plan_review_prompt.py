@@ -13,8 +13,8 @@ from string import punctuation
 from typing import Any
 
 from ..strict_input import SelectionError, require_fields, require_text
-from .execution_requests import Refusal, run_contained_helper
 from ..task_execution import owned_path
+from .execution_requests import Refusal, run_contained_helper
 from .planning_approval import planning_manifest, requests_recorded, update_inventory
 
 KINDS = ("recommended", "alternative", "custom")
@@ -128,10 +128,12 @@ def reviewed_selection(root: Path, inputs: dict[str, Any]) -> Selection:
     findings = _findings(fields["findings"])
     requests = _requests(fields["requests"], findings)
     withdrawn = _withdrawn(fields["withdrawals"], requests)
-    answered = {item["finding"] for identity, item in requests.items() if identity not in withdrawn}
+    active = [item for identity, item in requests.items() if identity not in withdrawn]
     for identity in findings:
-        if identity not in answered:
+        if not any(item["finding"] == identity for item in active):
             raise SelectionError(f"{identity} needs an active request; a withdrawn instruction needs a replacement")
+    if len({(item["finding"], item["instruction"]) for item in active}) != len(active):
+        raise SelectionError("two active requests for one finding carry the same instruction")
     revision = planning_manifest(root, fields["feature_dir"], fields["workflow_file"])["manifest_digest"]
     if require_text(fields["reviewed_revision"], "reviewed_revision") != revision:
         raise SelectionError("reviewed revision changed; restart the plan review before building its prompt")
@@ -143,10 +145,16 @@ def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[st
         raise ValueError(f"plan-review-prompt runs in {' or '.join(MODES)} mode, not {mode}")
     selection = reviewed_selection(root, inputs)
     findings, requests, withdrawn = selection.findings, selection.requests, selection.withdrawn
+    revision, inventory = selection.revision, None
+    if mode != "read_only":
+        recorded = partial(requests_recorded, active=selection.instructions(False), retired=selection.instructions(True))
+        inventory = update_inventory(root, selection.feature, recorded, apply=mode == "apply")
+    if mode == "apply":  # the inventory is a planning input, so recording moves the revision the prompt names
+        revision = planning_manifest(root, inputs["feature_dir"], inputs["workflow_file"])["manifest_digest"]
     body = [line for identity, summary in findings.items()
             for line in _section(identity, summary, [r for r in requests.values() if r["finding"] == identity], withdrawn)]
-    prompt = "\n".join([*PREAMBLE, f"Reviewed revision: {selection.revision}", *body])
-    reply = {"prompt": prompt, "revision": selection.revision, "writes_state": mode == "apply", "sends": False, "starts_work": False,
+    prompt = "\n".join([*PREAMBLE, f"Reviewed revision: {revision}", *body])
+    reply = {"prompt": prompt, "revision": revision, "writes_state": mode == "apply", "sends": False, "starts_work": False,
              "required_findings": [{"finding": identity, "summary": summary} for identity, summary in findings.items()],
              "active": [{"request": item["id"], "finding": item["finding"], "kind": item["kind"],
                          "instruction": item["instruction"]} for item in selection.active()],
@@ -154,9 +162,8 @@ def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[st
                           "instruction": item["instruction"],
                           "disposition": "withdrawn" if identity in withdrawn else "active"}
                          for identity, item in requests.items()]}
-    if mode != "read_only":
-        recorded = partial(requests_recorded, active=selection.instructions(False), retired=selection.instructions(True))
-        reply["inventory"] = update_inventory(root, selection.feature, recorded, apply=mode == "apply")
+    if inventory is not None:
+        reply["inventory"] = inventory
     return reply
 
 

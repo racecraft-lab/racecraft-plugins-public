@@ -153,7 +153,13 @@ class PlanReviewRequestRecordTest(InventoryFixture):
         self.assertEqual(reply["data"]["inventory"], expected)
         self.assertTrue(reply["data"]["writes_state"])
         self.assertFalse(reply["data"]["sends"] or reply["data"]["starts_work"])
-        self.assertIn("Reviewed revision: ", reply["data"]["prompt"])
+        current = self.run_helper("planning-approval", self.helper_inputs(action="manifest"))["data"]["manifest_digest"]
+        self.assertEqual(reply["data"]["revision"], current)
+        self.assertIn(f"Reviewed revision: {current}", reply["data"]["prompt"])
+        repeat = self.call(mode="apply", reviewed_revision=current)
+        self.assertEqual(repeat["status"], "ok", repeat)
+        self.assertEqual(repeat["data"]["revision"], current)
+        self.assertEqual(self.inventory(), expected)
 
     def test_read_only_and_dry_run_write_nothing(self):
         self.seed(json.dumps({"F1": [], "F2": []}))
@@ -211,7 +217,9 @@ class PlanReviewRequestRerunTest(InventoryFixture):
 
     def test_two_identical_instructions_for_one_finding_are_refused(self):
         twin = {**REQUESTS[0], "id": "R3", "kind": "custom"}
-        self.assertRefused(self.call(mode="apply", requests=[*REQUESTS, twin]), "F1")
+        for mode in ("read_only", "dry_run", "apply"):
+            with self.subTest(mode=mode):
+                self.assertRefused(self.call(mode=mode, requests=[*REQUESTS, twin]), "same instruction")
         self.assertIsNone(self.inventory_bytes())
 
     def test_a_malformed_inventory_is_refused_and_left_alone(self):

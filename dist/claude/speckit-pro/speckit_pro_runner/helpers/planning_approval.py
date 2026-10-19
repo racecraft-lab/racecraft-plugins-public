@@ -425,8 +425,6 @@ def requests_recorded(inventory: dict[str, Any], active: dict[str, list[str]], r
     """
     updated = dict(inventory)
     for identity, instructions in active.items():
-        if len(set(instructions)) != len(instructions):
-            raise ValueError(f"{identity}: two active requests carry the same instruction")
         recorded = inventory.get(identity, [])
         if not isinstance(recorded, list):
             raise ValueError(f"{FINDINGS_FILE}: {identity} must list its requests")
