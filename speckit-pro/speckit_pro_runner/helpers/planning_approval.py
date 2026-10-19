@@ -622,6 +622,9 @@ def verified_record(root: Path, feature: str, path: str, binding: dict[str, Any]
     return record
 
 
+PROMPTED = {("verify", "read_only"), ("record", "apply")}  # the actions whose reply carries the implement prompt
+
+
 def implement_prompt(workflow: str, record_path: str, manifest_digest: str) -> dict[str, Any]:
     """The copyable text that invokes implement for one approved revision; it sends nothing and starts no work."""
     prompt = "\n".join((
@@ -658,10 +661,9 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
             write_approval(root, target, record, snapshot, map_state)
     else:
         raise ValueError("use manifest/verify in read_only, or record in dry_run/apply")
-    reply = {"record": record, "record_path": path, "writes_state": mode == "apply"}
-    if action == "verify" or mode == "apply":
-        reply["implement_prompt"] = implement_prompt(owned_path(fields["workflow_file"], root), path, binding["manifest_digest"])
-    return reply
+    prompt = implement_prompt(owned_path(fields["workflow_file"], root), path, binding["manifest_digest"])
+    return {"record": record, "record_path": path, "writes_state": mode == "apply",
+            **({"implement_prompt": prompt} if (action, mode) in PROMPTED else {})}
 
 
 run_planning_approval_helper = partial(
