@@ -135,31 +135,6 @@ class DriftBlockTest(DriftFixture):
             with self.subTest(unit=unit):
                 self.assertBlocked(self.dispatch(unit))
 
-    def assertBlocksAllRemainingWork(self, change):
-        self.assertContinues(self.dispatch("alpha"))
-        self.control("complete", dispatch_id="alpha-0", outcome="completed")
-        change()
-        self.assertBlocked(self.dispatch("delta"))
-        self.assertEqual(sorted(self.entries()), ["task:T002", "task:T003", "task:T004"])
-        (cause,) = self.ledger()["blocked_work"]["causes"].values()
-        self.assertIsNone(cause["drifted_tasks"])
-
-    def test_a_changed_spec_blocks_all_remaining_work(self):
-        self.assertBlocksAllRemainingWork(lambda: (self.feature / "spec.md").write_text("A different feature"))
-
-    def test_an_added_task_blocks_all_remaining_work_and_is_never_dispatched(self):
-        self.assertBlocksAllRemainingWork(lambda: self.write_tasks(TASKS + "- [ ] T005 Build part 5\n"))
-        self.assertRefused(self.dispatch("epsilon"), "names a TDD unit the approved plan does not define")
-
-    def test_a_changed_heading_blocks_all_remaining_work(self):
-        self.assertBlocksAllRemainingWork(lambda: self.write_tasks(TASKS.replace("Phase 3", "Phase 4")))
-
-    def test_a_blank_line_between_tasks_is_a_layout_change(self):
-        self.assertBlocksAllRemainingWork(lambda: self.write_tasks(TASKS.replace("- [ ] T003", "\n- [ ] T003")))
-
-    def test_missing_task_metadata_blocks_all_remaining_work(self):
-        self.assertBlocksAllRemainingWork(lambda: (self.feature / ".process/task-execution.json").unlink())
-
     def test_a_task_writing_a_planning_file_it_owns_is_drift(self):
         self.assertWriteIsDrift("delta", "quickstart.md")
 
@@ -180,6 +155,38 @@ class DriftBlockTest(DriftFixture):
                              review_remediation={"tdd_unit": "epsilon", "paths": ["src/epsilon"]})
         self.assertRefused(reply, "names a TDD unit the approved plan does not define")
 
+
+class WholePlanChangeTest(DriftFixture):
+    """A change to a plan input beyond one task's text blocks every task still open, never one task's dependents."""
+
+    CHANGES = {
+        "a_changed_spec": lambda case: (case.feature / "spec.md").write_text("A different feature"),
+        "a_changed_heading": lambda case: case.write_tasks(TASKS.replace("Phase 3", "Phase 4")),
+        "a_blank_line_between_tasks": lambda case: case.write_tasks(TASKS.replace("- [ ] T003", "\n- [ ] T003")),
+        "missing_task_metadata": lambda case: (case.feature / ".process/task-execution.json").unlink(),
+        "an_added_task": lambda case: case.write_tasks(TASKS + "- [ ] T005 Build part 5\n"),
+    }
+
+    def assertBlocksAllRemainingWork(self, change):
+        self.assertContinues(self.dispatch("alpha"))
+        self.control("complete", dispatch_id="alpha-0", outcome="completed")
+        change(self)
+        self.assertBlocked(self.dispatch("delta"))
+        self.assertEqual(sorted(self.entries()), ["task:T002", "task:T003", "task:T004"])
+        (cause,) = self.ledger()["blocked_work"]["causes"].values()
+        self.assertIsNone(cause["drifted_tasks"])
+
+    def test_an_added_task_is_never_dispatched(self):
+        self.assertBlocksAllRemainingWork(self.CHANGES["an_added_task"])
+        self.assertRefused(self.dispatch("epsilon"), "names a TDD unit the approved plan does not define")
+
+
+for _name, _change in WholePlanChangeTest.CHANGES.items():
+    setattr(WholePlanChangeTest, f"test_{_name}_blocks_all_remaining_work",
+            lambda self, change=_change: self.assertBlocksAllRemainingWork(change))
+
+
+class UnscopedWorkDriftTest(DriftFixture):
     def test_unscoped_work_waits_after_drift(self):
         self.assertContinues(self.dispatch("delta"))
         self.write_tasks(TASKS.replace("Build part 1", "Build part 1 twice"))
@@ -356,6 +363,23 @@ class CorrectiveDriftTest(CorrectiveDriftFixture):
         self.assertContinues(self.control("reserve-class-correction", mode="dry_run", **request))
         self.assertFollowUpsWait({"reserve-class-correction": request})
 
+    def test_an_escalation_naming_a_remediation_unit_waits_after_drift(self):
+        self.prepareCorrectiveRun()
+        self.assertEqual(self.control("reserve", dispatch_id="again", kind="corrective",
+                                      failure_invariant="FR-001")["data"]["disposition"], "defer")
+        escalation = {"escalation": {"unit_kind": "failure_family", "unit": "FR-001", "tier": 2}}
+        self.assertContinues(self.control("reserve", mode="dry_run", dispatch_id="plain", kind="corrective", **escalation))
+        self.write_tasks(TASKS.replace("Build part 1", "Build part 1 twice"))
+        decoys = {"plain": {}, **{field: {"spec_file": "specs/demo/spec.md",
+                                          field: {"tdd_unit": "delta", "paths": ["src/delta"]}}
+                                  for field in ("review_remediation", "test_fix")}}
+        for name, decoy in decoys.items():
+            with self.subTest(decoy=name):
+                request = {"dispatch_id": f"escalate-{name}", "kind": "corrective", **escalation, **decoy}
+                self.assertBlocked(self.control("reserve", mode="dry_run", **request))
+                self.assertBlocked(self.control("reserve", **request))
+                self.assertNotIn(request["dispatch_id"], self.ledger()["dispatches"])
+
 
 class DriftBlockPersistenceTest(DriftFixture):
     def test_a_block_survives_a_revert_a_new_approval_and_resume(self):
@@ -388,7 +412,8 @@ class DriftGuidanceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (PinnedRevisionTest, DriftBlockTest, FeatureOwnerDriftTest,
+                               for case in (PinnedRevisionTest, DriftBlockTest, WholePlanChangeTest, UnscopedWorkDriftTest,
+                                            FeatureOwnerDriftTest,
                                             OwnedPlanningInputTest, AliasOwnedPlanningInputTest, CorrectiveDriftTest,
                                             DriftBlockPersistenceTest,
                                             DriftGuidanceTest))

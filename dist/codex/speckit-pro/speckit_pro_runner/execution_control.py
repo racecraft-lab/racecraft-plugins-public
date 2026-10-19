@@ -3079,20 +3079,20 @@ def _guarded_action(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[s
     return {}
 
 
-def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> list[str]:
-    """Pin the admitted planning revision at a planned run's first task dispatch; later, block what drift reaches.
+def _pin_or_block_drift(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[str, Any] | None:
+    """The pinned planning revision, pinned now on a planned run's first task dispatch; None for an unplanned run.
 
-    Returns the reasons a request waits: after drift, work that names no TDD unit cannot prove its independence.
+    A changed revision records the blocked work its drift reaches before the pin is returned.
     """
     pinned = ledger.get("planning_binding")
     if pinned is None:
         if "tdd_units" not in ctl.inputs:
-            return []
+            return None
         # Admission needs a record file, so every admitted implement entry pins whatever the workflow table shows.
         text = trusted_text(ctl.workflow, ctl.root)
         planned = text is not None and workflow_stage_signals(text)["planning_complete"]
         if not planned and not any((ctl.spec.parent / "plan-approvals").glob("*.json")):
-            return []
+            return None
     if ctl.planning is None:
         raise ValueError("an implement task dispatch needs the planning-approval binding")
     feature = ctl.spec.parent.relative_to(ctl.root.resolve()).as_posix()
@@ -3107,12 +3107,24 @@ def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> list[s
                                            {unit for unit, outcome in dispatched if outcome == "completed"}, now))
         if record["causes"]:
             ledger["blocked_work"] = record
+    return pinned
+
+
+def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> list[str]:
+    """Pin the admitted planning revision at a planned run's first task dispatch; later, block what drift reaches.
+
+    Returns the reasons a request waits: after drift, work that names no TDD unit cannot prove its independence.
+    """
+    pinned = _pin_or_block_drift(ctl, ledger, now)
+    if pinned is None:
+        return []
     units = {scope.removeprefix("unit:") for scope in _requested_scope(ctl.inputs) if scope.startswith("unit:")}
     if not units <= {entry["tdd_unit"] for entry in pinned["tasks"].values()}:
         raise ValueError("the request names a TDD unit the approved plan does not define")
-    # Follow-ups record no task units, regardless of scope/kind claims in their request.
+    # Follow-ups and escalations record no task units, whatever scope, kind or remediation claims their request carries.
     # Only an ordinary verification reserve dispatches checks without work from the changed plan.
-    unscoped = ctl.action != "reserve" or (ctl.inputs.get("kind") != "verification" and not units)
+    unscoped = (ctl.action != "reserve" or "escalation" in ctl.inputs
+                or (ctl.inputs.get("kind") != "verification" and not units))
     return ["blocked_for_uat"] if unscoped and planning_drifted(ledger) else []
 
 
