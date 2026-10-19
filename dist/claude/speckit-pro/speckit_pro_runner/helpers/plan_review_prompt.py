@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from string import punctuation
@@ -94,28 +95,47 @@ def _section(identity: str, summary: str, requests: list[dict[str, str]], withdr
     return lines
 
 
-def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
-    if mode != "read_only":
-        raise ValueError("plan-review-prompt runs in read_only mode and writes nothing")
+@dataclass(frozen=True)
+class Selection:
+    """The reviewer's validated answers, bound to the revision they reviewed."""
+    revision: str
+    findings: dict[str, str]
+    requests: dict[str, dict[str, str]]
+    withdrawn: set[str]
+
+    @property
+    def active(self) -> list[dict[str, str]]:
+        return [item for identity, item in self.requests.items() if identity not in self.withdrawn]
+
+
+def reviewed_selection(root: Path, inputs: dict[str, Any]) -> Selection:
     fields = require_fields({k: v for k, v in inputs.items() if k != "repo_root"},
                             {"feature_dir", "workflow_file", "reviewed_revision", "findings", "requests", "withdrawals"}, "plan review inputs")
     findings = _findings(fields["findings"])
     requests = _requests(fields["requests"], findings)
     withdrawn = _withdrawn(fields["withdrawals"], requests)
-    active = [item for identity, item in requests.items() if identity not in withdrawn]
+    answered = {item["finding"] for identity, item in requests.items() if identity not in withdrawn}
     for identity in findings:
-        if not any(item["finding"] == identity for item in active):
+        if identity not in answered:
             raise SelectionError(f"{identity} needs an active request; a withdrawn instruction needs a replacement")
     revision = planning_manifest(root, fields["feature_dir"], fields["workflow_file"])["manifest_digest"]
     if require_text(fields["reviewed_revision"], "reviewed_revision") != revision:
         raise SelectionError("reviewed revision changed; restart the plan review before building its prompt")
+    return Selection(revision, findings, requests, withdrawn)
+
+
+def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
+    if mode != "read_only":
+        raise ValueError("plan-review-prompt runs in read_only mode and writes nothing")
+    selection = reviewed_selection(root, inputs)
+    findings, requests, withdrawn = selection.findings, selection.requests, selection.withdrawn
     body = [line for identity, summary in findings.items()
             for line in _section(identity, summary, [r for r in requests.values() if r["finding"] == identity], withdrawn)]
-    prompt = "\n".join([*PREAMBLE, f"Reviewed revision: {revision}", *body])
-    return {"prompt": prompt, "revision": revision, "writes_state": False, "sends": False, "starts_work": False,
+    prompt = "\n".join([*PREAMBLE, f"Reviewed revision: {selection.revision}", *body])
+    return {"prompt": prompt, "revision": selection.revision, "writes_state": False, "sends": False, "starts_work": False,
             "required_findings": [{"finding": identity, "summary": summary} for identity, summary in findings.items()],
             "active": [{"request": item["id"], "finding": item["finding"], "kind": item["kind"],
-                        "instruction": item["instruction"]} for item in active],
+                        "instruction": item["instruction"]} for item in selection.active],
             "history": [{"request": identity, "finding": item["finding"], "kind": item["kind"],
                          "instruction": item["instruction"],
                          "disposition": "withdrawn" if identity in withdrawn else "active"}
