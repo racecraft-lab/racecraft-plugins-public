@@ -65,11 +65,11 @@ def fake_release(arch: str = "x64") -> bytes:
 
 class PinTests(unittest.TestCase):
     def test_pins_one_exact_version_with_a_digest_per_linux_architecture(self) -> None:
-        self.assertEqual("0.6.5", RIPWIRE.RIPWIRE_VERSION)
+        self.assertEqual("0.6.7", RIPWIRE.RIPWIRE_VERSION)
         self.assertEqual(
             {
-                "x64": "5c5794612f5f06632ada7c27a0f5c8f400748a70f707b64ec4d238c4fba2f7ea",
-                "arm64": "25e5f37e2985830bbff189879797988b862e36521413a6e3654630a0e1f0b108",
+                "x64": "9a1b44da5d17464518be25539354c931499d2b008ff94096384f211d18814755",
+                "arm64": "4510ad5ce1f03f1206e3743c32977b5155db21aaa7e4e8fb91fe9bd0b0f60830",
             },
             RIPWIRE.RIPWIRE_SHA256,
         )
@@ -116,7 +116,7 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(0o755, stat.S_IMODE(installed.stat().st_mode))
         self.assertEqual(["ripwire"], self.left_behind)
         self.assertEqual(
-            ["https://github.com/redhat-et/ripwire/releases/download/v0.6.5/ripwire-0.6.5-linux-arm64.tar.gz"],
+            ["https://github.com/redhat-et/ripwire/releases/download/v0.6.7/ripwire-0.6.7-linux-arm64.tar.gz"],
             opener.urls,
         )
         self.assertEqual([RIPWIRE.DOWNLOAD_TIMEOUT_SECONDS], opener.timeouts)

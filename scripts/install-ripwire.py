@@ -30,11 +30,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pinned_archive as _pinned  # noqa: E402
 
 
-RIPWIRE_VERSION = "0.6.5"
+RIPWIRE_VERSION = "0.6.7"
 # SHA-256 of ripwire-<version>-linux-<arch>.tar.gz from the upstream release.
 RIPWIRE_SHA256 = {
-    "x64": "5c5794612f5f06632ada7c27a0f5c8f400748a70f707b64ec4d238c4fba2f7ea",
-    "arm64": "25e5f37e2985830bbff189879797988b862e36521413a6e3654630a0e1f0b108",
+    "x64": "9a1b44da5d17464518be25539354c931499d2b008ff94096384f211d18814755",
+    "arm64": "4510ad5ce1f03f1206e3743c32977b5155db21aaa7e4e8fb91fe9bd0b0f60830",
 }
 RELEASE_BASE_URL = "https://github.com/redhat-et/ripwire/releases/download"
 RIPWIRE_BINARY = "ripwire"
