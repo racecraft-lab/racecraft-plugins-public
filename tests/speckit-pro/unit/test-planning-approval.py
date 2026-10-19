@@ -60,8 +60,9 @@ class PlanningApprovalFixture(PlanningHelperFixture):
     def call(self, action="manifest", mode="read_only", **extra):
         return self.helper("planning-approval", mode, action=action, **extra)
 
-    def approval(self):
-        (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"]}))
+    def approval(self, write_inventory=True):
+        if write_inventory:
+            (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"]}))
         (self.feature / "artifacts").mkdir(exist_ok=True)
         (self.feature / "artifacts/review.txt").write_text("Reviewed corrections and passing check")
         digest = self.call()["data"]["manifest_digest"]

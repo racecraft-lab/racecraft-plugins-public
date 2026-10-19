@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
@@ -392,8 +393,11 @@ def evidence(root: Path, reference: str) -> dict[str, str]:
     return {"reference": owned_path(reference, root), "sha256": hashlib.sha256(captured(root, reference)).hexdigest()}
 
 
-def add_findings(root: Path, feature: str, identities: list[str]) -> None:
-    """Add each new finding with no request yet and keep every recorded entry; a clean plan gets an empty map."""
+def update_inventory(root: Path, feature: str, change: Callable[[dict[str, Any]], dict[str, Any]], apply: bool = True) -> dict[str, Any]:
+    """Publish `change(inventory)` as the feature's findings inventory; the reads and the write share one snapshot.
+
+    `change` receives the recorded map and returns the whole new map. A dry run (`apply=False`) writes nothing.
+    """
     relative = f"{feature}/{FINDINGS_FILE}"
     target = root / relative
     snapshot = snapshot_write_target(target, root, bind_identity=True)
@@ -401,10 +405,34 @@ def add_findings(root: Path, feature: str, identities: list[str]) -> None:
     inventory = json.loads(snapshot["content"], object_pairs_hook=unique_object) if exists else {}
     if not isinstance(inventory, dict):
         raise ValueError(f"{relative} must map finding ids to request lists")
-    added: dict[str, list[str]] = {identity: [] for identity in identities if identity not in inventory}
-    if added or not exists:
-        content = json.dumps({**inventory, **added}, indent=2, ensure_ascii=False) + "\n"
+    updated = change(inventory)
+    if apply and (updated != inventory or not exists):
+        content = json.dumps(updated, indent=2, ensure_ascii=False) + "\n"
         write_bytes_atomic(target, content.encode("utf-8"), trust_root=root, expected_snapshot=snapshot)
+    return updated
+
+
+def add_findings(root: Path, feature: str, identities: list[str]) -> None:
+    """Add each new finding with no request yet and keep every recorded entry; a clean plan gets an empty map."""
+    update_inventory(root, feature, lambda inventory: {**inventory, **{identity: [] for identity in identities if identity not in inventory}})
+
+
+def requests_recorded(inventory: dict[str, Any], active: dict[str, list[str]], retired: dict[str, list[str]]) -> dict[str, Any]:
+    """The inventory with each named finding's active instructions in review order, `retired` being the withdrawn ones.
+
+    A recorded request leaves only by withdrawal. Findings the review did not name keep their entries. Pass this to
+    `update_inventory` to publish it.
+    """
+    updated = dict(inventory)
+    for identity, instructions in active.items():
+        recorded = inventory.get(identity, [])
+        if not isinstance(recorded, list):
+            raise ValueError(f"{FINDINGS_FILE}: {identity} must list its requests")
+        lost = [request for request in recorded if request not in instructions and request not in retired.get(identity, [])]
+        if lost:
+            raise ValueError(f"{identity}: the recorded request {lost[0]!r} is missing from the full request list and was not withdrawn")
+        updated[identity] = list(instructions)
+    return updated
 
 
 def checked_findings(root: Path, feature: str, findings: Any, revision: str) -> dict[str, Any]:
