@@ -15,7 +15,7 @@ from typing import Any
 from ..strict_input import SelectionError, require_fields, require_text
 from .execution_requests import Refusal, run_contained_helper
 from ..task_execution import owned_path
-from .planning_approval import planning_manifest, record_requests
+from .planning_approval import planning_manifest, requests_recorded, update_inventory
 
 KINDS = ("recommended", "alternative", "custom")
 MODES = ("read_only", "dry_run", "apply")
@@ -155,8 +155,8 @@ def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[st
                           "disposition": "withdrawn" if identity in withdrawn else "active"}
                          for identity, item in requests.items()]}
     if mode != "read_only":
-        reply["inventory"] = record_requests(root, selection.feature, selection.instructions(False),
-                                             selection.instructions(True), apply=mode == "apply")
+        recorded = partial(requests_recorded, active=selection.instructions(False), retired=selection.instructions(True))
+        reply["inventory"] = update_inventory(root, selection.feature, recorded, apply=mode == "apply")
     return reply
 
 

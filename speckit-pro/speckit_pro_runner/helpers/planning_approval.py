@@ -418,7 +418,11 @@ def add_findings(root: Path, feature: str, identities: list[str]) -> None:
 
 
 def requests_recorded(inventory: dict[str, Any], active: dict[str, list[str]], retired: dict[str, list[str]]) -> dict[str, Any]:
-    """The inventory with each named finding's request list replaced; a recorded request leaves only by withdrawal."""
+    """The inventory with each named finding's active instructions in review order, `retired` being the withdrawn ones.
+
+    A recorded request leaves only by withdrawal. Findings the review did not name keep their entries. Pass this to
+    `update_inventory` to publish it.
+    """
     updated = dict(inventory)
     for identity, instructions in active.items():
         if len(set(instructions)) != len(instructions):
@@ -431,15 +435,6 @@ def requests_recorded(inventory: dict[str, Any], active: dict[str, list[str]], r
             raise ValueError(f"{identity}: the recorded request {lost[0]!r} is missing from the full request list and was not withdrawn")
         updated[identity] = list(instructions)
     return updated
-
-
-def record_requests(root: Path, feature: str, active: dict[str, list[str]], retired: dict[str, list[str]],
-                    apply: bool = True) -> dict[str, list[str]]:
-    """Record each named finding's active request instructions in review order, `retired` being the withdrawn ones.
-
-    Findings the inventory lists but the review did not name keep their entries. A dry run (`apply=False`) writes nothing.
-    """
-    return update_inventory(root, feature, partial(requests_recorded, active=active, retired=retired), apply)
 
 
 def checked_findings(root: Path, feature: str, findings: Any, revision: str) -> dict[str, Any]:
