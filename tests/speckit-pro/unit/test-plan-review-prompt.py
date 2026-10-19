@@ -168,7 +168,7 @@ class PlanReviewConcurrentRevisionTest(PlanReviewPromptFixture):
         self.review_during_change("specs/demo/planning-findings.json", windows=("after",))
 
 
-RACE_PROBE = r'''
+RACE_PROBE_SETUP = r'''
 import json
 import sys
 from contextlib import ExitStack
@@ -195,7 +195,10 @@ reviewed = helper.planning_manifest(root, inputs["feature_dir"], inputs["workflo
 inputs["reviewed_revision"] = reviewed
 publish = helper.update_inventory
 failures = ExitStack()
+'''
 
+
+RACE_PROBE = RACE_PROBE_SETUP + r'''
 def mutate():
     alternate = target.with_name(target.name + ".concurrent")
     alternate.unlink(missing_ok=True)
