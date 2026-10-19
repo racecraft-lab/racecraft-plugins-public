@@ -22,8 +22,9 @@ from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
 from . import BLOCKED_BY_FIELD, COMPLETED_DISPATCH_IDS_FIELD, UNKNOWN_DISPATCH_IDS_FIELD
-from .blocked_work import (ACCEPT_BLOCKED_GAP, BLOCK_EXHAUSTED_CHECK, GAP_ACCEPTED, Block, accept_gap, block_exhausted_check,
-                           blocked_check, blocked_scope, disposition_event_ids, validate_blocked_work)
+from .blocked_work import (ACCEPT_BLOCKED_GAP, BLOCK_EXHAUSTED_CHECK, GAP_ACCEPTED, Block, Drift, accept_gap,
+                           block_exhausted_check, block_planning_drift, blocked_check, blocked_scope,
+                           disposition_event_ids, planning_drifted, validate_blocked_work)
 from .retry_ladder import RUNGS, is_interrupted, next_rung, replay_rungs, rung_settings
 from .strict_input import SelectionError, require_text as require_nonempty_text
 from .task_partition import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
@@ -326,6 +327,7 @@ def validate_ledger(value: Any) -> None:
     _validate_retry_ladders(value)
     _validate_finalize_observations(value)
     validate_blocked_work(value)
+    _validate_planning_binding(value)
 
 
 def _validate_corrective_counters(value: dict[str, Any]) -> None:
@@ -1012,6 +1014,9 @@ RECORD_FINALIZE_CYCLE = "record-finalize-cycle"
 
 
 Finalizer = Callable[[Path, dict[str, Any]], dict[str, Any]]
+# The planning-approval binding: (root, feature_dir, workflow_file, admit) -> the revision's digests.
+PlanningBinding = Callable[[Path, str, str, bool], dict[str, Any]]
+PLANNING_BINDING_KEYS = {"manifest_digest", "files", "layout", "tasks", "record_path", "bound_at"}
 
 
 def record_finalize_cycle(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], ledger_path: str,
@@ -2202,6 +2207,8 @@ def _nested_correction(ctx: _Reserve, reservation: str) -> dict[str, Any] | None
 def _new_correction(ctx: _Reserve, note: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
     """A new run-budget correction: an admission or deferral, or the fresh reservation the caller records."""
     ledger, dispatch_id, now = ctx.ledger, ctx.dispatch_id, ctx.now
+    if planning_drifted(ledger):
+        return {"reasons": ["blocked_for_uat"]}, None
     invariant = ctx.inputs.get("failure_invariant")
     family = str(invariant) if invariant in ledger["approved_invariants"] else _untagged_family(ledger, now)
     refusal = _corrective_refusal(ledger, family)
@@ -2945,6 +2952,9 @@ FAILURE_PATH_ACTIONS: dict[str, _FailurePathAction] = {
     "begin-stage-epoch": _FailurePathAction(
         lambda c: begin_stage_epoch(c.root, c.ledger, c.inputs, c.workflow, c.now)),
 }
+PLANNING_DISPATCH_ACTIONS = frozenset({"reserve", RESERVE_RETRY_RUNG, "authorize-corrective-retry",
+                                       "authorize-corrective-continuation", "authorize-corrective-exception",
+                                       "reserve-class-correction"})
 UNKNOWN_GUARDED_ACTIONS = frozenset({*FAILURE_PATH_ACTIONS, "begin-verification", RESERVE_RETRY_RUNG,
                                     BLOCK_EXHAUSTED_CHECK})
 _ACTIONS = frozenset({"start", "status", "begin-verification", "complete", "reconcile", "reconcile-unit",
@@ -2990,6 +3000,7 @@ class _Control(NamedTuple):
     relative: str
     path: Path
     finalizer: Finalizer | None = None
+    planning: PlanningBinding | None = None
 
 
 def _require_supported_action(action: Any, mode: str, evidence: dict[str, Any] | None) -> None:
@@ -3003,7 +3014,7 @@ def _require_supported_action(action: Any, mode: str, evidence: dict[str, Any] |
 
 
 def _open_control(root: Path, inputs: dict[str, Any], mode: str, evidence: dict[str, Any] | None,
-                  finalizer: Finalizer | None = None) -> _Control:
+                  finalizer: Finalizer | None = None, planning: PlanningBinding | None = None) -> _Control:
     """Validate the request's workflow, spec, action, run binding, and ledger location."""
     workflow_name = require_text(inputs.get("workflow_file"), "workflow_file")
     workflow = confined_path(root, workflow_name)
@@ -3026,7 +3037,7 @@ def _open_control(root: Path, inputs: dict[str, Any], mode: str, evidence: dict[
     if Path(relative).parent.name != "execution-control" or Path(relative).suffix != ".json":
         raise ValueError("ledger_path must reference an owned execution-control JSON record")
     return _Control(root, inputs, mode, evidence, action, workflow_name, workflow, spec, expected_run_id, relative,
-                    confined_path(root, relative), finalizer)
+                    confined_path(root, relative), finalizer, planning)
 
 
 def _load_ledger(ctl: _Control, now: float) -> dict[str, Any]:
@@ -3068,6 +3079,67 @@ def _guarded_action(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[s
     return {}
 
 
+def _pin_or_block_drift(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[str, Any] | None:
+    """The pinned planning revision, pinned now on a planned run's first task dispatch; None for an unplanned run.
+
+    A changed revision records the blocked work its drift reaches before the pin is returned.
+    """
+    pinned = ledger.get("planning_binding")
+    if pinned is None:
+        if "tdd_units" not in ctl.inputs:
+            return None
+        # Admission needs a record file, so every admitted implement entry pins whatever the workflow table shows.
+        text = trusted_text(ctl.workflow, ctl.root)
+        planned = text is not None and workflow_stage_signals(text)["planning_complete"]
+        if not planned and not any((ctl.spec.parent / "plan-approvals").glob("*.json")):
+            return None
+    if ctl.planning is None:
+        raise ValueError("an implement task dispatch needs the planning-approval binding")
+    feature = ctl.spec.parent.relative_to(ctl.root.resolve()).as_posix()
+    current = ctl.planning(ctl.root, feature, ctl.workflow_name, pinned is None)
+    if pinned is None:
+        pinned = ledger["planning_binding"] = {**current, "bound_at": now}
+    elif current["manifest_digest"] != pinned["manifest_digest"]:
+        dispatched = [(unit, item["outcome"]) for item in _all_dispatches(ledger) if item["kind"] == "implementation"
+                      for unit in item.get("tdd_units", [])]
+        record = ledger.get("blocked_work") or {"causes": {}, "entries": {}}
+        block_planning_drift(record, Drift(pinned, current, feature, {unit for unit, _ in dispatched},
+                                           {unit for unit, outcome in dispatched if outcome == "completed"}, now))
+        if record["causes"]:
+            ledger["blocked_work"] = record
+    return pinned
+
+
+def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> list[str]:
+    """Pin the admitted planning revision at a planned run's first task dispatch; later, block what drift reaches.
+
+    Returns the reasons a request waits: after drift, work that names no TDD unit cannot prove its independence.
+    """
+    pinned = _pin_or_block_drift(ctl, ledger, now)
+    if pinned is None:
+        return []
+    units = {scope.removeprefix("unit:") for scope in _requested_scope(ctl.inputs) if scope.startswith("unit:")}
+    if not units <= {entry["tdd_unit"] for entry in pinned["tasks"].values()}:
+        raise ValueError("the request names a TDD unit the approved plan does not define")
+    # Follow-ups and escalations record no task units, whatever scope, kind or remediation claims their request carries.
+    # Only an ordinary verification reserve dispatches checks without work from the changed plan.
+    unscoped = (ctl.action != "reserve" or "escalation" in ctl.inputs
+                or (ctl.inputs.get("kind") != "verification" and not units))
+    return ["blocked_for_uat"] if unscoped and planning_drifted(ledger) else []
+
+
+def _validate_planning_binding(ledger: dict[str, Any]) -> None:
+    if "planning_binding" not in ledger:
+        return
+    binding = ledger["planning_binding"]
+    if (not isinstance(binding, dict) or set(binding) != PLANNING_BINDING_KEYS
+            or not _is_digest(binding["manifest_digest"]) or not isinstance(binding["files"], dict)
+            or not isinstance(binding["tasks"], dict) or not all(
+                isinstance(entry, dict) and set(entry) == {"digest", "tdd_unit", "depends_on", "owns"}
+                and isinstance(entry["depends_on"], list) for entry in binding["tasks"].values())):
+        raise ValueError("invalid planning binding")
+
+
 def _run_action(ctl: _Control, ledger: dict[str, Any], now: float, reasons: list[str],
                 extra: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """Run the request's action; returns its extra result and the clock reasons after it."""
@@ -3080,6 +3152,10 @@ def _run_action(ctl: _Control, ledger: dict[str, Any], now: float, reasons: list
         return record_result(ledger, ctl.inputs, now, ctl.root), clock_reasons(ledger, now)
     if action in {"checkpoint", "pause", "resume"}:
         return checkpoint_or_wait(ledger, ctl.inputs, now), clock_reasons(ledger, now)
+    if action in PLANNING_DISPATCH_ACTIONS:
+        waiting = _check_planning(ctl, ledger, now)
+        if waiting:
+            return {"reasons": waiting}, reasons
     if action in FAILURE_PATH_ACTIONS:
         call = FailurePathCall(ctl.root, ledger, ctl.inputs, ctl.spec, ctl.workflow, now, bool(reasons))
         return run_failure_path(action, call, extra), reasons
@@ -3118,16 +3194,17 @@ def _update_ledger(ctl: _Control) -> dict[str, Any]:
     return _control_result(ctl, ledger, now, reasons, extra)
 
 
-def execution_control(root: Path, inputs: dict[str, Any], mode: str,
-                      evidence: dict[str, Any] | None = None, finalizer: Finalizer | None = None) -> dict[str, Any]:
+def execution_control(root: Path, inputs: dict[str, Any], mode: str, evidence: dict[str, Any] | None = None,
+                      finalizer: Finalizer | None = None, planning: PlanningBinding | None = None) -> dict[str, Any]:
     """Runner adapter returns a disposition without changing autopilot top-state.
 
     `evidence` is set only by `record_failing_checks`, the verification executors'
     internal path; a helper request cannot reach the evidence action. `finalizer`
-    is the `finalize-run` helper that `record-finalize-cycle` needs; the helper
-    request passes it in so this core module never imports the helpers layer.
+    is the `finalize-run` helper that `record-finalize-cycle` needs, and `planning`
+    the planning-approval binding a task dispatch needs; the helper request passes
+    both in so this core module never imports the helpers layer.
     """
-    ctl = _open_control(root, inputs, mode, evidence, finalizer)
+    ctl = _open_control(root, inputs, mode, evidence, finalizer, planning)
     if mode == "apply":
         # Mark the evidence directory before the orchestrator can write its own logs there (#813).
         ignore_owned_directory(confined_path(root, evidence_directory(ctl.workflow_name)))

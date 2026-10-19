@@ -1434,8 +1434,8 @@ class TerminalGuidanceTests(unittest.TestCase):
         # A section/phrase search can select a hidden copy or miss a negation.
         # Changes require reviewing the rendered instructions before re-pinning.
         reviewed = {
-            "claude": "460b1687d089e61ae444e9268bf3a8a530eaf9458558e658ad54e375e15c7298",
-            "codex": "64041c57a1f770e93c0c52646ed424bd85772ee610e31e22082d88ef30fe8409",
+            "claude": "01288a28cc5c5732063e71eb0d4c768bd311584778fa6e3217676b4392aa1507",
+            "codex": "0fb472b4ec7e6d03218a1eacb2608b3190ed81c605ff3cefb81b57eca46a4ce5",
         }
         for host, digest in reviewed.items():
             path = host_skill_views.host_skill_root(host) / "speckit-autopilot/references/phase-execution.md"

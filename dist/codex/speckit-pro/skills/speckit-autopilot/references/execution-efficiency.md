@@ -104,6 +104,11 @@ ownership from the caller's current workflow.
   notes are never counted. Without git, no edit is recorded. Parallel
   dispatches record each other's edits too, so the ownership check below, not
   the edit record alone, keeps one unit from claiming another unit's file.
+  When the workflow records planning complete, the first such reserve also
+  pins the admitted plan approval as `planning_binding`; later reserves block
+  the work a planning change reaches as `planning_drift` entries and return
+  `blocked_for_uat` for it
+  (**Planning drift during implement** in [phase-execution.md](./phase-execution.md)).
   A test-only fix to test code the increment itself edited earlier in this run
   (for example removing a mock that broke an existing test) instead supplies
   `test_fix`: `{"tdd_unit": <the increment's TDD unit>, "paths": [<every

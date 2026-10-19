@@ -4082,6 +4082,28 @@ Research a vendor claim using relevant official documentation only when needed;
 reuse still-current evidence and do not repeat generic web/code/history passes.
 <!-- /host -->
 
+**Planning drift during implement.** The first implementation `reserve` with
+`tdd_units` in a run whose planning is complete pins the admitted plan approval
+in the ledger. A missing or invalid approval refuses that reserve with the
+`planning approval field` that [admission](./planning-approval.md) names.
+Every later dispatch-creating request compares the current planning inputs with
+the pinned revision, including corrective approvals and class follow-ups.
+Every input in the approval manifest remains authoritative even when a task
+owns its path. Execution outputs outside that manifest do not change the plan.
+When they changed, the runner blocks the remaining tasks the change reaches
+(ADR 0012, ADR 0013): the changed tasks and their dependents when only task
+lines or their sidecar entries changed, otherwise every remaining task. A
+blocked unit's `reserve` returns `blocked_for_uat`: skip that batch and keep
+dispatching the units the runner still admits. After drift, any reserve that
+names no TDD unit returns `blocked_for_uat` too, except a verification
+dispatch, and so do retry rungs and corrective follow-ups whose original
+authority names no task unit. The runner refuses a request naming a TDD
+unit the approved plan does not define. Do not re-plan, record a new approval or
+revert the change to clear a block: blocks last for the whole run, and a
+`begin-replan-epoch` opens no changed task. The changed plan needs plan review
+and a linked implement run. Hand off with blocked work as
+**Ready for UAT with blocked work**.
+
 **Review fixes inside one increment.** When an increment's required review
 finds defects in code that increment just wrote, reserve the fix with
 `kind=corrective`, its `failure_invariant`, the feature's `spec_file`, and

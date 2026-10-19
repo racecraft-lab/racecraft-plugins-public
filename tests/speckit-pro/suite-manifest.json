@@ -188,6 +188,7 @@
         { "path": "tests/speckit-pro/unit/test-planning-navigation-inputs.py", "label": "test-planning-navigation-inputs" },
         { "path": "tests/speckit-pro/unit/test-planning-approval-preflight.py", "label": "test-planning-approval-preflight" },
         { "path": "tests/speckit-pro/unit/test-implement-admission.py", "label": "test-implement-admission" },
+        { "path": "tests/speckit-pro/unit/test-implement-planning-drift.py", "label": "test-implement-planning-drift" },
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference" },
         { "path": "tests/speckit-pro/unit/test-pr-body-deferred-section.py", "label": "test-pr-body-deferred-section" },
         { "path": "tests/speckit-pro/unit/test-pr-checks-helpers.py", "label": "test-pr-checks-helpers" },

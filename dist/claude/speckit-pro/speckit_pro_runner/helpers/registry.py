@@ -24,7 +24,7 @@ from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .g0_setup import run_g0_setup_helper
 from .harm_halt import apply_refusal as harm_halt_refusal, run_harm_halt_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
-from .planning_approval import run_planning_approval_helper
+from .planning_approval import implement_binding, run_planning_approval_helper
 from .plan_review_prompt import run_plan_review_prompt_helper
 from .plan_stage_terminal import run_plan_stage_terminal_helper
 from .quality_gates_proposal import run_quality_gates_proposal_helper
@@ -958,7 +958,7 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
         return response("ok", request_id=request.request_id, data=mutation_registry_report())
 
     if entry.helper_id in {"execution-control", "execute-verification", "task-results"}:
-        return run_execution_helper(entry, request)
+        return run_execution_helper(entry, request, implement_binding)
 
     if entry.helper_id == "decisions-list":
         return run_decisions_list_helper(entry, request)
