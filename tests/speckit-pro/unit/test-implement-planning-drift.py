@@ -155,6 +155,8 @@ class DriftBlockTest(DriftFixture):
         self.assertContinues(self.dispatch("alpha"))
         (self.feature / "quickstart.md").write_text("Run part 4\n")
         self.assertBlocked(self.dispatch("delta"))
+        (cause,) = self.ledger()["blocked_work"]["causes"].values()
+        self.assertEqual((cause["changed_files"], cause["drifted_tasks"]), (["specs/demo/quickstart.md"], None))
 
     def test_a_unit_the_approved_plan_does_not_define_is_refused_in_any_request(self):
         self.assertContinues(self.dispatch("alpha"))
