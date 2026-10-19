@@ -42,8 +42,8 @@ python3 scripts/refresh-codex-instruction-inventory.py
 Commit `tests/speckit-pro/unit/fixtures/codex-spawn-instruction-inventory.json`
 with the reviewed source changes. Validation compares complete content and path
 sets, including new and removed files, and never refreshes this evidence itself.
-For the review boundary and known limits, see
-[dispatch instruction coverage](reviews/pr-1375-instruction-coverage.md).
+For the design and review boundary, see
+[the Codex instruction inventory](architecture/codex-instruction-inventory.md).
 
 ## Running speckit-pro in a Scratch Clone
 
