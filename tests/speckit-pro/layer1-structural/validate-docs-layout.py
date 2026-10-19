@@ -24,9 +24,8 @@ from test_result import run_counted
 ALLOWED_DIRECTORIES = frozenset({"adr", "agents", "ai", "architecture"})
 ALLOWED_FILES = frozenset(
     {
+        "README.md",
         "agent-runbook.md",
-        "compact-runner-answers.md",
-        "phase-envelope.md",
         "roadmap-interactive-documentation.md",
         "traceability-interactive-documentation.md",
     }
