@@ -60,11 +60,10 @@ class DriftFixture(AdmissionFixture):
         return ledger
 
     def entries(self):
-        return self.ledger().get("blocked_work", {}).get("entries", {})
+        return self.ledger()["blocked_work"]["entries"]
 
     def assertContinues(self, reply):
-        self.assertEqual(reply["status"], "ok", reply)
-        self.assertEqual(reply["data"]["disposition"], "continue", reply)
+        self.assertEqual((reply["status"], reply["data"]["disposition"]), ("ok", "continue"), reply)
 
     def assertBlocked(self, reply):
         self.assertEqual(reply["data"]["reasons"], ["blocked_for_uat"], reply)
