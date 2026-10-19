@@ -507,9 +507,9 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         ("planning-approval-apply",),
     ),
     "plan-review-prompt": MutationEntry(
-        "plan-review-prompt", "plan-review-prompt", ("read_only",), None,
+        "plan-review-prompt", "plan-review-prompt", ("read_only", "dry_run", "apply"), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("plan-review-prompt"),
-        ("plan-review-prompt-read-only",),
+        ("plan-review-prompt-read-only", "plan-review-prompt-apply"),
     ),
     "resolve-nesting-mode": MutationEntry(
         "resolve-nesting-mode", "resolve-nesting-mode", ("apply",), None,
