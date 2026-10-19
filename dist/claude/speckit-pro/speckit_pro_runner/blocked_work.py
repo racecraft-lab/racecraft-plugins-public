@@ -21,7 +21,6 @@ from __future__ import annotations
 
 from typing import Any, NamedTuple
 
-from .task_execution import path_key
 
 BLOCK_EXHAUSTED_CHECK = "block-exhausted-check"
 ACCEPT_BLOCKED_GAP = "accept-blocked-gap"
@@ -102,26 +101,16 @@ class Drift(NamedTuple):
     now: float
 
 
-def _under(name: str, path: str) -> bool:
-    return path_key(name) == path_key(path) or path_key(name).startswith(path_key(path) + "/")
-
-
 def drifted_tasks(drift: Drift) -> tuple[list[str], list[str] | None]:
     """The changed planning files and the tasks they change, or None when the change cannot be confined to tasks.
 
-    A file under an owned path of a task the run dispatched is that task's planned output, not drift. Ownership of
-    the feature directory itself, or of a directory holding it, never covers a planning file.
+    Every manifest input is authoritative. Task ownership permits writes, not changes to planning authority.
     """
     pinned, current = drift.pinned, drift.current
     changed = sorted(name for name in {*pinned["files"], *current["files"]}
                      if pinned["files"].get(name) != current["files"].get(name))
     if not changed:
         return changed, None
-    owned = [path for entry in pinned["tasks"].values() if entry["tdd_unit"] in drift.dispatched_units
-             for path in entry["owns"] if not _under(drift.feature, path)]
-    changed = [name for name in changed if not any(_under(name, path) for path in owned)]
-    if not changed:
-        return changed, []
     if (not set(changed) <= {f"{drift.feature}/{name}" for name in TASK_SCOPED_FILES}
             or pinned["layout"] != current["layout"] or set(pinned["tasks"]) != set(current["tasks"])):
         return changed, None

@@ -160,9 +160,13 @@ class DriftBlockTest(DriftFixture):
     def test_missing_task_metadata_blocks_all_remaining_work(self):
         self.assertBlocksAllRemainingWork(lambda: (self.feature / ".process/task-execution.json").unlink())
 
-    def test_a_task_writing_a_planning_file_it_owns_is_not_drift(self):
+    def test_a_task_writing_a_planning_file_it_owns_is_drift(self):
+        self.assertWriteIsDrift("delta", "quickstart.md")
+
+    def test_owned_outputs_outside_the_planning_manifest_are_not_drift(self):
         self.assertContinues(self.dispatch("delta"))
-        (self.feature / "quickstart.md").write_text("Run part 4\n")
+        (self.root / "src/delta").mkdir(parents=True)
+        (self.root / "src/delta/result.py").write_text("RESULT = 4\n")
         self.assertContinues(self.dispatch("alpha"))
         self.assertNotIn("blocked_work", self.ledger())
 
@@ -198,6 +202,141 @@ class FeatureOwnerDriftTest(DriftFixture):
         self.assertWriteIsDrift("delta", "data-model.md")
 
 
+class OwnedPlanningFixture(DriftFixture):
+    """Ownership permits writes, but cannot exempt an approval manifest input."""
+
+    OWNS = {"T004": ["src/delta", "specs/demo/spec.md", "specs/demo/plan.md", "specs/demo/tasks.md",
+                     "specs/demo/.process", "specs/demo/workflow.md", "specs/demo/contracts",
+                     ".specify", "AGENTS.md", "formal"]}
+
+    def assertChangedInputsBlock(self, expected):
+        self.assertBlocked(self.dispatch("beta"))
+        (cause,) = self.ledger()["blocked_work"]["causes"].values()
+        self.assertEqual(cause["changed_files"], sorted(expected))
+        self.assertEqual(sorted(self.entries()), [f"task:{task}" for task in DEPENDS])
+
+
+class OwnedPlanningInputTest(OwnedPlanningFixture):
+    def test_exact_feature_planning_sources_cannot_be_exempted(self):
+        self.assertContinues(self.dispatch("delta"))
+        (self.feature / "spec.md").write_text("Changed feature")
+        (self.feature / "plan.md").write_text("Changed plan")
+        self.write_tasks(TASKS.replace("Phase 3", "Phase 4"))
+        self.assertChangedInputsBlock([f"specs/demo/{name}" for name in
+                                      ("spec.md", "plan.md", "tasks.md", ".process/task-execution.json")])
+
+    def test_owned_workflow_and_subtree_mutations_remain_visible(self):
+        contracts = self.feature / "contracts"
+        contracts.mkdir()
+        (contracts / "remove.md").write_text("Remove this input")
+        (contracts / "rename.md").write_text("Rename this input")
+        self.record()
+        self.assertContinues(self.dispatch("delta"))
+        (contracts / "remove.md").unlink()
+        (contracts / "rename.md").rename(contracts / "renamed.md")
+        (contracts / "added.md").write_text("New input")
+        workflow = self.feature / "workflow.md"
+        workflow.write_text(workflow.read_text() + "\nChanged planning instructions\n")
+        self.assertChangedInputsBlock(["specs/demo/workflow.md", *[f"specs/demo/contracts/{name}.md" for name in
+                                                               ("remove", "rename", "renamed", "added")]])
+
+    def test_owned_project_and_catalog_inputs_remain_visible(self):
+        inputs = (".specify/templates/plan.md", "AGENTS.md", "formal/model.tla")
+        for name in inputs:
+            target = self.root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("Original input")
+        (self.root / ".specify/formal-methods.json").write_text(json.dumps(
+            {"models": {"demo": {"inputs": ["formal/model.tla"]}}}))
+        self.record()
+        self.assertContinues(self.dispatch("delta"))
+        for name in inputs:
+            (self.root / name).write_text("Changed input")
+        self.assertChangedInputsBlock(inputs)
+
+
+class AliasOwnedPlanningInputTest(OwnedPlanningFixture):
+    """Case folding and Unicode normalization never remove changed planning inputs."""
+
+    OWNS = {"T004": ["src/delta", "specs/demo/PLAN.md", "specs/demo/caf\u00e9"]}
+
+    def test_case_and_unicode_ownership_aliases_cannot_hide_drift(self):
+        target = self.feature / "cafe\u0301/contract.md"
+        target.parent.mkdir()
+        target.write_text("Original contract")
+        self.record()
+        self.assertContinues(self.dispatch("delta"))
+        (self.feature / "plan.md").write_text("Changed plan")
+        target.write_text("Changed contract")
+        self.assertChangedInputsBlock(["specs/demo/plan.md", target.relative_to(self.root).as_posix()])
+
+
+class CorrectiveDriftFixture(DriftFixture):
+    """A pinned run with spent corrective cycles and eligible follow-up requests."""
+
+    def prepareCorrectiveRun(self):
+        (self.feature / "spec.md").write_text("A feature\n- FR-001: preserve data\n- FR-002: bounded work\n")
+        self.assertContinues(self.control("bind-invariants", spec_file="specs/demo/spec.md"))
+        self.record()
+        self.assertContinues(self.dispatch("delta"))
+        reservations = {}
+        for dispatch, invariant, outcome in (("owner", "FR-001", "failed"), ("other", "FR-002", "completed")):
+            reply = self.control("reserve", dispatch_id=dispatch, kind="corrective", failure_invariant=invariant)
+            self.assertContinues(reply)
+            reservations[dispatch] = reply["data"]["reservation_id"]
+            self.control("reconcile", dispatch_id=dispatch)
+            self.assertContinues(self.control("complete", dispatch_id=dispatch, outcome=outcome, native_observation={
+                "native_event_id": f"native-{dispatch}", "run_id": self.run_id, "dispatch_id": dispatch,
+                "action": "dispatch_result", "outcome": outcome}))
+        digest = self.ledger()["invariant_binding"]["spec_sha256"]
+        return {
+            "authorize-corrective-retry": {"dispatch_id": "retry", "failed_dispatch_id": "owner",
+                "reservation_id": reservations["owner"], "agent_authorized": True, "failure_kind": "infrastructure"},
+            "authorize-corrective-continuation": {"dispatch_id": "continuation", "completed_dispatch_id": "other",
+                "reservation_id": reservations["other"], "native_observation": {"native_event_id": "approve-continuation",
+                    "run_id": self.run_id, "action": "corrective_continuation_approved", "completed_dispatch_id": "other",
+                    "continuation_dispatch_id": "continuation", "reservation_id": reservations["other"],
+                    "purpose": "task_metadata_reconciliation"}},
+            "authorize-corrective-exception": {"dispatch_id": "exception", "failure_invariant": "FR-001",
+                "scope_sha256": "a" * 64, "native_observation": {"native_event_id": "approve-exception",
+                    "run_id": self.run_id, "action": "corrective_exception_approved", "failure_invariant": "FR-001",
+                    "dispatch_id": "exception", "failure_kind": "application", "refusal_reason": "failure_family_budget_exhausted",
+                    "scope_sha256": "a" * 64, "spec_sha256": digest}},
+        }
+
+    def assertFollowUpsWait(self, requests):
+        self.write_tasks(TASKS.replace("Build part 1", "Build part 1 twice"))
+        for action, inputs in requests.items():
+            for claim in ({}, {"kind": "verification"}, {"tdd_units": ["delta"]}):
+                with self.subTest(action=action, claim=claim):
+                    self.assertBlocked(self.control(action, mode="dry_run", **inputs, **claim))
+                    self.assertNotIn(inputs["dispatch_id"], self.ledger()["dispatches"])
+        for action, inputs in requests.items():
+            self.assertBlocked(self.control(action, **inputs))
+        self.assertContinues(self.dispatch("delta"))
+
+
+class CorrectiveDriftTest(CorrectiveDriftFixture):
+    def test_eligible_corrective_approvals_detect_drift_before_they_dispatch(self):
+        requests = self.prepareCorrectiveRun()
+        for action, inputs in requests.items():
+            self.assertContinues(self.control(action, mode="dry_run", **inputs))
+        self.assertFollowUpsWait(requests)
+
+    def test_eligible_class_follow_up_detects_drift_before_it_dispatches(self):
+        requests = self.prepareCorrectiveRun()
+        failure_class = {"test_file": "tests/cli.test.ts", "failure_signature": "Test timed out in 5000ms",
+                         "change_kind": "test_timeout"}
+        exception = requests["authorize-corrective-exception"]
+        exception["failure_class"] = failure_class
+        exception["native_observation"]["failure_class"] = failure_class
+        self.assertContinues(self.control("authorize-corrective-exception", **exception))
+        self.assertContinues(self.control("complete", dispatch_id="exception", outcome="completed"))
+        request = {"dispatch_id": "class-follow-up", "failure_class": failure_class}
+        self.assertContinues(self.control("reserve-class-correction", mode="dry_run", **request))
+        self.assertFollowUpsWait({"reserve-class-correction": request})
+
+
 class DriftBlockPersistenceTest(DriftFixture):
     def test_a_block_survives_a_revert_a_new_approval_and_resume(self):
         self.assertContinues(self.dispatch("delta"))
@@ -229,6 +368,8 @@ class DriftGuidanceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (PinnedRevisionTest, DriftBlockTest, FeatureOwnerDriftTest, DriftBlockPersistenceTest,
+                               for case in (PinnedRevisionTest, DriftBlockTest, FeatureOwnerDriftTest,
+                                            OwnedPlanningInputTest, AliasOwnedPlanningInputTest, CorrectiveDriftTest,
+                                            DriftBlockPersistenceTest,
                                             DriftGuidanceTest))
     raise SystemExit(run_counted(suite, label="test-implement-planning-drift"))

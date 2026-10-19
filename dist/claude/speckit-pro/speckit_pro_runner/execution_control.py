@@ -2950,6 +2950,9 @@ FAILURE_PATH_ACTIONS: dict[str, _FailurePathAction] = {
     "begin-stage-epoch": _FailurePathAction(
         lambda c: begin_stage_epoch(c.root, c.ledger, c.inputs, c.workflow, c.now)),
 }
+PLANNING_DISPATCH_ACTIONS = frozenset({"reserve", RESERVE_RETRY_RUNG, "authorize-corrective-retry",
+                                       "authorize-corrective-continuation", "authorize-corrective-exception",
+                                       "reserve-class-correction"})
 UNKNOWN_GUARDED_ACTIONS = frozenset({*FAILURE_PATH_ACTIONS, "begin-verification", RESERVE_RETRY_RUNG,
                                     BLOCK_EXHAUSTED_CHECK})
 _ACTIONS = frozenset({"start", "status", "begin-verification", "complete", "reconcile", "reconcile-unit",
@@ -3105,8 +3108,9 @@ def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> list[s
     units = {scope.removeprefix("unit:") for scope in _requested_scope(ctl.inputs) if scope.startswith("unit:")}
     if not units <= {entry["tdd_unit"] for entry in pinned["tasks"].values()}:
         raise ValueError("the request names a TDD unit the approved plan does not define")
-    # Verification runs checks and dispatches no work from the changed plan; every other kind needs a unit.
-    unscoped = ctl.action == RESERVE_RETRY_RUNG or (ctl.inputs.get("kind") != "verification" and not units)
+    # Follow-ups record no task units, regardless of scope/kind claims in their request.
+    # Only an ordinary verification reserve dispatches checks without work from the changed plan.
+    unscoped = ctl.action != "reserve" or (ctl.inputs.get("kind") != "verification" and not units)
     return ["blocked_for_uat"] if unscoped and planning_drifted(ledger) else []
 
 
@@ -3134,7 +3138,7 @@ def _run_action(ctl: _Control, ledger: dict[str, Any], now: float, reasons: list
         return record_result(ledger, ctl.inputs, now, ctl.root), clock_reasons(ledger, now)
     if action in {"checkpoint", "pause", "resume"}:
         return checkpoint_or_wait(ledger, ctl.inputs, now), clock_reasons(ledger, now)
-    if action in {"reserve", RESERVE_RETRY_RUNG}:
+    if action in PLANNING_DISPATCH_ACTIONS:
         waiting = _check_planning(ctl, ledger, now)
         if waiting:
             return {"reasons": waiting}, reasons
