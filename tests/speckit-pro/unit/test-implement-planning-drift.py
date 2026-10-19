@@ -20,6 +20,7 @@ AdmissionFixture = load_script("implement_admission_tests", HERE / "test-impleme
 TASKS = "## Phase 3: Stories\n" + "".join(f"- [ ] T00{n} Build part {n}\n" for n in range(1, 5))
 DEPENDS = {"T001": [], "T002": ["T001"], "T003": ["T002"], "T004": []}
 UNITS = {"T001": "alpha", "T002": "beta", "T003": "gamma", "T004": "delta"}
+OWNS = {"T004": ["src/delta", "specs/demo/quickstart.md"]}
 SCHEMA = json.loads((HERE.parents[2] / "speckit-pro/speckit_pro_runner/contracts/execution-control.schema.json").read_text())
 
 
@@ -38,7 +39,7 @@ class DriftFixture(AdmissionFixture):
         (self.feature / ".process").mkdir(exist_ok=True)
         sidecar = {"schema_version": "task-execution.v1",
                    "fingerprints": fingerprints("A feature", "A plan", text),
-                   "tasks": {task: {"capability_group": "stories", "depends_on": deps, "owns": [f"src/{UNITS[task]}"],
+                   "tasks": {task: {"capability_group": "stories", "depends_on": deps, "owns": OWNS.get(task, [f"src/{UNITS[task]}"]),
                                     "tdd_unit": UNITS[task]} for task, deps in DEPENDS.items()}}
         (self.feature / ".process/task-execution.json").write_text(json.dumps(sidecar))
 
@@ -107,7 +108,8 @@ class DriftBlockTest(DriftFixture):
         self.assertEqual(sorted(entries), ["task:T001", "task:T002", "task:T003"])
         self.assertEqual({entry["reason"] for entry in entries.values()}, {"planning_drift"})
         self.assertEqual({entry["attempted"] for entry in entries.values()}, {False})
-        self.assertEqual({entry["plan_sha256"] for entry in entries.values()}, {self.approved["manifest_digest"]})
+        self.assertEqual({entry["plan_sha256"] for entry in entries.values()},
+                         {self.approved["manifest"]["files"]["specs/demo/tasks.md"]})
         (cause,) = self.ledger()["blocked_work"]["causes"].values()
         self.assertEqual(cause["approved_manifest_digest"], self.approved["manifest_digest"])
         self.assertEqual(cause["drifted_tasks"], ["T001"])
@@ -134,6 +136,29 @@ class DriftBlockTest(DriftFixture):
 
     def test_a_changed_heading_blocks_all_remaining_work(self):
         self.assertBlocksAllRemainingWork(lambda: self.write_tasks(TASKS.replace("Phase 3", "Phase 4")))
+
+    def test_a_blank_line_between_tasks_is_a_layout_change(self):
+        self.assertBlocksAllRemainingWork(lambda: self.write_tasks(TASKS.replace("- [ ] T003", "\n- [ ] T003")))
+
+    def test_missing_task_metadata_blocks_all_remaining_work(self):
+        self.assertBlocksAllRemainingWork(lambda: (self.feature / ".process/task-execution.json").unlink())
+
+    def test_a_task_writing_a_planning_file_it_owns_is_not_drift(self):
+        self.assertContinues(self.dispatch("delta"))
+        (self.feature / "quickstart.md").write_text("Run part 4\n")
+        self.assertContinues(self.dispatch("alpha"))
+        self.assertNotIn("blocked_work", self.ledger())
+
+    def test_unscoped_work_waits_after_drift(self):
+        self.assertContinues(self.dispatch("delta"))
+        self.write_tasks(TASKS.replace("Build part 1", "Build part 1 twice"))
+        self.assertContinues(self.dispatch("delta"))
+        for action, inputs in (("reserve", {"kind": "implementation"}),
+                               ("reserve", {"kind": "corrective", "failure_invariant": "FR-001"}),
+                               ("reserve-retry-rung", {"host": "claude", "command_sha256": "a" * 64})):
+            with self.subTest(action=action, kind=inputs.get("kind")):
+                self.assertBlocked(self.control(action, dispatch_id=f"unscoped-{action}", **inputs))
+        self.assertContinues(self.control("reserve", dispatch_id="verify", kind="verification"))
 
 
 class DriftBlockPersistenceTest(DriftFixture):

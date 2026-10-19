@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from typing import Any, NamedTuple
 
+from .task_execution import overlaps
+
 BLOCK_EXHAUSTED_CHECK = "block-exhausted-check"
 ACCEPT_BLOCKED_GAP = "accept-blocked-gap"
 GAP_ACCEPTED = "gap_accepted"
@@ -100,11 +102,21 @@ class Drift(NamedTuple):
 
 
 def drifted_tasks(drift: Drift) -> tuple[list[str], list[str] | None]:
-    """The changed planning files and the tasks they change, or None when the change cannot be confined to tasks."""
+    """The changed planning files and the tasks they change, or None when the change cannot be confined to tasks.
+
+    A file some approved task owns is that task's planned output, not drift, unless it is a feature planning source.
+    """
     pinned, current = drift.pinned, drift.current
     changed = sorted(name for name in {*pinned["files"], *current["files"]}
                      if pinned["files"].get(name) != current["files"].get(name))
-    if (not changed or not set(changed) <= {f"{drift.feature}/{name}" for name in TASK_SCOPED_FILES}
+    if not changed:
+        return changed, None
+    sources = {f"{drift.feature}/{name}" for name in ("spec.md", "plan.md", *TASK_SCOPED_FILES)}
+    owned = [path for entry in pinned["tasks"].values() for path in entry["owns"]]
+    changed = [name for name in changed if name in sources or not any(overlaps(name, path) for path in owned)]
+    if not changed:
+        return changed, []
+    if (not set(changed) <= {f"{drift.feature}/{name}" for name in TASK_SCOPED_FILES}
             or pinned["layout"] != current["layout"] or set(pinned["tasks"]) != set(current["tasks"])):
         return changed, None
     named = sorted(task for task, entry in pinned["tasks"].items() if current["tasks"][task]["digest"] != entry["digest"])
@@ -114,6 +126,8 @@ def drifted_tasks(drift: Drift) -> tuple[list[str], list[str] | None]:
 def block_planning_drift(record: dict[str, Any], drift: Drift) -> list[str]:
     """Block the remaining tasks a planning change reaches: the changed tasks and their dependents, else every task."""
     changed, named = drifted_tasks(drift)
+    if named == []:
+        return []
     tasks, approved, cause = drift.pinned["tasks"], drift.pinned["manifest_digest"], drift.current["manifest_digest"]
     reached = set(tasks) if named is None else {*named, *dependents(
         {task: entry["depends_on"] for task, entry in tasks.items()}, named)}
@@ -123,8 +137,14 @@ def block_planning_drift(record: dict[str, Any], drift: Drift) -> list[str]:
     return merge_entries(record, cause, {entry_id("task", task): {
         "kind": "task", "unit": task, "tdd_unit": tasks[task]["tdd_unit"], "reason": PLANNING_DRIFT, "causes": [cause],
         "roots": [], "attempted": False, "retained_work": [], "verification": "not_run", "unblock": DRIFT_UNBLOCK,
-        "plan_sha256": approved, "blocked_at": drift.now, "disposition": None}
+        "plan_sha256": drift.pinned["files"].get(f"{drift.feature}/tasks.md"), "blocked_at": drift.now,
+        "disposition": None}
         for task in sorted(reached) if tasks[task]["tdd_unit"] not in drift.completed_units})
+
+
+def planning_drifted(ledger: dict[str, Any]) -> bool:
+    """True once the run recorded planning drift; from then on unscoped work cannot prove it is independent."""
+    return any("approved_manifest_digest" in cause for cause in _section(ledger, "causes").values())
 
 
 def merge_entries(record: dict[str, Any], cause: str, blocked: dict[str, dict[str, Any]]) -> list[str]:
