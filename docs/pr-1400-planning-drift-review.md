@@ -11,6 +11,8 @@ Both findings were reproduced through the portable `execution-control` helper be
 
 ## Known limits
 
+- **Info (nested-reservation probe):** a proposed nested correction carrying `reservation_id` plus `review_remediation` or `test_fix` cannot reach the corrective fallback. `execution_control.py` calls `_require_new_corrective_dispatch` while parsing those fields, before `_nested_correction`, and refuses a non-null reservation. Without a remediation/unit claim the planning guard blocks the nested request after drift. This is an unreachable bypass, so no speculative runtime change was added.
+
 - **Low (spec review):** escalation, gate-remediation and corrective follow-ups wait after drift when the planning guard cannot establish independent task-unit authority from their request/record shape. This conservatively withholds work rather than admitting changed planning authority. Independent ordinary implementation and eligible scoped review/test-fix reserves still continue; verification remains available.
 
 - **Info (standards review):** the `Drift.dispatched_units` tuple field remains unused after removal of the ownership filter, and the `named == []` branch is unreachable because `drifted_tasks` no longer returns that value. These are inert compatibility/cleanup remnants; neither can remove drift or admit work. They remain outside the behavioral repair.
