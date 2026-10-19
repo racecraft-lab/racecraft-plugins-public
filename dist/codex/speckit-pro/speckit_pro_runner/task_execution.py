@@ -39,7 +39,7 @@ def fingerprints(spec: str, plan: str, tasks: str) -> dict[str, str]:
 TASK_LINE = re.compile(r"(?m)^[ \t]*-[ \t]+\[[ xX]\][ \t]+(T[0-9]{3,})\b.*$")
 
 
-def task_digests(tasks: str, sidecar: Any) -> dict[str, Any]:
+def task_digests(tasks: str, sidecar: Any, root: Path) -> dict[str, Any]:
     """Digest each task's line with its sidecar entry, and separately the layout: the rest, task lines as bare IDs.
 
     An edit confined to some task lines or entries leaves the layout digest unchanged, so it names exactly those tasks.
@@ -56,7 +56,8 @@ def task_digests(tasks: str, sidecar: Any) -> dict[str, Any]:
     return {"layout": digest([TASK_LINE.sub(lambda match: match.group(1), definitions), rest]), "tasks": {
         task_id: {"digest": digest([lines[task_id], entry]), "tdd_unit": entry["tdd_unit"],
                   "depends_on": string_list(entry.get("depends_on"), f"{task_id}.depends_on"),
-                  "owns": string_list(entry.get("owns"), f"{task_id}.owns")}
+                  "owns": [owned_path(path, root) for path in string_list(entry.get("owns"), f"{task_id}.owns",
+                                                                          nonempty=True)]}
         for task_id, entry in entries.items()}}
 
 

@@ -3091,16 +3091,18 @@ def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> list[s
     if pinned is None:
         pinned = ledger["planning_binding"] = {**current, "bound_at": now}
     elif current["manifest_digest"] != pinned["manifest_digest"]:
-        completed = {unit for item in _all_dispatches(ledger) if item["kind"] == "implementation"
-                     and item["outcome"] == "completed" for unit in item.get("tdd_units", [])}
+        dispatched = [(unit, item["outcome"]) for item in _all_dispatches(ledger) if item["kind"] == "implementation"
+                      for unit in item.get("tdd_units", [])]
         record = ledger.get("blocked_work") or {"causes": {}, "entries": {}}
-        block_planning_drift(record, Drift(pinned, current, feature, completed, now))
+        block_planning_drift(record, Drift(pinned, current, feature, {unit for unit, _ in dispatched},
+                                           {unit for unit, outcome in dispatched if outcome == "completed"}, now))
         if record["causes"]:
             ledger["blocked_work"] = record
-    if not set(ctl.inputs.get("tdd_units") or []) <= {entry["tdd_unit"] for entry in pinned["tasks"].values()}:
-        raise ValueError("tdd_units names a TDD unit the approved plan does not define")
-    unscoped = ctl.action == RESERVE_RETRY_RUNG or (ctl.inputs.get("kind") in {"implementation", "corrective"} and not any(
-        scope.startswith("unit:") for scope in _requested_scope(ctl.inputs)))
+    units = {scope.removeprefix("unit:") for scope in _requested_scope(ctl.inputs) if scope.startswith("unit:")}
+    if not units <= {entry["tdd_unit"] for entry in pinned["tasks"].values()}:
+        raise ValueError("the request names a TDD unit the approved plan does not define")
+    # Verification runs checks and dispatches no work from the changed plan; every other kind needs a unit.
+    unscoped = ctl.action == RESERVE_RETRY_RUNG or (ctl.inputs.get("kind") != "verification" and not units)
     return ["blocked_for_uat"] if unscoped and planning_drifted(ledger) else []
 
 

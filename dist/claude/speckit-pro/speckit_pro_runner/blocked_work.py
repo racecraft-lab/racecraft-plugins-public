@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any, NamedTuple
 
-from .task_execution import overlaps
+from .task_execution import path_key
 
 BLOCK_EXHAUSTED_CHECK = "block-exhausted-check"
 ACCEPT_BLOCKED_GAP = "accept-blocked-gap"
@@ -92,28 +92,34 @@ def block_exhausted_check(record: dict[str, Any], block: Block) -> list[str]:
 
 
 class Drift(NamedTuple):
-    """The planning revision an implement run pinned, the current one, and the TDD units the run already completed."""
+    """The planning revision an implement run pinned, the current one, and the TDD units the run dispatched and completed."""
 
     pinned: dict[str, Any]
     current: dict[str, Any]
     feature: str
+    dispatched_units: set[str]
     completed_units: set[str]
     now: float
+
+
+def _under(name: str, path: str) -> bool:
+    return path_key(name) == path_key(path) or path_key(name).startswith(path_key(path) + "/")
 
 
 def drifted_tasks(drift: Drift) -> tuple[list[str], list[str] | None]:
     """The changed planning files and the tasks they change, or None when the change cannot be confined to tasks.
 
-    A file some approved task owns is that task's planned output, not drift, unless it is a feature planning source.
+    A file under an owned path of a task the run dispatched is that task's planned output, not drift. Ownership of
+    the feature directory itself, or of a directory holding it, never covers a planning file.
     """
     pinned, current = drift.pinned, drift.current
     changed = sorted(name for name in {*pinned["files"], *current["files"]}
                      if pinned["files"].get(name) != current["files"].get(name))
     if not changed:
         return changed, None
-    sources = {f"{drift.feature}/{name}" for name in ("spec.md", "plan.md", *TASK_SCOPED_FILES)}
-    owned = [path for entry in pinned["tasks"].values() for path in entry["owns"]]
-    changed = [name for name in changed if name in sources or not any(overlaps(name, path) for path in owned)]
+    owned = [path for entry in pinned["tasks"].values() if entry["tdd_unit"] in drift.dispatched_units
+             for path in entry["owns"] if not _under(drift.feature, path)]
+    changed = [name for name in changed if not any(_under(name, path) for path in owned)]
     if not changed:
         return changed, []
     if (not set(changed) <= {f"{drift.feature}/{name}" for name in TASK_SCOPED_FILES}

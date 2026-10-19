@@ -576,7 +576,7 @@ def implement_binding(root: Path, feature_dir: str, workflow_file: str, admit: b
     pinned = {"record_path": admission(root, feature, binding)["record_path"]} if admit else {}
     try:
         sidecar = json.loads(captured(root, feature + "/.process/task-execution.json"), object_pairs_hook=unique_object)
-        tasks = task_digests(captured(root, feature + "/tasks.md").decode("utf-8"), sidecar)
+        tasks = task_digests(captured(root, feature + "/tasks.md").decode("utf-8"), sidecar, root)
     except (ValueError, OSError):
         if admit:
             raise
