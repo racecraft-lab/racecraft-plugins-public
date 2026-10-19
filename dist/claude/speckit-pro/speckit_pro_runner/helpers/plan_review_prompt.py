@@ -149,8 +149,8 @@ def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[st
     if mode != "read_only":
         recorded = partial(requests_recorded, active=selection.instructions(False), retired=selection.instructions(True))
         inventory = update_inventory(root, selection.feature, recorded, apply=mode == "apply")
-    if mode == "apply":  # the inventory is a planning input, so recording moves the revision the prompt names
-        revision = planning_manifest(root, inputs["feature_dir"], inputs["workflow_file"])["manifest_digest"]
+    # Recording requests changes the bundle; it cannot review that new revision or concurrent edits.
+    # Keep the validated input revision, with no fallible planning reads after publication.
     body = [line for identity, summary in findings.items()
             for line in _section(identity, summary, [r for r in requests.values() if r["finding"] == identity], withdrawn)]
     prompt = "\n".join([*PREAMBLE, f"Reviewed revision: {revision}", *body])

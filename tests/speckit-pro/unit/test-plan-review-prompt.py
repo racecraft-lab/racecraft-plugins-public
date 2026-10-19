@@ -2,12 +2,14 @@
 """The plan-review repair prompt at the portable runner request seam, on source and both host payloads."""
 import copy
 import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from planning_helper_support import PlanningHelperFixture
+from runner_invocation import runner_env
 from script_loader import load_script
 from test_result import run_counted
 
@@ -129,6 +131,105 @@ class PlanReviewPromptRevisionTest(PlanReviewPromptFixture):
                 self.assertRefused(self.call(reviewed_revision=value), "reviewed_revision must be a non-empty string")
 
 
+class PlanReviewConcurrentRevisionTest(PlanReviewPromptFixture):
+    """Publication cannot turn concurrent planning edits into reviewed input, on either host."""
+
+    def review_during_change(self, relative, windows=("before", "after")):
+        target = self.root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("Original planning input\n")
+        for window in windows:
+            for mutation in ("edit", "replace", "rename", "symlink", "hardlink", "remove", "unreadable", "add"):
+                with self.subTest(window=window, mutation=mutation):
+                    completed = subprocess.run(
+                        [sys.executable, "-c", RACE_PROBE, relative, window, mutation],
+                        input=json.dumps(self.helper_inputs(findings=FINDINGS, requests=REQUESTS, withdrawals=[])),
+                        cwd=self.root, env=runner_env(self.runner_environment()), text=True, capture_output=True,
+                        check=False,
+                    )
+                    self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_feature_edits_never_acquire_a_reviewed_label(self):
+        self.review_during_change("specs/demo/plan.md")
+
+    def test_workflow_edits_never_acquire_a_reviewed_label(self):
+        self.review_during_change(self.workflow_file)
+
+    def test_project_edits_never_acquire_a_reviewed_label(self):
+        self.review_during_change(".specify/memory/constitution.md")
+
+    def test_formal_edits_never_acquire_a_reviewed_label(self):
+        (self.root / ".specify/formal-methods.json").write_text(json.dumps(
+            {"models": {"model": {"inputs": ["formal/model.tla"]}}}))
+        self.review_during_change("formal/model.tla")
+
+    def test_inventory_edits_after_publication_never_acquire_a_reviewed_label(self):
+        self.review_during_change("specs/demo/planning-findings.json", windows=("after",))
+
+
+RACE_PROBE = r'''
+import json
+import sys
+from pathlib import Path
+from unittest.mock import patch
+from speckit_pro_runner.helpers import plan_review_prompt as helper
+
+root = Path.cwd()
+target = root / sys.argv[1]
+window, mutation = sys.argv[2:]
+# Each process starts from a valid inventory and restores the previous probe's path mutations.
+target.unlink(missing_ok=True)
+target.write_text("Original planning input\n")
+inventory = root / "specs/demo/planning-findings.json"
+inventory.unlink(missing_ok=True)
+inventory.write_text('{"F1": [], "F2": []}')
+inputs = json.load(sys.stdin)
+reviewed = helper.planning_manifest(root, inputs["feature_dir"], inputs["workflow_file"])["manifest_digest"]
+inputs["reviewed_revision"] = reviewed
+publish = helper.update_inventory
+
+def mutate():
+    alternate = target.with_name(target.name + ".concurrent")
+    alternate.unlink(missing_ok=True)
+    alternate.write_text("Concurrent unreviewed input\n")
+    if mutation == "edit":
+        target.write_text("Concurrent unreviewed input\n")
+    elif mutation == "replace":
+        alternate.replace(target)
+    elif mutation == "rename":
+        target.rename(alternate)
+    elif mutation in ("symlink", "hardlink"):
+        target.unlink()
+        if mutation == "symlink":
+            target.symlink_to(alternate)
+        else:
+            target.hardlink_to(alternate)
+    elif mutation == "remove":
+        target.unlink()
+    elif mutation == "unreadable":
+        target.chmod(0)
+    # "add" leaves the newly created adjacent planning input in place.
+
+def racing_publish(*args, **kwargs):
+    if window == "before":
+        mutate()
+    result = publish(*args, **kwargs)
+    if window == "after":
+        mutate()
+    return result
+
+try:
+    with patch.object(helper, "update_inventory", side_effect=racing_publish):
+        reply = helper.plan_review_prompt(root, inputs, "apply")
+    assert reply["revision"] == reviewed, (reply["revision"], reviewed)
+    assert f"Reviewed revision: {reviewed}" in reply["prompt"], reply["prompt"]
+    assert reply["writes_state"] is True
+finally:
+    if target.exists():
+        target.chmod(0o600)
+'''
+
+
 class InventoryFixture(PlanReviewPromptFixture):
     def seed(self, text):
         (self.feature / "planning-findings.json").write_text(text)
@@ -146,7 +247,8 @@ class PlanReviewRequestRecordTest(InventoryFixture):
 
     def test_apply_records_each_active_instruction_under_its_finding(self):
         self.seed(json.dumps({"F1": [], "F2": []}))
-        reply = self.call(mode="apply")
+        reviewed = self.call()["data"]["revision"]
+        reply = self.call(mode="apply", reviewed_revision=reviewed)
         self.assertEqual(reply["status"], "ok", reply)
         expected = {"F1": [REQUESTS[0]["instruction"]], "F2": [REQUESTS[1]["instruction"]]}
         self.assertEqual(self.inventory(), expected)
@@ -154,8 +256,9 @@ class PlanReviewRequestRecordTest(InventoryFixture):
         self.assertTrue(reply["data"]["writes_state"])
         self.assertFalse(reply["data"]["sends"] or reply["data"]["starts_work"])
         current = self.run_helper("planning-approval", self.helper_inputs(action="manifest"))["data"]["manifest_digest"]
-        self.assertEqual(reply["data"]["revision"], current)
-        self.assertIn(f"Reviewed revision: {current}", reply["data"]["prompt"])
+        self.assertNotEqual(reviewed, current)
+        self.assertEqual(reply["data"]["revision"], reviewed)
+        self.assertIn(f"Reviewed revision: {reviewed}", reply["data"]["prompt"])
         repeat = self.call(mode="apply", reviewed_revision=current)
         self.assertEqual(repeat["status"], "ok", repeat)
         self.assertEqual(repeat["data"]["revision"], current)
