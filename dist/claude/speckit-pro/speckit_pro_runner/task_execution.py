@@ -36,7 +36,7 @@ def fingerprints(spec: str, plan: str, tasks: str) -> dict[str, str]:
     )}
 
 
-TASK_LINE = re.compile(r"(?m)^\s*-\s+\[[ xX]\]\s+(T[0-9]{3,})\b.*$")
+TASK_LINE = re.compile(r"(?m)^[ \t]*-[ \t]+\[[ xX]\][ \t]+(T[0-9]{3,})\b.*$")
 
 
 def task_digests(tasks: str, sidecar: Any) -> dict[str, Any]:
@@ -55,7 +55,8 @@ def task_digests(tasks: str, sidecar: Any) -> dict[str, Any]:
         return hashlib.sha256(canonical_bytes(value)).hexdigest()
     return {"layout": digest([TASK_LINE.sub(lambda match: match.group(1), definitions), rest]), "tasks": {
         task_id: {"digest": digest([lines[task_id], entry]), "tdd_unit": entry["tdd_unit"],
-                  "depends_on": string_list(entry.get("depends_on"), f"{task_id}.depends_on")}
+                  "depends_on": string_list(entry.get("depends_on"), f"{task_id}.depends_on"),
+                  "owns": string_list(entry.get("owns"), f"{task_id}.owns")}
         for task_id, entry in entries.items()}}
 
 

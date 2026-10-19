@@ -577,7 +577,7 @@ def implement_binding(root: Path, feature_dir: str, workflow_file: str, admit: b
     try:
         sidecar = json.loads(captured(root, feature + "/.process/task-execution.json"), object_pairs_hook=unique_object)
         tasks = task_digests(captured(root, feature + "/tasks.md").decode("utf-8"), sidecar)
-    except ValueError:
+    except (ValueError, OSError):
         if admit:
             raise
         tasks = {"layout": None, "tasks": {}}

@@ -3165,12 +3165,15 @@ inputs.
 in the ledger. A missing or invalid approval refuses that reserve with the
 `planning approval field` that [admission](./planning-approval.md) names.
 Every later `reserve` compares the current planning inputs with the pinned
-revision. When they changed, the runner blocks the remaining tasks the change
-reaches (ADR 0012): the changed tasks and their dependents when only task lines
-or their sidecar entries changed, otherwise every remaining task. A blocked
-unit's `reserve` returns `blocked_for_uat`: skip that batch and keep
-dispatching the units the runner still admits. The runner refuses a TDD unit
-the approved plan does not define. Do not re-plan, record a new approval or
+revision; a file an approved task owns is that task's output, not a change.
+When they changed, the runner blocks the remaining tasks the change reaches
+(ADR 0012, ADR 0013): the changed tasks and their dependents when only task
+lines or their sidecar entries changed, otherwise every remaining task. A
+blocked unit's `reserve` returns `blocked_for_uat`: skip that batch and keep
+dispatching the units the runner still admits. After drift, work that names no
+TDD unit (an unscoped implementation or corrective dispatch, a retry rung)
+also returns `blocked_for_uat`. The runner refuses a TDD unit the approved
+plan does not define. Do not re-plan, record a new approval or
 revert the change to clear a block: blocks last for the whole run, and a
 `begin-replan-epoch` opens no changed task. The changed plan needs plan review
 and a linked implement run. Hand off with blocked work as

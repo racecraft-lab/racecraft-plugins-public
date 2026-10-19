@@ -95,7 +95,7 @@
         "value": "speckit_pro_runner/blocked_work.py",
         "display": "speckit_pro_runner/blocked_work.py"
       },
-      "sha256": "07ac47e9ca514cceb240d789283a790f233a587d5c33bc623a42b79047a0ef0e"
+      "sha256": "14ddef1fe02b5d7514df54713eadfc15719be9345374d73c8d0dfe744ae7b8ff"
     },
     {
       "path": {
@@ -167,7 +167,7 @@
         "value": "speckit_pro_runner/contracts/execution-control.schema.json",
         "display": "speckit_pro_runner/contracts/execution-control.schema.json"
       },
-      "sha256": "d07cd5a3d0612f7b27b6a2500807005f9071653c4f811390214cdd28c6acbb97"
+      "sha256": "b834ad6e4b9738a291a84e3af53cd93bc324e434f7163922d5214d0b3619e222"
     },
     {
       "path": {
@@ -255,7 +255,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "4e162781c4f55d5a0f104813b837245cd95f0cbed196f482dfe56e01a6d148de"
+      "sha256": "c3470b850474aea8fd51919a5bc22e29fe3cefc63ebdefd58b929a9eb236e1f8"
     },
     {
       "path": {
@@ -751,7 +751,7 @@
         "value": "speckit_pro_runner/helpers/planning_approval.py",
         "display": "speckit_pro_runner/helpers/planning_approval.py"
       },
-      "sha256": "3109b5e1bf34336f073341fabb1a353f5e2ef2c0c828b6043be7ca7978fb9f07"
+      "sha256": "356b0b3ecc5c46a6f17fff88d22c91d40135f36aff3f9cba83f1193e93c523f1"
     },
     {
       "path": {
@@ -1111,7 +1111,7 @@
         "value": "speckit_pro_runner/task_execution.py",
         "display": "speckit_pro_runner/task_execution.py"
       },
-      "sha256": "283174800f76c66275fb906235167314cb19240836f0117ec085e8178f48168a"
+      "sha256": "632ae5014d97ebbce01f9b65ef3ddb24b371af07caae3433ebc1cb65bce7d0a4"
     },
     {
       "path": {

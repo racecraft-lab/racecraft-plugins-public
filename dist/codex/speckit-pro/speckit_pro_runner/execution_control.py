@@ -24,7 +24,7 @@ from typing import Any, NamedTuple
 from . import BLOCKED_BY_FIELD, COMPLETED_DISPATCH_IDS_FIELD, UNKNOWN_DISPATCH_IDS_FIELD
 from .blocked_work import (ACCEPT_BLOCKED_GAP, BLOCK_EXHAUSTED_CHECK, GAP_ACCEPTED, Block, Drift, accept_gap,
                            block_exhausted_check, block_planning_drift, blocked_check, blocked_scope,
-                           disposition_event_ids, validate_blocked_work)
+                           disposition_event_ids, planning_drifted, validate_blocked_work)
 from .retry_ladder import RUNGS, is_interrupted, next_rung, replay_rungs, rung_settings
 from .strict_input import SelectionError, require_text as require_nonempty_text
 from .task_partition import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
@@ -3074,13 +3074,16 @@ def _guarded_action(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[s
     return {}
 
 
-def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> None:
-    """Pin the admitted planning revision at a planned run's first task dispatch; later, block what drift reaches."""
+def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> list[str]:
+    """Pin the admitted planning revision at a planned run's first task dispatch; later, block what drift reaches.
+
+    Returns the reasons a request waits: after drift, work that names no TDD unit cannot prove its independence.
+    """
     pinned = ledger.get("planning_binding")
     if pinned is None:
         text = trusted_text(ctl.workflow, ctl.root) if "tdd_units" in ctl.inputs else None
         if text is None or not workflow_stage_signals(text)["planning_complete"]:
-            return
+            return []
     if ctl.planning is None:
         raise ValueError("an implement task dispatch needs the planning-approval binding")
     feature = ctl.spec.parent.relative_to(ctl.root.resolve()).as_posix()
@@ -3090,10 +3093,15 @@ def _check_planning(ctl: _Control, ledger: dict[str, Any], now: float) -> None:
     elif current["manifest_digest"] != pinned["manifest_digest"]:
         completed = {unit for item in _all_dispatches(ledger) if item["kind"] == "implementation"
                      and item["outcome"] == "completed" for unit in item.get("tdd_units", [])}
-        record = ledger.setdefault("blocked_work", {"causes": {}, "entries": {}})
+        record = ledger.get("blocked_work") or {"causes": {}, "entries": {}}
         block_planning_drift(record, Drift(pinned, current, feature, completed, now))
+        if record["causes"]:
+            ledger["blocked_work"] = record
     if not set(ctl.inputs.get("tdd_units") or []) <= {entry["tdd_unit"] for entry in pinned["tasks"].values()}:
         raise ValueError("tdd_units names a TDD unit the approved plan does not define")
+    unscoped = ctl.action == RESERVE_RETRY_RUNG or (ctl.inputs.get("kind") in {"implementation", "corrective"} and not any(
+        scope.startswith("unit:") for scope in _requested_scope(ctl.inputs)))
+    return ["blocked_for_uat"] if unscoped and planning_drifted(ledger) else []
 
 
 def _validate_planning_binding(ledger: dict[str, Any]) -> None:
@@ -3103,7 +3111,7 @@ def _validate_planning_binding(ledger: dict[str, Any]) -> None:
     if (not isinstance(binding, dict) or set(binding) != PLANNING_BINDING_KEYS
             or not _is_digest(binding["manifest_digest"]) or not isinstance(binding["files"], dict)
             or not isinstance(binding["tasks"], dict) or not all(
-                isinstance(entry, dict) and set(entry) == {"digest", "tdd_unit", "depends_on"}
+                isinstance(entry, dict) and set(entry) == {"digest", "tdd_unit", "depends_on", "owns"}
                 and isinstance(entry["depends_on"], list) for entry in binding["tasks"].values())):
         raise ValueError("invalid planning binding")
 
@@ -3120,8 +3128,10 @@ def _run_action(ctl: _Control, ledger: dict[str, Any], now: float, reasons: list
         return record_result(ledger, ctl.inputs, now, ctl.root), clock_reasons(ledger, now)
     if action in {"checkpoint", "pause", "resume"}:
         return checkpoint_or_wait(ledger, ctl.inputs, now), clock_reasons(ledger, now)
-    if action == "reserve":
-        _check_planning(ctl, ledger, now)
+    if action in {"reserve", RESERVE_RETRY_RUNG}:
+        waiting = _check_planning(ctl, ledger, now)
+        if waiting:
+            return {"reasons": waiting}, reasons
     if action in FAILURE_PATH_ACTIONS:
         call = FailurePathCall(ctl.root, ledger, ctl.inputs, ctl.spec, ctl.workflow, now, bool(reasons))
         return run_failure_path(action, call, extra), reasons
