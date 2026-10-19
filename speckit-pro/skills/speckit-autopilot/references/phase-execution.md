@@ -1974,7 +1974,8 @@ native tool.
 A strict-mode shortfall runs the whole sequence above. Before the pages, the
 runner adds each low-confidence finding to the feature's `planning-findings.json`
 (see [Recorded planning approval](./planning-approval.md)). Each finding starts with
-no request, so no approval can be recorded until plan review and its repair close it.
+no request, so no approval can be recorded until plan review records its requests
+(`plan-review-prompt` in `apply` mode) and the repair closes it.
 A gate that did not resolve (NO_DATA, a malformed verdict, or a blocked row) still
 stops before generation: no pages, no push, no pull request.
 

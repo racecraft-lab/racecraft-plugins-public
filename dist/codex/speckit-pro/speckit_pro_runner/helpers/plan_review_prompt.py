@@ -1,17 +1,24 @@
-"""The copyable planning-repair prompt a plan review builds; it sends nothing and starts no work."""
+"""The copyable planning-repair prompt a plan review builds, and the requests it records for approval.
+
+The prompt sends nothing and starts no work. Applying the review also writes each active request into the
+feature's `planning-findings.json`, the inventory that `planning-approval` checks.
+"""
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from string import punctuation
 from typing import Any
 
 from ..strict_input import SelectionError, require_fields, require_text
+from ..task_execution import owned_path
 from .execution_requests import Refusal, run_contained_helper
-from .planning_approval import planning_manifest
+from .planning_approval import planning_manifest, requests_recorded, update_inventory
 
 KINDS = ("recommended", "alternative", "custom")
+MODES = ("read_only", "dry_run", "apply")
 DISPLAY_ESCAPES = str.maketrans({char: f"\\u{ord(char):04x}" for char in punctuation if char not in '\\"'})
 
 PREAMBLE = (
@@ -94,9 +101,28 @@ def _section(identity: str, summary: str, requests: list[dict[str, str]], withdr
     return lines
 
 
-def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
-    if mode != "read_only":
-        raise ValueError("plan-review-prompt runs in read_only mode and writes nothing")
+@dataclass(frozen=True)
+class Selection:
+    """The reviewer's validated answers, bound to the revision they reviewed."""
+    feature: str
+    revision: str
+    findings: dict[str, str]
+    requests: dict[str, dict[str, str]]
+    withdrawn: set[str]
+
+    def active(self) -> list[dict[str, str]]:
+        return [item for identity, item in self.requests.items() if identity not in self.withdrawn]
+
+    def instructions(self, withdrawn: bool) -> dict[str, list[str]]:
+        """Each finding's instructions in review order: the active ones, or the withdrawn ones."""
+        kept: dict[str, list[str]] = {identity: [] for identity in self.findings}
+        for identity, item in self.requests.items():
+            if (identity in self.withdrawn) == withdrawn:
+                kept[item["finding"]].append(item["instruction"])
+        return kept
+
+
+def reviewed_selection(root: Path, inputs: dict[str, Any]) -> Selection:
     fields = require_fields({k: v for k, v in inputs.items() if k != "repo_root"},
                             {"feature_dir", "workflow_file", "reviewed_revision", "findings", "requests", "withdrawals"}, "plan review inputs")
     findings = _findings(fields["findings"])
@@ -106,20 +132,39 @@ def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[st
     for identity in findings:
         if not any(item["finding"] == identity for item in active):
             raise SelectionError(f"{identity} needs an active request; a withdrawn instruction needs a replacement")
+    if len({(item["finding"], item["instruction"]) for item in active}) != len(active):
+        raise SelectionError("two active requests for one finding carry the same instruction")
     revision = planning_manifest(root, fields["feature_dir"], fields["workflow_file"])["manifest_digest"]
     if require_text(fields["reviewed_revision"], "reviewed_revision") != revision:
         raise SelectionError("reviewed revision changed; restart the plan review before building its prompt")
+    return Selection(owned_path(fields["feature_dir"], root), revision, findings, requests, withdrawn)
+
+
+def plan_review_prompt(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
+    if mode not in MODES:
+        raise ValueError(f"plan-review-prompt runs in {' or '.join(MODES)} mode, not {mode}")
+    selection = reviewed_selection(root, inputs)
+    findings, requests, withdrawn = selection.findings, selection.requests, selection.withdrawn
+    revision, inventory = selection.revision, None
+    if mode != "read_only":
+        recorded = partial(requests_recorded, active=selection.instructions(False), retired=selection.instructions(True))
+        inventory = update_inventory(root, selection.feature, recorded, apply=mode == "apply")
+    # Recording requests changes the bundle; it cannot review that new revision or concurrent edits.
+    # Keep the validated input revision, with no fallible planning reads after publication.
     body = [line for identity, summary in findings.items()
             for line in _section(identity, summary, [r for r in requests.values() if r["finding"] == identity], withdrawn)]
     prompt = "\n".join([*PREAMBLE, f"Reviewed revision: {revision}", *body])
-    return {"prompt": prompt, "revision": revision, "writes_state": False, "sends": False, "starts_work": False,
-            "required_findings": [{"finding": identity, "summary": summary} for identity, summary in findings.items()],
-            "active": [{"request": item["id"], "finding": item["finding"], "kind": item["kind"],
-                        "instruction": item["instruction"]} for item in active],
-            "history": [{"request": identity, "finding": item["finding"], "kind": item["kind"],
-                         "instruction": item["instruction"],
-                         "disposition": "withdrawn" if identity in withdrawn else "active"}
-                        for identity, item in requests.items()]}
+    reply = {"prompt": prompt, "revision": revision, "writes_state": mode == "apply", "sends": False, "starts_work": False,
+             "required_findings": [{"finding": identity, "summary": summary} for identity, summary in findings.items()],
+             "active": [{"request": item["id"], "finding": item["finding"], "kind": item["kind"],
+                         "instruction": item["instruction"]} for item in selection.active()],
+             "history": [{"request": identity, "finding": item["finding"], "kind": item["kind"],
+                          "instruction": item["instruction"],
+                          "disposition": "withdrawn" if identity in withdrawn else "active"}
+                         for identity, item in requests.items()]}
+    if inventory is not None:
+        reply["inventory"] = inventory
+    return reply
 
 
 run_plan_review_prompt_helper = partial(
