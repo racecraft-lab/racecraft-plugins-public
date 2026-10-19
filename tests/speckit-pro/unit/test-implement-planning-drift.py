@@ -71,6 +71,14 @@ class DriftFixture(AdmissionFixture):
     def assertBlocked(self, reply):
         self.assertEqual(reply["data"]["reasons"], ["blocked_for_uat"], reply)
 
+    def assertWriteIsDrift(self, dispatched, name):
+        """After `dispatched` runs, writing the feature file `name` blocks every remaining task."""
+        self.assertContinues(self.dispatch(dispatched))
+        (self.feature / name).write_text("Planned elsewhere\n")
+        self.assertBlocked(self.dispatch("delta"))
+        (cause,) = self.ledger()["blocked_work"]["causes"].values()
+        self.assertEqual((cause["changed_files"], cause["drifted_tasks"]), ([f"specs/demo/{name}"], None))
+
 
 class PinnedRevisionTest(DriftFixture):
     def test_the_first_task_dispatch_pins_the_approved_revision(self):
@@ -152,11 +160,7 @@ class DriftBlockTest(DriftFixture):
         self.assertNotIn("blocked_work", self.ledger())
 
     def test_a_planning_file_owned_by_an_undispatched_task_is_drift(self):
-        self.assertContinues(self.dispatch("alpha"))
-        (self.feature / "quickstart.md").write_text("Run part 4\n")
-        self.assertBlocked(self.dispatch("delta"))
-        (cause,) = self.ledger()["blocked_work"]["causes"].values()
-        self.assertEqual((cause["changed_files"], cause["drifted_tasks"]), (["specs/demo/quickstart.md"], None))
+        self.assertWriteIsDrift("alpha", "quickstart.md")
 
     def test_a_unit_the_approved_plan_does_not_define_is_refused_in_any_request(self):
         self.assertContinues(self.dispatch("alpha"))
@@ -184,9 +188,7 @@ class FeatureOwnerDriftTest(DriftFixture):
     OWNS = {"T004": ["src/delta", "specs/demo"]}
 
     def test_owning_the_feature_directory_exempts_no_planning_file(self):
-        self.assertContinues(self.dispatch("delta"))
-        (self.feature / "data-model.md").write_text("A new entity\n")
-        self.assertBlocked(self.dispatch("delta"))
+        self.assertWriteIsDrift("delta", "data-model.md")
 
 
 class DriftBlockPersistenceTest(DriftFixture):
