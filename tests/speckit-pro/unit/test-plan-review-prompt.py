@@ -5,6 +5,7 @@ import json
 import subprocess
 import sys
 import unittest
+from itertools import product
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
@@ -138,16 +139,16 @@ class PlanReviewConcurrentRevisionTest(PlanReviewPromptFixture):
         target = self.root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("Original planning input\n")
-        for window in windows:
-            for mutation in ("edit", "replace", "rename", "symlink", "hardlink", "remove", "unreadable", "add"):
-                with self.subTest(window=window, mutation=mutation):
-                    completed = subprocess.run(
-                        [sys.executable, "-c", RACE_PROBE, relative, window, mutation],
-                        input=json.dumps(self.helper_inputs(findings=FINDINGS, requests=REQUESTS, withdrawals=[])),
-                        cwd=self.root, env=runner_env(self.runner_environment()), text=True, capture_output=True,
-                        check=False,
-                    )
-                    self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+        mutations = ("edit", "replace", "rename", "symlink", "hardlink", "remove", "unreadable", "add")
+        for window, mutation, recorded in product(windows, mutations, ("empty", "recorded")):
+            with self.subTest(window=window, mutation=mutation, inventory=recorded):
+                completed = subprocess.run(
+                    [sys.executable, "-c", RACE_PROBE, relative, window, mutation, recorded],
+                    input=json.dumps(self.helper_inputs(findings=FINDINGS, requests=REQUESTS, withdrawals=[])),
+                    cwd=self.root, env=runner_env(self.runner_environment()), text=True, capture_output=True,
+                    check=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
 
     def test_feature_edits_never_acquire_a_reviewed_label(self):
         self.review_during_change("specs/demo/plan.md")
@@ -170,28 +171,36 @@ class PlanReviewConcurrentRevisionTest(PlanReviewPromptFixture):
 RACE_PROBE = r'''
 import json
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import patch
 from speckit_pro_runner.helpers import plan_review_prompt as helper
 
 root = Path.cwd()
 target = root / sys.argv[1]
-window, mutation = sys.argv[2:]
+window, mutation, recorded = sys.argv[2:]
 # Each process starts from a valid inventory and restores the previous probe's path mutations.
+target.with_name(target.name + ".concurrent").unlink(missing_ok=True)
 target.unlink(missing_ok=True)
 target.write_text("Original planning input\n")
 inventory = root / "specs/demo/planning-findings.json"
 inventory.unlink(missing_ok=True)
-inventory.write_text('{"F1": [], "F2": []}')
 inputs = json.load(sys.stdin)
+inventory.write_text(json.dumps({item["finding"]: [item["instruction"]] if recorded == "recorded" else []
+                                 for item in inputs["requests"]}))
+if target.parts[-2] == "formal":
+    (root / ".specify/formal-methods.json").write_text(json.dumps(
+        {"models": {"model": {"inputs": [target.relative_to(root).as_posix()]}}}))
 reviewed = helper.planning_manifest(root, inputs["feature_dir"], inputs["workflow_file"])["manifest_digest"]
 inputs["reviewed_revision"] = reviewed
 publish = helper.update_inventory
+failures = ExitStack()
 
 def mutate():
     alternate = target.with_name(target.name + ".concurrent")
     alternate.unlink(missing_ok=True)
-    alternate.write_text("Concurrent unreviewed input\n")
+    if mutation in ("replace", "symlink", "hardlink", "add"):
+        alternate.write_text("Concurrent unreviewed input\n")
     if mutation == "edit":
         target.write_text("Concurrent unreviewed input\n")
     elif mutation == "replace":
@@ -208,7 +217,13 @@ def mutate():
         target.unlink()
     elif mutation == "unreadable":
         target.chmod(0)
-    # "add" leaves the newly created adjacent planning input in place.
+        # Inject the denied read too: chmod alone does not deny privileged test users.
+        failures.enter_context(patch.object(helper, "planning_manifest", side_effect=PermissionError("unreadable input")))
+    elif mutation == "add" and target.parts[-2] == "formal":
+        catalog = root / ".specify/formal-methods.json"
+        content = json.loads(catalog.read_text())
+        content["models"]["model"]["inputs"].append(alternate.relative_to(root).as_posix())
+        catalog.write_text(json.dumps(content))
 
 def racing_publish(*args, **kwargs):
     if window == "before":
@@ -225,6 +240,7 @@ try:
     assert f"Reviewed revision: {reviewed}" in reply["prompt"], reply["prompt"]
     assert reply["writes_state"] is True
 finally:
+    failures.close()
     if target.exists():
         target.chmod(0o600)
 '''

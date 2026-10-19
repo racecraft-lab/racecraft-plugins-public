@@ -30,7 +30,11 @@ to both hosts. `PlanReviewConcurrentRevisionTest` covers both publication
 windows and content edits, replacement, rename, symlink, hard link, removal,
 unreadability, and added files for each input category; inventory mutations
 exercise the post-publication window (its checked publisher owns the earlier
-window).
+window). Every case runs with an empty inventory that must be written and an
+already-recorded inventory that needs no write, so the inventory change cannot
+mask a mutation that fails to reach the planning manifest. Added formal inputs
+are declared in the catalog; denied reads are injected as well as chmodded to
+keep that failure deterministic for privileged test users.
 
 ## Known limits
 
