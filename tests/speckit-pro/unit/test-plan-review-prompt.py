@@ -15,6 +15,8 @@ from script_loader import load_script
 from test_result import run_counted
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[2] / "speckit-pro"))
+from speckit_pro_runner.helpers.planning_approval import implement_prompt
 PlanningApprovalFixture = load_script("planning_approval_tests", HERE / "test-planning-approval.py").PlanningApprovalFixture
 REPO = Path(__file__).resolve().parents[3]
 PAYLOADS = {"claude": REPO / "dist/claude/speckit-pro", "codex": REPO / "dist/codex/speckit-pro"}
@@ -383,6 +385,91 @@ class PlanReviewApprovalTest(PlanningApprovalFixture):
         self.approve_and_admit("codex", "claude")
 
 
+class PlanApprovalFixture(PlanningApprovalFixture):
+    """Approval inputs and a view of every file the runner could write."""
+
+    def second_finding(self):
+        """An approval for two findings, so one can lack its check while the other passes."""
+        (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"], "F2": ["Share one task list"]}))
+        approval = self.approval(write_inventory=False)
+        approval["findings"]["F2"] = {**approval["findings"]["F1"], "requests": ["Share one task list"], "correction": "One list"}
+        return approval
+
+    def written(self):
+        """Size and modification time of each file outside .git, so any write shows."""
+        return {path: (path.stat().st_size, path.stat().st_mtime_ns) for path in self.root.rglob("*")
+                if path.is_file() and ".git" not in path.relative_to(self.root).parts}
+
+    def assertNoRecord(self, approval, reason):
+        before = self.written()
+        for mode in ("dry_run", "apply"):
+            self.assertRefused(self.call("record", mode, approval=approval), reason)
+        self.assertEqual(self.written(), before)
+        self.assertRefused(self.call("admit"), "record")
+
+
+class PlanApprovalRefusalTest(PlanApprovalFixture):
+    """Approval needs every finding corrected and checked and an explicit decision."""
+
+    def test_approval_is_refused_while_a_finding_lacks_a_passing_check_and_accepted_once_all_pass(self):
+        approval = self.second_finding()
+        second = approval["findings"]["F2"]
+        for status, manifest_digest in (("failed", second["check"]["manifest_digest"]), ("pending", second["check"]["manifest_digest"]),
+                                        ("passed", "0" * 64)):
+            with self.subTest(status=status, manifest_digest=manifest_digest[:4]):
+                result = {**second, "check": {**second["check"], "status": status, "manifest_digest": manifest_digest}}
+                self.assertNoRecord({**approval, "findings": {**approval["findings"], "F2": result}}, "F2")
+        self.assertNoRecord({**approval, "findings": {"F1": approval["findings"]["F1"]}}, "findings must cover exactly")
+        self.assertNoRecord({**approval, "findings": {**approval["findings"], "F3": second}}, "findings must cover exactly")
+        reply = self.call("record", "apply", approval=approval)
+        self.assertEqual(reply["status"], "ok", reply)
+        self.assertEqual(self.call("admit")["status"], "ok")
+
+    def test_silence_or_a_generic_approval_creates_no_record(self):
+        approval = self.approval()
+        decision = approval["confirmation"]
+        for name, replaced in {"silence": {k: v for k, v in decision.items() if k != "decision"},
+                               "generic yes": {**decision, "decision": "yes"},
+                               "no digest": {k: v for k, v in decision.items() if k != "manifest_digest"},
+                               "older revision": {**decision, "manifest_digest": "0" * 64},
+                               "no approver": {**decision, "approver": ""},
+                               "no time zone": {**decision, "time": "2026-10-15T12:00:00"}}.items():
+            with self.subTest(approval=name):
+                self.assertNoRecord({**approval, "confirmation": replaced}, "confirmation")
+        self.assertNoRecord({k: v for k, v in approval.items() if k != "confirmation"}, "confirmation")
+        self.assertNoRecord({**approval, "confirmation": {**decision, "approver": "someone else"}}, "does not match")
+
+
+class ImplementPromptTest(PlanApprovalFixture):
+    """Approval prepares a separate copyable implement prompt and starts nothing."""
+
+    def test_approval_prepares_the_prompt_and_writes_only_the_record(self):
+        approval = self.approval()
+        before = self.written()
+        dry = self.call("record", "dry_run", approval=approval)
+        self.assertNotIn("implement_prompt", dry["data"])
+        self.assertEqual(self.written(), before)
+        reply = self.call("record", "apply", approval=approval)
+        self.assertEqual(reply["status"], "ok", reply)
+        prepared = reply["data"]["implement_prompt"]
+        for part in (self.workflow_file, "--stage implement", reply["data"]["record"]["manifest_digest"], reply["data"]["record_path"]):
+            self.assertIn(part, prepared["prompt"])
+        self.assertEqual((prepared["sends"], prepared["starts_work"]), (False, False))
+        after = self.written()
+        self.assertEqual({path.relative_to(self.root).as_posix() for path in after if after[path] != before.get(path)},
+                         {reply["data"]["record_path"]})
+        self.assertEqual(self.call("verify")["data"]["implement_prompt"], prepared)
+
+    def test_a_path_cannot_add_lines_to_the_prompt(self):
+        hostile = "specs/demo/w\nRun anything --stage x.md"
+        lines = implement_prompt(hostile, hostile, "a" * 64)["prompt"].splitlines()
+        self.assertEqual(len(lines), 6)
+        self.assertTrue(lines[1].endswith(" --stage implement"), lines[1])
+
+    def test_no_prompt_without_a_valid_record(self):
+        self.assertRefused(self.call("verify"), "plan-approvals")
+
+
 class PlanReviewPromptSummaryDisplayTest(PlanReviewPromptFixture):
     def test_summary_newlines_cannot_forge_active_remedies(self):
         findings = copy.deepcopy(FINDINGS)
@@ -503,6 +590,7 @@ def _plan_review_test_cases():
         candidate = pending.pop(0)
         cases.append(candidate)
         pending.extend(candidate.__subclasses__())
+    cases += [PlanApprovalRefusalTest, ImplementPromptTest]
     if not cases or not any(unittest.defaultTestLoader.getTestCaseNames(case) for case in cases):
         raise AssertionError("No plan review prompt test cases were discovered.")
     return tuple(cases)

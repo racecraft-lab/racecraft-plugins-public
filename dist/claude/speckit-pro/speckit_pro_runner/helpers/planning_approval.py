@@ -622,6 +622,27 @@ def verified_record(root: Path, feature: str, path: str, binding: dict[str, Any]
     return record
 
 
+PROMPTED = {("verify", "read_only"), ("record", "apply")}  # the actions whose reply carries the implement prompt
+
+
+def implement_prompt(workflow: str, record_path: str, manifest_digest: str) -> dict[str, Any]:
+    """The copyable text that invokes implement for one approved revision; it sends nothing and starts no work."""
+    prompt = "\n".join((
+        "Run the speckit-autopilot skill with these arguments to implement the approved plan.",
+        f"Arguments: {json.dumps(workflow)} --stage implement",
+        f"Approved revision: {manifest_digest}",
+        f"Approval record: {json.dumps(record_path)}",
+        "Implement starts only while the planning inputs still match that revision; if they changed, stop and return to plan review.",
+        "The approval grants no security consent; the run asks for any action consent it needs.",
+    ))
+    return {"prompt": prompt, "sends": False, "starts_work": False}
+
+
+def prompt_reply(request: tuple[str, str], workflow: str, record_path: str, manifest_digest: str) -> dict[str, Any]:
+    """The reply field carrying the implement prompt, for the requests that return one."""
+    return {"implement_prompt": implement_prompt(workflow, record_path, manifest_digest)} if request in PROMPTED else {}
+
+
 def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     action = inputs.get("action")
     required = {"feature_dir", "workflow_file", "action"} | ({"approval"} if action == "record" else set())
@@ -645,7 +666,8 @@ def planning_approval(root: Path, inputs: dict[str, Any], mode: str) -> dict[str
             write_approval(root, target, record, snapshot, map_state)
     else:
         raise ValueError("use manifest/verify in read_only, or record in dry_run/apply")
-    return {"record": record, "record_path": path, "writes_state": mode == "apply"}
+    return {"record": record, "record_path": path, "writes_state": mode == "apply",
+            **prompt_reply((action, mode), owned_path(fields["workflow_file"], root), path, binding["manifest_digest"])}
 
 
 run_planning_approval_helper = partial(

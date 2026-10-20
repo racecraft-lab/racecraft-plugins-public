@@ -258,7 +258,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Claude Code invocation:** `/speckit-pro:speckit-plan-review`
 - **Codex invocation:** `$speckit-pro:speckit-plan-review`
 - **Purpose:** Review a finished SpecKit plan with the user before implementation.
-- **Expected output artifact:** A copyable planning-repair prompt that carries every requested finding and remedy; nothing is sent.
+- **Expected output artifact:** A copyable planning-repair prompt that carries every requested finding and remedy, or, after an explicit approval of the final revision, a recorded approval and a separate copyable implement prompt; nothing is sent.
 
 **Prerequisites**
 

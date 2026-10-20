@@ -1,6 +1,6 @@
 interface:
   display_name: "SpecKit Plan Review"
-  short_description: "Review a finished plan and build a repair prompt"
+  short_description: "Review a finished plan, build a repair prompt, or approve it"
   default_prompt: "Review the finished SpecKit plan with me and build a copyable repair prompt"
 
 policy:

@@ -16,6 +16,10 @@
     "should_trigger": true
   },
   {
+    "query": "every finding is fixed and checked; record my approval of the final plan and give me the prompt to start implement myself",
+    "should_trigger": true
+  },
+  {
     "query": "run the autopilot workflow at docs/ai/specs/SPEC-009-workflow.md",
     "should_trigger": false
   },
