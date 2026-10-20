@@ -100,6 +100,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/canary_trust.py",
+        "display": "speckit_pro_runner/canary_trust.py"
+      },
+      "sha256": "add7baaf4ae9cc1a8a5c8daf46eaab62d253dfb24a70487d49ec7d3a92da7a07"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/canonical_json.py",
         "display": "speckit_pro_runner/canonical_json.py"
       },
@@ -751,7 +759,7 @@
         "value": "speckit_pro_runner/helpers/planning_approval.py",
         "display": "speckit_pro_runner/helpers/planning_approval.py"
       },
-      "sha256": "b6c8a1d5c6c7b93694e709297eed9fc5fb5886e50bcb5176a4199272bf769199"
+      "sha256": "b746d333ad410e0aa03d1bce0c710a8c873f26778a52037b02e9c4d0ca2cad4a"
     },
     {
       "path": {
