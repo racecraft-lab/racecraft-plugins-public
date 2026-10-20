@@ -17,7 +17,7 @@ runs it for every implement entry.
   `origin` URL, without `.git`), `planning_run`, `repair_runs` (list),
   `source_commit` (reviewed commit). Record refuses with `planning approval field
   repository` when `origin` does not name it, the same check `admit` runs.
-- `canary_issued=false`, `supersedes` (prior record path or null),
+- `canary_issued=false` (`true` only inside a host home the canary marked with `.speckit-pro-canary-home`; every other home refuses it), `supersedes` (prior record path or null),
   `superseded_by=null`, `withdrawn_by=null`.
 - `reviewed_evidence`: nonempty unique file references to the reviewed artifact
   manifest, draft PR/source snapshot, decisions, blocked gates and confidence findings.

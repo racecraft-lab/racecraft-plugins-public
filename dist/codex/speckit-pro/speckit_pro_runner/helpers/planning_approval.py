@@ -14,6 +14,7 @@ from typing import Any
 from urllib.parse import unquote
 
 from ..atomic_write import snapshot_write_target, write_bytes_atomic
+from ..canary_trust import canary_home_trusted
 from ..canonical_json import canonical_bytes
 from ..cli_probe import probe
 from ..formal.evidence import CHECKPOINT_ROWS, read_checkpoint, record_path
@@ -454,6 +455,11 @@ def checked_findings(root: Path, feature: str, findings: Any, revision: str) -> 
     return findings
 
 
+def canary_refused(value: Any) -> bool:
+    """A canary-issued mark passes only in a canary-marked home; any other non-false value is refused."""
+    return value is not False and not (value is True and canary_home_trusted())
+
+
 def approval_record(root: Path, feature: str, approval: Any, binding: dict[str, Any]) -> dict[str, Any]:
     record = require_fields(approval, {"repository", "planning_run", "repair_runs", "source_commit", "canary_issued",
                                       "supersedes", "superseded_by", "withdrawn_by", "reviewed_evidence", "confirmation", "findings"}, "approval")
@@ -461,7 +467,7 @@ def approval_record(root: Path, feature: str, approval: Any, binding: dict[str, 
         require_text(record[key], key)
     if not re.fullmatch(r"[0-9a-f]{40}", record["source_commit"]):
         raise ValueError("source_commit must identify the reviewed source revision")
-    if record["canary_issued"] is not False or record["superseded_by"] is not None or record["withdrawn_by"] is not None:
+    if canary_refused(record["canary_issued"]) or record["superseded_by"] is not None or record["withdrawn_by"] is not None:
         raise ValueError("production approval refuses canary-issued, superseded or withdrawn records")
     if not isinstance(record["repair_runs"], list):
         raise ValueError("repair_runs must be a list")
@@ -548,6 +554,16 @@ def admit_repository(root: Path, repository: Any) -> None:
         raise refused("repository", "the approval does not identify this checkout's origin")
 
 
+def refuse_dead_record(stored: dict[str, Any]) -> None:
+    """Name the first mark that voids a stored record: canary-issued outside a canary home, withdrawn or superseded."""
+    if stored.get("canary_issued") is not None and canary_refused(stored["canary_issued"]):
+        raise refused("canary_issued", "a canary-issued record never admits production")
+    for field, reason in (("withdrawn_by", "the approval was withdrawn"),
+                          ("superseded_by", "a later approval supersedes this record")):
+        if stored.get(field) not in (False, None):
+            raise refused(field, reason)
+
+
 def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, Any]:
     """Admit implement only for a valid record bound to the current manifest, else name the failing field."""
     directory = root / feature / "plan-approvals"
@@ -563,11 +579,7 @@ def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, An
     if not isinstance(stored, dict):
         raise refused("record", "the record is not a JSON object")
     admit_repository(root, stored.get("repository"))
-    for field, reason in (("canary_issued", "a canary-issued record never admits production"),
-                          ("withdrawn_by", "the approval was withdrawn"),
-                          ("superseded_by", "a later approval supersedes this record")):
-        if stored.get(field) not in (False, None):
-            raise refused(field, reason)
+    refuse_dead_record(stored)
     try:
         refuse_superseded(root, path)
     except ValueError as error:

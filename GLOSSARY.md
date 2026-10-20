@@ -24,6 +24,10 @@ _Avoid_: completed with deferrals, failed run, waived completion
 A fixed small SPEC run end to end, unattended, on both hosts from a clean install: scaffold through the real interview answered by the operator agent, planning, plan review by a simulated reviewer, and implement. Its green result is what lets a release ship.
 _Avoid_: smoke test, integration eval, dogfood run
 
+**Canary-issued approval**:
+A plan approval record marked `canary_issued` by the canary's test issuer after a scripted reviewer's answers. Only a host home the canary marked trusts it; every other verifier refuses it. It is a recorded approval, not a signed or protected one.
+_Avoid_: test approval, fake approval
+
 **Canary receipt**:
 The evidence one canary run leaves for one host: the commit, host and plugin versions, the verdict for each variant, and the measures it was judged on. Only a receipt from a canary CI run, scheduled or on demand, can gate a release; a local dogfood receipt never does.
 _Avoid_: canary log, test report
