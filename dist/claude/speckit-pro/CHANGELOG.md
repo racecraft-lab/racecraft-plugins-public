@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.47.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.46.0...speckit-pro-v2.47.0) (2026-10-20)
+
+
+### Features
+
+* **speckit-pro:** add the plan review skill and repair prompt ([#1384](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1384)) ([f6d9ff1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f6d9ff11b5fd9a9290e30eebb7b9b4f9e83ad1ca))
+* **speckit-pro:** block the implement work that planning drift reaches ([#1400](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1400)) ([376f718](https://github.com/racecraft-lab/racecraft-plugins-public/commit/376f718c4ab2360a6ca582acab715a5e14939663))
+* **speckit-pro:** canary-only test issuer and scripted plan reviewer ([#1409](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1409)) ([12dddbc](https://github.com/racecraft-lab/racecraft-plugins-public/commit/12dddbcbfa8600e2fc36da09327b5f5796ed3a2b))
+* **speckit-pro:** clear a harm halt only with its one-time owner-terminal token ([#1380](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1380)) ([666d5c4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/666d5c46cd912857355c02f8d3122880717a564c))
+* **speckit-pro:** closed stop registry and harm halts ([#1370](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1370)) ([4dce877](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4dce8770c85093d61e8a42d1a561bfb4a789b8b8))
+* **speckit-pro:** plan review records each active request for approval ([#1402](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1402)) ([f9e2dd6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f9e2dd6182d61822386debd5d902d7df4eecb0ae))
+* **speckit-pro:** plan review records the approval and prepares an implement prompt ([#1408](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1408)) ([120473e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/120473e6d624409bf267a190106c0f88f4ca4b83))
+* **speckit-pro:** record blocked-for-UAT work in the run ledger ([#1379](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1379)) ([cdd2961](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cdd2961a7f8656174077ce5bda055ef81f79d1e2))
+* **speckit-pro:** require the approval record to enter implement ([#1385](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1385)) ([0ced8c2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0ced8c2bc9be04a4aefef984e26c51176b2545cb))
+* **speckit-pro:** retry ladder in execution-control ledger v2 ([#1376](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1376)) ([79ff58e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/79ff58ed41515a1407f62eebf8fafe97d825d403))
+* **speckit-pro:** send strict low-confidence findings to plan review ([#1397](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1397)) ([1c214e5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1c214e566df654bd5ee9733b6bb8fa6326a6725a))
+
+
+### Bug Fixes
+
+* **speckit-pro:** a missing sweep session or unknown comment no longer records a harm halt ([#1391](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1391)) ([f706eda](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f706eda75a757bc6e4004580ff5436524d6ce32b)), closes [#1389](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1389)
+* **speckit-pro:** Codex plan-stage phases wake the root only with news ([#1392](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1392)) ([c7eb1ea](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c7eb1ead04a721465fba1b178d218c6356a94e51)), closes [#1317](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1317)
+* **speckit-pro:** Codex subagent spawns stop copying the caller history ([#1375](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1375)) ([95fdd1e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/95fdd1e495ea4c12cc64b88b1bdacc61f1ed54b4)), closes [#1317](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1317)
+* **speckit-pro:** guard generated planning navigation ([#1386](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1386)) ([65a593d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/65a593d76ed09742736b61ba8091fd5ec67f3322)), closes [#1383](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1383)
+* **speckit-pro:** harm-halt guard fails closed when the repo root does not resolve ([#1390](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1390)) ([2e5613e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2e5613ecf336cd73946533f84721b7c2db3649b6)), closes [#1388](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1388)
+* **speckit-pro:** the Codex plan-stage root reads only the reference sections its steps cite ([#1396](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1396)) ([89f3050](https://github.com/racecraft-lab/racecraft-plugins-public/commit/89f30503bcaa272a2f7c6efc08d2fd83c8af38dd)), closes [#1317](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1317)
+* **speckit-pro:** the plan-stage root stops guessing helper inputs and writing its own stop report ([#1393](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1393)) ([7509622](https://github.com/racecraft-lab/racecraft-plugins-public/commit/750962235eb2fc569e98ea32a46b9d59d7578990)), closes [#1317](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1317)
+
 ## [2.46.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.45.2...speckit-pro-v2.46.0) (2026-10-18)
 
 
