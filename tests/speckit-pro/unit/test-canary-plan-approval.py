@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Canary-issued plan approval: refused by production verifiers, accepted only in a canary-marked home."""
 import json
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from script_loader import load_script
@@ -27,12 +29,11 @@ class CanaryApprovalFixture(PlanningApprovalFixture):
         (self.feature / "workflow.md").write_text(STAGE_WORKFLOW)
         (self.feature / "planning-findings.json").write_text(json.dumps({"F1": ["Use bounded retries"]}))
         self.home = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
-
-    def runner_environment(self):
-        return {**super().runner_environment(), "HOME": str(self.home)}
+        self.enterContext(patch.dict(os.environ, {"HOME": str(self.home)}))
 
     def issue(self):
-        return issuer.issue(self.root, self.home, self.feature_dir, self.workflow_file, "example/project", "a" * 40)
+        inputs = {"feature_dir": self.feature_dir, "workflow_file": self.workflow_file}
+        return issuer.issue(self.root, self.home, inputs, "example/project", "a" * 40)
 
     def mark(self):
         (self.home / MARKER_NAME).write_text("canary-home/v1\n")
@@ -60,10 +61,12 @@ class CanaryTrustTest(CanaryApprovalFixture):
                 self.assertRefused(self.call(action), reason)
         self.assertTrue((self.root / path).is_file())
 
-    def test_a_wrong_marker_is_not_trust(self):
-        path = self.issue_marked()
-        (self.home / MARKER_NAME).write_text("anything else\n")
-        self.assertRefused(self.call("admit"), "canary_issued")
+    def test_only_the_exact_marker_is_trust(self):
+        self.issue_marked()
+        for text in ("anything else\n", "", "canary-home/v1"):
+            with self.subTest(marker=text):
+                (self.home / MARKER_NAME).write_text(text)
+                self.assertRefused(self.call("admit"), "canary_issued")
 
     def test_an_unmarked_home_cannot_record_a_canary_issued_approval(self):
         with self.assertRaises(SystemExit) as refusal:

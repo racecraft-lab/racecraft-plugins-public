@@ -30,11 +30,13 @@ def request(root: Path, home: Path, mode: str, **inputs: object) -> dict:
     return reply["data"]
 
 
-def issue(root: Path, home: Path, feature_dir: str, workflow_file: str, repository: str, source_commit: str) -> str:
-    """Record the scripted reviewer's approval as canary-issued; returns the record path."""
-    inputs = {"feature_dir": feature_dir, "workflow_file": workflow_file}
+def issue(root: Path, home: Path, inputs: dict[str, str], repository: str, source_commit: str) -> str:
+    """Record the scripted reviewer's approval as canary-issued; returns the record path.
+
+    `inputs` names the `feature_dir` and `workflow_file` the planning-approval helper takes.
+    """
     digest = request(root, home, "read_only", action="manifest", **inputs)["manifest_digest"]
-    approval = scripted_approval(root, feature_dir, digest, repository, source_commit)
+    approval = scripted_approval(root, inputs["feature_dir"], digest, repository, source_commit)
     return request(root, home, "apply", action="record", approval=approval, **inputs)["record_path"]
 
 
@@ -54,7 +56,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.provision:
         args.home.mkdir(parents=True, exist_ok=True)
         (args.home / MARKER_NAME).write_text(MARKER_TEXT, encoding="utf-8")
-    print(issue(root, args.home, args.feature_dir, args.workflow_file, args.repository, commit))
+    inputs = {"feature_dir": args.feature_dir, "workflow_file": args.workflow_file}
+    print(issue(root, args.home, inputs, args.repository, commit))
     return 0
 
 

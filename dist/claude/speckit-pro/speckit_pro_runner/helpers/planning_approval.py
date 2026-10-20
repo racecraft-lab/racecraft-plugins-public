@@ -554,6 +554,16 @@ def admit_repository(root: Path, repository: Any) -> None:
         raise refused("repository", "the approval does not identify this checkout's origin")
 
 
+def refuse_dead_record(stored: dict[str, Any]) -> None:
+    """Name the first mark that voids a stored record: canary-issued outside a canary home, withdrawn or superseded."""
+    if stored.get("canary_issued") is not None and canary_refused(stored["canary_issued"]):
+        raise refused("canary_issued", "a canary-issued record never admits production")
+    for field, reason in (("withdrawn_by", "the approval was withdrawn"),
+                          ("superseded_by", "a later approval supersedes this record")):
+        if stored.get(field) not in (False, None):
+            raise refused(field, reason)
+
+
 def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, Any]:
     """Admit implement only for a valid record bound to the current manifest, else name the failing field."""
     directory = root / feature / "plan-approvals"
@@ -569,12 +579,7 @@ def admission(root: Path, feature: str, binding: dict[str, Any]) -> dict[str, An
     if not isinstance(stored, dict):
         raise refused("record", "the record is not a JSON object")
     admit_repository(root, stored.get("repository"))
-    if stored.get("canary_issued") is not None and canary_refused(stored["canary_issued"]):
-        raise refused("canary_issued", "a canary-issued record never admits production")
-    for field, reason in (("withdrawn_by", "the approval was withdrawn"),
-                          ("superseded_by", "a later approval supersedes this record")):
-        if stored.get(field) not in (False, None):
-            raise refused(field, reason)
+    refuse_dead_record(stored)
     try:
         refuse_superseded(root, path)
     except ValueError as error:
