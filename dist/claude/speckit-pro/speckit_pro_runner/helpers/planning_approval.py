@@ -629,9 +629,9 @@ def implement_prompt(workflow: str, record_path: str, manifest_digest: str) -> d
     """The copyable text that invokes implement for one approved revision; it sends nothing and starts no work."""
     prompt = "\n".join((
         "Run the speckit-autopilot skill with these arguments to implement the approved plan.",
-        f"Arguments: {workflow} --stage implement",
+        f"Arguments: {json.dumps(workflow)} --stage implement",
         f"Approved revision: {manifest_digest}",
-        f"Approval record: {record_path}",
+        f"Approval record: {json.dumps(record_path)}",
         "Implement starts only while the planning inputs still match that revision; if they changed, stop and return to plan review.",
         "The approval grants no security consent; the run asks for any action consent it needs.",
     ))
