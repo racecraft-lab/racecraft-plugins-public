@@ -33,7 +33,9 @@ class CanaryApprovalFixture(PlanningApprovalFixture):
 
     def issue(self):
         inputs = {"feature_dir": self.feature_dir, "workflow_file": self.workflow_file}
-        return issuer.issue(self.root, self.home, inputs, "example/project", "a" * 40)
+        # The issuer launches its own runner child; use the same private Git PATH as helper calls.
+        with patch.dict(os.environ, self.runner_environment()):
+            return issuer.issue(self.root, self.home, inputs, "example/project", "a" * 40)
 
     def mark(self):
         (self.home / MARKER_NAME).write_text("canary-home/v1\n")
@@ -44,6 +46,14 @@ class CanaryApprovalFixture(PlanningApprovalFixture):
 
 
 class CanaryTrustTest(CanaryApprovalFixture):
+    def test_the_issuer_uses_the_fixture_git_path(self):
+        ambient_bin = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        (ambient_bin / "git").symlink_to(self.git_directory / "git")
+        (ambient_bin / "checkout-entry").symlink_to(self.feature / "spec.md")
+        with patch.dict(os.environ, {"PATH": str(ambient_bin)}):
+            self.issue_marked()
+        self.assertEqual(self.call("admit")["status"], "ok")
+
     def test_the_canary_verifier_in_a_marked_home_accepts_the_issued_record(self):
         path = self.issue_marked()
         record = json.loads((self.root / path).read_text())
