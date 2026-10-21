@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/formal-qualification.yml'
+      - 'scripts/check-java-trust.py'
       - 'speckit-pro/speckit_pro_runner/formal/**'
       - 'speckit-pro/skills/speckit-coach/scripts/**'
       - 'speckit-pro/skills/speckit-coach/examples/formal/**'
@@ -39,11 +40,15 @@ jobs:
           python-version: '3.11'
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
         with:
-          node-version: '24.11.1'
+          node-version: '24.22.1'
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '25'
+          # Cached cacerts may link into a root-owned system trust store.
+          force-download: true
+      - name: Remove incident roots and verify the selected Java trust store
+        run: python3 scripts/check-java-trust.py --remove-blocked
       - name: Install explicitly selected pinned tools in this checkout
         run: python3 speckit-pro/skills/speckit-coach/scripts/setup-formal-tools.py --repo-root . --tool apalache --tool tlc --tool quint --apply
       - name: Execute native model and compiler cases
