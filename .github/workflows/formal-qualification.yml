@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/formal-qualification.yml'
+      - 'scripts/check-java-trust.py'
       - 'speckit-pro/speckit_pro_runner/formal/**'
       - 'speckit-pro/skills/speckit-coach/scripts/**'
       - 'speckit-pro/skills/speckit-coach/examples/formal/**'
@@ -44,6 +45,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+      - name: Remove incident roots and verify the selected Java trust store
+        run: python3 scripts/check-java-trust.py --remove-blocked
       - name: Install explicitly selected pinned tools in this checkout
         run: python3 speckit-pro/skills/speckit-coach/scripts/setup-formal-tools.py --repo-root . --tool apalache --tool tlc --tool quint --apply
       - name: Execute native model and compiler cases
