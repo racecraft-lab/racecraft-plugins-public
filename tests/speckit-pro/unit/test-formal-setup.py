@@ -278,6 +278,7 @@ class JavaTrustTests(unittest.TestCase):
         self.assertLess(workflow.index("uses: actions/setup-java@"), guard)
         self.assertLess(guard, workflow.index("- name: Install explicitly selected pinned tools"))
         self.assertIn("- 'scripts/check-java-trust.py'", workflow)
+        self.assertIn("force-download: true", workflow)
 
 
 if __name__ == "__main__":

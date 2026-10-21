@@ -45,6 +45,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+          # Cached cacerts may link into a root-owned system trust store.
+          force-download: true
       - name: Remove incident roots and verify the selected Java trust store
         run: python3 scripts/check-java-trust.py --remove-blocked
       - name: Install explicitly selected pinned tools in this checkout
