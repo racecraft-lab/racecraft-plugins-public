@@ -353,8 +353,11 @@ func TestResponseAcceptsRefusals(t *testing.T) {
 				`,"ok":{"type":"noul","noul":0.8,"confidence":0.6}}}`)
 		}
 		for _, spec := range []ProviderSpec{openrouterSpec, providers["typesafe"]} {
-			if err := validateResponse(spec, in, reply(`{"type":"refusal"}`)); err != nil {
-				t.Errorf("%s %s: %v", spec.Name, q.Type, err)
+			// The second spelling is the same JSON string, escaped.
+			for _, refusal := range []string{`{"type":"refusal"}`, `{"type":"ref\u0075sal"}`} {
+				if err := validateResponse(spec, in, reply(refusal)); err != nil {
+					t.Errorf("%s %s %s: %v", spec.Name, q.Type, refusal, err)
+				}
 			}
 		}
 		if validateResponse(openrouterSpec, in, reply(`{"type":"refusal","confidence":0.5}`)) == nil {

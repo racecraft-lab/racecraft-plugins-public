@@ -436,7 +436,8 @@ var refusalValueFields = []string{"noul", "choice", "score", "box", "confidence"
 // is malformed.
 func checkRefusal(spec ProviderSpec, id string, raw json.RawMessage) (bool, error) {
 	var fields map[string]json.RawMessage
-	if json.Unmarshal(raw, &fields) != nil || string(fields["type"]) != `"`+answerRefusal+`"` {
+	var typ string
+	if json.Unmarshal(raw, &fields) != nil || json.Unmarshal(fields["type"], &typ) != nil || typ != answerRefusal {
 		return false, nil
 	}
 	for _, f := range refusalValueFields {

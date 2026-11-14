@@ -189,7 +189,7 @@ Criteria by type: `noul` takes optional `{"true": ..., "false": ...}` descriptio
 
 ### Images, box, and long context
 
-`images` is the only image input. Do not send a TypeSafe `assets` map or an OpenRouter `image_url` part: the server builds the wire format for the backend in use, and a TypeSafe `assets` map posted to OpenRouter is ignored while the call is still billed. A reference is a whole string equal to the name, or `{"image":"name"}`, inside `state`, `instructions`, or `criteria`.
+`images` is the only image input. Do not send a TypeSafe `assets` map or an OpenRouter `image_url` part: the server builds the wire format for the backend in use. A reference is a whole string equal to the name, or `{"image":"name"}`, inside `state`, `instructions`, or `criteria`.
 
 `JEV_IMAGES=true` is required before any image or `box` question is sent. Unset means off. The bytes leave the machine and are billed. Format, the 16 MiB decoded-file cap, and each backend's pixel limits are checked locally, so a picture the backend would refuse costs nothing. TypeSafe then receives `assets` plus `TypeSafe-Danger-Zone-Images: true`. OpenRouter receives `image_url` data URLs and no TypeSafe header. PNG and JPEG only; animated PNGs are rejected. EXIF orientation is not rewritten.
 
