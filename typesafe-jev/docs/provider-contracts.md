@@ -13,7 +13,11 @@ payload rewrite.
 
 | Source | URL | Fetched | Evidence |
 |---|---|---|---|
-| OpenRouter OpenAPI | `https://openrouter.ai/openapi.json` | 2026-10-17 | sha256 `e55c500ad16a9a68d2de7c251f5871fa65e3697cf4fe9363820eca4b3fffd484`, 2 694 235 bytes |
+| OpenRouter OpenAPI | `https://openrouter.ai/openapi.json` | 2026-11-14 | sha256 `553a2459a235c73dc4a040b81a2bf99aa47abe74551effd36a884b5c40e70f9e` |
+| TypeSafe OpenAPI | `https://api.typesafe.ai/openapi.json` | 2026-11-14 | version 0.2.0, sha256 `3ca93b6e6b9aa8d7820531b78c66ed7a9798b11e6e163ad96b140fb3d75fbcf4` |
+| TypeSafe models | `https://docs.typesafe.ai/models.md` | 2026-11-14 | `jev-latest` and `jev-preview` point at `jev-1.14.0` (released 2026-10-14); `jev-1.13.0` still accepted |
+| TypeSafe changelog | `https://docs.typesafe.ai/changelog.md` | 2026-11-14 | Jev 1.14: box, better multilingual support; images and long context also on 1.13 |
+| OpenRouter Decisions reference | `https://openrouter.ai/docs/api-reference/decisions` | 2026-11-14 | top-level `assets`; `refusal` answer |
 | TypeSafe docs index | `https://docs.typesafe.ai/llms.txt` | 2026-09-20 | index of the pages below |
 | TypeSafe structure rules | `https://docs.typesafe.ai/primitives/advanced.md` | 2026-09-20 | "Where structure is allowed" table |
 | TypeSafe images | `https://docs.typesafe.ai/images.md` | 2026-10-17 | `assets`, the images header, pixel and byte limits |
@@ -51,6 +55,15 @@ or `assets` field. `DecisionsScoreQuestion.criteria` still sets `minItems: 1`
 and no `maxItems`. `DecisionsBoxAnswer` requires `type` and `box`
 (`top`, `bottom`, `left`, `right`); `confidence` is optional.
 
+The 2026-11-14 fetch changes four things. `DecisionsRequest` gains a top-level
+`assets` map of `DecisionsImageAsset` (`format`, `data_base64`, optional
+`type`), in TypeSafe's shape; this server still sends `image_url` parts (see
+Images). A new `DecisionsRefusalAnswer`, `{"type": "refusal"}`, answers a
+question the provider declined. `DecisionsNoulAnswer` gains an optional
+`confidence`. And `instructions` is no longer required on any question but
+box, and now also allows `null`. Choice and score require only `type` and
+`criteria`.
+
 ## Endpoints
 
 | Backend | Endpoint | Auth | Default model |
@@ -81,7 +94,7 @@ object, or array, and additionally allow `null` for choice option descriptions.
 
 | Field | TypeSafe accepts | OpenRouter accepts |
 |---|---|---|
-| `instructions` (noul, choice, score, box) | string, object, array, null | string, object, array (required; no null) |
+| `instructions` (noul, choice, score, box) | string, object, array, null | string, object, array, null (required on box only) |
 | choice `criteria` values | string, object, array, null | string, object, array, **null** |
 | score `criteria` entries | string, object, array, null | string, object, array (`minItems: 1`; no null) |
 | noul `criteria.true` / `.false` | string, object, array, null | string, object, array; when `criteria` is present both keys are required (no null) |
@@ -101,9 +114,9 @@ Required-ness per OpenRouter's schemas:
 
 | Question type | Required properties | `criteria` |
 |---|---|---|
-| `noul` | `type`, `instructions` | optional; if present, `true` and `false` both required |
-| `choice` | `type`, `instructions`, `criteria` | required |
-| `score` | `type`, `instructions`, `criteria` | required |
+| `noul` | `type` | optional; if present, `true` and `false` both required |
+| `choice` | `type`, `criteria` | required |
+| `score` | `type`, `criteria` | required |
 | `box` | `type`, `instructions` | not accepted; the question locates one target in an image |
 
 `questions` is a map; the `type` property is the discriminator. Question ids are
@@ -134,26 +147,35 @@ the request's question ids.
 
 | Field | TypeSafe | OpenRouter |
 |---|---|---|
-| top-level required | `model`, `usage` | `model`, `answers`, `usage` |
-| `usage` | `input_tokens`, `output_tokens` | `input_tokens`, `output_tokens` required; `cost` optional |
-| `id`, `provider` | not present | optional |
+| top-level required | `model`, `answers`, `usage` | `model`, `answers`, `usage` |
+| `usage` | `input_tokens`, `output_tokens` | `input_tokens`, `output_tokens` required; `cost`, `input_tokens_details.cached_tokens` optional |
+| `id`, `provider`, `annotations` | not present | optional |
 
 Answer shapes, with **required** properties in bold:
 
 | Answer | TypeSafe | OpenRouter |
 |---|---|---|
-| `noul` | **`noul`** | **`type`**, **`noul`** |
+| `noul` | **`noul`** | **`type`**, **`noul`**; `confidence` optional |
 | `choice` | **`choice`**, **`confidence`**, **`probabilities`** | **`type`**, **`choice`**; `confidence`, `probabilities` optional |
 | `score` | **`score`**, **`confidence`**, **`legend`**, **`probabilities`** | **`type`**, **`score`**; `confidence`, `legend`, `probabilities` optional |
-| `box` | **`box`** (`top`, `bottom`, `left`, `right`), `confidence` when sent | **`type`**, **`box`**; `confidence` optional |
+| `box` | **`box`** (`top`, `bottom`, `left`, `right`), **`confidence`** (number or `null`) | **`type`**, **`box`**; `confidence` optional |
+| `refusal` | not sent | **`type`** only: the provider declined this question |
 
 This asymmetry is the single most important response fact for this server:
 **OpenRouter may omit `confidence` and `probabilities` where TypeSafe always
 sends them.** An absent field is absent. It is never filled in with a default,
 an estimate, or a value carried over from another question.
 
-A `noul` answer has no `confidence` field on either backend. Asking for one is a
-bug, not a provider omission.
+A `noul` answer has no `confidence` field on TypeSafe. OpenRouter's schema
+allows an optional one. This server checks it is in 0 to 1 when present and
+never asks for one.
+
+A `refusal` answer is passed through as that question's whole answer: the
+other questions in the call still answer, and the call does not fail. It
+carries no value, and none is filled in. A refusal that also carries a value
+(`noul`, `choice`, `score`, `box`, `confidence`, or `probabilities`) is
+malformed and fails the call. TypeSafe does not document a refusal; one from
+it would be accepted the same way.
 
 ### Value ranges
 
@@ -258,7 +280,7 @@ backends get base64 JSON.
 | --- | --- | --- |
 | Where the bytes go | top-level `assets` map, `{type: "image", format, data_base64}`, keyed by a minted `jevimg-` token substituted for the caller's name | an `image_url` part, `data:image/png;base64,...` or `data:image/jpeg;base64,...`, in place of the reference |
 | Header | `TypeSafe-Danger-Zone-Images: true` on any request with an image or a `box` question | none |
-| What must not be sent | the neutral `images` map | `assets`, `images`, and any TypeSafe danger-zone header. A TypeSafe `assets` map posted here is ignored, the call still returns HTTP 200, and it is still billed |
+| What must not be sent | the neutral `images` map | `assets`, `images`, and any TypeSafe danger-zone header. OpenRouter has accepted `assets` since the 2026-11-14 fetch; this server keeps `image_url`, which every Decisions model reads, rather than send two wire formats to one backend |
 
 Asset keys are minted from the caller's name. TypeSafe treats a reference as
 plain text and will match a short name inside an ordinary word (`cat` inside
@@ -290,25 +312,26 @@ either, and rewriting pixels here would make the two backends disagree about
 which way is up.
 
 `box` needs Jev 1.14. A model this server knows is 1.13 is rejected locally:
-on TypeSafe, `jev-latest`, `jev-1.13.0`, and `jev-1.13` (as of 2026-10-17
-`jev-latest` still points at 1.13, while `jev-preview` and `jev-1.14.0` are
-1.14); on OpenRouter, `typesafe/jev-1.13`, `~typesafe/jev-1.13`,
-`typesafe/jev-1.13.0`, and `~typesafe/jev-1.13.0`. `typesafe/jev-1.14` and
-`~typesafe/jev-latest` are allowed. An id this list does not name is sent
-through, so an operator's own model string is not rewritten into a 404 they
-did not ask to see. `prepare` fills the backend default before the check, so an
-omitted model on TypeSafe fails as `jev-latest` rather than being billed.
+on TypeSafe, `jev-1.13.0` and `jev-1.13`; on OpenRouter, `typesafe/jev-1.13`,
+`~typesafe/jev-1.13`, `typesafe/jev-1.13.0`, and `~typesafe/jev-1.13.0`.
+`jev-latest`, `jev-preview`, and `jev-1.14.0` on TypeSafe, and
+`typesafe/jev-1.14` and `~typesafe/jev-latest` on OpenRouter, are allowed. As
+of the 2026-11-14 fetch, TypeSafe's `jev-latest` and `jev-preview` both point
+at `jev-1.14.0` (until then `jev-latest` was 1.13 and was rejected here). An id
+this list does not name is sent through, so an operator's own model string is
+not rewritten into a 404 they did not ask to see. `prepare` fills the backend
+default before the check.
 
 ### Fallback and the per-backend gates
 
-The two backends' local gates differ: the box model default, the side minimum
+The two backends' local gates differ: the side minimum
 (280 on TypeSafe, 256 on OpenRouter), and the context budget (64,000 and
 32,000 on TypeSafe without `JEV_LONG_CONTEXT`, 262,144 on OpenRouter). The
 fallback never runs the caller's model, so:
 
-- A box question on the fallback runs on that backend's pinned Jev 1.14 id,
-  `jev-1.14.0` on TypeSafe (whose default, `jev-latest`, is 1.13) and
-  `~typesafe/jev-latest` on OpenRouter (`BoxModel` in `config.go`).
+- A box question on the fallback runs on that backend's default, which is
+  Jev 1.14 on both: `jev-latest` on TypeSafe, `~typesafe/jev-latest` on
+  OpenRouter.
 - When the primary fails in a way that would move the call, the fallback
   checks the request first. A request it would refuse locally does not move
   the session. The caller gets the primary's failure, and its exit code, with

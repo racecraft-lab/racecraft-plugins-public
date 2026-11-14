@@ -28,6 +28,9 @@ const (
 	typeChoice = "choice"
 	typeScore  = "score"
 	typeBox    = "box"
+	// answerRefusal is an answer type, not a question type: OpenRouter sends
+	// it when a provider declines one question.
+	answerRefusal = "refusal"
 	// minScoreLevels is this fork's policy, stricter than either publisher.
 	// OpenRouter's schema sets minItems: 1, but a one-level scale gives the
 	// model nothing to place a value between.
@@ -399,16 +402,49 @@ func validateResponse(spec ProviderSpec, in evaluateIn, body []byte) error {
 		return fmt.Errorf("%s: response reports no usage", spec.Name)
 	}
 
+	return validateAnswers(spec, in, env.Answers)
+}
+
+// validateAnswers checks that every question asked has an answer: a refusal,
+// or a value of the type asked.
+func validateAnswers(spec ProviderSpec, in evaluateIn, answers map[string]json.RawMessage) error {
 	for _, id := range sortedKeys(in.Questions) {
-		raw, ok := env.Answers[id]
+		raw, ok := answers[id]
 		if !ok {
 			return fmt.Errorf("%s: no answer for question %q", spec.Name, id)
+		}
+		refused, err := checkRefusal(spec, id, raw)
+		if err != nil {
+			return err
+		}
+		if refused {
+			continue
 		}
 		if err := validateAnswer(spec, id, in.Questions[id], raw); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// refusalValueFields are the answer fields a refusal must not carry.
+var refusalValueFields = []string{"noul", "choice", "score", "box", "confidence", "probabilities"}
+
+// checkRefusal reports whether raw is OpenRouter's {"type":"refusal"}, sent
+// when a provider declines one question. A refusal is that question's whole
+// answer and is passed through with no value; one that also carries a value
+// is malformed.
+func checkRefusal(spec ProviderSpec, id string, raw json.RawMessage) (bool, error) {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(raw, &fields) != nil || string(fields["type"]) != `"`+answerRefusal+`"` {
+		return false, nil
+	}
+	for _, f := range refusalValueFields {
+		if _, ok := fields[f]; ok {
+			return false, fmt.Errorf("%s: answer %q is a refusal that carries a value", spec.Name, id)
+		}
+	}
+	return true, nil
 }
 
 func validateAnswer(spec ProviderSpec, id string, q question, raw json.RawMessage) error {

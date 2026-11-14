@@ -333,6 +333,7 @@ func TestServerInstructionsNameTheBackend(t *testing.T) {
 				"bills for the call",
 				"may omit confidence and probabilities",
 				"Treat an absent field as absent",
+				"refusal",
 			},
 			// Structure is accepted here now. A leftover string-only warning
 			// would talk agents out of a form the backend supports.
@@ -343,7 +344,7 @@ func TestServerInstructionsNameTheBackend(t *testing.T) {
 			wantAll:  []string{"Backend: typesafe", "bills for the call"},
 			// This backend always sends both fields, so the omission note must
 			// not leak onto it.
-			wantNone: []string{"accepts only strings", "may omit confidence"},
+			wantNone: []string{"accepts only strings", "may omit confidence", "refusal"},
 		},
 	} {
 		t.Run(tc.provider, func(t *testing.T) {
