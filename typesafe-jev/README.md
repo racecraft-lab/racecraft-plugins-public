@@ -163,7 +163,7 @@ It gets back the raw response JSON, with each answer under the same id you gave 
 - **Both backends at full capability.** Structured instructions and criteria, and null option descriptions, work on TypeSafe and OpenRouter alike. Validation is per backend rather than a shared lowest common denominator, so neither is narrowed to suit the other, and a request a backend would reject fails locally before it costs anything.
 - **Rate limits handled honestly.** Each backend retries only the statuses it documents as transient, `Retry-After` is honoured as a minimum wait, and retry waits come out of the same timeout as the attempts. Authentication, credit, and validation failures are never replayed.
 - **Several questions, one call.** Batch independent questions over the same state; they run in parallel.
-- **Agents that use it well out of the box.** The server ships usage guidance (narrow questions, JSON state, no-match options) to the client, so the agent writes better questions without extra prompting.
+- **Agents that use it well out of the box.** The server ships usage guidance (narrow questions, JSON state, a companion noul when nothing may fit) to the client, so the agent writes better questions without extra prompting.
 - **A single static binary.** No runtime, no Node, no Python. Redirects are refused, the request timeout defaults to 45s across all attempts, a request body is capped at 32 MiB, and a response body at 16 MiB.
 
 ## About TypeSafe
@@ -189,11 +189,11 @@ Criteria by type: `noul` takes optional `{"true": ..., "false": ...}` descriptio
 
 ### Images, box, and long context
 
-`images` is the only image input. Do not send a TypeSafe `assets` map or an OpenRouter `image_url` part: the server builds the wire format for the backend in use, and a TypeSafe `assets` map posted to OpenRouter is ignored while the call is still billed. A reference is a whole string equal to the name, or `{"image":"name"}`, inside `state`, `instructions`, or `criteria`.
+`images` is the only image input. Do not send a TypeSafe `assets` map or an OpenRouter `image_url` part: the server builds the wire format for the backend in use. A reference is a whole string equal to the name, or `{"image":"name"}`, inside `state`, `instructions`, or `criteria`.
 
 `JEV_IMAGES=true` is required before any image or `box` question is sent. Unset means off. The bytes leave the machine and are billed. Format, the 16 MiB decoded-file cap, and each backend's pixel limits are checked locally, so a picture the backend would refuse costs nothing. TypeSafe then receives `assets` plus `TypeSafe-Danger-Zone-Images: true`. OpenRouter receives `image_url` data URLs and no TypeSafe header. PNG and JPEG only; animated PNGs are rejected. EXIF orientation is not rewritten.
 
-`box` returns `{top, bottom, left, right}`, each from 0 to 1, with `left < right` and `top < bottom`. It needs Jev 1.14: `jev-preview` or `jev-1.14.0` on TypeSafe, `typesafe/jev-1.14` or `~typesafe/jev-latest` on OpenRouter. TypeSafe's `jev-latest` was still 1.13 on 2026-10-17, and a model this server knows is 1.13 is rejected locally.
+`box` returns `{top, bottom, left, right}`, each from 0 to 1, with `left < right` and `top < bottom`. It needs Jev 1.14: `jev-latest` or `jev-1.14.0` on TypeSafe, `typesafe/jev-1.14` or `~typesafe/jev-latest` on OpenRouter. Both defaults have been Jev 1.14 since 2026-10-14. A model this server knows is 1.13 (`jev-1.13.0`, `typesafe/jev-1.13`) is rejected locally.
 
 OpenRouter's context window is 262,144 tokens. TypeSafe's defaults are 64,000 for the request and 32,000 for the state plus the longest question. `JEV_LONG_CONTEXT=true` raises both TypeSafe budgets to 262,144 and sends `TypeSafe-Danger-Zone-Long-Context: true` on every TypeSafe request while the flag is set, including small ones. Leave it unset when requests fit the default window. The token estimate counts text only; image bytes are not part of it.
 

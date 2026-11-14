@@ -228,20 +228,21 @@ func validateImageEntries(images map[string]imageSource) error {
 // validateBoxModel rejects a model this process knows is Jev 1.13. Anything
 // else is sent through: an unlisted id is the operator's, and rewriting it
 // would hide the 404 they asked to see. The resolved model is what counts;
-// prepare fills the backend default before this runs, so TypeSafe's jev-latest
-// (still 1.13 as of 2026-10-17) fails here instead of being billed.
+// prepare fills the backend default before this runs. Both defaults are Jev
+// 1.14: TypeSafe's jev-latest moved to jev-1.14.0 on 2026-10-14
+// (https://docs.typesafe.ai/models.md, read 2026-11-14).
 func validateBoxModel(spec ProviderSpec, model string) error {
 	if !knownBoxReject(spec.Name, model) {
 		return nil
 	}
-	return fmt.Errorf("model %s is Jev 1.13, which rejects box questions; use jev-preview or jev-1.14.0 on TypeSafe, or typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter", model)
+	return fmt.Errorf("model %s is Jev 1.13, which rejects box questions; use jev-latest or jev-1.14.0 on TypeSafe, or typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter", model)
 }
 
 func knownBoxReject(provider, model string) bool {
 	switch provider {
 	case "typesafe":
 		switch model {
-		case "jev-latest", "jev-1.13.0", "jev-1.13":
+		case "jev-1.13.0", "jev-1.13":
 			return true
 		}
 	case "openrouter":

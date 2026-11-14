@@ -31,7 +31,7 @@ const instructions = `The evaluate tool runs Jev, a TypeSafe System One model th
 - Ask one narrow judgment per question. Question ids are NOT sent to the model, so instructions must carry the full meaning.
 - Put everything the judgment needs in state; prefer a JSON object with named fields, and reference nested fields with backticked paths like ` + "`ticket.messages[0].text`" + `.
 - Batch independent questions over the same state into one call; they run in parallel and cannot see each other's answers.
-- Include a no-match option in a choice when nothing may fit. Score levels must describe concrete situations.
+- A choice always picks an option and a box always returns a location, even when nothing fits. When nothing may fit, ask a companion noul in the same call ("Is there a mug in ` + "`photo`" + `?"); on Jev 1.14 that usually works better than a no-match option. Score levels must describe concrete situations.
 - A noul near 0.5 means uncertain, not medium intensity. Confidence measures how concentrated the distribution is, not correctness.
 Docs: https://docs.typesafe.ai/llms.txt`
 
@@ -225,8 +225,9 @@ func newServer(cfg Config, c *Client) *mcp.Server {
 //
 // What does still differ is the reply. OpenRouter's Decisions schemas mark
 // confidence and probabilities optional on choice and score answers, where
-// TypeSafe always sends them. An agent that branches on a number which is
-// simply absent misreads the answer, so the note says so up front.
+// TypeSafe always sends them, and add a refusal answer for a question a
+// provider declines. An agent that branches on a number which is simply
+// absent misreads the answer, so the note says so up front.
 func backendNote(cfg Config) string {
 	note := "\nBackend: " + cfg.Provider.Name + ". Calling this tool sends the state and questions" +
 		" you pass to that provider, which bills for the call."
@@ -239,7 +240,9 @@ func backendNote(cfg Config) string {
 	if cfg.Provider.Name == "openrouter" || (cfg.Fallback != nil && cfg.Fallback.Provider.Name == "openrouter") {
 		note += "\nThis backend may omit confidence and probabilities from a choice or score" +
 			" answer, which the TypeSafe backend always sends. Treat an absent field as" +
-			" absent: do not substitute a default before branching on it."
+			" absent: do not substitute a default before branching on it." +
+			" A question it declines comes back as {\"type\":\"refusal\"} with no value, while the" +
+			" other questions still answer; treat a refusal as no judgment, never as a no."
 	}
 	if cfg.AllowImages {
 		note += "\nImages and box questions are enabled. Image bytes are sent to the provider and billed."
