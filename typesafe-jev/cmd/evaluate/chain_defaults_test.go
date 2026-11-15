@@ -246,11 +246,7 @@ func prepareRuntimeChainPrecedence(t *testing.T, plugin bool, source string) ([]
 // runChainModeCases exercises the same cases with and without plugin defaults.
 func runChainModeCases[T any](t *testing.T, cases []T, format string, check func(*testing.T, bool, T)) {
 	t.Helper()
-	for _, plugin := range []bool{false, true} {
-		for _, value := range cases {
-			t.Run(fmt.Sprintf(format, plugin, value), func(t *testing.T) {
-				check(t, plugin, value)
-			})
-		}
-	}
+	runTestMatrix(t, []bool{false, true}, cases, func(plugin bool, value T) string {
+		return fmt.Sprintf(format, plugin, value)
+	}, check)
 }

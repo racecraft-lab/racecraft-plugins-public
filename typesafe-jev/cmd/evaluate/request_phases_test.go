@@ -194,13 +194,11 @@ type requestRejectionCase struct {
 // shipped entry points and ensure no locally refused call reaches either hop.
 func TestRequestPrecedenceMatchesParent(t *testing.T) {
 	for _, tc := range requestPrecedenceCases(t) {
-		for _, primary := range []string{"typesafe", "openrouter"} {
-			for _, fallback := range []bool{false, true} {
-				t.Run(fmt.Sprintf("%s/%s/fallback=%v", tc.name, primary, fallback), func(t *testing.T) {
-					checkRequestPrecedence(t, tc, primary, fallback)
-				})
-			}
-		}
+		runTestMatrix(t, []string{"typesafe", "openrouter"}, []bool{false, true}, func(primary string, fallback bool) string {
+			return fmt.Sprintf("%s/%s/fallback=%v", tc.name, primary, fallback)
+		}, func(t *testing.T, primary string, fallback bool) {
+			checkRequestPrecedence(t, tc, primary, fallback)
+		})
 	}
 }
 
