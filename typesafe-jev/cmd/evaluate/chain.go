@@ -300,8 +300,13 @@ func (r *chainRunner) onTheFallback(err error) error {
 	if !errors.As(err, &local) {
 		return err
 	}
+	serving := r.current.Load()
+	failed := make([]string, serving)
+	for i := range failed {
+		failed[i] = r.hops[i].Provider.Name
+	}
 	return &requestInvalidError{fmt.Errorf("this session is on the %s fallback since %s failed; %w",
-		r.servingHop().Provider.Name, r.hops[0].Provider.Name, local.err)}
+		r.hops[serving].Provider.Name, strings.Join(failed, " and "), local.err)}
 }
 
 // backendNote reports the fixed loaded order for MCP.

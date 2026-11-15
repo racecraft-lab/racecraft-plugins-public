@@ -10,23 +10,23 @@ import (
 
 // Universal shape checks are independent of a backend. Hop preparation checks
 // its capabilities and limits (ADR 0028); it does not narrow the shared shape.
-// The two existing backends accept the same values
-// inside it. TypeSafe documents that instructions, choice option descriptions,
-// score level descriptions, and noul true/false descriptions all accept a
-// string, an object, an array, or null. OpenRouter's Decisions schemas typed
-// every one of those as a plain string until it republished them; they are now
-// anyOf string, object, or array, with null additionally allowed for choice
-// option descriptions.
+// TypeSafe and OpenRouter accept the same values inside it; Ollama's row
+// narrows them per position. TypeSafe documents that instructions, choice
+// option descriptions, score level descriptions, and noul true/false
+// descriptions all accept a string, an object, an array, or null. OpenRouter's
+// Decisions schemas typed every one of those as a plain string until it
+// republished them; they are now anyOf string, object, or array, with null
+// additionally allowed for choice option descriptions.
 //
 // So structure is no longer narrowed for OpenRouter. What remains of the
 // divergence is null in the three positions this server requires a value
 // anyway (instructions, noul true/false, score levels), which is why no
 // per-backend null rule survives here either. The capability still lives on
-// ProviderSpec rather than being assumed, so a backend that re-narrows is one
-// entry position to narrow. See docs/provider-contracts.md for the field-by-field source.
+// ProviderSpec rather than being assumed, so a backend that re-narrows changes
+// only its own row. See docs/provider-contracts.md for the field-by-field source.
 
 const (
-	// Question types, shared by both backends.
+	// Question types, shared by every backend.
 	typeNoul   = "noul"
 	typeChoice = "choice"
 	typeScore  = "score"
@@ -108,6 +108,24 @@ func (checks requestCheckList) validate(spec ProviderSpec, in evaluateIn) error 
 	return nil
 }
 
+// validateQuestionID applies a backend's id form, so a request with an id that
+// backend rejects routes to a later hop instead of failing upstream.
+func validateQuestionID(spec ProviderSpec, id string) error {
+	limit := spec.Limits.QuestionIDLength
+	if limit == noLimit {
+		return nil
+	}
+	if overLimit(len(id), limit) {
+		return fmt.Errorf("question id %q is %d characters, over the %d the backend accepts", id, len(id), limit)
+	}
+	for _, r := range id {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '.' || r == '-') {
+			return fmt.Errorf("question id %q has %q; the backend accepts only ASCII letters, digits, \"_\", \".\" and \"-\"", id, r)
+		}
+	}
+	return nil
+}
+
 func requestChecks(in evaluateIn) requestCheckList {
 	var checks requestCheckList
 	checks.shape(validateState(in.State))
@@ -124,6 +142,7 @@ func requestChecks(in evaluateIn) requestCheckList {
 		checks.shape(fmt.Errorf("model is whitespace only; omit it to use the configured default"))
 	}
 	for _, id := range sortedKeys(in.Questions) {
+		checks.hop(func(spec ProviderSpec, _ evaluateIn) error { return validateQuestionID(spec, id) })
 		checks = append(checks, questionChecks(id, in.Questions[id])...)
 	}
 	checks = append(checks, imageUseChecks(in)...)

@@ -29,7 +29,7 @@ var credentialEnv = []string{
 	"JEV_CHAIN", "JEV_PROVIDER", "JEV_MODEL", "JEV_FALLBACK_PROVIDER",
 	"JEV_API_KEY_FILE", "JEV_FALLBACK_API_KEY_FILE",
 	"JEV_REQUEST_TIMEOUT", "JEV_HOP_TIMEOUT", "JEV_MAX_RETRIES",
-	"TYPESAFE_API_KEY", "OPENROUTER_API_KEY",
+	"TYPESAFE_API_KEY", "OPENROUTER_API_KEY", "OLLAMA_API_KEY",
 }
 
 // isolateCallEnv unsets every credential variable and points HOME at an empty

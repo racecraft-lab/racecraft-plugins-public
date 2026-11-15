@@ -20,17 +20,23 @@ func TestOllamaImagesGoldenRequest(t *testing.T) {
 			"alpha": {DataBase64: b64(png), Format: "png"},
 		},
 		Questions: map[string]question{"q": {
-			Type: typeNoul, Instructions: []any{"zeta", map[string]any{"image": "alpha"}},
+			Type: typeNoul, Instructions: "zeta",
 			Criteria: map[string]any{"true": "alpha", "false": "zeta"},
 		}},
 	}
-	body, headers, err := encodeRequest(withImages(providers["ollama"]), in)
+	// Through hop preparation, so the golden is a request the Ollama row takes.
+	shaped, err := shapeRequest(in)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := fmt.Sprintf(`{"images":["%s","%s"],"model":"clef","questions":{"q":{"criteria":{"false":"image 2","true":"image 1"},"instructions":["image 2","image 1"],"type":"noul"}},"state":{"first":"image 1","second":"image 2"}}`, b64(png), b64(jpeg))
+	prepared, err := prepareForHop(&Client{Provider: withImages(providers["ollama"]), Model: "clef"}, shaped)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, headers := prepared.body, prepared.headers
+	want := fmt.Sprintf(`{"images":["%s","%s"],"model":"clef","questions":{"q":{"criteria":{"false":"image 2","true":"image 1"},"instructions":"image 2","type":"noul"}},"state":{"first":"image 1","second":"image 2"}}`, b64(png), b64(jpeg))
 	if string(body) != want || len(headers) != 0 {
-		t.Fatalf("wire request differs from golden (body=%d bytes, headers=%v)", len(body), headers)
+		t.Fatalf("wire request differs from golden (body=%d bytes, headers=%v):\n%s", len(body), headers, body[:min(len(body), 200)])
 	}
 }
 

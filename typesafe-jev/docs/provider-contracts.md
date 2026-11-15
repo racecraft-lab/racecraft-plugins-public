@@ -131,6 +131,7 @@ continues to require non-blank instructions and complete noul criteria.
 |---|---|---|---|---|
 | Question types | noul, choice, score, box | noul, choice, score, box | noul, choice, score | same as `ollama` |
 | Questions | no local count cap | no local count cap | 64 | same as `ollama` |
+| Question ids | no local id rule | no local id rule | up to 100 ASCII letters, digits, `_`, `.`, `-` | same as `ollama` |
 | Choice options | 1–255 | 1–255 | 2–255 | same as `ollama` |
 | Score levels | 2–10 | 2–10 | 2–10 | same as `ollama` |
 | Serialized body | 32 MiB | 32 MiB | 13 MiB | same as `ollama` |
@@ -144,8 +145,9 @@ image is read or sent. Its top-level base64 array accepts at most 4 images,
 
 All that survives of the divergence is `null` in the three positions this server
 requires a value anyway, so no per-backend rule is left in the validator. The
-capability is still carried on `ProviderSpec.StructuredEntries` rather than
-assumed, so a backend that re-narrows is one field to flip.
+capability is still carried per entry position on each row's
+`ProviderSpec.StructuredEntries` rather than assumed, so a backend that
+re-narrows changes only its own row, as Ollama's does.
 
 **What changed on 2026-09-20.** `validateEntry` no longer rejects objects and
 arrays on OpenRouter, and the separate narrow tool schema that typed
@@ -176,8 +178,8 @@ instead of spending a request. Do not cite them as provider requirements.
   `minItems: 1`; a one-level scale is a degenerate question, not a schema error.
 - A score question takes at most ten levels. TypeSafe's API page says the API
   accepts up to 10 (fetched 2026-10-17). OpenRouter's schema sets no
-  `maxItems`. The cap is applied on both backends so a request cannot pass one
-  and fail the fallback.
+  `maxItems`. Each backend's row carries its own cap, and a request over one
+  hop's cap routes to a later hop that can take it (ADR 0028).
 - A serialized request is capped at 32 MiB, the body limit both publishers
   document. The response is still capped at 16 MiB. One decoded image file is
   capped at 16 MiB, which base64 expands to about 22 MiB of JSON, so the old
