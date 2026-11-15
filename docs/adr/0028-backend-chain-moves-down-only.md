@@ -64,3 +64,19 @@ hop (Clef), spending its credits, until the MCP server restarts.
   call routes on to the next hop that can take it.
 - **A daemon 502 or 503 counts as unreachable.** The daemon is up but cannot
   reach the cloud, which is a path problem, so the call moves on to cloud direct.
+
+## Settled in the interface design (owner, 2026-11-14)
+
+- **The last hop a call can reach gets all the time left**, not the per-hop
+  limit, so a one-hop chain keeps the whole request deadline.
+- **A moved session with no hop left that can take the call returns the network
+  failure** (provider error), with the route reason attached. A local rejection
+  keeps meaning that no network call was made.
+- **Only a failure on the session's own hop moves the session.** A call routed
+  past it that fails on a later hop continues down to the next hop that can take
+  it, and the session stays where it was.
+- **A 404 is a path problem:** it moves to the next hop without skipping hops on
+  the same account, like an unreachable hop.
+- **Environment outranks the chain file:** `JEV_CHAIN`, then the legacy
+  `JEV_PROVIDER`/`JEV_FALLBACK_PROVIDER` pair, then the chain file, then the
+  built-in `typesafe,openrouter`. `JEV_PROVIDER` alone stays a one-hop chain.
