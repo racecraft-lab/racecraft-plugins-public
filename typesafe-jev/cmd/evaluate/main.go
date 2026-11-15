@@ -195,6 +195,17 @@ func backendNote(cfg Config) string {
 			note += cfg.Fallback.Provider.LongContextNote
 		}
 	}
+	return note + additionalBackendNotes(cfg)
+}
+
+func additionalBackendNotes(cfg Config) string {
+	var note string
+	for _, hop := range cfg.AdditionalHops {
+		note += "\nLater backend: " + hop.Provider.Name + "." + hop.Provider.AnswerNote
+		if cfg.LongContext {
+			note += hop.Provider.LongContextNote
+		}
+	}
 	return note
 }
 

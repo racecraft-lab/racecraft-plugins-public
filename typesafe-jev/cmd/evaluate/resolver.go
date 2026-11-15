@@ -120,7 +120,7 @@ func chainSetting(look lookupFunc, raw string, chainSet, pluginDefaults bool) (s
 	}
 	if home := homeDir(look); filepath.IsAbs(home) {
 		path := filepath.Join(home, filepath.FromSlash(pluginKeyDirectory), "chain")
-		data, err := os.ReadFile(path)
+		data, err := readChainFile(path)
 		if err == nil {
 			return strings.TrimSpace(string(data)), "chain file", nil
 		}
@@ -132,6 +132,15 @@ func chainSetting(look lookupFunc, raw string, chainSet, pluginDefaults bool) (s
 		return "typesafe,openrouter", "built-in chain", nil
 	}
 	return "typesafe", "built-in chain", nil
+}
+
+func readChainFile(path string) ([]byte, error) {
+	f, _, err := openRegularFile(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(f)
 }
 
 // resolveLegacyConfig validates the existing provider/pair settings.
@@ -257,17 +266,28 @@ func (r resolvedHops) clients(startupLog io.Writer) ([]*Client, Config, error) {
 		}
 		return nil, r.config, err
 	}
-	cfg := usable[0].config
+	cfg := loadedConfig(usable)
 	var clients []*Client
 	for _, hop := range usable {
 		clients = append(clients, clientForHop(hop))
 	}
-	if len(usable) == 1 {
-		cfg.Fallback = nil
-	}
 	r.logDropped(startupLog, usable)
 
 	return clients, cfg, nil
+}
+
+// loadedConfig describes only the destinations that survived credential loading.
+func loadedConfig(usable []resolvedHop) Config {
+	cfg := usable[0].config
+	cfg.Fallback, cfg.AdditionalHops = nil, nil
+	for i, hop := range usable[1:] {
+		if i == 0 {
+			cfg.Fallback = &FallbackConfig{Provider: hop.config.Provider, KeyFile: hop.config.KeyFile, KeyFileDefaulted: hop.config.KeyFileDefaulted}
+		} else {
+			cfg.AdditionalHops = append(cfg.AdditionalHops, hop.config)
+		}
+	}
+	return cfg
 }
 
 // logDropped preserves pair diagnostics and logs each unusable later hop once.

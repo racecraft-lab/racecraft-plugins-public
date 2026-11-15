@@ -170,8 +170,7 @@ type authKind string
 
 const authBearer authKind = "bearer"
 
-// Only images.go selects an encoding from this enum. The third format is
-// reserved for the Ollama layer; no Ollama backend is registered here.
+// Only images.go selects an encoding from this enum.
 type imageWireFormat int
 
 const (
@@ -182,13 +181,13 @@ const (
 
 type imageTrust int
 
-// Both current backends require the operator's explicit image opt-in.
 const imageTrustOperatorOptIn imageTrust = 1
 
 // providers is the closed set of backends. Adding a URL here is the only way
 // to change where a request goes; there is deliberately no environment
 // variable that points the server at an arbitrary host.
 var providers = map[string]ProviderSpec{
+	"ollama": ollamaCloudSpec(),
 	"typesafe": {
 		Name:        "typesafe",
 		EndpointURL: "https://api.typesafe.ai/v1/systemone",
@@ -256,6 +255,43 @@ var providers = map[string]ProviderSpec{
 		// https://openrouter.ai/docs/guides/community/multimodal-decisions (2026-10-17).
 		ImageLimits: backendImageLimits(openrouterSideMin),
 	},
+}
+
+func ollamaCloudSpec() ProviderSpec {
+	return ProviderSpec{
+		Name:           "ollama",
+		EndpointURL:    "https://ollama.com/v1/systemone",
+		APIKeyEnv:      "OLLAMA_API_KEY",
+		DefaultModel:   "clef",
+		AuthKind:       authBearer,
+		BillingAccount: "ollama",
+		WireFormat:     wireOllamaImages,
+		QuestionTypes:  []string{typeNoul, typeChoice, typeScore},
+		ImageTrust:     imageTrustOperatorOptIn,
+		// Object criteria were accepted in the 2026-11-14 research probes;
+		// this is observed behavior, beyond the published string schema.
+		StructuredEntries: true,
+		AnswerNote: "\nOllama serves Clef: noul answers omit confidence, and answers omit id." +
+			" Choice and score confidence measures entropy, not calibrated correctness;" +
+			" thresholds tuned for Jev do not carry over. Images are not enabled on this backend yet.",
+		// No automatic replay: Ollama does not document retries as safe,
+		// and a repeated inference may bill again. Endpoint 429 behavior
+		// and Retry-After remain unconfirmed in the research matrix.
+		RetryStatuses: []int{},
+		// Ollama System One schema and decision guide, fetched 2026-11-14.
+		Limits: backendLimits{
+			Questions: 64, ChoiceMin: 2, ChoiceMax: 255,
+			ScoreMin: 2, ScoreMax: 10, BodyBytes: 13 << 20,
+			Images: 4, ImageBytes: 4 << 20, TotalImageBytes: 8 << 20,
+			ExpandedBytes: noLimit,
+		},
+		LongContextTokens: noLimit,
+		RequestTokens:     65_536,
+		QuestionTokens:    65_536,
+		ImageLimits: imageBounds{
+			MinSide: noLimit, MaxSide: noLimit, MinPixels: noLimit, MaxPixels: 16_000_000,
+		},
+	}
 }
 
 // Both current rows share these caps; each gets its own value to keep copies
