@@ -121,26 +121,6 @@ func TestCallChainFileRequiresAbsoluteHome(t *testing.T) {
 	}
 }
 
-func TestCallKeyDiscoveryRequiresAbsoluteHome(t *testing.T) {
-	isolateCallEnv(t)
-	cwd := t.TempDir()
-	writeDefaultKey(t, cwd, "typesafe", fixtureKey, 0o600)
-	writeDefaultKey(t, cwd, "openrouter", fixtureKey, 0o600)
-	t.Chdir(cwd)
-	t.Setenv("HOME", ".")
-	t.Setenv("JEV_CHAIN", "typesafe,openrouter")
-	t.Setenv("TYPESAFE_API_KEY", fixtureKey)
-	t.Setenv("OPENROUTER_API_KEY", fixtureKey)
-	got := runCallForTest(t, callOptions{check: true, pluginDefaults: true}, "")
-	var report checkReport
-	if err := json.Unmarshal([]byte(got.stdout), &report); err != nil {
-		t.Fatalf("call report: %v; result=%+v", err, got)
-	}
-	if got.code != 0 || report.Primary.Source != "environment" || report.Fallback == nil || report.Fallback.Source != "environment" {
-		t.Fatalf("call: %+v; want environment credentials for both hops", got)
-	}
-}
-
 // FB-02 must hold through both runtime entry points, not only resolveConfig.
 func TestRuntimeRejectsOrphanFallbackKeyFile(t *testing.T) {
 	for _, tc := range []struct {

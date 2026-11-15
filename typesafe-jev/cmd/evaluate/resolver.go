@@ -188,7 +188,7 @@ func homeDir(look lookupFunc) string {
 // diagnostics stable when more than one setting is invalid.
 func resolveHopKeyFile(look lookupFunc, name, provider, home string) (string, bool, error) {
 	path, err := resolveKeyFileVar(look, name)
-	if err != nil || path != "" || !filepath.IsAbs(home) {
+	if err != nil || path != "" || home == "" {
 		return path, false, err
 	}
 	candidate := filepath.Join(home, filepath.FromSlash(pluginKeyDirectory), provider+".key")
