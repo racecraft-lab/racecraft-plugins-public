@@ -36,14 +36,19 @@ func resolveHops(look lookupFunc, pluginDefaults bool) (resolvedHops, error) {
 	return resolveConfiguredHops(cfg, look), nil
 }
 
+// chainConfigs is the one walk of a Config's hops in chain order: the first
+// hop, the fallback, then any later hops.
+func (c Config) chainConfigs() []Config {
+	configs := []Config{c}
+	if c.Fallback != nil {
+		configs = append(configs, c.fallbackConfig())
+	}
+	return append(configs, c.AdditionalHops...)
+}
+
 func resolveConfiguredHops(cfg Config, look lookupFunc) resolvedHops {
 	r := resolvedHops{config: cfg}
-	configs := []Config{cfg}
-	if cfg.Fallback != nil {
-		configs = append(configs, cfg.fallbackConfig())
-	}
-	configs = append(configs, cfg.AdditionalHops...)
-	for _, hop := range configs {
+	for _, hop := range cfg.chainConfigs() {
 		r.hops = append(r.hops, resolvedHop{config: hop, loaded: loadCredentialSource(hop, look)})
 	}
 	return r
@@ -345,11 +350,8 @@ func newClients(cfg Config, log io.Writer) (*chainRunner, Config, error) {
 
 // configuredChainNames serializes setup's resolved order, including later hops.
 func configuredChainNames(cfg Config) string {
-	names := []string{cfg.Provider.Name}
-	if cfg.Fallback != nil {
-		names = append(names, cfg.Fallback.Provider.Name)
-	}
-	for _, hop := range cfg.AdditionalHops {
+	var names []string
+	for _, hop := range cfg.chainConfigs() {
 		names = append(names, hop.Provider.Name)
 	}
 	return strings.Join(names, ",")
