@@ -36,17 +36,9 @@ type ProviderSpec struct {
 	// Attribution is sent as fixed HTTP-Referer / X-OpenRouter-Title headers
 	// when set. It is a constant, never derived from local paths or content.
 	Attribution bool
-	// StructuredEntries reports whether the backend accepts a JSON object or
-	// array where an instruction or a description is expected, rather than a
-	// plain string.
-	//
-	// Both backends do. OpenRouter's Decisions schemas typed these fields as
-	// plain strings until it republished them; as of the 2026-09-20 fetch
-	// recorded in docs/provider-contracts.md they are anyOf string, object, or
-	// array, matching what TypeSafe documents. It stays a capability rather
-	// than an assumption so a re-narrowing is one field to flip, not a hunt
-	// through the validator.
-	StructuredEntries bool
+	// StructuredEntries lists the object and array kinds each entry position
+	// accepts. An absent position accepts neither; strings use the shared shape.
+	StructuredEntries map[entryPosition]entryKinds
 	// RetryStatuses are the HTTP statuses worth a second attempt on this
 	// backend. See docs/provider-contracts.md: this is fork policy, not a
 	// provider guarantee.
@@ -70,6 +62,33 @@ type ProviderSpec struct {
 	// JEV_LONG_CONTEXT. OpenRouter's budget is already the long window and
 	// takes no header, so the flag must not leak onto that spec.
 	LongContext bool
+}
+
+// Entry positions and kinds describe capabilities, independently of question
+// paths and validation. Backend rows own the permissions for each combination.
+type entryPosition int
+
+const (
+	entryInstructions entryPosition = iota
+	entryChoiceValue
+	entryScoreLevel
+	entryNoulDescription
+)
+
+type entryKinds uint8
+
+const (
+	entryObject entryKinds = 1 << iota
+	entryArray
+)
+
+// Both Jev hosts accept objects and arrays at every entry position, as recorded
+// in docs/provider-contracts.md. The rows share this read-only capability table.
+var jevStructuredEntries = map[entryPosition]entryKinds{
+	entryInstructions:    entryObject | entryArray,
+	entryChoiceValue:     entryObject | entryArray,
+	entryScoreLevel:      entryObject | entryArray,
+	entryNoulDescription: entryObject | entryArray,
 }
 
 // backendLimits holds backend-specific caps. -1 explicitly means no limit;
@@ -205,7 +224,7 @@ var providers = map[string]ProviderSpec{
 		LongContextNote:      "\nLong context is enabled for the TypeSafe backend: its budgets are 262144 tokens and each TypeSafe request sends the long-context header.",
 		// TypeSafe documents string, object, array, or null for every
 		// instruction and description field.
-		StructuredEntries: true,
+		StructuredEntries: jevStructuredEntries,
 		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// 529 is TypeSafe's overload status, which upstream already retried.
@@ -236,7 +255,7 @@ var providers = map[string]ProviderSpec{
 			" other questions still answer; treat a refusal as no judgment, never as a no.",
 		Attribution: true,
 		// Matches TypeSafe since OpenRouter republished the Decisions schemas.
-		StructuredEntries: true,
+		StructuredEntries: jevStructuredEntries,
 		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// All four are documented on the Decisions path and transient in
@@ -268,9 +287,13 @@ func ollamaCloudSpec() ProviderSpec {
 		WireFormat:     wireOllamaImages,
 		QuestionTypes:  []string{typeNoul, typeChoice, typeScore},
 		ImageTrust:     imageTrustOperatorOptIn,
-		// Object criteria were accepted in the 2026-11-14 research probes;
-		// this is observed behavior, beyond the published string schema.
-		StructuredEntries: true,
+		// Only choice objects (b08) and score objects (b09) were observed in
+		// the 2026-11-14 probes, beyond the published string schema. Arrays
+		// and noul objects were not probed; other structured positions route.
+		StructuredEntries: map[entryPosition]entryKinds{
+			entryChoiceValue: entryObject,
+			entryScoreLevel:  entryObject,
+		},
 		AnswerNote: "\nOllama serves Clef: noul answers omit confidence, and answers omit id." +
 			" Choice and score confidence measures entropy, not calibrated correctness;" +
 			" thresholds tuned for Jev do not carry over. Images require JEV_IMAGES=true.",

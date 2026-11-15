@@ -101,7 +101,7 @@ func TestStructuredInstructionsAcceptedOnBothBackends(t *testing.T) {
 // The capability drives the rule, so this is what re-narrowing would cost.
 func TestStructuredInstructionsRejectedWhenBackendLacksSupport(t *testing.T) {
 	narrow := openrouterSpec
-	narrow.StructuredEntries = false
+	narrow.StructuredEntries = nil
 
 	in := evaluateIn{
 		State:     "x",

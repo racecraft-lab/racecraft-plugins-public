@@ -108,7 +108,7 @@ object, or array, and additionally allow `null` for choice option descriptions.
 
 | Field | TypeSafe accepts | OpenRouter accepts | Ollama accepts |
 |---|---|---|---|
-| `instructions` (noul, choice, score, box) | string, object, array, null | string, object, array, null (required on box only) | required for noul, choice and score; string, object or array; no box |
+| `instructions` (noul, choice, score, box) | string, object, array, null | string, object, array, null (required on box only) | required for noul, choice and score; locally restricted to strings; no box |
 | choice `criteria` values | string, object, array, null | string, object, array, **null** | documented string or null; object values accepted in research probes |
 | score `criteria` entries | string, object, array, null | string, object, array (`minItems: 1`; no null) | documented strings; object levels accepted in research probes |
 | noul `criteria.true` / `.false` | string, object, array, null | string, object, array; when `criteria` is present both keys are required (no null) | optional criteria; when given, true and false string descriptions |
