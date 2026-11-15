@@ -59,9 +59,9 @@ func newHTTPClient() *http.Client {
 }
 
 // encode builds this backend's wire body and headers. It trusts the request:
-// prepare validates before it encodes. Every error is a
-// *requestInvalidError: a bad image or a body over the cap never leaves the
-// machine, and call maps that type to exit 2.
+// callers validate before encoding. Ordered hop checks and lazy image reads
+// compose in prepareForHop; this compatibility entry point still wraps local
+// errors as requestInvalidError, which call maps to exit 2.
 func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
 	body, headers, err := encodeRequest(c.Provider, in)
 	if err != nil {

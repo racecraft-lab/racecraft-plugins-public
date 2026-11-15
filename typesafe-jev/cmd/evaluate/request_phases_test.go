@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -169,5 +170,228 @@ func TestOversizedImageKeepsItsLimitDiagnostic(t *testing.T) {
 	var hop *hopRefusalError
 	if !errors.As(err, &hop) || err.Error() != "images.door: the file is 16777217 bytes, over the 16777216 byte limit" {
 		t.Fatalf("error=%v; want the existing per-file limit diagnostic", err)
+	}
+}
+
+// Parent 0c66afb92 is the oracle for multiply-invalid requests. Exercise both
+// shipped entry points and ensure no locally refused call reaches either hop.
+func TestRequestPrecedenceMatchesParent(t *testing.T) {
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "missing.png")
+	malformed := filepath.Join(dir, "malformed.png")
+	if err := os.WriteFile(malformed, []byte("not an image"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tiny := filepath.Join(dir, "tiny.png")
+	if err := os.WriteFile(tiny, mustPNG(t, 100, 100), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	large := filepath.Join(dir, "large.png")
+	data := append(mustPNG(t, 280, 280), make([]byte, 9<<20)...)
+	if err := os.WriteFile(large, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	options := map[string]any{" ": nil}
+	for i := 1; i < 256; i++ {
+		options[fmt.Sprintf("option%d", i)] = nil
+	}
+	levels := []any{42, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
+	questions := func(a, b question) evaluateIn {
+		return evaluateIn{State: "fixture", Questions: map[string]question{"a": a, "b": b}}
+	}
+	imageInput := func(state any, images map[string]imageSource) evaluateIn {
+		return evaluateIn{State: state, Questions: simpleIn().Questions, Images: images}
+	}
+	box := func(images map[string]imageSource, state any) evaluateIn {
+		return evaluateIn{State: state, Questions: map[string]question{"a": {Type: typeBox, Instructions: "find door"}}, Images: images}
+	}
+	cases := []struct {
+		name     string
+		in       evaluateIn
+		want     func(string) string
+		oldModel bool
+	}{
+		{"choice before missing type", questions(question{Type: typeChoice, Instructions: "judge", Criteria: map[string]any{}}, question{Instructions: "judge"}), func(string) string { return "questions.a.criteria must name at least one option" }, false},
+		{"score before missing instructions", questions(question{Type: typeScore, Instructions: "judge", Criteria: []any{"one"}}, question{Type: typeNoul}), func(string) string { return "questions.a.criteria needs at least 2 ordered levels" }, false},
+		{"score bound before entry", evaluateIn{State: "fixture", Questions: map[string]question{"a": {Type: typeScore, Instructions: "judge", Criteria: levels}}}, func(string) string { return "questions.a.criteria has 11 levels, over the 10 the backend accepts" }, false},
+		{"choice bound before name", evaluateIn{State: "fixture", Questions: map[string]question{"a": {Type: typeChoice, Instructions: "judge", Criteria: options}}}, func(string) string { return "questions.a.criteria names 256 options, over the 255 the backend accepts" }, false},
+		{"context before malformed image", imageInput([]any{budgetText(300_000), "door"}, map[string]imageSource{"door": {Path: malformed}}), func(p string) string {
+			if p == "typesafe" {
+				return "the request is about 300012 tokens, over the 64000 the model accepts; send less state or fewer questions"
+			}
+			return "the request is about 300012 tokens, over the 262144 the model accepts; send less state or fewer questions"
+		}, false},
+		{"dimensions before unreadable", imageInput([]any{"a", "b"}, map[string]imageSource{"a": {Path: tiny}, "b": {Path: missing}}), func(p string) string {
+			if p == "typesafe" {
+				return "images.a: sides are 100 by 100 pixels, outside the 280-1568 range this backend accepts"
+			}
+			return "images.a: sides are 100 by 100 pixels, outside the 256-1568 range this backend accepts"
+		}, false},
+		{"dimensions before malformed", imageInput([]any{"a", "b"}, map[string]imageSource{"a": {Path: tiny}, "b": {Path: malformed}}), func(p string) string {
+			if p == "typesafe" {
+				return "images.a: sides are 100 by 100 pixels, outside the 280-1568 range this backend accepts"
+			}
+			return "images.a: sides are 100 by 100 pixels, outside the 256-1568 range this backend accepts"
+		}, false},
+		{"expanded budget before unreadable", imageInput([]any{"a", "a", "a", "a", "b"}, map[string]imageSource{"a": {Path: large}, "b": {Path: missing}}), func(p string) string {
+			if p == "typesafe" {
+				return "images together are over the 33554432 byte expanded request limit, which adds an image again for each use; send fewer or smaller images, or reference each one fewer times"
+			}
+			return "images together are over the 33554432 byte request limit once base64-encoded; send fewer or smaller images, or reference each one fewer times"
+		}, false},
+		{"body budget before unreadable", imageInput([]any{"a", "b", "c", "d"}, map[string]imageSource{"a": {Path: large}, "b": {Path: large}, "c": {Path: large}, "d": {Path: missing}}), func(string) string {
+			return "images together are over the 33554432 byte request limit once base64-encoded; send fewer or smaller images, or reference each one fewer times"
+		}, false},
+	}
+	// All model aliases here are the parent's explicit Jev 1.13 refusals.
+	for _, tc := range []struct {
+		name   string
+		images map[string]imageSource
+		state  any
+	}{
+		{"box before missing file", map[string]imageSource{"door": {Path: missing}}, "door"},
+		{"box before malformed file", map[string]imageSource{"door": {Path: malformed}}, "door"},
+		{"box before no image", nil, "fixture"},
+		{"box before unreferenced image", map[string]imageSource{"door": {Path: malformed}}, "fixture"},
+	} {
+		cases = append(cases, struct {
+			name     string
+			in       evaluateIn
+			want     func(string) string
+			oldModel bool
+		}{tc.name, box(tc.images, tc.state), func(p string) string {
+			model := "jev-1.13.0"
+			if p == "openrouter" {
+				model = "typesafe/jev-1.13"
+			}
+			return "model " + model + " is Jev 1.13, which rejects box questions; use jev-latest or jev-1.14.0 on TypeSafe, or typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter"
+		}, true})
+	}
+	for _, tc := range cases {
+		for _, primary := range []string{"typesafe", "openrouter"} {
+			for _, fallback := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/%s/fallback=%v", tc.name, primary, fallback), func(t *testing.T) {
+					isolateCallEnv(t)
+					t.Setenv("JEV_IMAGES", "true")
+					t.Setenv("JEV_LONG_CONTEXT", "false")
+					t.Setenv("JEV_PROVIDER", primary)
+					t.Setenv(providers[primary].APIKeyEnv, fixtureKey)
+					other := map[string]string{"typesafe": "openrouter", "openrouter": "typesafe"}[primary]
+					if fallback {
+						t.Setenv("JEV_FALLBACK_PROVIDER", other)
+						t.Setenv(providers[other].APIKeyEnv, fixtureKey)
+					}
+					in := tc.in
+					if tc.oldModel {
+						in.Model = "jev-1.13.0"
+						if primary == "openrouter" {
+							in.Model = "typesafe/jev-1.13"
+						}
+					}
+					p, f := newCountingBackend(t, 401, "{}"), newCountingBackend(t, 200, validAnswer)
+					input, err := json.Marshal(in)
+					if err != nil {
+						t.Fatal(err)
+					}
+					want := tc.want(primary)
+					result := runCallForTest(t, callOptions{retarget: retargetTo(p, f)}, string(input))
+					if result.code != 2 || result.stdout != "" || result.stderr != "evaluate: "+want+"\n" {
+						t.Errorf("call = %+v; want exit 2 and %q", result, want)
+					}
+					spec := withImages(providerAt(primary, p.URL))
+					chain := &chainRunner{log: io.Discard, hops: []*Client{{Provider: spec, Model: spec.DefaultModel, Timeout: time.Second, HTTP: p.Client()}}}
+					if fallback {
+						fs := withImages(providerAt(other, f.URL))
+						chain.hops = append(chain.hops, &Client{Provider: fs, Model: fs.DefaultModel, Timeout: time.Second, HTTP: f.Client()})
+					}
+					session := connect(t, Config{Provider: spec}, chain)
+					got, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "evaluate", Arguments: in})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !got.IsError || contentText(t, got) != want {
+						t.Errorf("MCP isError=%v message=%q; want %q", got.IsError, contentText(t, got), want)
+					}
+					if p.hits.Load() != 0 || f.hits.Load() != 0 || chain.current.Load() != 0 {
+						t.Errorf("locally refused call reached or moved hops: %d/%d, current=%d", p.hits.Load(), f.hits.Load(), chain.current.Load())
+					}
+				})
+			}
+		}
+	}
+}
+
+// Wrap the filesystem read seam on this call only. Later sources must never
+// be read, even when their contents would otherwise be valid.
+func TestRefusedRequestLeavesLaterImageUnread(t *testing.T) {
+	for _, provider := range []string{"typesafe", "openrouter"} {
+		for _, refusal := range []string{"box model", "dimensions", "expanded budget", "body budget"} {
+			t.Run(provider+"/"+refusal, func(t *testing.T) {
+				path := filepath.Join(t.TempDir(), "later.png")
+				data := mustPNG(t, 280, 280)
+				if err := os.WriteFile(path, data, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				in := evaluateIn{State: []any{"a", "b"}, Questions: simpleIn().Questions, Images: map[string]imageSource{"b": {Path: path}}}
+				switch refusal {
+				case "box model":
+					in.Questions = map[string]question{"q": {Type: typeBox, Instructions: "find"}}
+					in.Model = "jev-1.13.0"
+					if provider == "openrouter" {
+						in.Model = "typesafe/jev-1.13"
+					}
+				case "dimensions":
+					in.Images["a"] = imageSource{DataBase64: b64(mustPNG(t, 100, 100))}
+				case "expanded budget":
+					in.State = []any{"a", "a", "a", "a", "b"}
+					in.Images["a"] = imageSource{DataBase64: b64(append(data, make([]byte, 9<<20)...))}
+				case "body budget":
+					in.State = []any{"a", "aa", "ab", "b"}
+					encoded := b64(append(data, make([]byte, 9<<20)...))
+					for _, name := range []string{"a", "aa", "ab"} {
+						in.Images[name] = imageSource{DataBase64: encoded}
+					}
+				}
+				spec := withImages(providers[provider])
+				shaped, err := shapeRequest(in, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+				shaped.images.read = func(name string, src imageSource, limit int, haystack string) (preparedImage, error) {
+					if src.Path == path {
+						t.Fatal("refused request read a later image")
+					}
+					return readOneImage(name, src, limit, haystack)
+				}
+				_, err = prepareForHop(&Client{Provider: spec, Model: spec.DefaultModel}, shaped)
+				var hop *hopRefusalError
+				if !errors.As(err, &hop) {
+					t.Fatalf("want earlier hop refusal, got %v", err)
+				}
+			})
+		}
+	}
+}
+
+func TestInternalPreparationErrorsNeverRefuseAHop(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(*ProviderSpec)
+		want   string
+	}{
+		{"wire format", func(spec *ProviderSpec) { spec.WireFormat = imageWireFormat(255) }, "internal: typesafe has no supported image wire format"},
+		{"image limits", func(spec *ProviderSpec) { spec.ImageLimits = imageBounds{} }, "internal: typesafe has no image limits"},
+		{"context budget", func(spec *ProviderSpec) { spec.RequestTokens = 0 }, "internal: typesafe has no context budget"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := withImages(typesafeSpec)
+			tc.change(&spec)
+			_, err := prepare(&Client{Provider: spec, Model: spec.DefaultModel}, imageRequest(mustPNG(t, 280, 280), "png"))
+			var hop *hopRefusalError
+			var shape *requestShapeError
+			if err == nil || err.Error() != tc.want || errors.As(err, &hop) || errors.As(err, &shape) {
+				t.Fatalf("internal error = %T %v; want unclassified %q", err, err, tc.want)
+			}
+		})
 	}
 }
