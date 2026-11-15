@@ -21,8 +21,12 @@ BLOCKED_SHA256 = frozenset({
 
 
 def keytool(java_home: Path, store: Path, *arguments: str) -> str:
+    # Search only the selected JDK's bin, so the guard checks the same JDK it hardens.
+    executable = shutil.which("keytool", path=str(java_home / "bin"))
+    if executable is None:
+        raise FileNotFoundError("keytool not found in the selected JDK")
     return subprocess.run(
-        [str(java_home / "bin/keytool"), *arguments, "-keystore", str(store),
+        [executable, *arguments, "-keystore", str(store),
          "-storepass", "changeit", "-J-Duser.language=en", "-J-Duser.country=US"],
         check=True, shell=False, capture_output=True, text=True, encoding="utf-8", timeout=60,
     ).stdout
