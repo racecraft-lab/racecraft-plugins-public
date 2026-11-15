@@ -103,7 +103,7 @@ func resolveHopConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	for i := 2; i < len(names); i++ {
 		name := names[i]
 		hop := Config{Provider: providers[name], Model: providers[name].DefaultModel,
-			Timeout: cfg.Timeout, MaxRetries: cfg.MaxRetries, AllowImages: cfg.AllowImages, LongContext: cfg.LongContext}
+			Timeout: cfg.Timeout, HopTimeout: cfg.HopTimeout, MaxRetries: cfg.MaxRetries, AllowImages: cfg.AllowImages, LongContext: cfg.LongContext}
 		hop.KeyFile, hop.KeyFileDefaulted, err = resolveHopKeyFile(func(string) (string, bool) { return "", false }, pluginKeyFileEnv, name, home)
 		if err != nil {
 			return cfg, err
@@ -153,6 +153,9 @@ func resolveLegacyConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 		return cfg, err
 	}
 	if cfg.Timeout, err = resolveTimeout(look); err != nil {
+		return cfg, err
+	}
+	if cfg.HopTimeout, err = resolveHopTimeout(look, cfg.Timeout); err != nil {
 		return cfg, err
 	}
 	if cfg.MaxRetries, err = resolveMaxRetries(look); err != nil {
@@ -288,7 +291,7 @@ func clientForHop(hop resolvedHop) *Client {
 	cfg := hop.config
 	return &Client{
 		Provider: applyOperator(cfg.Provider, cfg.AllowImages, cfg.LongContext),
-		Model:    cfg.Model, APIKey: hop.loaded.key, Timeout: cfg.Timeout,
+		Model:    cfg.Model, APIKey: hop.loaded.key, Timeout: cfg.Timeout, HopTimeout: cfg.HopTimeout,
 		MaxRetries: cfg.MaxRetries, HTTP: newHTTPClient(), Backoff: time.Second,
 	}
 }

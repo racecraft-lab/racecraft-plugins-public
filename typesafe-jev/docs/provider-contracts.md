@@ -224,6 +224,24 @@ delay-seconds and HTTP-date forms, because doing so is correct HTTP behaviour
 regardless of whether the publisher documents it. A valid `Retry-After` is
 treated as a minimum wait, never as a cap to negotiate down.
 
+## Request and hop deadlines
+
+`JEV_REQUEST_TIMEOUT` bounds the whole call, including retries (45 s by
+default, at most 5 m). `JEV_HOP_TIMEOUT` bounds each hop's attempts and retry
+waits (10 s by default, capped at a shorter request budget). An explicit hop
+timeout must be a positive duration no greater than the request timeout; an
+invalid value fails at start-up.
+
+The last hop that can take this request gets all the time remaining, including
+in a one-hop chain. A hop deadline routes only this call onward and leaves the
+session where it was. A failure on that later route does not move the original
+session. Exhausting the whole request deadline ends the call as a timeout
+(provider error, exit 5) without a session-move log. Dial deadlines on a live
+call remain unreachable failures.
+
+If a retry cannot finish within the hop deadline, its HTTP status keeps its
+meaning for session moves. This rule is provisional pending owner review.
+
 ## Attribution headers
 
 `HTTP-Referer` and `X-OpenRouter-Title` both appear in the fetched OpenAPI

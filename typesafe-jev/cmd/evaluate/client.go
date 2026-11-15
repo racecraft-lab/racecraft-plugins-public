@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -36,9 +37,11 @@ type Client struct {
 	APIKey credential
 
 	HTTP *http.Client
-	// Timeout bounds the whole evaluation: every attempt plus every wait
-	// between them, not each attempt separately.
+	// Timeout is the whole evaluation budget, enforced by the chain runner.
+	// post spends only the deadline supplied in its call context.
 	Timeout time.Duration
+	// HopTimeout limits a non-final hop within the runner's request deadline.
+	HopTimeout time.Duration
 	// MaxRetries is the number of *additional* attempts, so 0 means one.
 	MaxRetries int
 	// Backoff is the first retry delay; it doubles each attempt.
@@ -73,19 +76,20 @@ func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
 	return body, headers, nil
 }
 
-// post sends one encoded body with this backend's retry policy, inside a
-// single c.Timeout budget.
+// post spends the caller's hop deadline on attempts and retry waits. The
+// chain runner owns deadlines so their provenance stays available to classify.
 func (c *Client) post(ctx context.Context, body []byte, headers map[string]string) ([]byte, error) {
-	// One deadline for the whole evaluation. Retry waits are spent from the
-	// same budget, so a caller's timeout means what it says.
-	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
-	defer cancel()
 	deadline, _ := ctx.Deadline()
+	budget := time.Until(deadline)
 
 	delay := c.Backoff
+	var retryFailure error
 	for attempt := 0; ; attempt++ {
 		b, status, header, err := c.attempt(ctx, body, headers)
 		if err != nil {
+			if retryFailure != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return nil, retryFailure
+			}
 			return nil, err
 		}
 		if status/100 == 2 {
@@ -97,15 +101,19 @@ func (c *Client) post(ctx context.Context, body []byte, headers map[string]strin
 		if !slices.Contains(c.Provider.RetryStatuses, status) || attempt >= c.MaxRetries {
 			return nil, c.statusError(status, b)
 		}
+		retryFailure = c.statusError(status, b)
 
 		wait := backoffFor(delay, header, time.Now())
 		// Stop rather than sleep past the deadline and then make one more
 		// doomed attempt on the way out.
 		if remaining := time.Until(deadline); wait >= remaining {
 			return nil, &statusErr{Status: status, text: fmt.Sprintf("%s: HTTP %d; the next retry would not fit in the %s budget; retry later",
-				c.Provider.Name, status, c.Timeout)}
+				c.Provider.Name, status, budget)}
 		}
 		if err := sleep(ctx, wait); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				return nil, retryFailure
+			}
 			return nil, err
 		}
 		delay *= 2

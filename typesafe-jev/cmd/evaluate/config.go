@@ -276,6 +276,7 @@ var providers = map[string]ProviderSpec{
 
 const (
 	defaultTimeout    = 45 * time.Second
+	defaultHopTimeout = 10 * time.Second
 	maxTimeout        = 5 * time.Minute
 	defaultMaxRetries = 3
 	maxMaxRetries     = 5
@@ -287,6 +288,7 @@ type Config struct {
 	Provider   ProviderSpec
 	Model      string
 	Timeout    time.Duration
+	HopTimeout time.Duration
 	MaxRetries int
 	// KeyFile is an absolute path, or "" to use the provider's environment
 	// variable. The path is not a secret; the file's contents are.
@@ -330,6 +332,7 @@ func (c Config) fallbackConfig() Config {
 		Provider:   c.Fallback.Provider,
 		Model:      c.Fallback.Provider.DefaultModel,
 		Timeout:    c.Timeout,
+		HopTimeout: c.HopTimeout,
 		MaxRetries: c.MaxRetries,
 		KeyFile:    c.Fallback.KeyFile,
 
@@ -456,6 +459,24 @@ func resolveTimeout(look lookupFunc) (time.Duration, error) {
 	}
 	if d > maxTimeout {
 		return 0, fmt.Errorf("JEV_REQUEST_TIMEOUT=%q is above the %s ceiling", raw, maxTimeout)
+	}
+	return d, nil
+}
+
+func resolveHopTimeout(look lookupFunc, requestTimeout time.Duration) (time.Duration, error) {
+	raw, set := look("JEV_HOP_TIMEOUT")
+	if !set || raw == "" {
+		return min(defaultHopTimeout, requestTimeout), nil
+	}
+	d, err := time.ParseDuration(strings.TrimSpace(raw))
+	if err != nil {
+		return 0, fmt.Errorf("JEV_HOP_TIMEOUT=%q is not a duration such as 10s", raw)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("JEV_HOP_TIMEOUT must be positive")
+	}
+	if d > requestTimeout {
+		return 0, fmt.Errorf("JEV_HOP_TIMEOUT=%s exceeds JEV_REQUEST_TIMEOUT=%s", d, requestTimeout)
 	}
 	return d, nil
 }

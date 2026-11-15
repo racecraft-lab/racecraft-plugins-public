@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type chainEffect uint8
@@ -108,11 +109,8 @@ func (r *chainRunner) servingHop() *Client { return r.hops[r.current.Load()] }
 // the session's own hop moves it before the next hop is prepared, so a failure
 // and a capability route compose. All hops share the request deadline.
 func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
-	if len(r.hops) > 1 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, r.hops[0].Timeout)
-		defer cancel()
-	}
+	ctx, cancel := context.WithTimeout(ctx, r.hops[0].Timeout)
+	defer cancel()
 	start := int(r.current.Load())
 	if start > 0 || r.firstDropped {
 		in = fallbackRequest(in)
@@ -147,12 +145,38 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 			}
 			continue
 		}
-		body, failure := send(ctx, r.hops[i], p)
+		hopCtx := ctx
+		cancelHop := func() {}
+		limit := r.hops[i].HopTimeout
+		if limit == 0 {
+			limit = defaultHopTimeout
+		}
+		deadline, _ := ctx.Deadline()
+		if time.Until(deadline) > limit && r.hasLaterHop(i, shaped) {
+			hopCtx, cancelHop = context.WithTimeout(ctx, limit)
+		}
+		body, failure := send(hopCtx, r.hops[i], p)
+		hopErr := hopCtx.Err()
+		cancelHop()
+		if requestErr := ctx.Err(); requestErr != nil {
+			failure = requestErr
+		}
 		if failure == nil {
 			return body, nil
 		}
+		// A retry that cannot fit (or finishes at the hop boundary) still
+		// carries the backend's status. Only a timeout without that status
+		// takes a call-only route; the whole deadline above always wins.
+		var status *statusErr
+		if errors.As(failure, &status) {
+			hopErr = nil
+		}
 		err, networkErr = failure, failure
-		out := classify(&chainFailure{err: failure, requestErr: ctx.Err()})
+		out := classify(&chainFailure{err: failure, requestErr: ctx.Err(), hopErr: hopErr})
+		if out.effect == nextHopForCall {
+			sessionHop = -1
+			continue
+		}
 		if out.effect != moveSession && out.effect != moveAccount {
 			break
 		}
@@ -165,6 +189,24 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 		err = r.onTheFallback(err)
 	}
 	return nil, err
+}
+
+// hasLaterHop checks reachability locally, using the same preparation and
+// shared image cache as routing. A later refusal cannot shorten the last able
+// hop's time. Other errors stop routing when that hop is reached.
+func (r *chainRunner) hasLaterHop(after int, shaped shapedCall) bool {
+	shaped.in = fallbackRequest(shaped.in)
+	for _, hop := range r.hops[after+1:] {
+		_, err := prepareForHop(hop, shaped)
+		if err == nil {
+			return true
+		}
+		var refusal *hopRefusalError
+		if !errors.As(err, &refusal) {
+			return false
+		}
+	}
+	return false
 }
 
 // move only advances the hop that actually failed. Concurrent failures of an
