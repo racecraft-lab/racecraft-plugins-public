@@ -173,11 +173,8 @@ func newServer(cfg Config, chain *chainRunner) *mcp.Server {
 // provider declines. An agent that branches on a number which is simply
 // absent misreads the answer, so the note says so up front.
 func backendNote(cfg Config) string {
-	specs := []ProviderSpec{cfg.Provider}
-	if cfg.Fallback != nil {
-		specs = append(specs, cfg.Fallback.Provider)
-	}
-	for _, hop := range cfg.AdditionalHops {
+	var specs []ProviderSpec
+	for _, hop := range cfg.chainConfigs() {
 		specs = append(specs, hop.Provider)
 	}
 	note := trustSentence(specs)
