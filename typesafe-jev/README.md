@@ -158,7 +158,7 @@ It gets back the raw response JSON, with each answer under the same id you gave 
 ## What you get
 
 - **Setup that changes nothing.** `evaluate setup mcp` prints the commands and config for the clients you name. It never runs a client CLI, edits a config file, or reads your key: only the key-file *path* appears in its output, never a value.
-- **Explicit backends.** `JEV_PROVIDER` selects TypeSafe or OpenRouter, and each backend reads only its own credential. An `OPENROUTER_API_KEY` left in a shell by another tool cannot silently reroute and re-bill your setup.
+- **Explicit backends.** A bare binary defaults to TypeSafe alone and uses a second backend only when the operator names a chain through `JEV_CHAIN`, the legacy provider pair, or the per-user chain file. The plugin's launcher opts into TypeSafe then OpenRouter with `--plugin-defaults`. `JEV_CHAIN` or the chain file overrides the built-in chain in both modes, with the same precedence. Each backend reads only its own credential.
 - **Answers your code can branch on.** Four question types: `noul` (probability a condition holds), `choice` (one option from a map), `score` (position on 2 to 10 ordered levels), and `box` (four edges of one target in an image; needs Jev 1.14).
 - **Both backends at full capability.** Structured instructions and criteria, and null option descriptions, work on TypeSafe and OpenRouter alike. Validation is per backend rather than a shared lowest common denominator, so neither is narrowed to suit the other, and a request a backend would reject fails locally before it costs anything.
 - **Rate limits handled honestly.** Each backend retries only the statuses it documents as transient, `Retry-After` is honoured as a minimum wait, and retry waits come out of the same timeout as the attempts. Authentication, credit, and validation failures are never replayed.
@@ -231,7 +231,7 @@ the primary.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `JEV_CHAIN` | `typesafe,openrouter` | Ordered distinct providers, up to four; overrides the chain file and cannot be combined with the legacy provider pair |
+| `JEV_CHAIN` | `typesafe` (`typesafe,openrouter` under `--plugin-defaults`) | Ordered distinct providers, up to four; overrides the chain file and cannot be combined with the legacy provider pair |
 | `JEV_PROVIDER` | unset | Legacy first backend; by itself selects one hop |
 | `JEV_MODEL` | backend default | Model id for configured hop 1 only, passed through unchanged |
 | `JEV_API_KEY_FILE` | unset | Absolute path to a private key file; wins over the environment key |

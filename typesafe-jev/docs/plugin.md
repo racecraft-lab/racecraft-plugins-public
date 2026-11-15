@@ -148,15 +148,21 @@ mask the operator's chain file. Resolution order is:
 
 1. `JEV_CHAIN`, a comma-separated list such as `openrouter,typesafe`.
 2. The legacy `JEV_PROVIDER` / `JEV_FALLBACK_PROVIDER` pair. A provider alone
-   selects one hop. Combining either legacy variable with `JEV_CHAIN` fails.
+   selects one hop. An empty `JEV_FALLBACK_PROVIDER` is unset. Combining a
+   configured legacy provider with `JEV_CHAIN` fails.
 3. The comma-separated file `~/.config/racecraft-jev/chain`.
-4. The built-in `typesafe,openrouter`, with `jev-latest` on TypeSafe.
+4. The built-in `typesafe,openrouter` under `--plugin-defaults`, which the
+   plugin's launcher always passes. Without that flag, the built-in is
+   `typesafe` alone. Both modes use `jev-latest` on TypeSafe.
 
 A chain accepts at most four distinct registered providers, with no empty
 entries. This layer registers `typesafe` and `openrouter`; Ollama remains for
 later layers. A missing chain file uses the built-in order; an unreadable or
 invalid file fails startup. Environment configuration wins without reading the
 file. `evaluate call --plugin-defaults` and the MCP server resolve identically.
+The chain file and `JEV_CHAIN` override the built-in chain in both modes, with
+the same precedence. A bare binary uses a second backend only when the
+operator names a chain; the plugin's launcher opts into TypeSafe then OpenRouter.
 `evaluate setup mcp` prints client configuration using `JEV_CHAIN`.
 
 Hop 1 keeps `JEV_API_KEY_FILE`; hop 2 keeps `JEV_FALLBACK_API_KEY_FILE`. With
@@ -164,6 +170,7 @@ Hop 1 keeps `JEV_API_KEY_FILE`; hop 2 keeps `JEV_FALLBACK_API_KEY_FILE`. With
 `~/.config/racecraft-jev/<provider>.key`, before its provider's environment key.
 `--check` reports exit 4 on any unusable credential. The server instead drops
 that hop with one log line and starts if any hop has a usable credential.
+Setting `JEV_FALLBACK_API_KEY_FILE` without a configured second hop fails startup.
 `JEV_MODEL` and the tool's `model` argument apply only to configured hop 1,
 even if that hop is dropped. Every later hop uses its provider's default.
 

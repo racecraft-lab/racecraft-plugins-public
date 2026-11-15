@@ -64,14 +64,15 @@ func resolveCallConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 func resolveHopConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	raw, chainSet := look("JEV_CHAIN")
 	_, primarySet := look("JEV_PROVIDER")
-	_, fallbackSet := look("JEV_FALLBACK_PROVIDER")
+	fallback, _ := look("JEV_FALLBACK_PROVIDER")
+	fallbackSet := fallback != ""
 	if chainSet && (primarySet || fallbackSet) {
 		return Config{}, fmt.Errorf("JEV_CHAIN cannot be combined with JEV_PROVIDER or JEV_FALLBACK_PROVIDER")
 	}
 	if !chainSet && (primarySet || fallbackSet) {
 		return resolveLegacyConfig(look, pluginDefaults)
 	}
-	raw, source, err := chainSetting(look, raw, chainSet)
+	raw, source, err := chainSetting(look, raw, chainSet, pluginDefaults)
 	if err != nil {
 		return Config{}, err
 	}
@@ -113,14 +114,17 @@ func resolveHopConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 }
 
 // chainSetting reads the file only after environment precedence is settled.
-func chainSetting(look lookupFunc, raw string, chainSet bool) (string, string, error) {
+func chainSetting(look lookupFunc, raw string, chainSet, pluginDefaults bool) (string, string, error) {
 	if chainSet {
 		return raw, "JEV_CHAIN", nil
 	}
 	path := filepath.Join(homeDir(look), filepath.FromSlash(pluginKeyDirectory), "chain")
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return "typesafe,openrouter", "built-in chain", nil
+		if pluginDefaults {
+			return "typesafe,openrouter", "built-in chain", nil
+		}
+		return "typesafe", "built-in chain", nil
 	}
 	if err != nil {
 		return "", "", fmt.Errorf("reading chain file: %w", err)
