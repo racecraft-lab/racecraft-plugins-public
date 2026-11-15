@@ -271,10 +271,9 @@ func openRouterFirst(t *testing.T, primaryStatus int, reply string) (*Client, *r
 
 const boxReply = `{"model":"jev-1.14.0","usage":{"input_tokens":1,"output_tokens":1},"answers":{"mug":{"type":"box","box":{"top":0.1,"bottom":0.4,"left":0.2,"right":0.8}}}}`
 
-// FB-07: the fallback runs its own default model, and TypeSafe's, jev-latest,
-// is Jev 1.13, which rejects box. A box call on a TypeSafe fallback runs on
-// its pinned 1.14 model instead, on the switching call and after it, so the
-// agent is never told to pick a model the fallback would clear.
+// FB-07: the fallback runs its own default model, never the caller's. Both
+// defaults are Jev 1.14, so a box call on a TypeSafe fallback runs on
+// jev-latest, on the switching call and after it.
 func TestFallbackRunsBoxOnABoxCapableModel(t *testing.T) {
 	c, _, fallback := openRouterFirst(t, http.StatusServiceUnavailable, boxReply)
 	in := imageRequest(mustPNG(t, 280, 280), "")
@@ -284,8 +283,8 @@ func TestFallbackRunsBoxOnABoxCapableModel(t *testing.T) {
 		if _, err := runEvaluate(context.Background(), c, in); err != nil {
 			t.Fatalf("call %d: %v", call, err)
 		}
-		if got := <-fallback.models; got != "jev-1.14.0" {
-			t.Fatalf("call %d: fallback model %q, want jev-1.14.0", call, got)
+		if got := <-fallback.models; got != "jev-latest" {
+			t.Fatalf("call %d: fallback model %q, want jev-latest", call, got)
 		}
 	}
 }

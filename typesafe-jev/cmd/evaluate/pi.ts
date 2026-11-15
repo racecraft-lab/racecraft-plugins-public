@@ -161,7 +161,7 @@ export default function (pi: ExtensionAPI) {
       model: Type.Optional(
         Type.String({
           description:
-            "model to use; defaults to the latest Jev on the configured endpoint. Box needs Jev 1.14: jev-preview or jev-1.14.0 on TypeSafe, typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter",
+            "model to use; defaults to the latest Jev on the configured endpoint. Box needs Jev 1.14: jev-latest or jev-1.14.0 on TypeSafe, typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter",
         }),
       ),
       images: Type.Optional(

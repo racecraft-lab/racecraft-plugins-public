@@ -57,7 +57,7 @@ func fallbackReason(err error) (string, bool) {
 func runWithFallback(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
 	defer cancel()
-	onFallback := fallbackRequest(c.Fallback, in)
+	onFallback := fallbackRequest(in)
 	if c.switched.Load() {
 		body, err := runOn(ctx, c.Fallback, onFallback)
 		return body, onTheFallback(c, err)
@@ -85,14 +85,9 @@ func runWithFallback(ctx context.Context, c *Client, in evaluateIn) ([]byte, err
 
 // fallbackRequest is the request as the fallback runs it. Its model names a
 // primary id, which differs per backend, so the fallback runs its own default.
-// A box question runs on the fallback's BoxModel when that default is one
-// validateBoxModel would refuse, so the fallback never fails a box question
-// on a model the agent cannot change.
-func fallbackRequest(fb *Client, in evaluateIn) evaluateIn {
+// Both defaults are Jev 1.14, so a box question needs no model of its own.
+func fallbackRequest(in evaluateIn) evaluateIn {
 	in.Model = ""
-	if requestHasBox(in) && knownBoxReject(fb.Provider.Name, fb.Model) {
-		in.Model = fb.Provider.BoxModel
-	}
 	return in
 }
 
