@@ -76,7 +76,7 @@ relative to the root.
 
 | Layer | speckit-pro | typesafe-jev | Repository |
 | --- | --- | --- | --- |
-| Policy: decides | `speckit_pro_runner/` modules and `gates/` | `cmd/evaluate/` request, backend and update logic (`validation.go`, `config.go`, `fallback.go`, `update.go`) | release and check logic in `scripts/` |
+| Policy: decides | `speckit_pro_runner/` modules and `gates/` | `cmd/evaluate/` request, backend and update logic (`validation.go`, `config.go`, `resolver.go`, `fallback.go`, `update.go`) | release and check logic in `scripts/` |
 | Contract: states a shape | `speckit_pro_runner/contracts/` schemas, plugin manifests | MCP tool schema in `cmd/evaluate/tools.go`, exit codes in `cmd/evaluate/call.go`, plugin manifests, `plugin/.mcp.json` | marketplace manifests, `release-please-config.json` |
 | Guidance: tells an agent what to do | `skills/`, `agents/`, `codex-agents/`, references, hook messages | `plugin/shared-skills/`, tool descriptions | `AGENTS.md`, `REVIEW.md`, `docs-site/` |
 | Glue: dispatches | `hooks/`, `codex-hooks.json`, `speckit_pro_runner/helpers/registry.py`, `scripts/` | `cmd/evaluate/main.go`, `plugin/scripts/` | `.github/workflows/`, dispatch scripts |
