@@ -17,16 +17,18 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type chainBehaviorCase struct {
+	name   string
+	status int
+	err    error
+	move   bool
+}
+
 // Pin the two-hop contract through the real MCP handler before extracting
 // session state. Every HTTP request is intercepted; no backend is contacted.
 func TestChainBehaviorFixture(t *testing.T) {
 	for _, primary := range []string{"typesafe", "openrouter"} {
-		for _, tc := range []struct {
-			name   string
-			status int
-			err    error
-			move   bool
-		}{
+		for _, tc := range []chainBehaviorCase{
 			{"answered", 200, nil, false},
 			{"shape", 400, nil, false},
 			{"key", 401, nil, true},
@@ -41,69 +43,84 @@ func TestChainBehaviorFixture(t *testing.T) {
 			{"connection refused", 0, &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}, true},
 		} {
 			t.Run(primary+"/"+tc.name, func(t *testing.T) {
-				fallback := map[string]string{"typesafe": "openrouter", "openrouter": "typesafe"}[primary]
-				calls := map[string]int{}
-				var log strings.Builder
-				transport := backendFixtureTransport(func(r *http.Request) (*http.Response, error) {
-					provider := primary
-					if r.URL.String() == providers[fallback].EndpointURL {
-						provider = fallback
-					}
-					calls[provider]++
-					var sent struct{ Model string }
-					if err := json.NewDecoder(r.Body).Decode(&sent); err != nil {
-						return nil, err
-					}
-					wantModel := "caller-model"
-					if provider == fallback {
-						wantModel = providers[fallback].DefaultModel
-					}
-					if sent.Model != wantModel {
-						t.Errorf("%s received model %q, want %q", provider, sent.Model, wantModel)
-					}
-					if provider == primary && tc.err != nil {
-						return nil, tc.err
-					}
-					status := 200
-					if provider == primary {
-						status = tc.status
-					}
-					return &http.Response{StatusCode: status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulReply))}, nil
-				})
-				client := &chainRunner{log: &log, hops: []*Client{
-					{Provider: providers[primary], Model: providers[primary].DefaultModel, Timeout: time.Second, HTTP: &http.Client{Transport: transport}},
-					{Provider: providers[fallback], Model: providers[fallback].DefaultModel, Timeout: time.Second, HTTP: &http.Client{Transport: transport}},
-				}}
-				cfg := Config{Provider: providers[primary], Fallback: &FallbackConfig{Provider: providers[fallback]}}
-				session := connect(t, cfg, client)
-				for range 2 {
-					result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "evaluate", Arguments: evaluateIn{
-						State: "fixture", Questions: simpleIn().Questions, Model: "caller-model",
-					}})
-					if err != nil {
-						t.Fatal(err)
-					}
-					wantError := tc.status != 200 && !tc.move
-					if result.IsError != wantError {
-						t.Fatalf("tool error=%v, want %v: %s", result.IsError, wantError, contentText(t, result))
-					}
-					if !wantError && contentText(t, result) != noulReply {
-						t.Fatalf("reply changed: %s", contentText(t, result))
-					}
-				}
-				wantPrimary, wantFallback, wantLog := 2, 0, ""
-				if tc.move {
-					wantPrimary, wantFallback = 1, 2
-					reason := fmt.Sprintf("HTTP %d", tc.status)
-					if tc.err != nil {
-						reason = "unreachable"
-					}
-					wantLog = fmt.Sprintf("evaluate: %s refused or failed the call (%s); using the %s fallback for the rest of this session\n", primary, reason, fallback)
-				}
-				if calls[primary] != wantPrimary || calls[fallback] != wantFallback || log.String() != wantLog {
-					t.Fatalf("calls=%v log=%q; want primary=%d fallback=%d log=%q", calls, log.String(), wantPrimary, wantFallback, wantLog)
-				}
+				checkChainBehavior(t, primary, tc)
 			})
+		}
+	}
+}
+
+func checkChainBehavior(t *testing.T, primary string, tc chainBehaviorCase) {
+	t.Helper()
+	fallback := map[string]string{"typesafe": "openrouter", "openrouter": "typesafe"}[primary]
+	calls := map[string]int{}
+	var log strings.Builder
+	transport := chainBehaviorTransport(t, primary, fallback, tc, calls)
+	client := &chainRunner{log: &log, hops: []*Client{
+		{Provider: providers[primary], Model: providers[primary].DefaultModel, Timeout: time.Second, HTTP: &http.Client{Transport: transport}},
+		{Provider: providers[fallback], Model: providers[fallback].DefaultModel, Timeout: time.Second, HTTP: &http.Client{Transport: transport}},
+	}}
+	cfg := Config{Provider: providers[primary], Fallback: &FallbackConfig{Provider: providers[fallback]}}
+	session := connect(t, cfg, client)
+	checkChainReplies(t, session, tc)
+	wantPrimary, wantFallback, wantLog := 2, 0, ""
+	if tc.move {
+		wantPrimary, wantFallback = 1, 2
+		reason := fmt.Sprintf("HTTP %d", tc.status)
+		if tc.err != nil {
+			reason = "unreachable"
+		}
+		wantLog = fmt.Sprintf("evaluate: %s refused or failed the call (%s); using the %s fallback for the rest of this session\n", primary, reason, fallback)
+	}
+	if calls[primary] != wantPrimary || calls[fallback] != wantFallback || log.String() != wantLog {
+		t.Fatalf("calls=%v log=%q; want primary=%d fallback=%d log=%q", calls, log.String(), wantPrimary, wantFallback, wantLog)
+	}
+}
+
+func chainBehaviorTransport(t *testing.T, primary, fallback string, tc chainBehaviorCase, calls map[string]int) backendFixtureTransport {
+	t.Helper()
+	return backendFixtureTransport(func(r *http.Request) (*http.Response, error) {
+		provider := primary
+		if r.URL.String() == providers[fallback].EndpointURL {
+			provider = fallback
+		}
+		calls[provider]++
+		var sent struct{ Model string }
+		if err := json.NewDecoder(r.Body).Decode(&sent); err != nil {
+			return nil, err
+		}
+		wantModel := "caller-model"
+		if provider == fallback {
+			wantModel = providers[fallback].DefaultModel
+		}
+		if sent.Model != wantModel {
+			t.Errorf("%s received model %q, want %q", provider, sent.Model, wantModel)
+		}
+		if provider == primary && tc.err != nil {
+			return nil, tc.err
+		}
+		status := 200
+		if provider == primary {
+			status = tc.status
+		}
+		return &http.Response{StatusCode: status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulReply))}, nil
+	})
+}
+
+func checkChainReplies(t *testing.T, session *mcp.ClientSession, tc chainBehaviorCase) {
+	t.Helper()
+	for range 2 {
+		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "evaluate", Arguments: evaluateIn{
+			State: "fixture", Questions: simpleIn().Questions, Model: "caller-model",
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantError := tc.status != 200 && !tc.move
+		if result.IsError != wantError {
+			t.Fatalf("tool error=%v, want %v: %s", result.IsError, wantError, contentText(t, result))
+		}
+		if !wantError && contentText(t, result) != noulReply {
+			t.Fatalf("reply changed: %s", contentText(t, result))
 		}
 	}
 }

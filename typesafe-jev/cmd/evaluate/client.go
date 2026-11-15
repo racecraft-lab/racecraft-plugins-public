@@ -64,10 +64,10 @@ func newHTTPClient() *http.Client {
 // errors as requestInvalidError, which call maps to exit 2.
 func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
 	body, headers, err := encodeRequest(c.Provider, in)
-	if err != nil {
-		return nil, nil, &requestInvalidError{err}
+	if err == nil {
+		err = checkBodySize(c.Provider, body)
 	}
-	if err := checkBodySize(c.Provider, body); err != nil {
+	if err != nil {
 		return nil, nil, &requestInvalidError{err}
 	}
 	return body, headers, nil

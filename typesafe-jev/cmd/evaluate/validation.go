@@ -410,16 +410,7 @@ func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error 
 }
 
 func choiceChecks(path string, criteria any) requestCheckList {
-	var checks requestCheckList
-	m, err := criteriaOf[map[string]any](choiceRule, path, criteria)
-	checks.shape(err)
-	if err != nil {
-		return checks
-	}
-	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
-		_, err := criteriaOf[map[string]any](choiceRule.withBounds(spec.Limits.ChoiceMin, spec.Limits.ChoiceMax), path, criteria)
-		return err
-	})
+	m, checks := criteriaChecks[map[string]any](choiceRule, path, criteria)
 	for _, option := range sortedKeys(m) {
 		if strings.TrimSpace(option) == "" {
 			checks.shape(fmt.Errorf("%s.criteria has a blank option name", path))
@@ -431,20 +422,30 @@ func choiceChecks(path string, criteria any) requestCheckList {
 
 // Score levels retain their order: each level's number is its position.
 func scoreChecks(path string, criteria any) requestCheckList {
-	var checks requestCheckList
-	levels, err := criteriaOf[[]any](scoreRule, path, criteria)
-	checks.shape(err)
-	if err != nil {
-		return checks
-	}
-	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
-		_, err := criteriaOf[[]any](scoreRule.withBounds(spec.Limits.ScoreMin, spec.Limits.ScoreMax), path, criteria)
-		return err
-	})
+	levels, checks := criteriaChecks[[]any](scoreRule, path, criteria)
 	for i, level := range levels {
 		checks = append(checks, entryChecks(fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired)...)
 	}
 	return checks
+}
+
+// criteriaChecks keeps shape errors before per-hop bounds, then entry checks.
+func criteriaChecks[T map[string]any | []any](rule criteriaRule, path string, criteria any) (T, requestCheckList) {
+	var checks requestCheckList
+	entries, err := criteriaOf[T](rule, path, criteria)
+	checks.shape(err)
+	if err != nil {
+		return entries, checks
+	}
+	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
+		least, most := spec.Limits.ChoiceMin, spec.Limits.ChoiceMax
+		if rule.qtype == typeScore {
+			least, most = spec.Limits.ScoreMin, spec.Limits.ScoreMax
+		}
+		_, err := criteriaOf[T](rule.withBounds(least, most), path, criteria)
+		return err
+	})
+	return entries, checks
 }
 
 // validateResponse checks that what came back answers what was asked, without

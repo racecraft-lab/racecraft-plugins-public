@@ -152,7 +152,7 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 		return nil, fmt.Errorf("%w; the %s fallback cannot take this request: %v", err, r.hops[1].Provider.Name, local)
 	}
 	r.move(0, 1, out.reason)
-	return send(ctx, r.hops[1], p)
+	return send(ctx, r.hops[1], p, nil)
 }
 
 // move only advances the hop that actually failed. Concurrent failures of an
