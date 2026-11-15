@@ -334,8 +334,11 @@ later hops never run the caller's model, so:
 - A box question on the fallback runs on that backend's default, which is
   Jev 1.14 on both: `jev-latest` on TypeSafe, `~typesafe/jev-latest` on
   OpenRouter.
-- Universal shape errors are rejected before per-hop limits and capabilities.
-  Each hop checks its own limits and image opt-in before any request is sent
+- Universal shape errors are rejected before per-hop limits and capabilities,
+  except image-file errors. Image files are read lazily, so a file that cannot
+  be read or is not PNG or JPEG is reported only after a hop's earlier checks
+  pass; a hop refusal can therefore be reported first. Either way the request
+  is a local rejection (exit 2) and nothing is sent. Each hop checks its own limits and image opt-in before any request is sent
   to it. A refusal takes a capability route to the next able hop and leaves
   the session where it is. Images are read at most once across those checks.
 - Only a failure on the session's own hop moves the session. A routed call
