@@ -50,3 +50,17 @@ hop (Clef), spending its credits, until the MCP server restarts.
 - **Every entry point reads the same chain.** `evaluate call --plugin-defaults`
   resolves the chain exactly as the server does, and `evaluate setup` writes
   `JEV_CHAIN` into a client's config instead of the old provider pair.
+- **Limits are per hop.** Each backend holds its own caps (question count,
+  choice options, context budget, images). A request over the current hop's
+  limits takes a capability route instead of failing. This replaces the earlier
+  rule that every backend shares one set of caps so a request cannot pass the
+  primary and fail the fallback; capability routes now handle that case, and
+  TypeSafe and OpenRouter keep their existing values.
+- **Every local per-hop refusal routes.** A question type, model capability,
+  context budget, image format or image size one hop lacks routes on. Only a
+  shape error that fails everywhere, or no later hop left, is a local rejection.
+- **A failure and a route compose.** When hop N fails for an account reason and
+  hop N+1 cannot take the request, the session still moves to N+1 and that one
+  call routes on to the next hop that can take it.
+- **A daemon 502 or 503 counts as unreachable.** The daemon is up but cannot
+  reach the cloud, which is a path problem, so the call moves on to cloud direct.
