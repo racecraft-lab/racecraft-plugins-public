@@ -294,21 +294,7 @@ func TestRequestPrecedenceMatchesParent(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					want := tc.want(primary)
-					switch tc.name {
-					case "box before no image":
-						want = "a box question needs an image in the request"
-					case "box before unreferenced image":
-						want = "images.door is not referenced from state, instructions, or criteria"
-					case "box before missing file":
-						if fallback {
-							want = "images.door: the image file cannot be read"
-						}
-					case "box before malformed file":
-						if fallback {
-							want = "images.door: not a PNG or JPEG"
-						}
-					}
+					want := precedenceRouteDiagnostic(tc.name, fallback, tc.want(primary))
 					result := runCallForTest(t, callOptions{retarget: retargetTo(p, f)}, string(input))
 					if result.code != 2 || result.stdout != "" || result.stderr != "evaluate: "+want+"\n" {
 						t.Errorf("call = %+v; want exit 2 and %q", result, want)
@@ -334,6 +320,24 @@ func TestRequestPrecedenceMatchesParent(t *testing.T) {
 			}
 		}
 	}
+}
+
+func precedenceRouteDiagnostic(name string, fallback bool, want string) string {
+	switch name {
+	case "box before no image":
+		want = "a box question needs an image in the request"
+	case "box before unreferenced image":
+		want = "images.door is not referenced from state, instructions, or criteria"
+	case "box before missing file":
+		if fallback {
+			want = "images.door: the image file cannot be read"
+		}
+	case "box before malformed file":
+		if fallback {
+			want = "images.door: not a PNG or JPEG"
+		}
+	}
+	return want
 }
 
 // Wrap the filesystem read seam on this call only. Later sources must never
