@@ -43,6 +43,10 @@ repository tooling or tests giving a wrong answer:
 - A correctness bug in repository tooling or tests, for example a check that
   passes on nothing: an empty glob, a skipped branch, or a fixture that never
   reaches the code under test.
+- A ripwire `--quality-delta` regression the change leaves in place, whether
+  ripwire calls it gating or not: one the author's receipt lists, the
+  `ripwire-advisory` job summary shows, or a local run finds. Only a genuine
+  false positive accepted with `--quality-ack` and a reason is exempt.
 
 Style, naming, prose, and refactoring suggestions are Nit at most.
 
