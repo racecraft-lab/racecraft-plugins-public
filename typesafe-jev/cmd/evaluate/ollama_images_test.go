@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,7 +35,7 @@ func TestOllamaImagesGoldenRequest(t *testing.T) {
 }
 
 func ollamaImageResponse() *http.Response {
-	return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulOK))}
+	return fixtureHTTPResponse(200, noulOK)
 }
 
 func TestOllamaImagesCaps(t *testing.T) {
