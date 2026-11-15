@@ -160,6 +160,9 @@ entries. This layer registers `typesafe` and `openrouter`; Ollama remains for
 later layers. A missing chain file uses the built-in order; an unreadable or
 invalid file fails startup. Environment configuration wins without reading the
 file. `evaluate call --plugin-defaults` and the MCP server resolve identically.
+If the home directory is empty or relative, chain-file and key-file discovery
+are skipped; the mode's built-in chain applies unless environment configuration
+overrides it.
 The chain file and `JEV_CHAIN` override the built-in chain in both modes, with
 the same precedence. A bare binary uses a second backend only when the
 operator names a chain; the plugin's launcher opts into TypeSafe then OpenRouter.

@@ -118,18 +118,20 @@ func chainSetting(look lookupFunc, raw string, chainSet, pluginDefaults bool) (s
 	if chainSet {
 		return raw, "JEV_CHAIN", nil
 	}
-	path := filepath.Join(homeDir(look), filepath.FromSlash(pluginKeyDirectory), "chain")
-	data, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		if pluginDefaults {
-			return "typesafe,openrouter", "built-in chain", nil
+	if home := homeDir(look); filepath.IsAbs(home) {
+		path := filepath.Join(home, filepath.FromSlash(pluginKeyDirectory), "chain")
+		data, err := os.ReadFile(path)
+		if err == nil {
+			return strings.TrimSpace(string(data)), "chain file", nil
 		}
-		return "typesafe", "built-in chain", nil
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", "", fmt.Errorf("reading chain file: %w", err)
+		}
 	}
-	if err != nil {
-		return "", "", fmt.Errorf("reading chain file: %w", err)
+	if pluginDefaults {
+		return "typesafe,openrouter", "built-in chain", nil
 	}
-	return strings.TrimSpace(string(data)), "chain file", nil
+	return "typesafe", "built-in chain", nil
 }
 
 // resolveLegacyConfig validates the existing provider/pair settings.
@@ -186,7 +188,7 @@ func homeDir(look lookupFunc) string {
 // diagnostics stable when more than one setting is invalid.
 func resolveHopKeyFile(look lookupFunc, name, provider, home string) (string, bool, error) {
 	path, err := resolveKeyFileVar(look, name)
-	if err != nil || path != "" || home == "" {
+	if err != nil || path != "" || !filepath.IsAbs(home) {
 		return path, false, err
 	}
 	candidate := filepath.Join(home, filepath.FromSlash(pluginKeyDirectory), provider+".key")

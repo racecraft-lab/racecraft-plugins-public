@@ -63,6 +63,9 @@ Do not put a secret in `state` to have a judgment made about it.
   chain in both modes, with the same precedence. Each backend reads its own
   credential; hop 2 uses `JEV_FALLBACK_API_KEY_FILE` or its own environment
   variable, with key-file discovery also available under `--plugin-defaults`.
+- Chain-file and key-file discovery require an absolute home directory. If
+  the home is empty or relative, discovery is skipped and the mode's built-in
+  chain applies unless environment configuration overrides it.
 - A key file must be a regular file, at most 8 KiB, not readable by group or
   others. Empty values, control characters, surrounding whitespace, and
   unexpanded `${...}` placeholders are rejected rather than repaired.
