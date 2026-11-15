@@ -34,8 +34,16 @@ sources here. They were used only to find primary pages.
 - **Minimum daemon**: 0.40.5 by the docs and the git history, 0.40.6 by the
   Clef library page. 0.40.16 (this Mac) meets both.
 - **Score levels cap at 10** on every route. 26 is the local choice-option cap.
-- **clef-flash is not offered on Ollama Cloud** on 2026-11-14, although the
-  0.40.5 release notes say it is.
+- **clef-flash is served on Ollama Cloud but not listed.** A billed probe of
+  `clef-flash:cloud` on 2026-11-14 returned 200 with `"model":"clef-flash"` and
+  answers that differ from `clef`. The tags page, the cloud search, `/api/tags`
+  and the pricing page still show only `clef`, and no clef-flash price exists.
+- **Context overflow is a 400**, not a 413, with the body
+  `{"error":"Request requires N tokens; the maximum is 65536 (ref: ...)"}`.
+- **Object criteria are accepted** for choice options and score levels. The
+  `legend` echoes a score level's object back.
+- **`keep_alive` is ignored on the cloud route**, even an invalid value.
+  Probabilities come back rounded to 4 decimal places.
 
 ## Fetch provenance
 
@@ -71,6 +79,7 @@ these ids. Raw copies are in `typesafe-jev/.artifacts/ollama-systemone/`
 | `OR` OpenRouter Decisions reference | `https://openrouter.ai/docs/api-reference/decisions` | 2026-11-14 | sha256 `e8842e794b02b6eb982a3659aadc355fc7559bd083e31b289af2ce8928b85267`. Lists `cloudflare/clef-flash` among popular models. No Clef entry for the 27B model. |
 | `PP` Ollama privacy policy | `https://ollama.com/privacy` | 2026-11-14 | sha256 `fc79e67f9b357631bcfb6373e6a7e1cd802edbf53ba220cb2e2c395559a0fc3b`, 26 326 bytes, `ollama.com_privacy` |
 | `PB` Unauthenticated live probes | `https://ollama.com/v1/systemone` | 2026-11-14 | Six requests with no credential or a fake bearer. Redacted request, status, headers and body are in `typesafe-jev/.artifacts/ollama-systemone/probes/` (files `01` to `06`). |
+| `PBB` Billed live probes | `http://localhost:11434/v1/systemone` | 2026-11-14 | 15 sequential requests through the signed-in daemon, approved by the owner. About 2,500 input tokens in total. Redacted files `b01` to `b15` in `typesafe-jev/.artifacts/ollama-systemone/probes/`. |
 | `PC` Existing contracts file | `typesafe-jev/docs/provider-contracts.md` | 2026-11-14 | Source of the OpenRouter column. |
 
 Cloudflare and OpenRouter pages are comparison sources. They describe other
@@ -78,9 +87,9 @@ hosts. They are never used for an Ollama fact unless the table row says so.
 
 Local read-only checks on this Mac, 2026-11-14: `ollama --version` reports
 0.40.16; `curl -s localhost:11434/api/version` returns `{"version":"0.40.16"}`;
-`ollama list` shows four `:cloud` entries and no Clef entry. No sign-in state
-was read. No cloud call was made. `ollama signin` and `ollama pull` were not
-run.
+`ollama list` shows four `:cloud` entries and no Clef entry. The first round
+made no cloud call. The second round made the billed probes in `PBB`.
+`ollama signin` and `ollama pull` were never run.
 
 To reproduce a hash, download the URL with `curl --fail --silent --show-error`
 into the file name shown, then run `shasum -a 256` on it. A changed hash means
@@ -90,13 +99,13 @@ the publisher edited the page. Compare the tables below before changing code.
 
 | # | Question | Status | Evidence |
 |---|---|---|---|
-| 1 | Is clef-flash on Ollama Cloud? | **Contradicted**: not offered today, though announced | `RN` v0.40.5 says "use `clef:cloud` and `clef-flash:cloud`", and `PRS` #18969 is titled "clef and clef flash on cloud". Against that: `LFT` lists five tags and none is `cloud`; `LF` has no cloud badge; `SC` (cloud plus "clef") returns only `clef`; `TAGS` has `clef:27b` and no `clef-flash`; `PR` prices `clef` only; `DG`, `CM` and `OA` name only Clef for cloud. What `clef-flash:cloud` returns upstream is **Unconfirmed**: no billed call was made. The daemon would forward it (`GH` `server/systemone_test.go`, test `TestSystemOneHandlerCloudPassthrough`). |
-| 2 | clef-flash context: 64K or 256K? | **Contradicted**: three sources, three numbers | `LFT` tag table: "256K context window" for every tag. `LF` readme: "64K context window". `CFM` (Cloudflare-hosted, not Ollama): 24,576 tokens. The 256K figure is tag metadata for the local weights. The 64K figure is the readme claim. Neither is tied to a loaded window. `OA` says only that "the complete input must fit the loaded context window" locally. For Ollama Cloud the question does not arise, because clef-flash is not offered. |
+| 1 | Is clef-flash on Ollama Cloud? | **Confirmed by probe: served, but unlisted**. The listings still contradict it | `PBB` `b03`: `clef-flash:cloud` through the daemon returned 200, `"model":"clef-flash"`, with answers that differ from `clef` on the same request (`b01`), so it is a separate model and not an alias. Observed once on 2026-11-14. The text that follows is the documentary evidence from before the probe. `RN` v0.40.5 says "use `clef:cloud` and `clef-flash:cloud`", and `PRS` #18969 is titled "clef and clef flash on cloud". Against that: `LFT` lists five tags and none is `cloud`; `LF` has no cloud badge; `SC` (cloud plus "clef") returns only `clef`; `TAGS` has `clef:27b` and no `clef-flash`; `PR` prices `clef` only; `DG`, `CM` and `OA` name only Clef for cloud. The daemon forwards it (`GH` `server/systemone_test.go`, test `TestSystemOneHandlerCloudPassthrough`). |
+| 2 | clef-flash context: 64K or 256K? | **Contradicted**: three sources, three numbers | `LFT` tag table: "256K context window" for every tag. `LF` readme: "64K context window". `CFM` (Cloudflare-hosted, not Ollama): 24,576 tokens. The 256K figure is tag metadata for the local weights. The 64K figure is the readme claim. Neither is tied to a loaded window. `OA` says only that "the complete input must fit the loaded context window" locally. clef-flash is served on Ollama Cloud (`PBB` `b03`), but no probe measured its cloud window. The overflow probe (`b15`) ran on `clef` only. The clef-flash cloud window stays **Unconfirmed**. |
 | 3 | Score levels cap: 10 or 26? | **Confirmed: 10**. The 26 is a different cap | 10: `OA` `maxItems: 10` and answer `maximum: 9`; `DG` "2–10 descriptions"; `LC` "2 to 10 level descriptions"; `GH` `decision/systemone.go` `ValidateLimits` (line 51, `len(levels) > 10`), which `Compile` calls for the `clef` encoding; `CFS` `maxItems: 10`. 26: `GH` `decision/clef.go` line 148 and `DG` "2–26 named options" cap **choice** options locally. `LF` says "2 to 26 levels" for score. That one page is the outlier, and the schema, the code and the sibling page all disagree with it. |
 | 4 | Rate limits | **Confirmed** for concurrency, **Unconfirmed** for request rate | `PR`: Pay as you go and Pro 3 concurrent requests; Max and Team 10. Requests over the limit queue, and "if the queue is full, the request will be rejected" with no status or queue size stated. No requests-per-minute or tokens-per-minute figure for `/v1/systemone` appears in `OA`, `DG`, `CM`, `FAQ`, `PR` or `ERR`. Searched: all of those, plus `OAY` for `429` and `Retry-After`. The only documented per-minute limit (10 requests per minute) belongs to the separate usage endpoint, `docs.ollama.com/api/cloud-usage.md`. |
 | 5 | Pricing | **Confirmed**: $0.24 per million input tokens | `PR` model table: `clef` input `$0.24`, cached input `-`, output `-`. `DG`: "billed per input token at the listed price". `CFM` lists the same $0.24 for Cloudflare's own hosting. No price exists for clef-flash on Ollama Cloud. Note: `OA` 402 text says "isn't included in the Free plan", and `PR` now shows "Pay as you go" at $0 with per-token billing, not a "Free plan". Whether 402 still fires for an account with no credits is **Unconfirmed**. |
 | 6 | Data retention | **Confirmed**: zero data retention | `FAQ`: "Ollama operates with a zero data retention (ZDR) policy"; prompts and responses are processed "transiently", not stored or logged, and never used for training. `PR` privacy answers: "Prompt or response data is never logged or trained on", and hosting partners must have "no logging, no training, and zero data retention". Account and usage metadata are kept; the FAQ says it excludes prompt and response content. The privacy policy (`PP`, fetched 2026-11-14) agrees: cloud prompts and responses are processed "transiently" and "not stored beyond the time required to fulfill the request", with "technical measures designed to minimize retention", and are not used for training. It also keeps account, billing and usage metadata. The wording is "designed to minimize", slightly softer than the FAQ's "does not store or log"; both say no training. |
-| 7 | Is 429 ever returned? | **Unconfirmed** for `/v1/systemone` | `OA` lists 400, 401, 402, 404, 413 and 500, and no 429. `ERR` lists 429 for the API in general ("e.g. when a rate limit is exceeded"). `PR` describes queueing and rejection. The daemon forwards any upstream status and `Retry-After` (see below), so a 429 would reach the client unchanged. No source says the System One cloud service sends one. |
+| 7 | Is 429 ever returned? | **Unconfirmed** for `/v1/systemone` | `OA` lists 400, 401, 402, 404, 413 and 500, and no 429. `ERR` lists 429 for the API in general ("e.g. when a rate limit is exceeded"). `PR` describes queueing and rejection. The daemon forwards any upstream status and `Retry-After` (see below), so a 429 would reach the client unchanged. No source says the System One cloud service sends one. No 429 occurred in 15 sequential billed probes (`PBB`). A 429 was not provoked by load, by design. |
 
 ## Endpoints and routes
 
@@ -129,7 +138,7 @@ it is not, the middleware calls the local handler, which answers with a local
 | Id | Where it is valid | Source |
 |---|---|---|
 | `clef` | Cloud direct ("Direct API requests use `clef`"). Also the local model name after `ollama pull clef`. | `CM`, `LC` |
-| `clef:27b` | Listed by `TAGS` for direct cloud. Whether `/v1/systemone` accepts it directly is **Unconfirmed**; it is the model name the daemon sends for `clef:27b-cloud`. | `TAGS`, `GH` `internal/modelref/modelref.go` `parseSourceSuffix` |
+| `clef:27b` | Listed by `TAGS` for direct cloud. It is the model name the daemon sends for `clef:27b-cloud`, and the cloud accepted it as the same model as `clef` (`PBB` `b05`, observed once). A direct call with an API key was not made. | `TAGS`, `GH` `internal/modelref/modelref.go` `parseSourceSuffix` |
 | `clef:cloud` | Local daemon. The daemon strips `:cloud` and sends `clef` upstream. | `DG`, `LC`, `GH` |
 | `clef:27b-cloud` | Local daemon, legacy suffix. Sent upstream as `clef:27b`. Listed in `LCT`. | `LCT`, `GH` |
 | `clef`, `clef:27b`, `clef:27b-q4_K_M`, and other local tags | Local daemon, local inference, needs `ollama pull`. | `LCT` |
@@ -150,10 +159,10 @@ back (`GH` `server/systemone_test.go`).
 | `state` | Required. String, object or array. Objects and arrays are serialized as JSON text. "Not interpreted as chat messages or multimodal input". Must be non-blank. | same, passed through untouched | Required string, object or array | `OA`, `PC` |
 | `images` | Optional array of base64 strings. See "Images". | same | Not a request field; media goes in `state` parts, and top-level `assets` since 2026-11-14 | `OA`, `PC` |
 | `questions` | Required map, 1 to 64 entries. Names up to 100 characters of ASCII letters, digits, `_`, `.`, `-`. | same limits, enforced by the cloud, not the daemon | Required map. Ids not sent to the model. | `OA`, `DG`, `PC` |
-| `keep_alive` | Accepted by the schema (string or number). The Clef page says "Optional, local only". Effect on cloud is **Unconfirmed**. | Forwarded untouched | Not applicable | `OA`, `LC` |
+| `keep_alive` | Accepted by the schema (string or number). The Clef page says "Optional, local only". On cloud it is ignored, even an invalid value (`PBB` `b11` to `b13`, observed once). | Forwarded untouched | Not applicable | `OA`, `LC` |
 | `stream`, `messages`, `max_tokens`, tools | Not supported ("streaming, video, tools, and generation controls are not supported") | same | not applicable | `OA` |
 | Unknown top-level fields | Accepted or rejected: **Unconfirmed**. The OpenAPI sets no `additionalProperties` on the request. | Forwarded untouched | n/a | `OA` |
-| `Content-Encoding: zstd` body | **Unconfirmed** | Decompressed by the daemon, capped at 20 MiB, then forwarded as plain JSON. A bad stream gives a local 400. | n/a | `GH` `server/cloud_proxy.go` lines 81 to 92 |
+| `Content-Encoding: zstd` body | **Unconfirmed** for a direct call (needs an API key) | Decompressed by the daemon, capped at 20 MiB, then forwarded as plain JSON. A bad stream gives a local 400. Observed working (`PBB` `b14`). | n/a | `GH` `server/cloud_proxy.go` lines 81 to 92, `PBB` |
 
 ### Question objects
 
@@ -164,15 +173,16 @@ back (`GH` `server/systemone_test.go`).
 | `choice.criteria` | Object, 2 to 255 keys, keys non-blank. Values `string` or `null`. | Same as cloud direct | Map with string, object, array or `null` values | `OA`, `LC`, `PC` |
 | `noul.criteria` | Optional. Keys `true` and `false` only, string values, no other keys. | Same as cloud direct | Optional; if present both keys required | `OA`, `PC` |
 | `score.criteria` | Array of strings, 2 to 10 items, lowest first | Same as cloud direct | Array, `minItems: 1`, no `maxItems` | `OA`, `PC` |
-| Structured (object or array) criteria values | Documented as `string` or `null` only. **Unconfirmed** whether the cloud accepts objects. Cloudflare's own Clef schema allows string, object or array (`CFS`). | The daemon does not check; the cloud decides | Allowed | `OA`, `CFS`, `PC` |
+| Structured (object or array) criteria values | Documented as `string` or `null` only, but the cloud accepted object values for choice options and score levels (`PBB` `b08`, `b09`, observed once). The score `legend` echoes the object. Cloudflare's own Clef schema allows string, object or array (`CFS`). | The daemon does not check; the cloud decides | Allowed | `OA`, `CFS`, `PC` |
 
 The local Clef encoder (`GH` `decision/clef.go`, `clefValue`) accepts any JSON
 value as a criteria description. The local generic encoder rejects objects with
 "choice criteria must map option keys to descriptions or null"
 (`decision/systemone.go` line 261). So local Clef and the OpenAPI text disagree
 about object criteria. This is the row that decides whether a future
-`StructuredEntries`-style flag for Ollama would be true or false. It stays
-**Unconfirmed** for cloud until a billed probe settles it.
+`StructuredEntries`-style flag for Ollama would be true or false. A billed probe
+(`PBB` `b08`, `b09`) found the cloud accepts object values, so the flag would
+be true. That is observed behavior, not documented contract.
 
 ## Response: what comes back
 
@@ -201,7 +211,7 @@ Value ranges and rules:
 | `score` | Probability-weighted zero-based index, "not rounded to a level or normalized to 0–1". Schema maximum 9. | `OA` |
 | `legend` | Index strings mapped to the criterion text | `OA` |
 | Ties | Choice follows the model's option order | `OA`, `LC` |
-| Rounding | The docs say only that the **examples** are rounded to four decimals. Server rounding is **Unconfirmed**. | `OA` |
+| Rounding | The docs say only that the **examples** are rounded to four decimals. Every value in the billed probes had at most 4 decimal places (`PBB` `b01` to `b03`), so the server rounds to 4. | `OA` |
 | Unrecognized fields | None documented | `OA` |
 
 OpenRouter's Jev and Jev-style answers use a different `confidence` formula,
@@ -238,7 +248,7 @@ so a threshold tuned on one does not carry over. See `PC`.
 | Choice options | 2 to 255 | same | `OA`, `LC` ("up to 255 in the cloud") |
 | Score levels | 2 to 10 | same | `OA`, `DG` |
 | Context window | 65,536 tokens, input never truncated | same | `DG`, `LC`, `OA` |
-| Over-window behavior | Rejected, not truncated. Status is **Unconfirmed**: `OA` assigns the case to both 400 ("exceeds ... a cloud model's token limit") and 413 ("exceeds ... the model's context window"). | same | `OA` |
+| Over-window behavior | Rejected, not truncated. `OA` assigns the case to both 400 ("exceeds ... a cloud model's token limit") and 413 ("exceeds ... the model's context window"). Observed: 400 with `Request requires N tokens; the maximum is 65536` (`PBB` `b15`). | same | `OA` |
 | Local model context | Loaded window (tag metadata says 256K) | same, but not used on the cloud route | `LCT`, `OA` |
 | Concurrency | 3 (Pay as you go, Pro) or 10 (Max, Team); queued, then rejected | same account limits | `PR` |
 | Daemon request timeout | not applicable | None. The daemon calls ollama.com with `http.DefaultClient` and has an open TODO for timeouts. A client must set its own. | `GH` `server/cloud_proxy.go` lines 223 to 226 |
@@ -265,8 +275,9 @@ Body shape for Ollama errors is `{"error": "<string>"}` (`ErrorResponse` in
 | 502 | Not listed for this endpoint. `ERR`: "e.g. when a cloud model cannot be reached". | Daemon only: it could not reach ollama.com; body is the Go transport error text | `ERR`, `GH` lines 226 to 230 |
 | 503, 504, 524, 529 | Not documented | Pass through if the cloud sends them | `OA`, `GH` |
 
-Whether a cloud error carries `Retry-After` is **Unconfirmed**. `OAY` declares
-the header on two other endpoints and not on `/v1/systemone`.
+`Retry-After` was absent on every 400 and 401 observed (`PB`, `PBB`). On 402,
+429 or 5xx it is **Unconfirmed**. `OAY` declares the header on two other
+endpoints and not on `/v1/systemone`.
 
 ## Daemon route: what the proxy does
 
@@ -365,60 +376,74 @@ Each row is **observed once on 2026-11-14**. It is not a documented contract.
 Artifacts are in `typesafe-jev/.artifacts/ollama-systemone/probes/` (ignored by
 git), with request ids, cookies, trace ids and UUIDs redacted.
 
-Billed probes through the local daemon were **not run**. The permission system
-denied the first billed call, so zero billed calls were made in this round. The
-rows below are the free, no-credential probes against `ollama.com` and the
-privacy-policy fetch.
+The first round made only free, no-credential probes (rows 1 to 8). A second
+round on the same day made 15 billed probes through the signed-in local daemon
+(rows 9 to 23), after the owner approved them. They ran one at a time, with tiny
+synthetic states, about 2,500 input tokens in total.
 
-| # | Route | Request summary | Status | Key fact | Artifact |
-|---|---|---|---|---|---|
-| 1 | Cloud direct, no credential | Valid noul request, model `clef` | 401 | Body `{"error":"Unauthorized"}`, `content-type: application/json`. No `Retry-After`. No `signin_url`. A `set-cookie` header is sent. | `01_noauth_valid.headers`, `01_noauth_valid.body` |
-| 2 | Cloud direct, no credential | Same shape with a 14 MiB `state` | 401 | Auth runs before the size check. No 413. Answered in about 0.15 s. | `02_noauth_big14mib.txt` |
-| 3 | Cloud direct, no credential | `state` of 80 000 words (well over 65,536 tokens) | 401 | Auth runs before the context check, so 400 versus 413 for context overflow cannot be probed without a credential. | `03_noauth_ctx70k.txt` |
-| 4 | Cloud direct, no credential | Truncated JSON body | 401 | Auth runs before body parsing. | `04_noauth_badjson.txt` |
-| 5 | Cloud direct, no credential | No `model` field | 401 | Auth runs before field validation. | `05_noauth_nomodel.txt` |
-| 6 | Cloud direct, fake bearer | `Authorization: Bearer not-a-real-key` | 401 | Same body as no credential. A fake key is not told apart from a missing one. | `06_badkey_valid.txt` |
-| 7 | Free read | `GET https://ollama.com/privacy` | 200 | Retention wording recorded in open point 6. | `ollama.com_privacy` (in the parent directory) |
 | 8 | Local daemon | `POST /api/me` (free, no model call) | 200 | The daemon reported a signed-in account with a plan. No account detail was recorded. | not saved |
 
-What these settle:
+Billed probes, local daemon, model `clef:cloud` unless the row says otherwise.
+The base request asks three questions about a synthetic ticket: a noul, a
+three-option choice and a three-level score.
 
-- **Direct 401 body** is now observed: `{"error":"Unauthorized"}` (capital U).
-  `OA` says only that the 401 has an `error` string. A `signin_url` does not
-  appear on the direct route.
-- **`Retry-After` on a 401** is absent on the direct route. Whether it
-  appears on 402, 429 or 5xx stays Unconfirmed.
+| # | Request summary | Status | Key fact | Artifact |
+|---|---|---|---|---|
+| 9 | Base request | 200 | `{"model":"clef","answers":{...},"usage":{"input_tokens":355,"output_tokens":0}}`. Every probability, `noul`, `score` and `confidence` has at most 4 decimal places. The cloud's response headers (`Server: Google Frontend`) reach the client. | `b01_baseline.txt` |
+| 10 | Base request, different ticket | 200 | Same shape. 4 decimal places again. | `b02_baseline_repeat.txt` |
+| 11 | `clef-flash:cloud` | 200 | `"model":"clef-flash"`. Answers differ from row 9 on the same request (noul 0.9315 against 0.9835), so it is a separate model. | `b03_clef_flash_cloud.txt` |
+| 12 | `clef-flash` (no tag) | 404 | `{"error":"model 'clef-flash' not found"}`. Made by the daemon: no cloud headers, answered in under 0.05 s. A name without `:cloud` is looked up locally. | `b04_clef_flash_plain.txt` |
+| 13 | `clef:27b-cloud` | 200 | `"model":"clef:27b"`. Answers are identical to row 9, so the cloud serves `clef:27b` as the same model as `clef`. | `b05_clef_27b_cloud.txt` |
+| 14 | `clef:27b` (no `-cloud`) | 404 | Daemon's local `model 'clef:27b' not found`. | `b06_clef_27b.txt` |
+| 15 | `no-such-model:cloud` | 404 | `{"error":"model 'no-such-model' not found"}`, apparently from the daemon (no cloud headers). | `b07_unknown_model.txt` |
+| 16 | Choice whose option values are objects | 200 | Accepted. The answer is a normal choice. | `b08_choice_object_criteria.txt` |
+| 17 | Score whose levels are objects | 200 | Accepted. `legend` echoes each level's object, for example `"0":{"level":"low"}`. | `b09_score_object_level.txt` |
+| 18 | Score with 11 levels | 400 | Made by the cloud: `{"error":"question \"u\": score criteria must contain 2–10 levels (ref: <uuid>)"}`. No `Retry-After`. Confirms the cap of 10. | `b10_score_11_levels.txt` |
+| 19 | `keep_alive: "5m"` | 200 | Answers identical to row 9. | `b11_keep_alive_5m.txt` |
+| 20 | `keep_alive: 0` | 200 | Identical to row 9. | `b12_keep_alive_0.txt` |
+| 21 | `keep_alive: "not-a-duration"` | 200 | Identical to row 9. The cloud route ignores the field and does not validate it. | `b13_keep_alive_bad.txt` |
+| 22 | Base request, `Content-Encoding: zstd` | 200 | Identical to row 9. The daemon decompresses before forwarding (`GH` `server/cloud_proxy.go`), so this proves the daemon route only, not that ollama.com accepts zstd directly. | `b14_zstd.txt` |
+| 23 | `state` of 80,000 words, one noul | 400 | Made by the cloud: `{"error":"Request requires 80146 tokens; the maximum is 65536 (ref: <uuid>)"}`. No `Retry-After`. Context overflow is a 400, not a 413. | `b15_context_overflow.txt` |
+
+What these settle, each **observed once on 2026-11-14**:
+
+- **Direct 401 body**: `{"error":"Unauthorized"}` (capital U), with no
+  `Retry-After` and no `signin_url`.
 - **The direct route authenticates before it validates anything.** A client
   cannot learn a size, context or schema error without a valid key.
+- **clef-flash is served on Ollama Cloud** as its own model, though no listing
+  or price shows it.
+- **`clef:27b` is the same cloud model as `clef`**, and the response echoes the
+  id that reached the cloud.
+- **Context overflow is a 400** with the token count in the message. `OA` also
+  lists 413; that may be the body-size error, which was not probed with a key.
+- **Object criteria are accepted** for choice options and score levels.
+- **Probabilities are rounded to 4 decimal places** on the server.
+- **`keep_alive` is ignored on the cloud route**, even when it is invalid.
+- **zstd bodies work through the daemon.**
+- **Cloud error bodies carry a `ref` id** in the message text, and no
+  `Retry-After` on a 400.
+- **A model name without `:cloud` is handled locally**, and an unknown model
+  gets a local 404 before any cloud call.
 
-Not run, and why: every item below needs a billed call through the daemon,
-which the permission system denied. They stay Unconfirmed.
+Not attempted, by design:
 
-| Planned probe | Status |
+| Probe | Why |
 |---|---|
-| Upstream answer for `clef-flash:cloud` and plain `clef-flash` | Unconfirmed |
-| Context overflow: 400 or 413, with body | Unconfirmed |
-| Object criteria for a choice option and a score level | Unconfirmed |
-| Server-side rounding of probabilities | Unconfirmed |
-| `Retry-After` on a System One error from a valid call | Unconfirmed |
-| `clef:27b-cloud` accepted upstream (the daemon sends `clef:27b`) | Unconfirmed |
-| `keep_alive` effect on a cloud call | Unconfirmed |
-| zstd request body through the daemon | Unconfirmed |
-| 402: needs an account with no credits | Not attempted by design |
-| 429: not to be provoked by load | Not attempted by design |
+| 402 for an account with no credits | Needs an account with no credits. |
+| 429, and `Retry-After` on it | Must not be provoked by load. None occurred in 15 sequential calls. |
+| 5xx, and `Retry-After` on it | Cannot be caused on purpose. |
+| Daemon-route 401 for an unlinked device key | Needs the device unlinked from the account. `ollama signin` and sign-out were not run. |
 
 ## Still Unconfirmed
 
 | Item | Where it was searched |
 |---|---|
-| Upstream response to `clef-flash:cloud` | Not called. `DG`, `CM`, `OA`, `LFT`, `TAGS`, `PR`, `SC`. |
-| Real body of an upstream 401 for an unlinked device key (daemon route) | `OA`, `AUTH`, `ERR`; daemon tests give fixtures only. The direct route's no-credential 401 was observed (see "Live probes"); the daemon route's was not, because billed daemon calls were blocked. |
-| Status for context overflow (400 or 413) | `OA` states both. |
-| Cloud acceptance of object or array criteria | `OA` says string or null. `CFS` allows more. Local Clef code accepts any JSON. |
-| Server-side rounding of `probabilities` and `confidence` | `OA` rounds examples only. |
-| `Retry-After` on System One errors | `OAY`, `OA`. |
+| Whether 402 still applies to a pay-as-you-go account with no credits | `OA` text names a "Free plan" that `PR` no longer lists. Not probed. |
+| Whether the cloud sends 429 on `/v1/systemone`, and with `Retry-After` | `OA`, `OAY`, `ERR`, `PR`. None in 15 sequential probes. |
+| `Retry-After` on 402, 429 or 5xx | `OAY`, `OA`. Absent on every 400 and 401 observed. |
 | Request-rate limit for `/v1/systemone` | `PR`, `FAQ`, `CM`, `OA`, `ERR`. |
-| Whether 402 still applies to a pay-as-you-go account with no credits | `OA` text names a "Free plan" that `PR` no longer lists. |
-| Direct acceptance of `clef:27b` | `TAGS` lists it; `CM` and `DG` say `clef`. |
-| `keep_alive` effect on cloud | `LC` says "local only"; `OA` accepts the field. |
-| Whether the cloud accepts `Content-Encoding: zstd` | Not documented. |
+| Real body of an upstream 401 for an unlinked device key (daemon route) | `OA`, `AUTH`, `ERR`; daemon tests give fixtures only. |
+| Status for an over-size body with a valid key (`OA` lists 413) | Not probed with a key; the unauthenticated 14 MiB probe got 401. |
+| Cloud context window for clef-flash | `LF`, `LFT`, `CFM` disagree. Not probed. |
+| Whether ollama.com accepts `Content-Encoding: zstd` directly | Not documented. Needs an API key; only the daemon route was probed. |

@@ -173,10 +173,10 @@ and on Cloudflare's published schema for comparison.
 | `aaddrick/building-with-decision-models` | Ollama text and schema limit is 64 KiB, 32 MiB with images | **Agrees for local models.** It does not apply to the `clef:cloud` daemon route: the daemon proxies before its local checks. |
 | `aaddrick/building-with-decision-models` | Ollama returns 400 for `:cloud` tags | **Stale.** That branch exists in the local handler, but the middleware proxies `:cloud` requests first, so a client does not reach it. |
 | `aaddrick/building-with-decision-models` | Ollama `confidence` is `1 - H/ln N` | **Agrees.** |
-| `aaddrick/building-with-decision-models` | Ollama rounds to four decimals | **Unconfirmed.** The docs say only the examples are rounded. |
+| `aaddrick/building-with-decision-models` | Ollama rounds to four decimals | **Agrees** with the billed probes in the field matrix (`PBB`, observed once on 2026-11-14): every value had at most 4 decimal places. The docs say only that the examples are rounded. |
 | `aaddrick/building-with-decision-models` | Clef-flash on Cloudflare has a 65,536-token context and costs $0.09 per million input tokens (2026-10-06) | **Conflicts** with the Cloudflare model page fetched 2026-11-14: 24,576 tokens and $0.038. |
 | `fitchmultz/pi-agent-skills` | Clef-flash 24,576 tokens and $0.038; Clef 65,536 and $0.24 | **Agrees** with Cloudflare's page. Clef's $0.24 also matches the Ollama pricing page. |
-| `digitaldreams/tuhin` | Ollama rejects object criteria for choice with a 400 | **Partly agrees.** The OpenAPI says string or null, and the generic local encoder rejects objects. The local Clef encoder accepts any JSON value, so this is not safe to assume for Clef. |
+| `digitaldreams/tuhin` | Ollama rejects object criteria for choice with a 400 | **Conflicts** for Ollama Cloud Clef: a billed probe got 200 with object option values (field matrix `PBB` `b08`, observed once). The OpenAPI says string or null, and the generic local encoder rejects objects, so the claim may hold for other local models. |
 | `digitaldreams/tuhin` | `usage.input_tokens` counts the state again for each question | **Agrees.** The OpenAPI says shared context is counted again when questions are scored separately. |
 | `digitaldreams/tuhin` | A long local prompt returns 400 with the text `prompt 0 has N tokens; expected 1-M` | **Unconfirmed.** Not in the docs; local models only. |
 | `luandro/clef` | Score limit is 2 to 10; choice up to 255 | **Agrees** with the cloud rows. The proxy is a third-party host and is not a source for Ollama. |
