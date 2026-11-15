@@ -96,19 +96,14 @@ func resolveHopConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	if err != nil {
 		return cfg, err
 	}
-	home := ""
-	if pluginDefaults {
-		home = homeDir(look)
-	}
+	home := pluginHome(look, pluginDefaults)
 	for i := 2; i < len(names); i++ {
 		name := names[i]
-		hop := Config{Provider: providers[name], Model: providers[name].DefaultModel,
-			Timeout: cfg.Timeout, HopTimeout: cfg.HopTimeout, MaxRetries: cfg.MaxRetries, AllowImages: cfg.AllowImages, LongContext: cfg.LongContext}
-		hop.KeyFile, hop.KeyFileDefaulted, err = resolveHopKeyFile(func(string) (string, bool) { return "", false }, pluginKeyFileEnv, name, home)
+		keyFile, defaulted, err := resolveHopKeyFile(func(string) (string, bool) { return "", false }, pluginKeyFileEnv, name, home)
 		if err != nil {
 			return cfg, err
 		}
-		cfg.AdditionalHops = append(cfg.AdditionalHops, hop)
+		cfg.AdditionalHops = append(cfg.AdditionalHops, cfg.laterHop(providers[name], keyFile, defaulted))
 	}
 	return cfg, nil
 }
@@ -129,9 +124,9 @@ func chainSetting(look lookupFunc, raw string, chainSet, pluginDefaults bool) (s
 		}
 	}
 	if pluginDefaults {
-		return "typesafe,openrouter", "built-in chain", nil
+		return defaultProvider + ",openrouter", "built-in chain", nil
 	}
-	return "typesafe", "built-in chain", nil
+	return defaultProvider, "built-in chain", nil
 }
 
 func readChainFile(path string) ([]byte, error) {
@@ -147,10 +142,7 @@ func readChainFile(path string) ([]byte, error) {
 // Setup deliberately resolves settings without opening any credential file.
 func resolveLegacyConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	var cfg Config
-	home := ""
-	if pluginDefaults {
-		home = homeDir(look)
-	}
+	home := pluginHome(look, pluginDefaults)
 
 	spec, err := resolveProvider(look)
 	if err != nil {
@@ -184,6 +176,14 @@ func resolveLegacyConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// pluginHome is the key-file discovery root, which only --plugin-defaults enables.
+func pluginHome(look lookupFunc, pluginDefaults bool) string {
+	if !pluginDefaults {
+		return ""
+	}
+	return homeDir(look)
 }
 
 // homeDir is $HOME, or the platform's home directory when HOME is unset.
