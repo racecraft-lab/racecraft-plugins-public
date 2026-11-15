@@ -95,9 +95,21 @@ func (r *chainRunner) credentialExit() int { return r.credentialCode }
 
 func (r *chainRunner) servingHop() *Client { return r.hops[r.current.Load()] }
 
-// evaluate keeps the existing two-hop contract. In particular, a fallback's
-// local refusal is checked before a move (FB-08); capability routes and per-hop
-// deadlines belong to later layers. Both hops share the primary's deadline.
+// evaluate keeps the existing two-hop contract. A call moves to the fallback
+// only when the primary will not serve this credential (401, 402, 403), has
+// moved (404), is throttling (429) or is down (5xx) after its own retries, or
+// cannot be reached. The session then stays there, so one session never
+// alternates between two accounts. A request rejected by shape (400, 413, 422)
+// or by local validation fails the same way anywhere, so it never moves.
+//
+// The backends' local gates differ (image limits, context budgets), so the
+// fallback checks the request before the session moves (FB-08). One it cannot
+// take leaves the session on the primary, and the caller sees the primary's
+// failure, whose class decides the exit code, rather than a local rejection
+// after a network call was made.
+//
+// Both hops share the primary's deadline: a client that aborts a tool call
+// after a fixed time would otherwise kill a fallback given a fresh budget.
 func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
 	if len(r.hops) > 1 {
 		var cancel context.CancelFunc
