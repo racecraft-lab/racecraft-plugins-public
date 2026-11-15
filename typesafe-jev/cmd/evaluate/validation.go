@@ -23,7 +23,7 @@ import (
 // anyway (instructions, noul true/false, score levels), which is why no
 // per-backend null rule survives here either. The capability still lives on
 // ProviderSpec rather than being assumed, so a backend that re-narrows is one
-// field to flip. See docs/provider-contracts.md for the field-by-field source.
+// entry position to narrow. See docs/provider-contracts.md for the field-by-field source.
 
 const (
 	// Question types, shared by both backends.
@@ -264,7 +264,7 @@ func questionChecks(id string, q question) requestCheckList {
 		}
 		return nil
 	})
-	checks = append(checks, entryChecks(path+".instructions", q.Instructions, entryRequired)...)
+	checks = append(checks, entryChecks(path+".instructions", q.Instructions, entryRequired, entryInstructions)...)
 	switch q.Type {
 	case typeNoul:
 		checks = append(checks, noulChecks(path, q.Criteria)...)
@@ -280,10 +280,10 @@ func questionChecks(id string, q question) requestCheckList {
 	return checks
 }
 
-func entryChecks(path string, v any, mode entryMode) requestCheckList {
+func entryChecks(path string, v any, mode entryMode, position entryPosition) requestCheckList {
 	var checks requestCheckList
 	checks.shape(validateEntryShape(path, v, mode))
-	checks.hop(func(spec ProviderSpec, _ evaluateIn) error { return validateEntryCapability(spec, path, v) })
+	checks.hop(func(spec ProviderSpec, _ evaluateIn) error { return validateEntryCapability(spec, path, v, position) })
 	return checks
 }
 
@@ -297,15 +297,24 @@ const (
 )
 
 // validateEntryCapability checks a hop's support for structured entries.
-func validateEntryCapability(spec ProviderSpec, path string, v any) error {
-	switch v.(type) {
-	case map[string]any, []any:
-		if !spec.StructuredEntries {
-			return fmt.Errorf("%s must be a string for the %s backend; structured %s are not accepted there",
-				path, spec.Name, describeKind(v))
-		}
+func validateEntryCapability(spec ProviderSpec, path string, v any, position entryPosition) error {
+	kind := structuredEntryKind(v)
+	if kind != 0 && spec.StructuredEntries[position]&kind == 0 {
+		return fmt.Errorf("%s: structured %s are not accepted by the %s backend at this position",
+			path, describeKind(v), spec.Name)
 	}
 	return nil
+}
+
+func structuredEntryKind(v any) entryKinds {
+	switch v.(type) {
+	case map[string]any:
+		return entryObject
+	case []any:
+		return entryArray
+	default:
+		return 0
+	}
 }
 
 func validateEntryShape(path string, v any, mode entryMode) error {
@@ -356,7 +365,7 @@ func noulChecks(path string, criteria any) requestCheckList {
 			checks.shape(fmt.Errorf("%s.criteria.%s is required when criteria is given", path, key))
 			return checks
 		}
-		checks = append(checks, entryChecks(path+".criteria."+key, v, entryRequired)...)
+		checks = append(checks, entryChecks(path+".criteria."+key, v, entryRequired, entryNoulDescription)...)
 	}
 	for key := range m {
 		if key != "true" && key != "false" {
@@ -453,11 +462,11 @@ func criteriaChecks[T map[string]any | []any](rule criteriaRule, path string, cr
 				checks.shape(fmt.Errorf("%s.criteria has a blank option name", path))
 			}
 			// Optional descriptions, including null, use the backend's entry rule.
-			checks = append(checks, entryChecks(path+".criteria."+option, entries[option], entryOptional)...)
+			checks = append(checks, entryChecks(path+".criteria."+option, entries[option], entryOptional, entryChoiceValue)...)
 		}
 	case []any:
 		for i, level := range entries {
-			checks = append(checks, entryChecks(fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired)...)
+			checks = append(checks, entryChecks(fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired, entryScoreLevel)...)
 		}
 	}
 	return checks

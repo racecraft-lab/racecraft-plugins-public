@@ -75,6 +75,24 @@ func TestOllamaImagesCaps(t *testing.T) {
 	}
 }
 
+func TestOllamaImagesPixelCap(t *testing.T) {
+	in := imageRequest(mustPNG(t, 4000, 4001), "png")
+	t.Run("one hop exits locally", func(t *testing.T) {
+		checkOllamaRoute(t, in, false, false)
+	})
+	t.Run("routes to next hop", func(t *testing.T) {
+		// The real OpenRouter row also rejects this size. Give the fake
+		// next hop room to accept it so this isolates Ollama's pixel cap.
+		original := providers["openrouter"]
+		next := original
+		next.ImageLimits.MaxSide = noLimit
+		next.ImageLimits.MaxPixels = 16_008_000
+		providers["openrouter"] = next
+		t.Cleanup(func() { providers["openrouter"] = original })
+		checkOllamaRoute(t, in, true, false)
+	})
+}
+
 func ollamaSizedImages(t *testing.T, sizes ...int) evaluateIn {
 	t.Helper()
 	in := imageRequest(nil, "png")

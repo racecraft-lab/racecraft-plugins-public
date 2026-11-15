@@ -118,7 +118,7 @@ object, or array, and additionally allow `null` for choice option descriptions.
 
 | Field | TypeSafe accepts | OpenRouter accepts | Ollama accepts | `ollama-local` |
 |---|---|---|---|---|
-| `instructions` (noul, choice, score, box) | string, object, array, null | string, object, array, null (required on box only) | required for noul, choice and score; string, object or array; no box | same as `ollama` |
+| `instructions` (noul, choice, score, box) | string, object, array, null | string, object, array, null (required on box only) | required for noul, choice and score; locally restricted to strings; no box | same as `ollama` |
 | choice `criteria` values | string, object, array, null | string, object, array, **null** | documented string or null; object values accepted in research probes | same as `ollama` |
 | score `criteria` entries | string, object, array, null | string, object, array (`minItems: 1`; no null) | documented strings; object levels accepted in research probes | same as `ollama` |
 | noul `criteria.true` / `.false` | string, object, array, null | string, object, array; when `criteria` is present both keys are required (no null) | optional criteria; when given, true and false string descriptions | same as `ollama` |
@@ -374,8 +374,9 @@ never duplicate bytes. Longer strings and object keys remain unchanged, as
 with the other encoders. Ollama accepts no `box` questions; those route on.
 The existing PNG/JPEG input contract remains; WebP is not enabled by this client.
 
-Ollama allows at most 4 images, 4 MiB per decoded file, 8 MiB of decoded files
-in total and 16,000,000 pixels per image, with no separate side-length cap.
+Ollama allows at most 4 images, 4 MiB each, 8 MiB in total and 16,000,000
+pixels per image, with no separate side-length cap. This client measures the
+byte caps on decoded file bytes.
 Every image refusal routes to a later able hop without moving the session.
 The final serialized body, including text and base64, must fit 13 MiB.
 Rate-limit behavior and image retention remain unconfirmed.

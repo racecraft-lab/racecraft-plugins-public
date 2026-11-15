@@ -667,6 +667,12 @@ func checkImageDimensions(label string, w, h int, limits imageBounds) error {
 	// PNG and JPEG dimensions fit int32; multiply in int64 even without a side cap.
 	pixels := int64(w) * int64(h)
 	if pixels < int64(limits.MinPixels) || (limits.MaxPixels != noLimit && pixels > int64(limits.MaxPixels)) {
+		if limits.MinPixels == noLimit {
+			return fmt.Errorf("%s: the image is %d pixels, over the %d pixel limit", label, pixels, limits.MaxPixels)
+		}
+		if limits.MaxPixels == noLimit {
+			return fmt.Errorf("%s: the image is %d pixels, under the %d pixel minimum", label, pixels, limits.MinPixels)
+		}
 		return fmt.Errorf("%s: the image is %d pixels, outside the %d-%d range this backend accepts",
 			label, pixels, limits.MinPixels, limits.MaxPixels)
 	}
