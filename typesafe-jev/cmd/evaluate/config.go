@@ -299,8 +299,8 @@ type Config struct {
 	// it to JEV_FALLBACK_API_KEY_FILE.
 	keyFileVar string
 	// Fallback is the backend a call moves to when Provider refuses its
-	// credential or is unavailable, or nil. It is set only by the operator
-	// (JEV_FALLBACK_PROVIDER): which keys happen to exist never creates one.
+	// credential or is unavailable, or nil for a one-hop chain. Chain resolution
+	// sets it from configuration or the built-in order, never from available keys.
 	Fallback *FallbackConfig
 	// AdditionalHops continues the configured order after the legacy pair.
 	AdditionalHops []Config

@@ -192,12 +192,16 @@ func TestChainThirdCredentialIsStrictButServerDropsIt(t *testing.T) {
 	}
 }
 
-func TestChainToolNoteUpdatesAfterMove(t *testing.T) {
+func TestChainInstructionsStayFixedWhileToolNoteUpdatesAfterMove(t *testing.T) {
 	var log strings.Builder
+	var primaryCalls, fallbackCalls int
 	transport := backendFixtureTransport(func(r *http.Request) (*http.Response, error) {
 		status := 200
 		if r.URL.String() == providers["typesafe"].EndpointURL {
-			status = 401
+			primaryCalls++
+			status = 429
+		} else {
+			fallbackCalls++
 		}
 		return &http.Response{StatusCode: status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulReply))}, nil
 	})
@@ -206,8 +210,16 @@ func TestChainToolNoteUpdatesAfterMove(t *testing.T) {
 		{Provider: providers["openrouter"], Model: "~typesafe/jev-latest", Timeout: time.Second, HTTP: &http.Client{Transport: transport}},
 	}}
 	session := connect(t, Config{Provider: providers["typesafe"]}, chain)
+	initialInstructions := session.InitializeResult().Instructions
 	check := func(serving string) {
 		t.Helper()
+		got := session.InitializeResult().Instructions
+		if got != initialInstructions || !strings.Contains(got, "Backend chain: typesafe -> openrouter.") {
+			t.Errorf("instructions must keep the fixed hop order: %q", got)
+		}
+		if strings.Contains(got, "Serving hop:") {
+			t.Errorf("initialize instructions must never name a serving hop (currently %s)", serving)
+		}
 		listed, err := session.ListTools(context.Background(), nil)
 		if err != nil {
 			t.Fatal(err)
@@ -217,11 +229,16 @@ func TestChainToolNoteUpdatesAfterMove(t *testing.T) {
 		}
 	}
 	check("typesafe")
-	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "evaluate", Arguments: simpleIn()})
-	if err != nil || result.IsError {
-		t.Fatalf("result=%v error=%v", result, err)
+	for range 2 {
+		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "evaluate", Arguments: simpleIn()})
+		if err != nil || result.IsError {
+			t.Fatalf("result=%v error=%v", result, err)
+		}
+		check("openrouter")
 	}
-	check("openrouter")
+	if primaryCalls != 1 || fallbackCalls != 2 {
+		t.Fatalf("calls primary=%d fallback=%d; want 1 and 2", primaryCalls, fallbackCalls)
+	}
 }
 
 func TestChainModelsStayOnConfiguredFirstHop(t *testing.T) {

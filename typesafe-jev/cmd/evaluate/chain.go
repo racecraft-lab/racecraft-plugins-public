@@ -84,6 +84,7 @@ type chainRunner struct {
 	log            io.Writer
 	credentialCode int
 	moveMu         sync.Mutex
+	logMu          sync.Mutex
 	onMove         func()
 	// firstDropped keeps model overrides tied to the configured first hop.
 	firstDropped bool
@@ -160,21 +161,26 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 // older hop cannot move a session again; only the CAS winner writes the log.
 func (r *chainRunner) move(from, to int32, reason string) {
 	r.moveMu.Lock()
-	defer r.moveMu.Unlock()
 	for {
 		current := r.current.Load()
 		if current != from || to <= current {
+			r.moveMu.Unlock()
 			return
 		}
 		if r.current.CompareAndSwap(current, to) {
+			onMove := r.onMove
+			r.moveMu.Unlock()
+			// Keep writers serialized without holding up session moves or MCP I/O.
+			r.logMu.Lock()
 			log := r.log
 			if log == nil {
 				log = os.Stderr
 			}
 			fmt.Fprintf(log, "evaluate: %s refused or failed the call (%s); using the %s fallback for the rest of this session\n",
 				r.hops[from].Provider.Name, reason, r.hops[to].Provider.Name)
-			if r.onMove != nil {
-				r.onMove()
+			r.logMu.Unlock()
+			if onMove != nil {
+				onMove()
 			}
 			return
 		}
@@ -196,11 +202,11 @@ func (r *chainRunner) onTheFallback(err error) error {
 		r.servingHop().Provider.Name, r.hops[0].Provider.Name, local.err)}
 }
 
-// backendNote reports the loaded order and current session position for MCP.
+// backendNote reports the fixed loaded order for MCP.
 func (r *chainRunner) backendNote() string {
 	names := make([]string, len(r.hops))
 	for i, hop := range r.hops {
 		names[i] = hop.Provider.Name
 	}
-	return "\nBackend chain: " + strings.Join(names, " -> ") + ". Serving hop: " + r.servingHop().Provider.Name + "."
+	return "\nBackend chain: " + strings.Join(names, " -> ") + "."
 }

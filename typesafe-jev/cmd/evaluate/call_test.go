@@ -46,7 +46,7 @@ func isolateCallEnv(t *testing.T) string {
 	return home
 }
 
-// pluginEnv sets what both plugin manifests set.
+// pluginEnv selects the legacy provider pair for tests; manifests leave it unset.
 func pluginEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv("JEV_PROVIDER", "typesafe")

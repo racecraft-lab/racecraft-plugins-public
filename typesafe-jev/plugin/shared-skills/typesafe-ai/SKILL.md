@@ -79,8 +79,10 @@ the call is billed.** The read-only annotation means it changes nothing on the
 machine, not that it is free or private. Do not put a secret in `state` to have
 a judgment made about it.
 
-Which backend the tool uses is fixed by the operator's `JEV_PROVIDER` setting,
-not by anything you pass. The server's own instructions name it at connect time.
+The operator configures the backend chain through `JEV_CHAIN`, the legacy
+provider settings, or the chain file; otherwise the built-in order applies.
+The server's instructions list the hop order. The tool description names the
+serving hop and refreshes when the session moves down the chain.
 
 **Images, box, and long context.** Images and `box` stay off until the operator
 sets `JEV_IMAGES=true`. Name a PNG or JPEG in `images` and reference that name

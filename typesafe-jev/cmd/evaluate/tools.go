@@ -50,7 +50,7 @@ type evaluateIn struct {
 func registerTools(s *mcp.Server, _ Config, chain *chainRunner) {
 	refresh := func() {
 		tool := evaluateTool()
-		tool.Description += chain.backendNote()
+		tool.Description += chain.backendNote() + " Serving hop: " + chain.servingHop().Provider.Name + "."
 		add(s, tool, func(ctx context.Context, in evaluateIn) ([]byte, error) {
 			return chain.evaluate(ctx, in)
 		})

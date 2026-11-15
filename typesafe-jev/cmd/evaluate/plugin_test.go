@@ -121,8 +121,8 @@ func TestPluginManifestsResolve(t *testing.T) {
 	}
 }
 
-// The MCP entries must launch the shipped launcher, name the backend
-// explicitly, and carry no credential. A key in a committed manifest is a key
+// The MCP entries must launch the shipped launcher, leave backend selection
+// to runtime configuration, and carry no credential. A key in a committed manifest is a key
 // in everyone's checkout.
 func TestPluginMCPEntries(t *testing.T) {
 	root := repoRoot(t)
@@ -157,8 +157,8 @@ func TestPluginMCPEntries(t *testing.T) {
 				t.Errorf("%s: %s = %v, want absent", tc.file, key, got)
 			}
 		}
-		// The binary's own default stays typesafe; the plugin opts in rather
-		// than the server guessing from which keys are set.
+		// The provider table keeps TypeSafe registered independently of the
+		// runtime chain selection.
 		if providers["typesafe"].Name != "typesafe" {
 			t.Fatal("provider table changed")
 		}
