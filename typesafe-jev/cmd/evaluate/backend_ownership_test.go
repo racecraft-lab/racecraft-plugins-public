@@ -129,8 +129,16 @@ func providerNameComparisons(file *ast.File, info *types.Info) []token.Pos {
 			}
 			expr = paren.X
 		}
+		// go/types links package variables to their initializers across files.
+		if id, ok := expr.(*ast.Ident); ok {
+			for _, init := range info.InitOrder {
+				if len(init.Lhs) == 1 && init.Lhs[0] == info.Uses[id] {
+					return isProvider(init.Rhs)
+				}
+			}
+		}
 		// The AST links local variable aliases to their initializers. Constant
-		// aliases across files are resolved by go/types above.
+		// aliases are resolved by go/types above.
 		if id, ok := expr.(*ast.Ident); ok && id.Obj != nil && !seen[id.Obj] {
 			seen[id.Obj] = true
 			defer delete(seen, id.Obj)
@@ -272,6 +280,7 @@ func TestProviderNameGateDetectsCrossFileComparisons(t *testing.T) {
 	fset := token.NewFileSet()
 	owner, err := parser.ParseFile(fset, "config.go", `package fixture
 const providerTypeSafe = "typesafe"
+var other = "typesafe"
 type ProviderSpec struct { Name string }
 var providers = map[string]ProviderSpec{"typesafe": {Name: "typesafe"}}
 `, 0)
@@ -281,8 +290,9 @@ var providers = map[string]ProviderSpec{"typesafe": {Name: "typesafe"}}
 	for _, body := range []string{
 		`if spec.Name == providerTypeSafe {}`,
 		`if spec.Name == providers["typesafe"].Name {}`,
+		`if name == other {}`,
 	} {
-		file, err := parser.ParseFile(fset, "images.go", "package fixture; func check(spec ProviderSpec) { "+body+" }", 0)
+		file, err := parser.ParseFile(fset, "images.go", "package fixture; func check(spec ProviderSpec, name string) { "+body+" }", 0)
 		if err != nil {
 			t.Fatal(err)
 		}
