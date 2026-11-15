@@ -35,10 +35,10 @@ func fallbackStatus(status int) bool {
 
 // fallbackReason names why err should move a call to the fallback, or returns
 // false when it should not.
-func fallbackReason(err error) (string, bool) {
-	// DeadlineExceeded also satisfies net.Error. A timeout belongs to this
-	// call, not the backend's reachability, so classify it before transport.
-	if errors.Is(err, context.DeadlineExceeded) {
+func fallbackReason(ctx context.Context, err error) (string, bool) {
+	// Only the call's deadline makes this a request timeout. A dial timeout
+	// can also match DeadlineExceeded while the call is live and unreachable.
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return "timeout", false
 	}
 	var status *statusErr
@@ -71,7 +71,7 @@ func runWithFallback(ctx context.Context, c *Client, in evaluateIn) ([]byte, err
 	if err == nil || ctx.Err() != nil {
 		return body, err
 	}
-	reason, ok := fallbackReason(err)
+	reason, ok := fallbackReason(ctx, err)
 	if !ok {
 		return nil, err
 	}
