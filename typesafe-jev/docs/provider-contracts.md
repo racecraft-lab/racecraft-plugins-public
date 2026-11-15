@@ -121,6 +121,7 @@ continues to require non-blank instructions and complete noul criteria.
 |---|---|---|---|
 | Question types | noul, choice, score, box | noul, choice, score, box | noul, choice, score |
 | Questions | no local count cap | no local count cap | 64 |
+| Question ids | no local id rule | no local id rule | up to 100 ASCII letters, digits, `_`, `.`, `-` |
 | Choice options | 1–255 | 1–255 | 2–255 |
 | Score levels | 2–10 | 2–10 | 2–10 |
 | Serialized body | 32 MiB | 32 MiB | 13 MiB |
@@ -134,8 +135,9 @@ that wire encoding is not enabled yet.
 
 All that survives of the divergence is `null` in the three positions this server
 requires a value anyway, so no per-backend rule is left in the validator. The
-capability is still carried on `ProviderSpec.StructuredEntries` rather than
-assumed, so a backend that re-narrows is one field to flip.
+capability is still carried per entry position on each row's
+`ProviderSpec.StructuredEntries` rather than assumed, so a backend that
+re-narrows changes only its own row, as Ollama's does.
 
 **What changed on 2026-09-20.** `validateEntry` no longer rejects objects and
 arrays on OpenRouter, and the separate narrow tool schema that typed

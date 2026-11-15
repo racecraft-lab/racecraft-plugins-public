@@ -83,12 +83,15 @@ const (
 )
 
 // Both Jev hosts accept objects and arrays at every entry position, as recorded
-// in docs/provider-contracts.md. The rows share this read-only capability table.
-var jevStructuredEntries = map[entryPosition]entryKinds{
-	entryInstructions:    entryObject | entryArray,
-	entryChoiceValue:     entryObject | entryArray,
-	entryScoreLevel:      entryObject | entryArray,
-	entryNoulDescription: entryObject | entryArray,
+// in docs/provider-contracts.md. Each row gets its own copy, so changing one
+// row's table never changes another's.
+func jevStructuredEntries() map[entryPosition]entryKinds {
+	return map[entryPosition]entryKinds{
+		entryInstructions:    entryObject | entryArray,
+		entryChoiceValue:     entryObject | entryArray,
+		entryScoreLevel:      entryObject | entryArray,
+		entryNoulDescription: entryObject | entryArray,
+	}
 }
 
 // backendLimits holds backend-specific caps. -1 explicitly means no limit;
@@ -104,6 +107,9 @@ type backendLimits struct {
 	ImageBytes      int
 	TotalImageBytes int
 	ExpandedBytes   int
+	// QuestionIDLength caps an id that must also be ASCII letters, digits,
+	// "_", "." or "-"; noLimit means any id the request shape accepts.
+	QuestionIDLength int
 }
 
 const (
@@ -224,7 +230,7 @@ var providers = map[string]ProviderSpec{
 		LongContextNote:      "\nLong context is enabled for the TypeSafe backend: its budgets are 262144 tokens and each TypeSafe request sends the long-context header.",
 		// TypeSafe documents string, object, array, or null for every
 		// instruction and description field.
-		StructuredEntries: jevStructuredEntries,
+		StructuredEntries: jevStructuredEntries(),
 		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// 529 is TypeSafe's overload status, which upstream already retried.
@@ -255,7 +261,7 @@ var providers = map[string]ProviderSpec{
 			" other questions still answer; treat a refusal as no judgment, never as a no.",
 		Attribution: true,
 		// Matches TypeSafe since OpenRouter republished the Decisions schemas.
-		StructuredEntries: jevStructuredEntries,
+		StructuredEntries: jevStructuredEntries(),
 		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// All four are documented on the Decisions path and transient in
@@ -306,7 +312,7 @@ func ollamaCloudSpec() ProviderSpec {
 			Questions: 64, ChoiceMin: 2, ChoiceMax: 255,
 			ScoreMin: 2, ScoreMax: 10, BodyBytes: 13 << 20,
 			Images: 4, ImageBytes: 4 << 20, TotalImageBytes: 8 << 20,
-			ExpandedBytes: noLimit,
+			ExpandedBytes: noLimit, QuestionIDLength: 100,
 		},
 		LongContextTokens: noLimit,
 		RequestTokens:     65_536,
@@ -325,6 +331,7 @@ func backendRequestLimits() backendLimits {
 		ScoreMin: minScoreLevels, ScoreMax: maxScoreLevels,
 		BodyBytes: maxRequestBody, Images: noLimit, ImageBytes: maxImageBytes,
 		TotalImageBytes: noLimit, ExpandedBytes: maxExpandedRequest,
+		QuestionIDLength: noLimit,
 	}
 }
 
