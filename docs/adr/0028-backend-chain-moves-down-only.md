@@ -80,3 +80,10 @@ hop (Clef), spending its credits, until the MCP server restarts.
 - **Environment outranks the chain file:** `JEV_CHAIN`, then the legacy
   `JEV_PROVIDER`/`JEV_FALLBACK_PROVIDER` pair, then the chain file, then the
   built-in `typesafe,openrouter`. `JEV_PROVIDER` alone stays a one-hop chain.
+- **The built-in chain depends on how the binary starts** (owner, 2026-11-15).
+  Under `--plugin-defaults`, which is how the plugin always launches it, the
+  built-in is `typesafe,openrouter`. Without it, the built-in is `typesafe`
+  alone, so the bare binary never sends state to a second backend unless the
+  operator names one (`JEV_CHAIN`, the legacy pair, or the chain file). This
+  keeps the plugin's behaviour and the security rule that a second backend is
+  used only when someone chose it.
