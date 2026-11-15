@@ -436,20 +436,8 @@ func (images *shapedImages) prepare(spec ProviderSpec, in evaluateIn) error {
 	if spec.ImageLimits.MaxSide <= 0 {
 		return fmt.Errorf("internal: %s has no image limits", spec.Name)
 	}
-	if images.loaded == nil {
-		state, questions, err := imageTrees(in)
-		if err != nil {
-			return &requestShapeError{err}
-		}
-		images.haystack, err = referenceHaystack(state, questions)
-		if err != nil {
-			return &requestShapeError{err}
-		}
-		images.uses, err = countImageUses(state, questions, in.Images)
-		if err != nil {
-			return &requestShapeError{err}
-		}
-		images.loaded = make(map[string]preparedImage, len(in.Images))
+	if err := images.initialize(in); err != nil {
+		return &requestShapeError{err}
 	}
 	var budget imageBudget
 	fileLimit, _ := imageReadLimits()
@@ -461,21 +449,8 @@ func (images *shapedImages) prepare(spec ProviderSpec, in evaluateIn) error {
 			img.readError = err
 			images.loaded[name] = img
 		}
-		if img.sizeError != nil {
-			return &hopRefusalError{img.sizeError.forLimit(spec.Limits.ImageBytes)}
-		}
-		if overLimit(len(img.data), spec.Limits.ImageBytes) {
-			size := int64(-1)
-			if in.Images[name].Path != "" {
-				size = int64(len(img.data))
-			}
-			return &hopRefusalError{(&imageSizeError{imageLabel(name), size, spec.Limits.ImageBytes}).forLimit(spec.Limits.ImageBytes)}
-		}
-		if img.readError != nil {
-			return &requestShapeError{img.readError}
-		}
-		if err := checkImageDimensions(imageLabel(name), img.width, img.height, spec.ImageLimits); err != nil {
-			return &hopRefusalError{err}
+		if err := img.validateForHop(spec, name, in.Images[name]); err != nil {
+			return err
 		}
 		n := max(images.uses[name], 1)
 		inBody := n
@@ -485,6 +460,48 @@ func (images *shapedImages) prepare(spec ProviderSpec, in evaluateIn) error {
 		if err := budget.add(spec.Limits, len(img.data), inBody, n); err != nil {
 			return &hopRefusalError{err}
 		}
+	}
+	return nil
+}
+
+// initialize records reference sites before opening the first image.
+func (images *shapedImages) initialize(in evaluateIn) error {
+	if images.loaded != nil {
+		return nil
+	}
+	state, questions, err := imageTrees(in)
+	if err != nil {
+		return err
+	}
+	images.haystack, err = referenceHaystack(state, questions)
+	if err != nil {
+		return err
+	}
+	images.uses, err = countImageUses(state, questions, in.Images)
+	if err != nil {
+		return err
+	}
+	images.loaded = make(map[string]preparedImage, len(in.Images))
+	return nil
+}
+
+// validateForHop preserves size, read, then dimension diagnostic precedence.
+func (img preparedImage) validateForHop(spec ProviderSpec, name string, source imageSource) error {
+	if img.sizeError != nil {
+		return &hopRefusalError{img.sizeError.forLimit(spec.Limits.ImageBytes)}
+	}
+	if overLimit(len(img.data), spec.Limits.ImageBytes) {
+		size := int64(-1)
+		if source.Path != "" {
+			size = int64(len(img.data))
+		}
+		return &hopRefusalError{(&imageSizeError{imageLabel(name), size, spec.Limits.ImageBytes}).forLimit(spec.Limits.ImageBytes)}
+	}
+	if img.readError != nil {
+		return &requestShapeError{img.readError}
+	}
+	if err := checkImageDimensions(imageLabel(name), img.width, img.height, spec.ImageLimits); err != nil {
+		return &hopRefusalError{err}
 	}
 	return nil
 }

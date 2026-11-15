@@ -1,6 +1,9 @@
 package main
 
-import "context"
+import (
+	"context"
+	"testing"
+)
 
 // Adapt existing one-backend fixtures and chain fixtures to the same real
 // runner. HTTP remains the only fake boundary; there is no hop interface.
@@ -24,4 +27,16 @@ func runEvaluate(ctx context.Context, c any, in evaluateIn) ([]byte, error) {
 func fallbackReason(ctx context.Context, err error) (string, bool) {
 	out := classify(&chainFailure{err: err, requestErr: ctx.Err()})
 	return out.reason, out.effect == moveSession || out.effect == moveAccount
+}
+
+// runTestMatrix runs every pair in order with caller-owned names and checks.
+func runTestMatrix[A, B any](t *testing.T, rows []A, columns []B, name func(A, B) string, check func(*testing.T, A, B)) {
+	t.Helper()
+	for _, row := range rows {
+		for _, column := range columns {
+			t.Run(name(row, column), func(t *testing.T) {
+				check(t, row, column)
+			})
+		}
+	}
 }

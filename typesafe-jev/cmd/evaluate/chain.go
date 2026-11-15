@@ -167,7 +167,7 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 			stop = walk.localFailure(r.hops[i], local)
 			continue
 		}
-		body, failure := send(ctx, r.hops[i], p)
+		body, failure := send(ctx, r.hops[i], p, nil)
 		if failure == nil {
 			return body, nil
 		}
