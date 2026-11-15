@@ -135,8 +135,8 @@ instead of spending a request. Do not cite them as provider requirements.
   `minItems: 1`; a one-level scale is a degenerate question, not a schema error.
 - A score question takes at most ten levels. TypeSafe's API page says the API
   accepts up to 10 (fetched 2026-10-17). OpenRouter's schema sets no
-  `maxItems`. The cap is applied on both backends so a request cannot pass one
-  and fail the fallback.
+  `maxItems`. Each backend's row carries its own cap, and a request over one
+  hop's cap routes to a later hop that can take it (ADR 0028).
 - A serialized request is capped at 32 MiB, the body limit both publishers
   document. The response is still capped at 16 MiB. One decoded image file is
   capped at 16 MiB, which base64 expands to about 22 MiB of JSON, so the old

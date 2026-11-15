@@ -178,7 +178,7 @@ func backendNote(cfg Config) string {
 		note = "\nBackend: " + cfg.Provider.Name + ", with " + cfg.Fallback.Provider.Name + " as fallback." +
 			" Calling this tool sends the state and questions you pass to " + cfg.Provider.Name +
 			", or to " + cfg.Fallback.Provider.Name + " when " + cfg.Provider.Name + " refuses its credential" +
-			" or is unavailable; the provider that answers bills for the call."
+			", is unavailable, or cannot take the request; the provider that answers bills for the call."
 	}
 	note += cfg.Provider.AnswerNote
 	if cfg.Fallback != nil && cfg.Fallback.Provider.AnswerNote != cfg.Provider.AnswerNote {
