@@ -40,3 +40,13 @@ We decided three things (owner, 2026-11-14).
 
 A brief outage of every Jev hop leaves the rest of that session on the last
 hop (Clef), spending its credits, until the MCP server restarts.
+
+## Settled after the grill (owner, 2026-11-14)
+
+- **A keyless hop always loads.** `ollama-local` needs no key, so the rule that
+  drops a hop with no loadable key at start-up does not apply to it. A daemon
+  that is down shows at call time as unreachable and moves the session to the
+  next hop.
+- **Every entry point reads the same chain.** `evaluate call --plugin-defaults`
+  resolves the chain exactly as the server does, and `evaluate setup` writes
+  `JEV_CHAIN` into a client's config instead of the old provider pair.
