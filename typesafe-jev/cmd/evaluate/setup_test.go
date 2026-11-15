@@ -47,7 +47,7 @@ func TestSetupGeneratesBothClients(t *testing.T) {
 		"claude mcp add 'jev-openrouter'",
 		"codex mcp add 'jev-openrouter'",
 		"-- '/opt/racecraft/evaluate' mcp",
-		"'JEV_PROVIDER=openrouter'",
+		"'JEV_CHAIN=openrouter'",
 		"'JEV_API_KEY_FILE=" + keyFile + "'",
 		"[mcp_servers.jev-openrouter]",
 		"claude mcp remove 'jev-openrouter' --scope user",

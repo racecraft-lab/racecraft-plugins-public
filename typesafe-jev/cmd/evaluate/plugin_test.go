@@ -150,15 +150,10 @@ func TestPluginMCPEntries(t *testing.T) {
 		}
 
 		env, _ := entry["env"].(map[string]any)
-		// TypeSafe first, with OpenRouter as the operator's explicit fallback,
-		// each with its own model id: the ids differ per backend.
-		for key, want := range map[string]string{
-			"JEV_PROVIDER":          "typesafe",
-			"JEV_MODEL":             "jev-latest",
-			"JEV_FALLBACK_PROVIDER": "openrouter",
-		} {
-			if got, _ := env[key].(string); got != want {
-				t.Errorf("%s: %s = %q, want %q", tc.file, key, got, want)
+		// Backend and model selection belong to runtime configuration.
+		for _, key := range []string{"JEV_PROVIDER", "JEV_MODEL", "JEV_FALLBACK_PROVIDER"} {
+			if got, set := env[key]; set {
+				t.Errorf("%s: %s = %v, want absent", tc.file, key, got)
 			}
 		}
 		// The binary's own default stays typesafe; the plugin opts in rather
