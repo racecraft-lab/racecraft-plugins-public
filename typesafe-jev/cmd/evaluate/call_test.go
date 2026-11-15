@@ -472,8 +472,8 @@ func TestServerStillServesPastABrokenFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the server refused to start: %v", err)
 	}
-	if served.Provider.Name != "typesafe" || c.Fallback != nil {
-		t.Errorf("served %s with fallback %v", served.Provider.Name, c.Fallback)
+	if served.Provider.Name != "typesafe" || len(c.hops) != 1 {
+		t.Errorf("served %s with %d hops", served.Provider.Name, len(c.hops))
 	}
 	if !strings.Contains(log.String(), "fallback is off") {
 		t.Errorf("the dropped fallback was not reported: %q", log.String())

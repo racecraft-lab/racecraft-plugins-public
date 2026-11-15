@@ -40,22 +40,21 @@ func newRecordingBackend(t *testing.T, status int, reply string) *recordingBacke
 // fallbackPair builds a primary on primaryName answering primaryStatus and a
 // fallback on the other backend answering 200 with reply, and returns the
 // primary.
-func fallbackPair(t *testing.T, primaryName string, primaryStatus int, reply string) (*Client, *recordingBackend, *recordingBackend, *strings.Builder) {
+func fallbackPair(t *testing.T, primaryName string, primaryStatus int, reply string) (*chainRunner, *recordingBackend, *recordingBackend, *strings.Builder) {
 	t.Helper()
 	fallbackName := map[string]string{"typesafe": "openrouter", "openrouter": "typesafe"}[primaryName]
 	primary := newRecordingBackend(t, primaryStatus, `{"error":{"message":"no"}}`)
 	fallback := newRecordingBackend(t, http.StatusOK, reply)
 	c := testClient(providerAt(primaryName, primary.srv.URL), primary.srv)
 	c.MaxRetries = 0
-	c.Fallback = testClient(providerAt(fallbackName, fallback.srv.URL), fallback.srv)
 	log := &strings.Builder{}
-	c.Log = log
-	return c, primary, fallback, log
+	chain := &chainRunner{hops: []*Client{c, testClient(providerAt(fallbackName, fallback.srv.URL), fallback.srv)}, log: log}
+	return chain, primary, fallback, log
 }
 
 // withFallback builds a TypeSafe primary answering primaryStatus and an
 // OpenRouter fallback answering 200, and returns the primary.
-func withFallback(t *testing.T, primaryStatus int) (*Client, *recordingBackend, *recordingBackend, *strings.Builder) {
+func withFallback(t *testing.T, primaryStatus int) (*chainRunner, *recordingBackend, *recordingBackend, *strings.Builder) {
 	t.Helper()
 	return fallbackPair(t, "typesafe", primaryStatus, noulReply)
 }
@@ -71,7 +70,7 @@ func TestNoFallbackUnlessConfigured(t *testing.T) {
 		t.Fatalf("a fallback appeared without JEV_FALLBACK_PROVIDER: %+v", cfg.Fallback)
 	}
 	c, primary, fallback, _ := withFallback(t, http.StatusUnauthorized)
-	c.Fallback = nil
+	c.hops = c.hops[:1]
 	if _, err := runEvaluate(context.Background(), c, simpleIn()); err == nil || !strings.Contains(err.Error(), "typesafe: HTTP 401") {
 		t.Fatalf("want the primary's 401, got %v", err)
 	}
@@ -228,11 +227,11 @@ func TestStartupPicksWhatCanServe(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
-		if c.Provider.Name != tc.serving || served.Provider.Name != tc.serving {
-			t.Errorf("%s: serving %s (config %s), want %s", tc.name, c.Provider.Name, served.Provider.Name, tc.serving)
+		if c.servingHop().Provider.Name != tc.serving || served.Provider.Name != tc.serving {
+			t.Errorf("%s: serving %s (config %s), want %s", tc.name, c.servingHop().Provider.Name, served.Provider.Name, tc.serving)
 		}
-		if (c.Fallback != nil) != tc.fallbackArmed || (served.Fallback != nil) != tc.fallbackArmed {
-			t.Errorf("%s: fallback armed = %v, want %v", tc.name, c.Fallback != nil, tc.fallbackArmed)
+		if (len(c.hops) == 2) != tc.fallbackArmed || (served.Fallback != nil) != tc.fallbackArmed {
+			t.Errorf("%s: fallback armed = %v, want %v", tc.name, len(c.hops) == 2, tc.fallbackArmed)
 		}
 		if !strings.Contains(log.String(), tc.wantLog) || strings.Contains(log.String(), "sk-test") {
 			t.Errorf("%s: log %q", tc.name, log.String())
@@ -261,11 +260,11 @@ func TestInstructionsNameTheFallback(t *testing.T) {
 // TypeSafe fallback answering reply, both with images on. The backends' local
 // gates differ in this direction: TypeSafe's default model rejects box, its
 // side minimum is 280 rather than 256, and its default budget is 64k tokens.
-func openRouterFirst(t *testing.T, primaryStatus int, reply string) (*Client, *recordingBackend, *recordingBackend) {
+func openRouterFirst(t *testing.T, primaryStatus int, reply string) (*chainRunner, *recordingBackend, *recordingBackend) {
 	t.Helper()
 	c, primary, fallback, _ := fallbackPair(t, "openrouter", primaryStatus, reply)
-	c.Provider.AllowImages = true
-	c.Fallback.Provider.AllowImages = true
+	c.hops[0].Provider.AllowImages = true
+	c.hops[1].Provider.AllowImages = true
 	return c, primary, fallback
 }
 
@@ -314,9 +313,9 @@ func TestFallbackLocalRefusalKeepsThePrimary(t *testing.T) {
 					t.Fatalf("call %d: error = %v", call, err)
 				}
 			}
-			if c.switched.Load() || fallback.calls.Load() != 0 || primary.calls.Load() != 2 {
+			if (c.current.Load() != 0) || fallback.calls.Load() != 0 || primary.calls.Load() != 2 {
 				t.Fatalf("switched=%v; calls primary %d, fallback %d; want false, 2, 0",
-					c.switched.Load(), primary.calls.Load(), fallback.calls.Load())
+					(c.current.Load() != 0), primary.calls.Load(), fallback.calls.Load())
 			}
 		})
 	}
@@ -327,7 +326,7 @@ func TestFallbackLocalRefusalKeepsThePrimary(t *testing.T) {
 // fallback, so a limit the primary does not have is not a mystery.
 func TestLocalRefusalAfterTheSwitchNamesTheFallback(t *testing.T) {
 	c, primary, fallback := openRouterFirst(t, http.StatusServiceUnavailable, noulOK)
-	c.switched.Store(true)
+	c.current.Store(1)
 	_, err := runEvaluate(context.Background(), c, imageRequest(mustPNG(t, 256, 320), ""))
 	var local *requestInvalidError
 	if !errors.As(err, &local) {

@@ -18,12 +18,12 @@ var testImpl = &mcp.Implementation{Name: "evaluate-test", Version: "test"}
 
 // connect runs the real server registration over the SDK's in-memory
 // transports, so a test drives the shipped tool rather than a stand-in.
-func connect(t *testing.T, cfg Config, c *Client) *mcp.ClientSession {
+func connect(t *testing.T, cfg Config, c any) *mcp.ClientSession {
 	t.Helper()
 	ctx := context.Background()
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
-	serverSession, err := newServer(cfg, c).Connect(ctx, serverTransport, nil)
+	serverSession, err := newServer(cfg, testChain(c)).Connect(ctx, serverTransport, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +251,7 @@ func TestStdioHelperProcess(t *testing.T) {
 		Timeout:  10 * time.Second,
 		Backoff:  time.Millisecond,
 	}
-	err := newServer(cfg, c).Run(context.Background(), &mcp.StdioTransport{})
+	err := newServer(cfg, testChain(c)).Run(context.Background(), &mcp.StdioTransport{})
 	// Exit before the testing package writes its own summary to stdout, which
 	// would be a protocol frame the client cannot parse.
 	if err != nil {

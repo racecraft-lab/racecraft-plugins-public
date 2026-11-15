@@ -47,20 +47,10 @@ type evaluateIn struct {
 // both backends accept a string, an object, or an array. Exporting the narrow
 // shape now would hide a capability the backend has, which is the same failure
 // as advertising one it lacks, so one schema serves both.
-func registerTools(s *mcp.Server, _ Config, c *Client) {
+func registerTools(s *mcp.Server, _ Config, chain *chainRunner) {
 	add(s, evaluateTool(), func(ctx context.Context, in evaluateIn) ([]byte, error) {
-		return runEvaluate(ctx, c, in)
+		return chain.evaluate(ctx, in)
 	})
-}
-
-// runEvaluate validates, sends, and validates the reply. The schema the client
-// enforced is a convenience, not a boundary, so everything is checked again
-// here.
-func runEvaluate(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
-	if c.Fallback != nil {
-		return runWithFallback(ctx, c, in)
-	}
-	return runOn(ctx, c, in)
 }
 
 // runOn is one evaluation on one backend.

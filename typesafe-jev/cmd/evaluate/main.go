@@ -151,12 +151,12 @@ func buildCommit() string {
 // newServer registers the tools for cfg's backend against c. Split out from
 // serve so a test can drive the real registration without a transport or a
 // provider.
-func newServer(cfg Config, c *Client) *mcp.Server {
+func newServer(cfg Config, chain *chainRunner) *mcp.Server {
 	s := mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
 		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg)},
 	)
-	registerTools(s, cfg, c)
+	registerTools(s, cfg, chain)
 	return s
 }
 
@@ -231,17 +231,17 @@ func serve(ctx context.Context, pluginDefaults bool) error {
 	if err != nil {
 		return err
 	}
+	chain, cfg, err := startChain(resolved, os.Stderr, os.Stderr)
 	if pluginDefaults {
-		if resolved.credentialExit() == exitUnconfigured {
+		if chain.credentialExit() == exitUnconfigured {
 			fmt.Fprintln(os.Stderr, "evaluate: no TypeSafe or OpenRouter credential is configured; serving setup instructions with no tools")
 			return newSetupServer().Run(ctx, &mcp.StdioTransport{})
 		}
 	}
-	c, cfg, err := resolved.clients(os.Stderr, os.Stderr)
 	if err != nil {
 		return err
 	}
 	// Nothing is printed here: stdout carries the MCP protocol, and a startup
 	// banner on it is a protocol error.
-	return newServer(cfg, c).Run(ctx, &mcp.StdioTransport{})
+	return newServer(cfg, chain).Run(ctx, &mcp.StdioTransport{})
 }

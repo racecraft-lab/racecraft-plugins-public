@@ -132,7 +132,8 @@ func runCall(ctx context.Context, opts callOptions, stdin io.Reader, stdout, std
 
 	resolved := resolveConfiguredHops(cfg, os.LookupEnv)
 	primary, fallback := resolved.sources()
-	code := resolved.credentialExit()
+	chain, _, startErr := startChain(resolved, stderr, io.Discard)
+	code := chain.credentialExit()
 	for _, s := range []*sourceStatus{&primary, fallback} {
 		if s != nil && s.State == "unusable" {
 			fmt.Fprintf(stderr, "evaluate: %s credential (%s) is unusable: %s\n", s.Provider, s.Source, s.reason)
@@ -163,13 +164,12 @@ func runCall(ctx context.Context, opts callOptions, stdin io.Reader, stdout, std
 		return exitRequestInvalid
 	}
 
-	c, _, err := resolved.clients(stderr, io.Discard)
-	if err != nil {
-		fmt.Fprintln(stderr, "evaluate:", err)
+	if startErr != nil {
+		fmt.Fprintln(stderr, "evaluate:", startErr)
 		return exitCredentialBroken
 	}
 
-	body, err := runEvaluate(ctx, c, in)
+	body, err := chain.evaluate(ctx, in)
 	if err != nil {
 		fmt.Fprintln(stderr, "evaluate:", err)
 		var reqErr *requestInvalidError

@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 )
 
@@ -44,16 +43,6 @@ type Client struct {
 	MaxRetries int
 	// Backoff is the first retry delay; it doubles each attempt.
 	Backoff time.Duration
-
-	// Fallback is the operator's opt-in second backend (JEV_FALLBACK_PROVIDER),
-	// or nil. See fallback.go.
-	Fallback *Client
-	// Log receives the one line written when calls switch to Fallback. It is
-	// stderr in production: stdout carries the MCP protocol.
-	Log io.Writer
-	// switched is set once and never cleared, so one session never alternates
-	// between backends.
-	switched atomic.Bool
 }
 
 // newHTTPClient returns the transport used for provider calls.
