@@ -277,6 +277,8 @@ func backendImageLimits(minSide int) imageBounds {
 }
 
 const (
+	// defaultProvider serves when no setting names a backend.
+	defaultProvider   = "typesafe"
 	defaultTimeout    = 45 * time.Second
 	maxTimeout        = 5 * time.Minute
 	defaultMaxRetries = 3
@@ -328,15 +330,22 @@ type FallbackConfig struct {
 // fallbackConfig is the Config a client for the fallback backend is built
 // from: its own provider, model default and key, and the primary's limits.
 func (c Config) fallbackConfig() Config {
+	hop := c.laterHop(c.Fallback.Provider, c.Fallback.KeyFile, c.Fallback.KeyFileDefaulted)
+	hop.keyFileVar = pluginFallbackFileEnv
+	return hop
+}
+
+// laterHop builds a hop after the first from the shared request settings, so
+// every later hop inherits the same timeout, retries and operator opt-ins.
+func (c Config) laterHop(spec ProviderSpec, keyFile string, keyFileDefaulted bool) Config {
 	return Config{
-		Provider:   c.Fallback.Provider,
-		Model:      c.Fallback.Provider.DefaultModel,
+		Provider:   spec,
+		Model:      spec.DefaultModel,
 		Timeout:    c.Timeout,
 		MaxRetries: c.MaxRetries,
-		KeyFile:    c.Fallback.KeyFile,
+		KeyFile:    keyFile,
 
-		KeyFileDefaulted: c.Fallback.KeyFileDefaulted,
-		keyFileVar:       pluginFallbackFileEnv,
+		KeyFileDefaulted: keyFileDefaulted,
 		AllowImages:      c.AllowImages,
 		LongContext:      c.LongContext,
 	}
@@ -405,7 +414,7 @@ func resolveOptIn(look lookupFunc, name string) (bool, error) {
 func resolveProvider(look lookupFunc) (ProviderSpec, error) {
 	raw, set := look("JEV_PROVIDER")
 	if !set {
-		return providers["typesafe"], nil
+		return providers[defaultProvider], nil
 	}
 	name := strings.TrimSpace(raw)
 	if name == "" {
