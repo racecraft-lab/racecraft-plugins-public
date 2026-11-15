@@ -149,7 +149,7 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 			return nil, fmt.Errorf("%w; the %s fallback cannot take this request: %v", err, r.hops[i+1].Provider.Name, local)
 		}
 		r.move(int32(i), int32(i+1), out.reason)
-		body, err = send(ctx, r.hops[i+1], p)
+		body, err = send(ctx, r.hops[i+1], p, nil)
 	}
 	if start > 0 {
 		err = r.onTheFallback(err)

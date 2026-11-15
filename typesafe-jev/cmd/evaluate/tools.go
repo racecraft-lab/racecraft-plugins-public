@@ -59,21 +59,14 @@ func registerTools(s *mcp.Server, _ Config, chain *chainRunner) {
 	refresh()
 }
 
-// runOn is one evaluation on one backend.
+// runOn uses the chain's single-hop path for one evaluation on one backend.
 func runOn(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
-	p, err := prepare(c, in)
-	if err != nil {
-		return nil, err
-	}
-	return send(ctx, c, p)
+	return (&chainRunner{hops: []*Client{c}}).evaluate(ctx, in)
 }
 
 func runShapedOn(ctx context.Context, c *Client, shaped shapedCall) ([]byte, error) {
 	p, err := prepareForHop(c, shaped)
-	if err != nil {
-		return nil, err
-	}
-	return send(ctx, c, p)
+	return send(ctx, c, p, err)
 }
 
 // preparedCall is one request that passed every local check for one backend,
@@ -94,8 +87,11 @@ func prepare(c *Client, in evaluateIn) (preparedCall, error) {
 	return prepareForHop(c, shaped)
 }
 
-// send posts a prepared call and validates the reply.
-func send(ctx context.Context, c *Client, p preparedCall) ([]byte, error) {
+// send propagates preparation failures before posting and validating a reply.
+func send(ctx context.Context, c *Client, p preparedCall, preparationError error) ([]byte, error) {
+	if preparationError != nil {
+		return nil, preparationError
+	}
 	body, err := c.post(ctx, p.body, p.headers)
 	if err != nil {
 		return nil, err
