@@ -124,13 +124,13 @@ continues to require non-blank instructions and complete noul criteria.
 | Choice options | 1–255 | 1–255 | 2–255 |
 | Score levels | 2–10 | 2–10 | 2–10 |
 | Serialized body | 32 MiB | 32 MiB | 13 MiB |
-| Images in this implementation | operator opt-in | operator opt-in | unavailable in this layer, including with `JEV_IMAGES=true` |
+| Images in this implementation | operator opt-in | operator opt-in | operator opt-in |
 
 Every Ollama per-hop refusal takes a capability route to a later able hop;
-with none available it is exit 2 and sends no HTTP request. Image support is
-deferred: the published limits are 4 images, 4 MiB each, 8 MiB total, using a
-top-level base64 array. Ollama has the same operator image trust as OpenRouter;
-that wire encoding is not enabled yet.
+with none available it is exit 2 and sends no HTTP request. Ollama has the same
+operator image trust as OpenRouter: `JEV_IMAGES=true` is required before any
+image is read or sent. Its top-level base64 array accepts at most 4 images,
+4 MiB each and 8 MiB total, within the 13 MiB serialized body cap.
 
 All that survives of the divergence is `null` in the three positions this server
 requires a value anyway, so no per-backend rule is left in the validator. The
@@ -341,11 +341,24 @@ The encoder in `images.go` is the only place that chooses a wire format.
 Multipart is TypeSafe's preferred upload and OpenRouter rejects it, so both
 backends get base64 JSON.
 
-| | TypeSafe | OpenRouter |
-| --- | --- | --- |
-| Where the bytes go | top-level `assets` map, `{type: "image", format, data_base64}`, keyed by a minted `jevimg-` token substituted for the caller's name | an `image_url` part, `data:image/png;base64,...` or `data:image/jpeg;base64,...`, in place of the reference |
-| Header | `TypeSafe-Danger-Zone-Images: true` on any request with an image or a `box` question | none |
-| What must not be sent | the neutral `images` map | `assets`, `images`, and any TypeSafe danger-zone header. OpenRouter has accepted `assets` since the 2026-11-14 fetch; this server keeps `image_url`, which every Decisions model reads, rather than send two wire formats to one backend |
+| | TypeSafe | OpenRouter | Ollama |
+| --- | --- | --- | --- |
+| Where the bytes go | top-level `assets` map, `{type: "image", format, data_base64}`, keyed by a minted `jevimg-` token substituted for the caller's name | an `image_url` part, `data:image/png;base64,...` or `data:image/jpeg;base64,...`, in place of the reference | top-level `images` array of base64 strings, each file once, in sorted image-name order |
+| Header | `TypeSafe-Danger-Zone-Images: true` on any request with an image or a `box` question | none | none |
+| What must not be sent | the neutral `images` map | `assets`, `images`, and any TypeSafe danger-zone header. OpenRouter has accepted `assets` since the 2026-11-14 fetch; this server keeps `image_url`, which every Decisions model reads, rather than send two wire formats to one backend | neutral image map, `assets`, data URLs, inline image parts or TypeSafe headers |
+
+For Ollama, whole-name string references and `{"image":"name"}` markers in
+state, instructions and criteria become `"image 1"`, `"image 2"`, and so on,
+matching the sorted array order. Repeated references reuse that position and
+never duplicate bytes. Longer strings and object keys remain unchanged, as
+with the other encoders. Ollama accepts no `box` questions; those route on.
+The existing PNG/JPEG input contract remains; WebP is not enabled by this client.
+
+Ollama allows at most 4 images, 4 MiB per decoded file, 8 MiB of decoded files
+in total and 16,000,000 pixels per image, with no separate side-length cap.
+Every image refusal routes to a later able hop without moving the session.
+The final serialized body, including text and base64, must fit 13 MiB.
+Rate-limit behavior and image retention remain unconfirmed.
 
 Asset keys are minted from the caller's name. TypeSafe treats a reference as
 plain text and will match a short name inside an ordinary word (`cat` inside

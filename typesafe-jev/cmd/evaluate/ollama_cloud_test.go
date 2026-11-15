@@ -68,26 +68,30 @@ func TestOllamaCloudGoldenTextRequestAndAnswers(t *testing.T) {
 func TestOllamaCloudCapabilityRoutesAndLocalExit(t *testing.T) {
 	for name, input := range ollamaRefusedRequests(t) {
 		t.Run(name, func(t *testing.T) {
-			checkOllamaRoute(t, input, false)
-			checkOllamaRoute(t, input, true)
+			checkOllamaRoute(t, input, false, name == "image")
+			checkOllamaRoute(t, input, true, name == "image")
 		})
 	}
 }
 
-func checkOllamaRoute(t *testing.T, input evaluateIn, later bool) {
+func checkOllamaRoute(t *testing.T, input evaluateIn, later, accepts bool) {
 	t.Helper()
 	ollamaCloudEnv(t)
 	t.Setenv("JEV_IMAGES", "true")
 	wantCode, wantCalls := 2, 0
+	wantProvider := "openrouter"
 	if later {
 		t.Setenv("JEV_CHAIN", "ollama,openrouter")
 		t.Setenv("OPENROUTER_API_KEY", fixtureKey)
 		wantCode, wantCalls = 0, 1
 	}
+	if accepts {
+		wantCode, wantCalls, wantProvider = 0, 1, "ollama"
+	}
 	calls := 0
 	fakeOllamaTransport(t, func(req *http.Request) (*http.Response, error) {
 		calls++
-		if req.URL.String() != providers["openrouter"].EndpointURL {
+		if req.URL.String() != providers[wantProvider].EndpointURL {
 			t.Errorf("refused request reached %s", req.URL)
 		}
 		return ollamaRouteReply(req)
@@ -124,12 +128,16 @@ func ollamaRefusedRequests(t *testing.T) map[string]evaluateIn {
 }
 
 func ollamaRouteReply(req *http.Request) (*http.Response, error) {
-	var in evaluateIn
-	if err := json.NewDecoder(req.Body).Decode(&in); err != nil {
+	// Images are backend wire data, not the neutral input images map.
+	var wire struct {
+		Model     string              `json:"model"`
+		Questions map[string]question `json:"questions"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&wire); err != nil {
 		return nil, err
 	}
 	answers := make(map[string]any)
-	for id, q := range in.Questions {
+	for id, q := range wire.Questions {
 		answer := map[string]any{"type": q.Type, "noul": 0.8}
 		switch q.Type {
 		case typeChoice:
@@ -139,7 +147,7 @@ func ollamaRouteReply(req *http.Request) (*http.Response, error) {
 		}
 		answers[id] = answer
 	}
-	body, err := json.Marshal(map[string]any{"model": in.Model, "answers": answers, "usage": map[string]int{"input_tokens": 10, "output_tokens": 0}})
+	body, err := json.Marshal(map[string]any{"model": wire.Model, "answers": answers, "usage": map[string]int{"input_tokens": 10, "output_tokens": 0}})
 	return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(string(body)))}, err
 }
 
@@ -165,16 +173,23 @@ func TestOllamaCloudPluginCredentialDiscoveryAndCheck(t *testing.T) {
 	}
 }
 
-func TestOllamaCloudImageRefusalNamesMissingEncoding(t *testing.T) {
+func TestOllamaCloudImageRequestAnswers(t *testing.T) {
 	ollamaCloudEnv(t)
-	blockOllamaHTTP(t)
+	calls := 0
+	fakeOllamaTransport(t, func(req *http.Request) (*http.Response, error) {
+		calls++
+		if req.URL.String() != providers["ollama"].EndpointURL {
+			t.Errorf("image request went to %s", req.URL)
+		}
+		return ollamaImageResponse(), nil
+	})
 	t.Setenv("JEV_IMAGES", "true")
 	body, err := json.Marshal(imageRequest(mustPNG(t, 280, 280), "png"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	got := runCallForTest(t, callOptions{}, string(body))
-	if got.code != 2 || !strings.Contains(got.stderr, "image encoding is not enabled for ollama") {
-		t.Fatalf("exit=%d stderr=%s; operator opt-in must not promise unavailable encoding", got.code, got.stderr)
+	if got.code != 0 || strings.TrimSpace(got.stdout) != noulOK || calls != 1 {
+		t.Fatalf("exit=%d calls=%d stdout=%s stderr=%s", got.code, calls, got.stdout, got.stderr)
 	}
 }

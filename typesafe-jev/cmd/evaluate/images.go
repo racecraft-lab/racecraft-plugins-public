@@ -21,12 +21,12 @@ import (
 	"syscall"
 )
 
-// The two backends do not share an image wire format, and mixing them is a
+// The backends do not share an image wire format, and mixing them is a
 // billed no-op: a TypeSafe `assets` map posted to OpenRouter comes back HTTP
 // 200 with answers that never saw the picture. This file is the only place
 // that chooses a format. Callers name an image and point at it; the encoder
 // builds `assets` plus the images header for TypeSafe, or image_url data-URL
-// parts for OpenRouter, and refuses to put `assets` on an OpenRouter body.
+// parts for OpenRouter, or a top-level base64 array for Ollama.
 //
 // Multipart is TypeSafe's preferred upload and is rejected by OpenRouter, so
 // both backends get base64 JSON. One encoder, and no path that can only be
@@ -106,7 +106,21 @@ func encodeLoadedRequest(spec ProviderSpec, in evaluateIn, loaded map[string]pre
 	if in.Model != "" {
 		payload["model"] = in.Model
 	}
-	if spec.WireFormat == wireTypeSafeAssets {
+	addWireImages(spec, loaded, payload)
+	if err := rejectForeignImageFields(spec, payload); err != nil {
+		return nil, nil, err
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, nil, err
+	}
+	return body, headers, nil
+}
+
+func addWireImages(spec ProviderSpec, loaded map[string]preparedImage, payload map[string]any) {
+	switch spec.WireFormat {
+	case wireTypeSafeAssets:
 		assets := make(map[string]any, len(loaded))
 		for _, name := range sortedKeys(loaded) {
 			img := loaded[name]
@@ -117,16 +131,13 @@ func encodeLoadedRequest(spec ProviderSpec, in evaluateIn, loaded map[string]pre
 			}
 		}
 		payload["assets"] = assets
+	case wireOllamaImages:
+		images := make([]string, 0, len(loaded))
+		for _, name := range sortedKeys(loaded) {
+			images = append(images, base64.StdEncoding.EncodeToString(loaded[name].data))
+		}
+		payload["images"] = images
 	}
-	if err := rejectForeignImageFields(spec, payload); err != nil {
-		return nil, nil, err
-	}
-
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return nil, nil, err
-	}
-	return body, headers, nil
 }
 
 // dangerHeaders returns the TypeSafe opt-in headers this request needs.
@@ -155,7 +166,7 @@ func dangerHeaders(spec ProviderSpec, in evaluateIn) map[string]string {
 // impossible. It reads the payload map the body is marshalled from, so the
 // body is never parsed back.
 func rejectForeignImageFields(spec ProviderSpec, payload map[string]any) error {
-	if _, ok := payload["images"]; ok {
+	if _, ok := payload["images"]; ok && spec.WireFormat != wireOllamaImages {
 		return errors.New("internal: the wire request still carries the images map")
 	}
 	_, assets := payload["assets"]
@@ -217,13 +228,7 @@ func requireImageOptIn(allowed bool) error {
 }
 
 func requireBackendImages(spec ProviderSpec) error {
-	if err := requireImageOptIn(spec.AllowImages && spec.ImageTrust == imageTrustOperatorOptIn); err != nil {
-		return err
-	}
-	if spec.WireFormat == wireOllamaImages {
-		return fmt.Errorf("image encoding is not enabled for %s", spec.Name)
-	}
-	return nil
+	return requireImageOptIn(spec.AllowImages && spec.ImageTrust == imageTrustOperatorOptIn)
 }
 
 func validateImageEntries(images map[string]imageSource) error {
@@ -443,7 +448,7 @@ func (images *shapedImages) prepare(spec ProviderSpec, in evaluateIn) error {
 	if len(in.Images) == 0 {
 		return nil
 	}
-	if spec.ImageLimits.MaxSide <= 0 {
+	if spec.ImageLimits.MaxSide == 0 {
 		return fmt.Errorf("internal: %s has no image limits", spec.Name)
 	}
 	if err := images.initialize(in); err != nil {
@@ -464,7 +469,7 @@ func (images *shapedImages) prepare(spec ProviderSpec, in evaluateIn) error {
 		}
 		n := max(images.uses[name], 1)
 		inBody := n
-		if spec.WireFormat == wireTypeSafeAssets {
+		if spec.WireFormat != wireOpenRouterParts {
 			inBody = 1
 		}
 		if err := budget.add(spec.Limits, len(img.data), inBody, n); err != nil {
@@ -655,13 +660,13 @@ func decodeImageBase64(label, s string, limit int) ([]byte, error) {
 }
 
 func checkImageDimensions(label string, w, h int, limits imageBounds) error {
-	if w < limits.MinSide || h < limits.MinSide || w > limits.MaxSide || h > limits.MaxSide {
+	if min(w, h) < limits.MinSide || overLimit(max(w, h), limits.MaxSide) {
 		return fmt.Errorf("%s: sides are %d by %d pixels, outside the %d-%d range this backend accepts",
 			label, w, h, limits.MinSide, limits.MaxSide)
 	}
-	// Sides are already inside MaxSide, so the product cannot overflow int.
-	pixels := w * h
-	if pixels < limits.MinPixels || pixels > limits.MaxPixels {
+	// PNG and JPEG dimensions fit int32; multiply in int64 even without a side cap.
+	pixels := int64(w) * int64(h)
+	if pixels < int64(limits.MinPixels) || (limits.MaxPixels != noLimit && pixels > int64(limits.MaxPixels)) {
 		return fmt.Errorf("%s: the image is %d pixels, outside the %d-%d range this backend accepts",
 			label, pixels, limits.MinPixels, limits.MaxPixels)
 	}
@@ -737,6 +742,13 @@ func countImageUses(state any, questions map[string]any, sources map[string]imag
 }
 
 func replacementFor(spec ProviderSpec, loaded map[string]preparedImage) func(string) any {
+	if spec.WireFormat == wireOllamaImages {
+		positions := make(map[string]string, len(loaded))
+		for i, name := range sortedKeys(loaded) {
+			positions[name] = fmt.Sprintf("image %d", i+1)
+		}
+		return func(name string) any { return positions[name] }
+	}
 	if spec.WireFormat == wireTypeSafeAssets {
 		return func(name string) any { return loaded[name].ref }
 	}
