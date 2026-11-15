@@ -36,6 +36,11 @@ func fallbackStatus(status int) bool {
 // fallbackReason names why err should move a call to the fallback, or returns
 // false when it should not.
 func fallbackReason(err error) (string, bool) {
+	// DeadlineExceeded also satisfies net.Error. A timeout belongs to this
+	// call, not the backend's reachability, so classify it before transport.
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout", false
+	}
 	var status *statusErr
 	if errors.As(err, &status) {
 		return fmt.Sprintf("HTTP %d", status.Status), fallbackStatus(status.Status)
