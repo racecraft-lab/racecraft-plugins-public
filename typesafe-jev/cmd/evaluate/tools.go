@@ -36,7 +36,7 @@ type imageSource struct {
 type evaluateIn struct {
 	State     any                    `json:"state" jsonschema:"content to judge: plain text, or a JSON object/array with named fields. Reference an image by a whole string equal to its name, or by {\"image\":\"name\"}"`
 	Questions map[string]question    `json:"questions" jsonschema:"map of question id to question; answers come back under the same ids, which are not sent to the model"`
-	Model     string                 `json:"model,omitempty" jsonschema:"model to use; defaults to the latest Jev on whichever endpoint is configured. Box needs Jev 1.14: jev-preview or jev-1.14.0 on TypeSafe, typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter"`
+	Model     string                 `json:"model,omitempty" jsonschema:"model to use; defaults to the latest Jev on whichever endpoint is configured. Box needs Jev 1.14: jev-latest or jev-1.14.0 on TypeSafe, typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter"`
 	Images    map[string]imageSource `json:"images,omitempty" jsonschema:"named PNG or JPEG images referenced from state, instructions, or criteria. Requires the operator to set JEV_IMAGES=true. The bytes are sent to the provider and billed. The server builds each backend's wire format; do not send assets or image_url parts"`
 }
 

@@ -230,9 +230,11 @@ prose. All three answer ids should come back with matching types. Do not expect
 particular probability values from a stochastic service, and do not expect the
 returned model to equal the alias you asked for.
 
-A `noul` answer carries no confidence field on either backend, by design. On
-OpenRouter, `confidence` and `probabilities` are optional on choice and score
-answers too, and may be absent where TypeSafe always sends them.
+A `noul` answer carries no confidence field on TypeSafe; OpenRouter's schema
+allows an optional one. On OpenRouter, `confidence` and `probabilities` are
+optional on choice and score answers, and may be absent where TypeSafe always
+sends them. A question OpenRouter's provider declines comes back as
+`{"type": "refusal"}` with no value; the other questions still answer.
 
 ## Troubleshooting
 
