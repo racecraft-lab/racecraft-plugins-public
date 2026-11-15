@@ -1,0 +1,360 @@
+{
+ "_note": "PROTOTYPE: owner-specified labels derived only from saved repository history. Outcome and provenance are excluded from inference requests.",
+ "limitations": [
+  "18 cases (pr 7, failure 5, owner 6), 90 requests over 5 backends.",
+  "failure_real is one-sided: 4 real, 1 flaky. History had one green-on-rerun failure and no log that is plainly infrastructure.",
+  "pr05 and pr06 are snapshots at a commit where a PR check failed; pr07 is an open draft. Superseded Dependabot PRs were dropped: closing them did not mean not ready.",
+  "Labels come from repository history by fixed rules, not from anyone's opinion. A rule is a proxy for the owner's judgment."
+ ],
+ "questions": {
+  "pr_ready": {
+   "type": "noul",
+   "instructions": "Would the repository owner judge the pull request in `pr` ready to merge as it stands, based on its description, review comments and available checks?"
+  },
+  "failure_real": {
+   "type": "noul",
+   "instructions": "Does the CI failure in `failure` point to a real defect in the changed code, rather than a flaky test, an infrastructure problem, or a cause outside the change?"
+  },
+  "owner": {
+   "type": "choice",
+   "instructions": "Which area of this repository should own the change or issue in `item`?",
+   "criteria": {
+    "speckit_pro": "The speckit-pro plugin: its skills, agents, hooks, Python runner, gates, or its tests.",
+    "typesafe_jev": "The typesafe-jev plugin: the Go evaluate server, its backends, its shipped skills, or its docs.",
+    "docs_site": "The public documentation website and its generated reference pages.",
+    "release_ci": "Release automation, PR checks, GitHub workflows, or repository-wide scripts.",
+    "none": "None of these areas fits."
+   }
+  }
+ },
+ "cases": [
+  {
+   "id": "pr01",
+   "question": "pr_ready",
+   "expect": true,
+   "state": {
+    "pr": {
+     "title": "docs(agents): document sub-issue commands and unphased phase locks",
+     "body": "## What changed\n\n- `docs/agents/issue-tracker.md` now uses the issue commands from the current Matt Pocock skills templates: issues are read as JSON (`gh issue view <n> --json ...`), and sub-issues are linked with `gh issue create --parent` or `gh issue edit --add-sub-issue`. The wayfinder child-ticket step points at that new line.\n- `AGENTS.md` section 14 now states that a `phase-locked` ticket with no phase label never unlocks; it waits for a human to add one. `scripts/phase-lock.py` already behaves this way (its unlock step skips tickets without a phase label), so this documents existing behavior.\n\nNo code changes.",
+     "reviews": [],
+     "checks": {}
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1426
+   },
+   "label_rule": "Merged and not a draft; owner judged it ready."
+  },
+  {
+   "id": "pr02",
+   "question": "pr_ready",
+   "expect": true,
+   "state": {
+    "pr": {
+     "title": "docs(docs): add a start-here index for docs and the ADRs",
+     "body": "## Summary\n\n- `docs/README.md`: explains how planning works in this repo (PRD, roadmap, roadmap map, spec folder), lists every initiative with its status and planning files, and maps each folder.\n- `docs/adr/README.md`: lists the 27 ADRs with their status.\n- Moves `phase-envelope.md` and `compact-runner-answers.md` into `docs/architecture/` and drops them from the `docs/` allowlist.",
+     "reviews": [],
+     "checks": {}
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1406
+   },
+   "label_rule": "Merged and not a draft; owner judged it ready."
+  },
+  {
+   "id": "pr03",
+   "question": "pr_ready",
+   "expect": true,
+   "state": {
+    "pr": {
+     "title": "chore(ripwire): pin the CI ripwire to 0.6.7 to match local runs",
+     "body": "## Summary\n\nThe `ripwire-advisory` job installed ripwire 0.6.5, but agents run 0.6.7 locally. Its doc-drift and quality-delta reports could disagree with local runs.\n\n- `scripts/install-ripwire.py`: pin 0.6.7 with new SHA-256 digests for the x64 and arm64 Linux tarballs. Each digest was computed from the downloaded v0.6.7 release asset and matches the upstream `.sha256` file.\n- `tests/speckit-pro/unit/test-install-ripwire.py`: update the pinned version, digests, and URL.",
+     "reviews": [],
+     "checks": {}
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1401
+   },
+   "label_rule": "Merged and not a draft; owner judged it ready."
+  },
+  {
+   "id": "pr04",
+   "question": "pr_ready",
+   "expect": true,
+   "state": {
+    "pr": {
+     "title": "chore(deps): bump github/codeql-action/upload-sarif from 4.38.2 to 4.38.3",
+     "body": "Bumps [github/codeql-action/upload-sarif](https://github.com/github/codeql-action) from 4.38.2 to 4.38.3.",
+     "reviews": [],
+     "checks": {}
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1348
+   },
+   "label_rule": "Merged and not a draft; owner judged it ready."
+  },
+  {
+   "id": "pr05",
+   "question": "pr_ready",
+   "expect": false,
+   "state": {
+    "pr": {
+     "title": "feat(speckit-pro): canary-only test issuer and scripted plan reviewer",
+     "body": "## Summary\n\n```text\nbefore: record(canary_issued=true) -> refused everywhere        (no way to reach implement unattended)\nafter:  record(canary_issued=true) -> refused in every home\n                                   -> accepted only in a home holding the canary marker\n        issuer + scripted reviewer: test tooling, in no install\n```\n\nThe canary needs the plan-review stage to produce an approval without a human, and the target failure is `plan_review.unavailable` (round 4: plan review recorded 0 s and 0 tokens and implement ran with nothing between). ADRs 0016 and 0017 settle the shape: a c",
+     "reviews": [],
+     "checks": {
+      "detect": "pass",
+      "mypy-ratchet": "pass",
+      "validate-workflows": "pass",
+      "python-lint": "pass",
+      "validate-docs": "pass",
+      "artifact-consistency": "pass",
+      "test (speckit-pro)": "fail",
+      "validate-plugins": "fail"
+     }
+    }
+   },
+   "source": {
+    "kind": "run",
+    "ref": 39358198764,
+    "pr": 1409
+   },
+   "label_rule": "Snapshot at a commit where a PR check failed; the owner did not merge that commit."
+  },
+  {
+   "id": "pr06",
+   "question": "pr_ready",
+   "expect": false,
+   "state": {
+    "pr": {
+     "title": "chore(docs): prune finished-work process files from docs/ai/specs",
+     "body": "## Summary\n\n- Removes 232 files from finished initiatives. 227 are in `docs/ai/specs/.process/`: workflow prompts, Grill-Me design concepts, PR packets, UAT runbooks, gate JSON and a Python UAT harness for XPLAT, PRSG, TACD, CI/CD, DOC, ART, HRNS and others. Nothing had been added there since Sep 29. Five more finished-work files sat at the `docs/ai/specs/` top level.\n- Keeps live work only: BRAND-001's workflow and design concept, and `autopilot-state.json`, which the workflow guard hook and the merge driver expect.\n- Roadmap links to removed files become code-formatted names, so each table s",
+     "reviews": [],
+     "checks": {
+      "validate-docs": "pass",
+      "mypy-ratchet": "pass",
+      "artifact-consistency": "pass",
+      "validate-workflows": "pass",
+      "detect": "pass",
+      "python-lint": "pass",
+      "test (speckit-pro)": "fail",
+      "validate-plugins": "fail"
+     }
+    }
+   },
+   "source": {
+    "kind": "run",
+    "ref": 39326784780,
+    "pr": 1405
+   },
+   "label_rule": "Snapshot at a commit where a PR check failed; the owner did not merge that commit."
+  },
+  {
+   "id": "pr07",
+   "question": "pr_ready",
+   "expect": false,
+   "state": {
+    "pr": {
+     "title": "fix(security): update qualification and release trust stores",
+     "body": "## Release note\n\n```release-note\nUpdate qualification and release toolchains to versions containing the emSign certificate trust fixes. TypeSafe Jev builds now require Go 1.27.3 or newer. Formal qualification removes the two affected Java roots by certificate fingerprint and verifies the remaining trust store.\n```\n\n## Summary\n\n```diff\n- Formal qualification: Node 24.11.1; CI/docs/release: Node 22\n- TypeSafe Jev: Go minimum 1.27.1\n+ Formal qualification: Node 24.22.1; CI/docs/release: Node 22.23.4\n+ TypeSafe Jev: Go minimum and release compiler 1.27.3\n```\n\n## Changes\n\n- Pin active Node selector",
+     "reviews": [],
+     "checks": {}
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1410
+   },
+   "label_rule": "Open draft; the author has not marked it ready."
+  },
+  {
+   "id": "fail01",
+   "question": "failure_real",
+   "expect": true,
+   "state": {
+    "failure": {
+     "job": "validate-docs",
+     "log": "> racecraft-plugins-public-docs-site@0.0.0 validate <path>\n> pnpm reference:check && pnpm check && pnpm validate:links && pnpm validate:safe-aids && pnpm validate:quality && pnpm validate:smoke:preview && pnpm validate:gallery\n\n\n> racecraft-plugins-public-docs-site@0.0.0 reference:check <path>\n> node scripts/generate-reference-pages.mjs --check\n\nReference pages are current.\n\n> racecraft-plugins-public-docs-site@0.0.0 check <path>\n> astro check\n\nTo continue, Astro requires the following dependency to be installed: @astrojs/check. Packages cannot be installed automatically in CI environments.\n02:40:31 [ERROR] [check] The `@astrojs/check` and `typescript` packages are required for this command to work. Please manually install them into your project and try again.\nELIFECYCLE  Command failed with exit code 1.\nELIFECYCLE  Command failed with exit code 1.\n##[error]Process completed with exit code 1.",
+     "changed_files": [
+      "docs-site/package.json",
+      "docs-site/pnpm-lock.yaml"
+     ]
+    }
+   },
+   "source": {
+    "kind": "run",
+    "ref": 43547551457
+   },
+   "label_rule": "Dependency validation failed: required checker packages missing; no success for this workflow/SHA in fetched runs."
+  },
+  {
+   "id": "fail02",
+   "question": "failure_real",
+   "expect": true,
+   "state": {
+    "failure": {
+     "job": "Native formal checks (ubuntu-latest)",
+     "log": "test-formal-checkers FAILED __main__.NativeQuintTests.test_native_quint_check_and_intentional_violation\nTraceback (most recent call last):\nFile \"<path>\", line 551, in test_native_quint_check_and_intentional_violation\nself.assertEqual(\"pass\", result[\"data\"][\"verdict\"], result)\nAssertionError: 'pass' != 'unsupported'\n- pass\n+ unsupported\n: {'schema_version': '1.0', 'status': 'expected_failure', 'exit_code': 1, 'legacy_exit_code': None, 'diagnostics': [], 'data': {'selection': {'schema_version': '1.0', 'status': 'enabled', 'rationale': 'Counter rule', 'models': [{'id': 'counter', 'behavior': 'Stay within the limit', 'origin': 'existing', 'evidence': 'model'}]}, 'models': {'counter': {'model': {'checker': 'apalache', 'module': 'formal/counter-quint/Counter.qnt', 'config': 'formal/counter-quint/Counter.cfg', 'inputs': ['formal/counter-quint/Counter.qnt', 'formal/counter-quint/Counter.cfg'], 'properties': {'Bounded': {'kind': 'invariant', 'requirement': 'FR1'}}, 'assumptions': ['Limit = 2'], 'mode': 'bounded', 'init': 'init', 'next': 'step', 'bounds': {'length': 5}, 'budget': {'timeout_seconds': 20, 'output_bytes': 1048576}, 'language': 'quint', 'main': 'Counter'}, 'tool': {'version': '0.62.2', 'jar': '<path>', 'sha256': '079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8', 'java': 'java', 'heap_mb': 4096}, 'input_hashes': {'formal/counter-quint/Counter.qnt': '9ef6f86acc1ef0ac47a36294014c8edf86d9f435f609688df7f1a3a1d54ca223', 'formal/counter-quint/Counter.cfg': '2af8fa8e7907642c58a2530d5b021ba793e2367e34cd0cae985f4816240ee740'}, 'compiler': {'version': '0.32.0', 'root': '<path>', 'tree_sha256': 'f6629ced74a17d1c2df89409c3ed1920043b35b80d659e78b53d572e4dd33863', 'node': 'node'}}}, 'identities': {'counter': {'checker': 'apalache', 'version': '0.62.2', 'sha256': '079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8', 'java_version': 'openjdk version \"25.0.4.1\" 2026-08-18 LTS\\nOpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS)\\nOpenJDK 64-Bit Server VM Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS, mixed mode, sharing)', 'java_sha256': '7380ce48ed5013735d2c8414db54adb8f981e7933ff594bd36f3baccddaafba3'}}, 'gaps': [{'model': 'counter', 'verdict': 'unsupported', 'reason': 'Quint installation must stay inside .specify/tools/formal'}], 'verdict': 'unsupported', 'helper_id': 'formal-check', 'writes_state': False}, 'request_id': 'formal-test'}\ntest-formal-checkers: 52/55 passed\ntest-formal-checkers FAILED __main__.NativeQuintTests.test_native_quint_syntax_and_installation_drift\nTraceback (most recent call last):\nFile \"<path>\", line 568, in test_native_quint_syntax_and_installation_drift\nself.assertEqual(\"invalid_model\", self.request(\"apply\")[\"data\"][\"verdict\"])\nAssertionError: 'invalid_model' != 'unsupported'\n- invalid_model\n+ unsupported\ntest-formal-checkers FAILED __main__.NativeQuintTests.test_native_quint_temporal\nTraceback (most recent call last):\nFile \"<path>\", line 563, in test_native_quint_temporal\nself.assertEqual(\"pass\", result[\"data\"][\"verdict\"], result)\nAssertionError: 'pass' != 'unsupported'\n- pass\n+ unsupported\n: {'schema_version': '1.0', 'status': 'expected_failure', 'exit_code': 1, 'legacy_exit_code': None, 'diagnostics': [], 'data': {'selection': {'schema_version': '1.0', 'status': 'enabled', 'rationale': 'Counter rule', 'models': [{'id': 'counter', 'behavior': 'Stay within the limit', 'origin': 'existing', 'evidence': 'model'}]}, 'models': {'counter': {'model': {'checker': 'apalache', 'module': 'formal/counter-quint/Counter.qnt', 'config': 'formal/counter-quint/Counter.cfg', 'inputs': ['formal/counter-quint/Counter.qnt', 'formal/counter-quint/Counter.cfg'], 'properties': {'Bounded': {'kind': 'invariant', 'requirement': 'FR1'}, 'EventuallyFull': {'kind': 'temporal', 'requirement': 'FR2'}}, 'assumptions': ['Limit = 2'], 'mode': 'temporal', 'init': 'init', 'next': 'step', 'bounds': {'length': 5}, 'budget': {'timeout_seconds': 20, 'output_bytes': 1048576}, 'language': 'quint', 'main': 'Counter'}, 'tool': {'version': '0.62.2', 'jar': '<path>', 'sha256': '079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8', 'java': 'java', 'heap_mb': 4096}, 'input_hashes': {'formal/counter-quint/Counter.qnt': '9ef6f86acc1ef0ac47a36294014c8edf86d9f435f609688df7f1a3a1d54ca223', 'formal/counter-quint/Counter.cfg': '2af8fa8e7907642c58a2530d5b021ba793e2367e34cd0cae985f4816240ee740'}, 'compiler': {'version': '0.32.0', 'root': '<path>', 'tree_sha256': 'f6629ced74a17d1c2df89409c3ed1920043b35b80d659e78b53d572e4dd33863', 'node': 'node'}}}, 'identities': {'counter': {'checker': 'apalache', 'version': '0.62.2', 'sha256': '079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8', 'java_version': 'openjdk version \"25.0.4.1\" 2026-08-18 LTS\\nOpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS)\\nOpenJDK 64-Bit Server VM Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS, mixed mode, sharing)', 'java_sha256': '7380ce48ed5013735d2c8414db54adb8f981e7933ff594bd36f3baccddaafba3'}}, 'gaps': [{'model': 'counter', 'verdict': 'unsupported', 'reason': 'Quint installation must stay inside .specify/tools/formal'}], 'verdict': 'unsupported', 'helper_id': 'formal-check', 'writes_state': False}, 'request_id': 'formal-test'}\n##[error]Process completed with exit code 1."
+    }
+   },
+   "source": {
+    "kind": "run",
+    "ref": 35290131068
+   },
+   "label_rule": "Native checker assertions rejected unsupported verdicts; no success for this workflow/SHA in fetched runs."
+  },
+  {
+   "id": "fail03",
+   "question": "failure_real",
+   "expect": true,
+   "state": {
+    "failure": {
+     "job": "capture-typesafe-jev-release-note-inputs",
+     "log": "##[endgroup]\n{\"error\":\"Compare API response is truncated: total_commits=309, returned=250\",\"outcome\":\"release_note_composition_failed\"}\n##[error]Process completed with exit code 1.\n##[group]Run python3 scripts/audit-release-notes.py\npython3 scripts/audit-release-notes.py\nshell: /usr/bin/bash -e {0}\nenv:\nCAPTURE_RESULT: failure\nEXPECTED_SNAPSHOT_SHA256: \nGITHUB_API_URL: https://api.github.com\nGITHUB_REPOSITORY: racecraft-lab/racecraft-plugins-public\nSNAPSHOT_ARTIFACT_DIGEST: \nSNAPSHOT_ARTIFACT_ID: \nSNAPSHOT_ARTIFACT_URL: \nSNAPSHOT_DOWNLOAD_OUTCOME: success\nWORKFLOW_RUN_ATTEMPT: 1\nWORKFLOW_RUN_ID: 39074136906\n##[endgroup]\n{\"error\":\"release input capture did not succeed: failure\",\"outcome\":\"release_note_composition_failed\"}\n##[error]Process completed with exit code 1."
+    }
+   },
+   "source": {
+    "kind": "run",
+    "ref": 39074136906
+   },
+   "label_rule": "Release input validation rejected a truncated compare response; no success for this workflow/SHA in fetched runs."
+  },
+  {
+   "id": "fail04",
+   "question": "failure_real",
+   "expect": true,
+   "state": {
+    "failure": {
+     "job": "validate-release-note",
+     "log": "##[group]Run python3 scripts/compose-release-notes.py --validate-pr\npython3 scripts/compose-release-notes.py --validate-pr\nshell: /usr/bin/bash -e {0}\nenv:\nPR_TITLE: fix(speckit-pro): keep artifact publication inside anchored directories\nPR_BODY: \nPR_LABELS_JSON: []\nPR_DRAFT: false\n##[endgroup]\n{\"outcome\":\"release_note_validation_failed\",\"reason\":\"feat/fix pull requests require exactly one non-empty release-note fence\"}\n##[error]Process completed with exit code 1.\nPost job cleanup.\n[command]/usr/bin/git version\ngit version 2.55.0\nTemporarily overriding HOME='<path>' before making global git config changes\nAdding repository directory to the temporary git global config as a safe directory"
+    }
+   },
+   "source": {
+    "kind": "run",
+    "ref": 37319690469
+   },
+   "label_rule": "Release-note validation rejected a missing non-empty fence; no success for this workflow/SHA in fetched runs."
+  },
+  {
+   "id": "fail05",
+   "question": "failure_real",
+   "expect": false,
+   "state": {
+    "failure": {
+     "job": "container-preflight-linux-arm64",
+     "log": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 14.4 MB/s  0:00:00\n\nInstalling collected packages: pip\nAttempting uninstall: pip\nFound existing installation: pip 26.1.2\nUninstalling pip-26.1.2:\nSuccessfully uninstalled pip-26.1.2\nSuccessfully installed pip-26.2.1\nCreate complete file\nSuccessfully set up CPython (3.13.14)\n##[endgroup]\n##[group]Run import runpy; runpy.run_path(\"tests/speckit-pro/run-container-preflight.py\", run_name=\"__main__\")\nimport runpy; runpy.run_path(\"tests/speckit-pro/run-container-preflight.py\", run_name=\"__main__\")\nshell: /opt/hostedtoolcache/Python/3.13.14/x64/bin/python {0}\nenv:\nHOSTED_PYTHON_VERSION: 3.13.14\nPIPX_VERSION: 1.15.0\npythonLocation: /opt/hostedtoolcache/Python/3.13.14/x64\nPKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.14/x64/lib/pkgconfig\nPython_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.14/x64\nPython2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.14/x64\nPython3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.14/x64\nLD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.14/x64/lib\nPREFLIGHT_OPERATION: sentinel\nPREFLIGHT_ROLE: linux-arm64-required\nEVIDENCE_DIR: <path>\nCHANGES_RESULT: cancelled\nRUN_PREFLIGHT: true\nPREFLIGHT_RESULT: skipped"
+    }
+   },
+   "source": {
+    "kind": "run",
+    "ref": 39278711445,
+    "failed_attempt": 1,
+    "successful_attempt": 2
+   },
+   "label_rule": "rerun of the same run turned green"
+  },
+  {
+   "id": "own01",
+   "question": "owner",
+   "expect": "typesafe_jev",
+   "state": {
+    "item": {
+     "title": "align the evaluate tool with [component] 1.14 and OpenRouter refusals",
+     "body": "## Summary\n\n[component] moved `[component]-latest` to [component] 1.14 (`[component]-1.14.0`) on 2026-10-14, and OpenRouter's Decisions API added a refusal answer. This brings the `evaluate` server in line with both.\n\n- **Box on `[component]-latest`.** The local box gate still treated `[component]-latest` as [component] 1.13 and refused it. It now refuses only the 1.13 ids (`[component]-1.13.0`, `[component]-1.13`, and the OpenRouter 1.13 ids). Both backend defaults are now 1.14, so the fallback no longer needs a pinned box model: `ProviderSpec.BoxModel` and the fallback's model swap are removed.\n- **Refusals pass through.** OpenRouter answers `{\"type\":\"refusal\"}` when a provider declines one question. That used to fail the whole call as a type mismatch. A refusal is now accepted as that question's answer, with no value filled in, and the other answers come back normally. A refusal that also carries a value is rejected. The OpenRouter backend note tells the agent to treat a refusal as no judgment, never as a \"no\".\n- **Guidance.** Following [component]'s skill 0.6.2, the server instructions suggest a companion `noul` (\"does anything fit?\") over a no-match option when nothing may fit.\n- **Contract doc.** [path omitted] records the 2026-11-14 fetches of both OpenAPI documents: OpenRouter's top-level `assets` map (accepted there; this server keeps sending `image_url` by design), the refusal answer, an optional `noul` confidence on OpenRouter, and [component]'s nullable box confidence.\n\n"
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1423
+   },
+   "label_rule": "All changed files fall under typesafe-jev/."
+  },
+  {
+   "id": "own02",
+   "question": "owner",
+   "expect": "typesafe_jev",
+   "state": {
+    "item": {
+     "title": "refresh the bundled skills for [component] skill 0.6.2 and [component] 1.14",
+     "body": "## Summary\n\nRefreshes the two skills the `[component]` plugin installs.\n\n- **`[component]`**: re-vendored from upstream [path omitted] v0.6.2 (it was 0.5.7). Upstream rewrote the skill around \"judgments from [component], decisions in code\": truth tables, the human test for state, one judgment per question, a companion `noul` for the null case, and 0.7/0.3 as starting cut-offs for a `noul`. All upstream lines are kept as written, and the licence is unchanged. The Racecraft additions are re-applied in marked sections: routing in-session judgments to `evaluate`, and notes on what the tool's answers can lack (optional fields, refusals) and on images and box against the APIs directly.\n- **`typed-judgments`**: drops \"[component]'s `[component]-latest` is still 1.13\" and the claim that OpenRouter ignores `assets`. Adds `box` to the primitives, the companion-`noul` rule, the 0.7/0.3 cut-offs and the refusal note. Points to the current jaggedness page.\n- The provenance test and [path omitted] now name version 0.6.2.\n\nPlugin installs only. The archived skills.sh copy is not updated.\n\n"
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1424
+   },
+   "label_rule": "All changed files fall under typesafe-jev/."
+  },
+  {
+   "id": "own03",
+   "question": "owner",
+   "expect": "speckit_pro",
+   "state": {
+    "item": {
+     "title": "keep harm-halt clear tokens off the terminal when a test file runs on its own",
+     "body": "# Keep harm-halt clear tokens off the terminal when a test file runs on its own\n\n## What changes\n\nRunning one test file directly, for example [path omitted], printed harm-halt clear tokens on the developer's terminal. The tokens belong to the throwaway repos the tests create, so no real halt was involved. They still flooded the terminal of whoever started the session.\n\nThe only guard was `COMPONENT_HARM_HALT_TERMINAL=off` in `suite_child_env.child_environment`, which applies only when the suite dispatchers start a test. Now:\n\n- `suite_child_env` holds the switch and its value in one place (`HARM_HALT_TERMINAL`), and gains `withhold_harm_halt_tokens()`, which sets it for the current process and every child it starts.\n- `run_counted`, which every unit test's `__main__` goes through, calls it first. A test file run on its own now behaves like one the suite started.\n- The tests that show the token on a fake terminal (`OwnerTerminalCase`) still clear the switch for each test, so the real terminal path stays covered.\n\n"
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1395
+   },
+   "label_rule": "All changed files fall under speckit-pro/ or tests/speckit-pro/."
+  },
+  {
+   "id": "own04",
+   "question": "owner",
+   "expect": "docs_site",
+   "state": {
+    "item": {
+     "title": "bump astro from 7.3.7 to 7.4.7",
+     "body": "Bumps astro from 7.3.7 to 7.4.7."
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1422
+   },
+   "label_rule": "All changed files fall under docs-site/."
+  },
+  {
+   "id": "own05",
+   "question": "owner",
+   "expect": "release_ci",
+   "state": {
+    "item": {
+     "title": "bump setup-python action from 7.0.0 to 7.1.0",
+     "body": "Bumps setup-python action from 7.0.0 to 7.1.0."
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1417
+   },
+   "label_rule": "All changed files fall under .github/ or scripts/."
+  },
+  {
+   "id": "own06",
+   "question": "owner",
+   "expect": "release_ci",
+   "state": {
+    "item": {
+     "title": "bump codeql-action upload-sarif from 4.38.3 to 4.39.3",
+     "body": "Bumps codeql-action upload-sarif from 4.38.3 to 4.39.3."
+    }
+   },
+   "source": {
+    "kind": "pr",
+    "ref": 1419
+   },
+   "label_rule": "All changed files fall under .github/ or scripts/."
+  }
+ ]
+}

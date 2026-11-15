@@ -1,0 +1,68 @@
+{
+  "_note": "PROTOTYPE, throwaway. 20 synthetic cases modelled on this repo. `expect` is the prototype author's own label, a reference, not ground truth.",
+  "questions": {
+    "pr_ready": {
+      "type": "noul",
+      "instructions": "Is the pull request in `pr` ready to merge as it stands: every required check passed, no reviewer comment names an unresolved defect, and nothing in the description says work is still pending?"
+    },
+    "failure_real": {
+      "type": "noul",
+      "instructions": "Does the CI failure in `failure` point to a real defect in the changed code, rather than a flaky test, an infrastructure problem, or a cause outside the change?"
+    },
+    "owner": {
+      "type": "choice",
+      "instructions": "Which area of this repository should own the change or issue in `item`?",
+      "criteria": {
+        "speckit_pro": "The speckit-pro plugin: its skills, agents, hooks, Python runner, gates, or its tests.",
+        "typesafe_jev": "The typesafe-jev plugin: the Go evaluate server, its backends, its shipped skills, or its docs.",
+        "docs_site": "The public documentation website and its generated reference pages.",
+        "release_ci": "Release automation, PR checks, GitHub workflows, or repository-wide scripts.",
+        "none": "None of these areas fits."
+      }
+    }
+  },
+  "cases": [
+    {"id": "pr01", "question": "pr_ready", "expect": true,
+     "state": {"pr": {"title": "fix(typesafe-jev): reject a fallback key file without a fallback provider", "checks": {"test": "pass", "go": "pass", "artifact-consistency": "pass", "validate-pr-title": "pass"}, "reviews": [{"author": "reviewer", "state": "approved", "body": "Looks good, test covers the new error."}], "description": "Adds the config check and a unit test. Done."}}},
+    {"id": "pr02", "question": "pr_ready", "expect": false,
+     "state": {"pr": {"title": "feat(speckit-pro): add a resume gate for stale worktrees", "checks": {"test": "fail", "go": "pass", "artifact-consistency": "pass"}, "reviews": [], "description": "New gate plus fixtures."}}},
+    {"id": "pr03", "question": "pr_ready", "expect": false,
+     "state": {"pr": {"title": "refactor(typesafe-jev): move image limits into ProviderSpec", "checks": {"test": "pass", "go": "pass", "artifact-consistency": "pass"}, "reviews": [{"author": "reviewer", "state": "changes_requested", "body": "openrouterSideMin is now applied to TypeSafe too, which lowers its minimum from 280 to 256. That is a behaviour change in a refactor PR."}], "description": "Behaviour-preserving move."}}},
+    {"id": "pr04", "question": "pr_ready", "expect": false,
+     "state": {"pr": {"title": "docs(docs-site): rewrite the install page", "checks": {"validate-docs": "pass", "validate-pr-title": "pass"}, "reviews": [{"author": "reviewer", "state": "approved", "body": "Nice."}], "description": "WIP: the Codex section still describes the old marketplace command. Will push a follow-up commit before merge."}}},
+    {"id": "pr05", "question": "pr_ready", "expect": true,
+     "state": {"pr": {"title": "chore(release): bump actionlint to the pinned version", "checks": {"validate-workflows": "pass", "test": "pass", "artifact-consistency": "pass"}, "reviews": [{"author": "reviewer", "state": "approved", "body": "Is the SHA from the release page? (answered: yes, verified)"}], "description": "Pin update only."}}},
+    {"id": "pr06", "question": "pr_ready", "expect": false,
+     "state": {"pr": {"title": "feat(typesafe-jev): add box to the OpenRouter backend", "checks": {"test": "pass", "go": "pass", "artifact-consistency": "fail"}, "reviews": [{"author": "reviewer", "state": "approved", "body": "Code is fine."}], "description": "dist/ not regenerated yet."}}},
+    {"id": "pr07", "question": "pr_ready", "expect": true,
+     "state": {"pr": {"title": "test(speckit-pro): pin the phase-lock label swap", "checks": {"test": "pass", "container-preflight-linux-amd64": "pass", "container-preflight-linux-arm64": "pass"}, "reviews": [{"author": "reviewer", "state": "approved", "body": "Nit: the fixture name could be shorter. Not blocking."}], "description": "Adds one regression test."}}},
+
+    {"id": "fail01", "question": "failure_real", "expect": true,
+     "state": {"failure": {"job": "go", "changed_files": ["typesafe-jev/cmd/evaluate/validation.go"], "log": "--- FAIL: TestScoreCap (0.00s)\n    validation_test.go:88: score with 11 levels: got nil error, want cap error\nFAIL\tgithub.com/racecraft-lab/typesafe-jev/cmd/evaluate", "history": "TestScoreCap passed on main for the last 40 runs."}}},
+    {"id": "fail02", "question": "failure_real", "expect": false,
+     "state": {"failure": {"job": "container-preflight-linux-arm64", "changed_files": ["docs-site/src/content/docs/index.mdx"], "log": "Error: failed to pull image: toomanyrequests: You have reached your pull rate limit.", "history": "Same job passed on the previous commit; the change touches only a docs page."}}},
+    {"id": "fail03", "question": "failure_real", "expect": false,
+     "state": {"failure": {"job": "test", "changed_files": ["speckit-pro/skills/speckit-plan/SKILL.md"], "log": "FAIL tests/speckit-pro/unit/test-stall-monitor.py::test_wakes_after_idle - AssertionError: expected wake within 2.0s, waited 2.31s", "history": "This test failed 6 times in the last 100 main runs and passed on rerun each time."}}},
+    {"id": "fail04", "question": "failure_real", "expect": true,
+     "state": {"failure": {"job": "artifact-consistency", "changed_files": ["speckit-pro/speckit_pro_runner/gates/stop_policy.py"], "log": "dist/claude/speckit-pro is stale: runner hash mismatch for speckit_pro_runner/gates/stop_policy.py. Run python3 scripts/refresh-release-artifacts.py.", "history": "Fails on every rerun of this commit."}}},
+    {"id": "fail05", "question": "failure_real", "expect": false,
+     "state": {"failure": {"job": "go", "changed_files": ["typesafe-jev/plugin/shared-skills/typed-judgments/SKILL.md"], "log": "go: downloading golang.org/x/sys v0.30.0\ngo: golang.org/x/sys@v0.30.0: Get \"https://proxy.golang.org/...\": dial tcp: i/o timeout", "history": "Only a skill prose file changed."}}},
+    {"id": "fail06", "question": "failure_real", "expect": true,
+     "state": {"failure": {"job": "test", "changed_files": ["speckit-pro/speckit_pro_runner/helpers/registry.py"], "log": "FAIL tests/speckit-pro/unit/test-helper-registry.py::test_every_helper_has_a_schema - KeyError: 'archive-sweep'", "history": "New helper id added in this PR; test passes on main."}}},
+    {"id": "fail07", "question": "failure_real", "expect": false,
+     "state": {"failure": {"job": "validate-docs", "changed_files": ["typesafe-jev/cmd/evaluate/client.go"], "log": "Error: browserType.launch: Executable doesn't exist at /ms-playwright/chromium-1140/chrome-linux/chrome", "history": "Playwright browsers were not installed in this runner image; the change is Go code only."}}},
+
+    {"id": "own01", "question": "owner", "expect": "typesafe_jev",
+     "state": {"item": {"title": "evaluate returns exit 5 instead of 3 when the OpenRouter key file is missing", "body": "Running `evaluate call` with JEV_PROVIDER=openrouter and no key gives a transport error."}}},
+    {"id": "own02", "question": "owner", "expect": "speckit_pro",
+     "state": {"item": {"title": "Autopilot stops after the tasks phase on a branch without a numeric prefix", "body": "The runner cannot find the feature directory when the branch is research/foo."}}},
+    {"id": "own03", "question": "owner", "expect": "docs_site",
+     "state": {"item": {"title": "Search on the docs website returns no results for 'fallback'", "body": "The Pagefind index seems to skip the reference section."}}},
+    {"id": "own04", "question": "owner", "expect": "release_ci",
+     "state": {"item": {"title": "release-please opened two release PRs for typesafe-jev", "body": "Both bump 0.10.0 to 0.10.1; the manifest and config may disagree."}}},
+    {"id": "own05", "question": "owner", "expect": "none",
+     "state": {"item": {"title": "Can you add dark mode to my personal blog?", "body": "Unrelated to this repository."}}},
+    {"id": "own06", "question": "owner", "expect": "typesafe_jev",
+     "state": {"item": {"title": "typed-judgments skill tells agents to read a field the response no longer has", "body": "The skill says to check `answers[q].id`, but Jev 1.14 responses carry no id."}}}
+  ]
+}
