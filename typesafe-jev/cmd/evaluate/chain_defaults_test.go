@@ -83,6 +83,44 @@ func TestCallCheckBuiltInChainModes(t *testing.T) {
 	}
 }
 
+func TestCallChainFileRequiresAbsoluteHome(t *testing.T) {
+	for _, plugin := range []bool{false, true} {
+		for _, home := range []string{"unset", "", "."} {
+			t.Run(fmt.Sprintf("plugin=%t/HOME=%q", plugin, home), func(t *testing.T) {
+				isolateCallEnv(t)
+				cwd := t.TempDir()
+				writeChainSetting(t, cwd, "openrouter")
+				t.Chdir(cwd)
+				if home == "unset" {
+					if err := os.Unsetenv("HOME"); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					t.Setenv("HOME", home)
+				}
+				t.Setenv("TYPESAFE_API_KEY", fixtureKey)
+				t.Setenv("OPENROUTER_API_KEY", fixtureKey)
+				got := runCallForTest(t, callOptions{check: true, pluginDefaults: plugin}, "")
+				var report checkReport
+				if err := json.Unmarshal([]byte(got.stdout), &report); err != nil {
+					t.Fatalf("call report: %v; result=%+v", err, got)
+				}
+				fallback := ""
+				if report.Fallback != nil {
+					fallback = report.Fallback.Provider
+				}
+				wantFallback := ""
+				if plugin {
+					wantFallback = "openrouter"
+				}
+				if got.code != 0 || report.Primary.Provider != "typesafe" || fallback != wantFallback {
+					t.Fatalf("call: %+v; want primary=typesafe fallback=%s", got, wantFallback)
+				}
+			})
+		}
+	}
+}
+
 // FB-02 must hold through both runtime entry points, not only resolveConfig.
 func TestRuntimeRejectsOrphanFallbackKeyFile(t *testing.T) {
 	for _, tc := range []struct {
