@@ -184,7 +184,8 @@ stays where it is. A failure and a route compose: when the session's hop fails
 and the next hop cannot take this request, the session still moves and the call
 routes on (FB-08). An account failure (401, 402, 403, 429 or 5xx) also skips
 every later hop that bills the same account: when `ollama-local` fails that
-way, the call does not try `ollama` next (see
+way, the call does not try `ollama` next. A daemon 502 or 503 is the exception:
+it means the daemon could not reach the cloud, so `ollama` is still tried (see
 [provider-contracts.md](provider-contracts.md)). Each hop's
 attempts stop at `JEV_HOP_TIMEOUT` (10s by default), and the last hop that can
 take the request gets the time left; a hop deadline routes only that call on
