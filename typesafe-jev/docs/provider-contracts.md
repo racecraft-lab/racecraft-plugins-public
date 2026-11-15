@@ -2,8 +2,10 @@
 
 This is a hand-written field matrix, not a byte-for-byte copy of either
 publisher's schema. It records what was actually fetched and inspected, so the
-per-backend validation in `cmd/evaluate/validation.go` can be reviewed against a
-source rather than against someone's memory.
+per-backend limits and capabilities in the backend rows in
+`cmd/evaluate/config.go`, and the universal request shape in
+`cmd/evaluate/validation.go`, can be reviewed against a source rather than
+against someone's memory.
 
 Re-check this file whenever the integration changes. A drift check can run
 without credentials; a change should trigger review rather than a silent

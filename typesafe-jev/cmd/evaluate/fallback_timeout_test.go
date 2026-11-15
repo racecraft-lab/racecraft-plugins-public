@@ -14,11 +14,13 @@ import (
 )
 
 func TestFallbackReasonClassifiesDeadlineAsTimeout(t *testing.T) {
+	ctx, cancel := context.WithDeadline(context.Background(), time.Unix(1, 0))
+	defer cancel()
 	for _, tc := range []struct {
 		name string
 		err  error
 	}{
-		{"deadline", context.DeadlineExceeded},
+		{"deadline", ctx.Err()},
 		{"wrapped deadline", fmt.Errorf("typesafe: %w", context.DeadlineExceeded)},
 		{"HTTP transport deadline", &url.Error{Op: "Post", URL: "https://backend.invalid", Err: context.DeadlineExceeded}},
 		{"network deadline", &net.OpError{Op: "read", Net: "tcp", Err: context.DeadlineExceeded}},
@@ -28,7 +30,7 @@ func TestFallbackReasonClassifiesDeadlineAsTimeout(t *testing.T) {
 			if !errors.As(tc.err, &network) || !network.Timeout() {
 				t.Fatal("fixture must also satisfy net.Error and report a timeout")
 			}
-			reason, move := fallbackReason(tc.err)
+			reason, move := fallbackReason(ctx, tc.err)
 			if reason != "timeout" || move {
 				t.Fatalf("deadline classified as (%q, %v); want (\"timeout\", false)", reason, move)
 			}
@@ -40,6 +42,54 @@ type timeoutTransport func(*http.Request) (*http.Response, error)
 
 func (f timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return f(r)
+}
+
+func TestDialTimeoutMovesSessionToFallback(t *testing.T) {
+	primaryCalls, fallbackCalls := 0, 0
+	log := &strings.Builder{}
+	transport := &http.Transport{DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+		primaryCalls++
+		// An already-expired dial deadline fails before any connection is made.
+		dialer := &net.Dialer{Deadline: time.Unix(1, 0)}
+		return dialer.DialContext(ctx, network, address)
+	}}
+	t.Cleanup(transport.CloseIdleConnections)
+	c := &Client{
+		Provider: providerAt("typesafe", "http://127.0.0.1:1"), Model: "jev-latest",
+		Timeout: time.Minute, Log: log,
+		HTTP: &http.Client{Transport: transport},
+		Fallback: &Client{
+			Provider: providers["openrouter"], Model: "~typesafe/jev-latest",
+			Timeout: time.Minute,
+			HTTP: &http.Client{Transport: timeoutTransport(func(*http.Request) (*http.Response, error) {
+				fallbackCalls++
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(noulReply)), Header: http.Header{}}, nil
+			})},
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	_, err := runOn(ctx, c, simpleIn())
+	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
+		t.Fatalf("want a dial deadline error with a live call context, got error %v, context %v", err, ctx.Err())
+	}
+	if reason, move := fallbackReason(ctx, err); reason != "unreachable" || !move {
+		t.Errorf("dial timeout classified as (%q, %v); want (\"unreachable\", true)", reason, move)
+	}
+	for call := 0; call < 2; call++ {
+		body, err := runEvaluate(ctx, c, simpleIn())
+		if err != nil || string(body) != noulReply {
+			t.Errorf("call %d: body %s, error %v; want fallback reply", call, body, err)
+		}
+	}
+	// One classification probe, one failed call, then the session stays moved.
+	if primaryCalls != 2 || fallbackCalls != 2 {
+		t.Errorf("calls: primary %d, fallback %d; want 2, 2", primaryCalls, fallbackCalls)
+	}
+	wantLog := "evaluate: typesafe refused or failed the call (unreachable); using the openrouter fallback for the rest of this session\n"
+	if log.String() != wantLog {
+		t.Errorf("switch log %q; want %q", log.String(), wantLog)
+	}
 }
 
 // Pin the request-deadline guard before changing timeout classification. A
