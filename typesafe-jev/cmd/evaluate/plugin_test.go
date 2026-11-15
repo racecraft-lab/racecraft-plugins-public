@@ -150,8 +150,9 @@ func TestPluginMCPEntries(t *testing.T) {
 		}
 
 		env, _ := entry["env"].(map[string]any)
-		// Backend and model selection belong to runtime configuration.
-		for _, key := range []string{"JEV_PROVIDER", "JEV_MODEL", "JEV_FALLBACK_PROVIDER"} {
+		// Backend and model selection belong to runtime configuration: any of
+		// these in the manifest would outrank the user's chain file.
+		for _, key := range []string{"JEV_CHAIN", "JEV_PROVIDER", "JEV_MODEL", "JEV_FALLBACK_PROVIDER"} {
 			if got, set := env[key]; set {
 				t.Errorf("%s: %s = %v, want absent", tc.file, key, got)
 			}
