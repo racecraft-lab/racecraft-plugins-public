@@ -104,6 +104,41 @@ func (r *chainRunner) credentialExit() int { return r.credentialCode }
 
 func (r *chainRunner) servingHop() *Client { return r.hops[r.current.Load()] }
 
+// chainWalk keeps a routed call's failures separate from the session's moves.
+type chainWalk struct {
+	err, networkErr error
+	sessionHop      int
+}
+
+func (w *chainWalk) localFailure(hop *Client, local error) bool {
+	reported := local
+	if w.networkErr != nil {
+		reported = fmt.Errorf("%w; the %s fallback cannot take this request: %v", w.networkErr, hop.Provider.Name, local)
+	}
+	var refusal *hopRefusalError
+	if !errors.As(local, &refusal) {
+		w.err = reported
+		return true
+	}
+	if w.networkErr != nil || w.err == nil {
+		w.err = reported
+	}
+	return false
+}
+
+func (w *chainWalk) sendFailure(ctx context.Context, r *chainRunner, i int, failure error) bool {
+	w.err, w.networkErr = failure, failure
+	out := classify(&chainFailure{err: failure, requestErr: ctx.Err()})
+	if out.effect != moveSession && out.effect != moveAccount {
+		return true
+	}
+	if i == w.sessionHop && i+1 < len(r.hops) {
+		r.move(int32(i), int32(i+1), out.reason)
+		w.sessionHop = i + 1
+	}
+	return false
+}
+
 // evaluate routes local hop refusals without moving the session. A failure on
 // the session's own hop moves it before the next hop is prepared, so a failure
 // and a capability route compose. All hops share the request deadline.
@@ -118,53 +153,30 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 		in = fallbackRequest(in)
 	}
 	shaped, err := shapeRequest(in)
+	walk := chainWalk{sessionHop: start}
 	if err != nil {
-		local := &requestInvalidError{err}
-		if start > 0 {
-			return nil, r.onTheFallback(local)
-		}
-		return nil, local
+		walk.err = &requestInvalidError{err}
 	}
-	var networkErr error
-	sessionHop := start
-	for i := start; i < len(r.hops); i++ {
+	stop := err != nil
+	for i := start; i < len(r.hops) && !stop; i++ {
 		if i > start {
 			shaped.in = fallbackRequest(shaped.in)
 		}
 		p, local := prepareForHop(r.hops[i], shaped)
 		if local != nil {
-			reported := local
-			if networkErr != nil {
-				reported = fmt.Errorf("%w; the %s fallback cannot take this request: %v", networkErr, r.hops[i].Provider.Name, local)
-			}
-			var refusal *hopRefusalError
-			if !errors.As(local, &refusal) {
-				err = reported
-				break
-			}
-			if networkErr != nil || err == nil {
-				err = reported
-			}
+			stop = walk.localFailure(r.hops[i], local)
 			continue
 		}
 		body, failure := send(ctx, r.hops[i], p)
 		if failure == nil {
 			return body, nil
 		}
-		err, networkErr = failure, failure
-		out := classify(&chainFailure{err: failure, requestErr: ctx.Err()})
-		if out.effect != moveSession && out.effect != moveAccount {
-			break
-		}
-		if i == sessionHop && i+1 < len(r.hops) {
-			r.move(int32(i), int32(i+1), out.reason)
-			sessionHop = i + 1
-		}
+		stop = walk.sendFailure(ctx, r, i, failure)
 	}
 	if start > 0 {
-		err = r.onTheFallback(err)
+		walk.err = r.onTheFallback(walk.err)
 	}
-	return nil, err
+	return nil, walk.err
 }
 
 // move only advances the hop that actually failed. Concurrent failures of an
