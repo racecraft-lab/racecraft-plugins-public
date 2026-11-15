@@ -37,19 +37,62 @@ func (c credential) reveal() string { return string(c) }
 // The key is read once. Rotating it means restarting the server, which for an
 // MCP client means reconnecting it.
 func loadCredential(cfg Config) (credential, error) {
+	loaded := loadCredentialSource(cfg, os.LookupEnv)
+	return loaded.key, loaded.err
+}
+
+// sourceStatus is the value-free state of one backend's credential source.
+type sourceStatus struct {
+	Provider string `json:"provider"`
+	// Source is explicit-file, default-file, environment, or none.
+	Source string `json:"source"`
+	// State is ok, absent (nothing configured), or unusable.
+	State string `json:"state"`
+	// reason names a path or variable, never the credential value.
+	reason string
+}
+
+// loadedCredential keeps the secret separate from its printable verdict. Both
+// the server and call use this loader, including file precedence and errors.
+type loadedCredential struct {
+	key    credential
+	status sourceStatus
+	err    error
+}
+
+func loadCredentialSource(cfg Config, look lookupFunc) loadedCredential {
+	loaded := loadedCredential{status: sourceStatus{Provider: cfg.Provider.Name}}
+	s := &loaded.status
 	if cfg.KeyFile != "" {
-		return readKeyFile(cfg.keyFileEnv(), cfg.KeyFile)
+		s.Source = "explicit-file"
+		if cfg.KeyFileDefaulted {
+			s.Source = "default-file"
+		}
+		loaded.key, loaded.err = readKeyFile(cfg.keyFileEnv(), cfg.KeyFile)
+		if loaded.err != nil {
+			s.State, s.reason = "unusable", loaded.err.Error()
+		} else {
+			s.State = "ok"
+		}
+		return loaded
 	}
-	raw, ok := os.LookupEnv(cfg.Provider.APIKeyEnv)
+	raw, ok := look(cfg.Provider.APIKeyEnv)
 	if !ok || raw == "" {
-		return "", fmt.Errorf("%s: %w; set %s, or point %s at a private key file",
+		s.Source, s.State = "none", "absent"
+		loaded.err = fmt.Errorf("%s: %w; set %s, or point %s at a private key file",
 			cfg.Provider.Name, errNoCredential, cfg.Provider.APIKeyEnv, cfg.keyFileEnv())
+		return loaded
 	}
-	key, err := parseKey(raw)
+	s.Source = "environment"
+	var err error
+	loaded.key, err = parseKey(raw)
 	if err != nil {
-		return "", fmt.Errorf("%s: %s %w", cfg.Provider.Name, cfg.Provider.APIKeyEnv, err)
+		s.State, s.reason = "unusable", cfg.Provider.APIKeyEnv+" "+err.Error()
+		loaded.err = fmt.Errorf("%s: %s %w", cfg.Provider.Name, cfg.Provider.APIKeyEnv, err)
+	} else {
+		s.State = "ok"
 	}
-	return key, nil
+	return loaded
 }
 
 // readKeyFile reads a key from a private file. Every check is made against the

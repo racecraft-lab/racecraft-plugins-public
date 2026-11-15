@@ -351,42 +351,6 @@ func (c Config) keyFileEnv() string {
 // explicitly set to blank is a mistake worth reporting.
 type lookupFunc func(string) (string, bool)
 
-// resolveConfig builds the server's configuration from the environment. It is
-// pure apart from the injected lookup, so tests never depend on the developer's
-// shell.
-func resolveConfig(look lookupFunc) (Config, error) {
-	var cfg Config
-
-	spec, err := resolveProvider(look)
-	if err != nil {
-		return cfg, err
-	}
-	cfg.Provider = spec
-
-	if cfg.Model, err = resolveModel(look, spec); err != nil {
-		return cfg, err
-	}
-	if cfg.Timeout, err = resolveTimeout(look); err != nil {
-		return cfg, err
-	}
-	if cfg.MaxRetries, err = resolveMaxRetries(look); err != nil {
-		return cfg, err
-	}
-	if cfg.KeyFile, err = resolveKeyFile(look); err != nil {
-		return cfg, err
-	}
-	if cfg.Fallback, err = resolveFallback(look, spec); err != nil {
-		return cfg, err
-	}
-	if cfg.AllowImages, err = resolveOptIn(look, "JEV_IMAGES"); err != nil {
-		return cfg, err
-	}
-	if cfg.LongContext, err = resolveOptIn(look, "JEV_LONG_CONTEXT"); err != nil {
-		return cfg, err
-	}
-	return cfg, nil
-}
-
 // resolveOptIn reads a feature flag. Unset leaves it off. An explicit false is
 // off, an explicit true is on, and any other value is a configuration error:
 // guessing would send image bytes, or a long-context header, that the operator
@@ -486,10 +450,6 @@ func resolveMaxRetries(look lookupFunc) (int, error) {
 	return n, nil
 }
 
-func resolveKeyFile(look lookupFunc) (string, error) {
-	return resolveKeyFileVar(look, "JEV_API_KEY_FILE")
-}
-
 func resolveKeyFileVar(look lookupFunc, name string) (string, error) {
 	raw, set := look(name)
 	if !set || raw == "" {
@@ -511,7 +471,7 @@ func resolveKeyFileVar(look lookupFunc, name string) (string, error) {
 // resolveFallback reads the opt-in second backend. Unset means none, which is
 // exactly the behaviour before fallback existed. A fallback key file with no
 // fallback provider is a mistake worth reporting, not a hint to guess one.
-func resolveFallback(look lookupFunc, primary ProviderSpec) (*FallbackConfig, error) {
+func resolveFallback(look lookupFunc, primary ProviderSpec, home string) (*FallbackConfig, error) {
 	raw, set := look("JEV_FALLBACK_PROVIDER")
 	if !set || raw == "" {
 		if file, _ := look("JEV_FALLBACK_API_KEY_FILE"); file != "" {
@@ -527,11 +487,11 @@ func resolveFallback(look lookupFunc, primary ProviderSpec) (*FallbackConfig, er
 	if spec.Name == primary.Name {
 		return nil, fmt.Errorf("JEV_FALLBACK_PROVIDER=%q is the primary backend; a fallback must be the other one", name)
 	}
-	keyFile, err := resolveKeyFileVar(look, "JEV_FALLBACK_API_KEY_FILE")
+	keyFile, defaulted, err := resolveHopKeyFile(look, pluginFallbackFileEnv, spec.Name, home)
 	if err != nil {
 		return nil, err
 	}
-	return &FallbackConfig{Provider: spec, KeyFile: keyFile}, nil
+	return &FallbackConfig{Provider: spec, KeyFile: keyFile, KeyFileDefaulted: defaulted}, nil
 }
 
 // credentialSource names where the key will be read from, for a diagnostic

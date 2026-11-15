@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -111,21 +109,6 @@ exits 0, 3, or 4. It prints the value-free credential status as JSON.`,
 	return cmd
 }
 
-// sourceStatus is the value-free state of one backend's credential source.
-type sourceStatus struct {
-	Provider string `json:"provider"`
-	// Source is where the key comes from: "explicit-file" (the operator set the
-	// path), "default-file" (--plugin-defaults found the file), "environment",
-	// or "none".
-	Source string `json:"source"`
-	// State is "ok", "absent" (nothing configured), or "unusable" (configured,
-	// and cannot be used).
-	State string `json:"state"`
-	// reason says why a source is unusable. It names a path or a variable and
-	// never a value, and it goes to stderr only.
-	reason string
-}
-
 // checkReport is what `call --check` prints on stdout.
 type checkReport struct {
 	Exit     int           `json:"exit"`
@@ -147,8 +130,9 @@ func runCall(ctx context.Context, opts callOptions, stdin io.Reader, stdout, std
 		opts.retarget(&cfg)
 	}
 
-	primary, fallback := classifySources(cfg, os.LookupEnv)
-	code := credentialExit(primary, fallback)
+	resolved := resolveConfiguredHops(cfg, os.LookupEnv)
+	primary, fallback := resolved.sources()
+	code := resolved.credentialExit()
 	for _, s := range []*sourceStatus{&primary, fallback} {
 		if s != nil && s.State == "unusable" {
 			fmt.Fprintf(stderr, "evaluate: %s credential (%s) is unusable: %s\n", s.Provider, s.Source, s.reason)
@@ -179,16 +163,8 @@ func runCall(ctx context.Context, opts callOptions, stdin io.Reader, stdout, std
 		return exitRequestInvalid
 	}
 
-	// Sources found absent are dropped before the clients are built, so the
-	// one that is present serves without a second, noisier diagnosis.
-	if primary.State == "absent" && cfg.Fallback != nil {
-		cfg = cfg.fallbackConfig()
-	} else if fallback != nil && fallback.State == "absent" {
-		cfg.Fallback = nil
-	}
-	c, _, err := newClients(cfg, stderr)
+	c, _, err := resolved.clients(stderr, io.Discard)
 	if err != nil {
-		// The file changed between the check and the load.
 		fmt.Fprintln(stderr, "evaluate:", err)
 		return exitCredentialBroken
 	}
@@ -212,138 +188,6 @@ func runCall(ctx context.Context, opts callOptions, stdin io.Reader, stdout, std
 		return exitProviderFailed
 	}
 	return exitAnswered
-}
-
-// credentialExit turns two source states into the exit code --check reports.
-// A source that is configured and unusable is an error even when the other
-// one works: a broken key the operator set up must not be quietly passed over.
-func credentialExit(primary sourceStatus, fallback *sourceStatus) int {
-	if primary.State == "unusable" || (fallback != nil && fallback.State == "unusable") {
-		return exitCredentialBroken
-	}
-	if primary.State == "ok" || (fallback != nil && fallback.State == "ok") {
-		return exitAnswered
-	}
-	return exitUnconfigured
-}
-
-// resolveCallConfig resolves the configuration, first applying the plugin's
-// key-file defaults when asked to.
-func resolveCallConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
-	if !pluginDefaults {
-		return resolveConfig(look)
-	}
-	withDefaults, defaulted := pluginDefaultLookup(look, homeDir(look))
-	cfg, err := resolveConfig(withDefaults)
-	if err != nil {
-		return cfg, err
-	}
-	cfg.KeyFileDefaulted = defaulted[pluginKeyFileEnv]
-	if cfg.Fallback != nil {
-		cfg.Fallback.KeyFileDefaulted = defaulted[pluginFallbackFileEnv]
-	}
-	return cfg, nil
-}
-
-// homeDir is $HOME, or the platform's home directory when HOME is unset.
-func homeDir(look lookupFunc) string {
-	if home, ok := look("HOME"); ok && home != "" {
-		return home
-	}
-	home, _ := os.UserHomeDir()
-	return home
-}
-
-// pluginDefaultLookup wraps look so that each unset key-file variable points at
-// the plugin's default key file for that backend, but only when something is
-// at that path. It reports which variables it filled in.
-//
-// A default for a file that does not exist would be worse than none: an
-// explicit key file stops the environment variable from being read at all, so
-// an operator whose key lives only in TYPESAFE_API_KEY could never
-// authenticate through the plugin. That was the launcher's behaviour through
-// 0.8.0.
-func pluginDefaultLookup(look lookupFunc, home string) (lookupFunc, map[string]bool) {
-	filled := map[string]string{}
-	if home != "" {
-		dir := filepath.Join(home, filepath.FromSlash(pluginKeyDirectory))
-		primary := "typesafe"
-		if raw, set := look("JEV_PROVIDER"); set {
-			primary = strings.TrimSpace(raw)
-		}
-		defaultKeyFile(look, filled, pluginKeyFileEnv, dir, primary)
-		if raw, set := look("JEV_FALLBACK_PROVIDER"); set && strings.TrimSpace(raw) != "" {
-			defaultKeyFile(look, filled, pluginFallbackFileEnv, dir, strings.TrimSpace(raw))
-		}
-	}
-	defaulted := map[string]bool{}
-	for name := range filled {
-		defaulted[name] = true
-	}
-	return func(name string) (string, bool) {
-		if path, ok := filled[name]; ok {
-			return path, true
-		}
-		return look(name)
-	}, defaulted
-}
-
-// defaultKeyFile records dir/<provider>.key for name when name is unset or
-// empty, the provider is a known backend, and something exists at the path.
-// Whether that something is a usable key file is for readKeyFile to decide.
-func defaultKeyFile(look lookupFunc, filled map[string]string, name, dir, provider string) {
-	if raw, set := look(name); set && raw != "" {
-		return
-	}
-	if _, known := providers[provider]; !known {
-		return
-	}
-	path := filepath.Join(dir, provider+".key")
-	if _, err := os.Lstat(path); err == nil {
-		filled[name] = path
-	}
-}
-
-// classifySources reports the state of the primary's credential source and,
-// when a fallback is configured, the fallback's. It reads each key exactly as
-// the server would and keeps only the verdict.
-func classifySources(cfg Config, look lookupFunc) (sourceStatus, *sourceStatus) {
-	primary := classifySource(cfg.Provider, pluginKeyFileEnv, cfg.KeyFile, cfg.KeyFileDefaulted, look)
-	if cfg.Fallback == nil {
-		return primary, nil
-	}
-	fallback := classifySource(cfg.Fallback.Provider, pluginFallbackFileEnv, cfg.Fallback.KeyFile, cfg.Fallback.KeyFileDefaulted, look)
-	return primary, &fallback
-}
-
-// classifySource reports one source's state. keyFileVar names the variable
-// keyFile came from, so an unusable file's reason names the setting to fix.
-func classifySource(spec ProviderSpec, keyFileVar, keyFile string, defaulted bool, look lookupFunc) sourceStatus {
-	s := sourceStatus{Provider: spec.Name}
-	if keyFile != "" {
-		s.Source = "explicit-file"
-		if defaulted {
-			s.Source = "default-file"
-		}
-		if _, err := readKeyFile(keyFileVar, keyFile); err != nil {
-			s.State, s.reason = "unusable", err.Error()
-			return s
-		}
-		s.State = "ok"
-		return s
-	}
-	raw, set := look(spec.APIKeyEnv)
-	if !set || raw == "" {
-		s.Source, s.State = "none", "absent"
-		return s
-	}
-	s.Source = "environment"
-	if _, err := parseKey(raw); err != nil {
-		s.State, s.reason = "unusable", spec.APIKeyEnv+" "+err.Error()
-		return s
-	}
-	s.State = "ok"
-	return s
 }
 
 // readCallRequest reads one request object from r. It reads at most
