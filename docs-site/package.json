@@ -32,6 +32,13 @@
     "starlight-links-validator": "0.27.0"
   },
   "pnpm": {
+    "packageExtensions": {
+      "@astrojs/astro2tsx": {
+        "dependencies": {
+          "@emnapi/runtime": "1.11.3"
+        }
+      }
+    },
     "overrides": {
       "esbuild": "0.28.1",
       "postcss-selector-parser": "7.1.6",
