@@ -18,12 +18,6 @@ import (
 // maxBody caps response size so an oversized reply cannot exhaust memory.
 const maxBody = 16 << 20
 
-// maxRequestBody caps the serialized request. Both publishers document a 32 MiB
-// body (TypeSafe's request rules and OpenRouter's Jev image limits, fetched
-// 2026-10-17). The previous 16 MiB cap rejected a single image that the
-// backends accept: base64 makes a 16 MiB file about 22 MiB of JSON.
-const maxRequestBody = 32 << 20
-
 const (
 	attributionURL   = "https://github.com/racecraft-lab/racecraft-plugins-public"
 	attributionTitle = "Racecraft Jev MCP"
@@ -84,9 +78,9 @@ func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
 	if err != nil {
 		return nil, nil, &requestInvalidError{err}
 	}
-	if len(body) > maxRequestBody {
+	if overLimit(len(body), c.Provider.Limits.BodyBytes) {
 		return nil, nil, &requestInvalidError{fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state, fewer questions, or fewer or smaller images",
-			c.Provider.Name, len(body), maxRequestBody)}
+			c.Provider.Name, len(body), c.Provider.Limits.BodyBytes)}
 	}
 	return body, headers, nil
 }

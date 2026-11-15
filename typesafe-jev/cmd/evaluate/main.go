@@ -237,20 +237,20 @@ func backendNote(cfg Config) string {
 			", or to " + cfg.Fallback.Provider.Name + " when " + cfg.Provider.Name + " refuses its credential" +
 			" or is unavailable; the provider that answers bills for the call."
 	}
-	if cfg.Provider.Name == "openrouter" || (cfg.Fallback != nil && cfg.Fallback.Provider.Name == "openrouter") {
-		note += "\nThis backend may omit confidence and probabilities from a choice or score" +
-			" answer, which the TypeSafe backend always sends. Treat an absent field as" +
-			" absent: do not substitute a default before branching on it." +
-			" A question it declines comes back as {\"type\":\"refusal\"} with no value, while the" +
-			" other questions still answer; treat a refusal as no judgment, never as a no."
+	note += cfg.Provider.AnswerNote
+	if cfg.Fallback != nil && cfg.Fallback.Provider.AnswerNote != cfg.Provider.AnswerNote {
+		note += cfg.Fallback.Provider.AnswerNote
 	}
 	if cfg.AllowImages {
 		note += "\nImages and box questions are enabled. Image bytes are sent to the provider and billed."
 	} else {
 		note += "\nImages and box questions are disabled until the operator sets JEV_IMAGES=true."
 	}
-	if cfg.LongContext && (cfg.Provider.Name == "typesafe" || (cfg.Fallback != nil && cfg.Fallback.Provider.Name == "typesafe")) {
-		note += "\nLong context is enabled for the TypeSafe backend: its budgets are 262144 tokens and each TypeSafe request sends the long-context header."
+	if cfg.LongContext {
+		note += cfg.Provider.LongContextNote
+		if cfg.Fallback != nil && cfg.Fallback.Provider.LongContextNote != cfg.Provider.LongContextNote {
+			note += cfg.Fallback.Provider.LongContextNote
+		}
 	}
 	return note
 }

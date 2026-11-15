@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -31,40 +32,6 @@ const (
 	// answerRefusal is an answer type, not a question type: OpenRouter sends
 	// it when a provider declines one question.
 	answerRefusal = "refusal"
-	// minScoreLevels is this fork's policy, stricter than either publisher.
-	// OpenRouter's schema sets minItems: 1, but a one-level scale gives the
-	// model nothing to place a value between.
-	minScoreLevels = 2
-	// maxScoreLevels is TypeSafe's published cap ("the API accepts up to 10",
-	// https://docs.typesafe.ai/api.md, 2026-10-17). OpenRouter's Decisions
-	// schema sets no maxItems. The cap is applied on both backends anyway:
-	// both serve Jev, and an 11th level is a billed rejection on TypeSafe, so
-	// a request must not pass one backend and fail the other.
-	maxScoreLevels = 10
-	// maxChoiceOptions is a published limit, not this fork's policy: the tool
-	// description states at most 255 options. Probed 2026-09-18 against the
-	// OpenRouter backend, 255 options answered correctly and 256 came back as
-	// an HTTP 400 naming no field.
-	maxChoiceOptions = 255
-	// TypeSafe's default context budgets (https://docs.typesafe.ai/models.md,
-	// 2026-10-17): 64k tokens for the whole request, and 32k for the state
-	// plus the single longest question. Exceeding either without the
-	// long-context header is a billed round trip that comes back as a bare
-	// HTTP 400, whose text blames the question types. With
-	// TypeSafe-Danger-Zone-Long-Context: true, both budgets are
-	// longContextTokens. OpenRouter's window is longContextTokens with no header.
-	typesafeRequestTokens  = 64_000
-	typesafeQuestionTokens = 32_000
-	longContextTokens      = 262_144
-	// Pixel bounds. Sides and totals are inclusive. TypeSafe's minimum side
-	// is 280; OpenRouter's is 256. The total-pixel range is the same on both
-	// (https://docs.typesafe.ai/images.md and OpenRouter's multimodal guide,
-	// both 2026-10-17).
-	imageSideMax      = 1568
-	imagePixelsMin    = 78_400
-	imagePixelsMax    = 2_458_624
-	typesafeSideMin   = 280
-	openrouterSideMin = 256
 	// Tokens are estimated from serialised bytes because no tokenizer ships
 	// here and adding one for a guardrail would be a poor trade. Four bytes
 	// per token is the usual figure for English text; it UNDER-counts denser
@@ -87,6 +54,9 @@ func validateRequest(spec ProviderSpec, in evaluateIn) error {
 	}
 	if len(in.Questions) == 0 {
 		return fmt.Errorf("questions must not be empty")
+	}
+	if overLimit(len(in.Questions), spec.Limits.Questions) {
+		return fmt.Errorf("questions has %d entries, over the %d the backend accepts", len(in.Questions), spec.Limits.Questions)
 	}
 	if in.Model != "" && strings.TrimSpace(in.Model) == "" {
 		return fmt.Errorf("model is whitespace only; omit it to use the configured default")
@@ -137,11 +107,11 @@ func validateBudget[Q any](spec ProviderSpec, state any, questions map[string]Q)
 		}
 	}
 
-	if total > spec.RequestTokens {
+	if overLimit(total, spec.RequestTokens) {
 		return budgetTooLarge(spec, total, fmt.Sprintf("the request is about %d tokens, over the %d the model accepts; send less state or fewer questions",
 			total, spec.RequestTokens))
 	}
-	if statePlus := stateTokens + longest; statePlus > spec.QuestionTokens {
+	if statePlus := stateTokens + longest; overLimit(statePlus, spec.QuestionTokens) {
 		return budgetTooLarge(spec, statePlus, fmt.Sprintf("state plus the longest question (questions.%s) is about %d tokens, over the %d the model accepts for the two together; send less state",
 			longestID, statePlus, spec.QuestionTokens))
 	}
@@ -151,8 +121,8 @@ func validateBudget[Q any](spec ProviderSpec, state any, questions map[string]Q)
 // budgetTooLarge adds the long-context hint only when that flag would actually
 // let this request through. A request past 262k tokens is over both windows.
 func budgetTooLarge(spec ProviderSpec, tokens int, msg string) error {
-	if spec.Name == "typesafe" && !spec.LongContext && tokens <= longContextTokens {
-		return fmt.Errorf("%s; set JEV_LONG_CONTEXT=true to raise both budgets to %d", msg, longContextTokens)
+	if spec.LongContextHeader != "" && !spec.LongContext && tokens <= spec.LongContextTokens {
+		return fmt.Errorf("%s; set JEV_LONG_CONTEXT=true to raise both budgets to %d", msg, spec.LongContextTokens)
 	}
 	return fmt.Errorf("%s", msg)
 }
@@ -180,6 +150,10 @@ func validateQuestion(spec ProviderSpec, id string, q question) error {
 		return fmt.Errorf("%s.type is required; use noul, choice, score, or box", path)
 	default:
 		return fmt.Errorf("%s.type must be noul, choice, score, or box", path)
+	}
+
+	if !slices.Contains(spec.QuestionTypes, q.Type) {
+		return fmt.Errorf("%s.type is not supported by %s", path, spec.Name)
 	}
 
 	if err := validateEntry(spec, path+".instructions", q.Instructions, entryRequired); err != nil {
@@ -296,15 +270,24 @@ type criteriaRule struct {
 var (
 	choiceRule = criteriaRule{
 		qtype: typeChoice, shape: "an object mapping each option to its description",
-		least: 1, most: maxChoiceOptions,
 		few: "must name at least one option", verb: "names", unit: "options",
 	}
 	scoreRule = criteriaRule{
 		qtype: typeScore, shape: "an ordered array of level descriptions",
-		least: minScoreLevels, most: maxScoreLevels,
-		few: fmt.Sprintf("needs at least %d ordered levels", minScoreLevels), verb: "has", unit: "levels",
+		verb: "has", unit: "levels",
 	}
 )
+
+// withBounds combines a question shape with this backend's numeric limits.
+func (rule criteriaRule) withBounds(least, most int) criteriaRule {
+	rule.least, rule.most = least, most
+	if rule.qtype == typeScore {
+		rule.few = fmt.Sprintf("needs at least %d ordered levels", least)
+	} else if least != 1 {
+		rule.few = fmt.Sprintf("must name at least %d options", least)
+	}
+	return rule
+}
 
 // criteriaOf returns a question's criteria as T once rule holds for it.
 func criteriaOf[T map[string]any | []any](rule criteriaRule, path string, criteria any) (T, error) {
@@ -318,7 +301,7 @@ func criteriaOf[T map[string]any | []any](rule criteriaRule, path string, criter
 		return zero, fmt.Errorf("%s.criteria must be %s", path, rule.shape)
 	case len(v) < rule.least:
 		return zero, fmt.Errorf("%s.criteria %s", path, rule.few)
-	case len(v) > rule.most:
+	case overLimit(len(v), rule.most):
 		return zero, fmt.Errorf("%s.criteria %s %d %s, over the %d the backend accepts", path, rule.verb, len(v), rule.unit, rule.most)
 	}
 	return v, nil
@@ -327,7 +310,8 @@ func criteriaOf[T map[string]any | []any](rule criteriaRule, path string, criter
 // validateChoiceCriteria requires a non-empty option map. Option names are the
 // answer space, so they are preserved exactly.
 func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error {
-	m, err := criteriaOf[map[string]any](choiceRule, path, criteria)
+	rule := choiceRule.withBounds(spec.Limits.ChoiceMin, spec.Limits.ChoiceMax)
+	m, err := criteriaOf[map[string]any](rule, path, criteria)
 	if err != nil {
 		return err
 	}
@@ -348,7 +332,8 @@ func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error 
 // meaning: a level's number is its position, so the slice is never sorted or
 // deduplicated.
 func validateScoreCriteria(spec ProviderSpec, path string, criteria any) error {
-	levels, err := criteriaOf[[]any](scoreRule, path, criteria)
+	rule := scoreRule.withBounds(spec.Limits.ScoreMin, spec.Limits.ScoreMax)
+	levels, err := criteriaOf[[]any](rule, path, criteria)
 	if err != nil {
 		return err
 	}
