@@ -207,12 +207,7 @@ var providers = map[string]ProviderSpec{
 		// TypeSafe documents string, object, array, or null for every
 		// instruction and description field.
 		StructuredEntries: true,
-		Limits: backendLimits{
-			Questions: noLimit, ChoiceMin: 1, ChoiceMax: maxChoiceOptions,
-			ScoreMin: minScoreLevels, ScoreMax: maxScoreLevels,
-			BodyBytes: maxRequestBody, Images: noLimit, ImageBytes: maxImageBytes,
-			TotalImageBytes: noLimit, ExpandedBytes: maxExpandedRequest,
-		},
+		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// 529 is TypeSafe's overload status, which upstream already retried.
 		RetryStatuses: []int{429, 529},
@@ -221,10 +216,7 @@ var providers = map[string]ProviderSpec{
 		RequestTokens:  typesafeRequestTokens,
 		QuestionTokens: typesafeQuestionTokens,
 		// https://docs.typesafe.ai/images.md (2026-10-17).
-		ImageLimits: imageBounds{
-			MinSide: typesafeSideMin, MaxSide: imageSideMax,
-			MinPixels: imagePixelsMin, MaxPixels: imagePixelsMax,
-		},
+		ImageLimits: backendImageLimits(typesafeSideMin),
 	},
 	"openrouter": {
 		Name:        "openrouter",
@@ -246,12 +238,7 @@ var providers = map[string]ProviderSpec{
 		Attribution: true,
 		// Matches TypeSafe since OpenRouter republished the Decisions schemas.
 		StructuredEntries: true,
-		Limits: backendLimits{
-			Questions: noLimit, ChoiceMin: 1, ChoiceMax: maxChoiceOptions,
-			ScoreMin: minScoreLevels, ScoreMax: maxScoreLevels,
-			BodyBytes: maxRequestBody, Images: noLimit, ImageBytes: maxImageBytes,
-			TotalImageBytes: noLimit, ExpandedBytes: maxExpandedRequest,
-		},
+		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// All four are documented on the Decisions path and transient in
 		// kind: 429 rate limited, 503 unavailable, 524 an upstream timeout,
@@ -267,11 +254,26 @@ var providers = map[string]ProviderSpec{
 		QuestionTokens: longContextTokens,
 		// Side minimum is 256, not TypeSafe's 280. Total pixels match TypeSafe.
 		// https://openrouter.ai/docs/guides/community/multimodal-decisions (2026-10-17).
-		ImageLimits: imageBounds{
-			MinSide: openrouterSideMin, MaxSide: imageSideMax,
-			MinPixels: imagePixelsMin, MaxPixels: imagePixelsMax,
-		},
+		ImageLimits: backendImageLimits(openrouterSideMin),
 	},
+}
+
+// Both current rows share these caps; each gets its own value to keep copies
+// independently configurable by the operator and tests.
+func backendRequestLimits() backendLimits {
+	return backendLimits{
+		Questions: noLimit, ChoiceMin: 1, ChoiceMax: maxChoiceOptions,
+		ScoreMin: minScoreLevels, ScoreMax: maxScoreLevels,
+		BodyBytes: maxRequestBody, Images: noLimit, ImageBytes: maxImageBytes,
+		TotalImageBytes: noLimit, ExpandedBytes: maxExpandedRequest,
+	}
+}
+
+func backendImageLimits(minSide int) imageBounds {
+	return imageBounds{
+		MinSide: minSide, MaxSide: imageSideMax,
+		MinPixels: imagePixelsMin, MaxPixels: imagePixelsMax,
+	}
 }
 
 const (

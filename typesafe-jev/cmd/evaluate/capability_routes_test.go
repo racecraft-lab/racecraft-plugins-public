@@ -192,13 +192,15 @@ func TestCapabilityRouteRejectsUniversalShapeBeforeHopLimits(t *testing.T) {
 	}
 }
 
+type capabilityCallCase struct {
+	name                 string
+	tokens, status, code int
+	hits                 string
+	reasons              []string
+}
+
 func TestCapabilityRouteCallExitCodes(t *testing.T) {
-	for _, tc := range []struct {
-		name                 string
-		tokens, status, code int
-		hits                 string
-		reasons              []string
-	}{
+	for _, tc := range []capabilityCallCase{
 		{"no able hop is local", 300_000, 200, 2, "0/0", []string{"over the 64000"}},
 		{"route answers", 100_000, 200, 0, "0/1", nil},
 		{"moved session retains failure", 100_000, 503, 5, "1/0", []string{"HTTP 503", "fallback cannot take this request", "JEV_LONG_CONTEXT", "using the typesafe fallback"}},
@@ -221,15 +223,20 @@ func TestCapabilityRouteCallExitCodes(t *testing.T) {
 			if got.code != tc.code || fmt.Sprintf("%d/%d", p.hits.Load(), f.hits.Load()) != tc.hits {
 				t.Fatalf("call=%+v hits=%d/%d; want exit %d, hits %s", got, p.hits.Load(), f.hits.Load(), tc.code, tc.hits)
 			}
-			if tc.code == 0 && strings.TrimSpace(got.stdout) != validAnswer || tc.code != 0 && got.stdout != "" {
-				t.Fatalf("unexpected stdout: %q", got.stdout)
-			}
-			for _, reason := range tc.reasons {
-				if !strings.Contains(got.stderr, reason) {
-					t.Errorf("stderr=%q; want %q", got.stderr, reason)
-				}
-			}
+			checkCapabilityCallOutput(t, tc, got)
 		})
+	}
+}
+
+func checkCapabilityCallOutput(t *testing.T, tc capabilityCallCase, got callResult) {
+	t.Helper()
+	if tc.code == 0 && strings.TrimSpace(got.stdout) != validAnswer || tc.code != 0 && got.stdout != "" {
+		t.Fatalf("unexpected stdout: %q", got.stdout)
+	}
+	for _, reason := range tc.reasons {
+		if !strings.Contains(got.stderr, reason) {
+			t.Errorf("stderr=%q; want %q", got.stderr, reason)
+		}
 	}
 }
 

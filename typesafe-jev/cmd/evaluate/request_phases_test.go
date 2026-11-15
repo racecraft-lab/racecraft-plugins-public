@@ -67,45 +67,10 @@ func TestCallReadsImagesOnceAcrossHops(t *testing.T) {
 			fallback := map[string]string{"typesafe": "openrouter", "openrouter": "typesafe"}[primary]
 			data := mustPNG(t, 280, 280)
 			path := filepath.Join(t.TempDir(), "photo.png")
-			if err := os.WriteFile(path, data, 0o600); err != nil {
-				t.Fatal(err)
-			}
+			writeImageFixture(t, path, data)
 			in := imageRequest(nil, "png")
 			in.Images["door"] = imageSource{Path: path}
-			calls := 0
-			transport := backendFixtureTransport(func(req *http.Request) (*http.Response, error) {
-				calls++
-				var body map[string]any
-				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-					return nil, err
-				}
-				provider := primary
-				status := 401
-				if calls == 1 {
-					if err := os.Remove(path); err != nil {
-						return nil, err
-					}
-				} else {
-					provider, status = fallback, 200
-				}
-				if req.URL.String() != providers[provider].EndpointURL {
-					t.Errorf("request %d went to %s", calls, req.URL)
-				}
-				photo := body["state"].(map[string]any)["photo"]
-				if provider == "typesafe" {
-					ref := photo.(string)
-					asset := body["assets"].(map[string]any)[ref].(map[string]any)
-					if asset["data_base64"] != b64(data) || asset["format"] != "png" {
-						t.Error("TypeSafe did not receive the original PNG")
-					}
-				} else {
-					part := photo.(map[string]any)
-					if part["image_url"].(map[string]any)["url"] != "data:image/png;base64,"+b64(data) {
-						t.Error("OpenRouter did not receive the original PNG")
-					}
-				}
-				return &http.Response{StatusCode: status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulOK))}, nil
-			})
+			transport, count := imageOnceTransport(t, primary, fallback, path, data)
 			chain := &chainRunner{log: io.Discard, hops: []*Client{
 				{Provider: withImages(providers[primary]), Model: providers[primary].DefaultModel, Timeout: time.Second, HTTP: &http.Client{Transport: transport}},
 				{Provider: withImages(providers[fallback]), Model: providers[fallback].DefaultModel, Timeout: time.Second, HTTP: &http.Client{Transport: transport}},
@@ -115,10 +80,55 @@ func TestCallReadsImagesOnceAcrossHops(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			calls := *count
 			if result.IsError || contentText(t, result) != noulOK || calls != 2 {
 				t.Fatalf("calls=%d; result=%s; isError=%v", calls, contentText(t, result), result.IsError)
 			}
 		})
+	}
+}
+
+func imageOnceTransport(t *testing.T, primary, fallback, path string, data []byte) (backendFixtureTransport, *int) {
+	t.Helper()
+	calls := 0
+	transport := backendFixtureTransport(func(req *http.Request) (*http.Response, error) {
+		calls++
+		var body map[string]any
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			return nil, err
+		}
+		provider := primary
+		status := 401
+		if calls == 1 {
+			if err := os.Remove(path); err != nil {
+				return nil, err
+			}
+		} else {
+			provider, status = fallback, 200
+		}
+		if req.URL.String() != providers[provider].EndpointURL {
+			t.Errorf("request %d went to %s", calls, req.URL)
+		}
+		checkOriginalImage(t, provider, body, data)
+		return &http.Response{StatusCode: status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulOK))}, nil
+	})
+	return transport, &calls
+}
+
+func checkOriginalImage(t *testing.T, provider string, body map[string]any, data []byte) {
+	t.Helper()
+	photo := body["state"].(map[string]any)["photo"]
+	if provider == "typesafe" {
+		ref := photo.(string)
+		asset := body["assets"].(map[string]any)[ref].(map[string]any)
+		if asset["data_base64"] != b64(data) || asset["format"] != "png" {
+			t.Error("TypeSafe did not receive the original PNG")
+		}
+	} else {
+		part := photo.(map[string]any)
+		if part["image_url"].(map[string]any)["url"] != "data:image/png;base64,"+b64(data) {
+			t.Error("OpenRouter did not receive the original PNG")
+		}
 	}
 }
 
@@ -173,25 +183,43 @@ func TestOversizedImageKeepsItsLimitDiagnostic(t *testing.T) {
 	}
 }
 
+type requestRejectionCase struct {
+	name     string
+	in       evaluateIn
+	want     func(string) string
+	oldModel bool
+}
+
 // Universal shape errors now precede hop refusals (ADR 0028). Keep the
 // parent fixture strict at both entry points, with only replaced contracts
 // updated; no locally refused call may reach or move either hop.
 func TestRequestPrecedenceMatchesParent(t *testing.T) {
+	for _, tc := range requestPrecedenceCases(t) {
+		runTestMatrix(t, []string{"typesafe", "openrouter"}, []bool{false, true}, func(primary string, fallback bool) string {
+			return fmt.Sprintf("%s/%s/fallback=%v", tc.name, primary, fallback)
+		}, func(t *testing.T, primary string, fallback bool) {
+			checkRequestPrecedence(t, tc, primary, fallback)
+		})
+	}
+}
+
+func requestPrecedenceCases(t *testing.T) []requestRejectionCase {
+	t.Helper()
 	dir := t.TempDir()
 	missing := filepath.Join(dir, "missing.png")
 	malformed := filepath.Join(dir, "malformed.png")
-	if err := os.WriteFile(malformed, []byte("not an image"), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	writeImageFixture(t, malformed, []byte("not an image"))
 	tiny := filepath.Join(dir, "tiny.png")
-	if err := os.WriteFile(tiny, mustPNG(t, 100, 100), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	writeImageFixture(t, tiny, mustPNG(t, 100, 100))
 	large := filepath.Join(dir, "large.png")
 	data := append(mustPNG(t, 280, 280), make([]byte, 9<<20)...)
-	if err := os.WriteFile(large, data, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	writeImageFixture(t, large, data)
+	cases := precedenceQuestionCases()
+	cases = append(cases, precedenceImageCases(missing, malformed, tiny, large)...)
+	return append(cases, precedenceBoxCases(missing, malformed)...)
+}
+
+func precedenceQuestionCases() []requestRejectionCase {
 	options := map[string]any{" ": nil}
 	for i := 1; i < 256; i++ {
 		options[fmt.Sprintf("option%d", i)] = nil
@@ -200,22 +228,20 @@ func TestRequestPrecedenceMatchesParent(t *testing.T) {
 	questions := func(a, b question) evaluateIn {
 		return evaluateIn{State: "fixture", Questions: map[string]question{"a": a, "b": b}}
 	}
-	imageInput := func(state any, images map[string]imageSource) evaluateIn {
-		return evaluateIn{State: state, Questions: simpleIn().Questions, Images: images}
-	}
-	box := func(images map[string]imageSource, state any) evaluateIn {
-		return evaluateIn{State: state, Questions: map[string]question{"a": {Type: typeBox, Instructions: "find door"}}, Images: images}
-	}
-	cases := []struct {
-		name     string
-		in       evaluateIn
-		want     func(string) string
-		oldModel bool
-	}{
+	cases := []requestRejectionCase{
 		{"choice before missing type", questions(question{Type: typeChoice, Instructions: "judge", Criteria: map[string]any{}}, question{Instructions: "judge"}), func(string) string { return "questions.b.type is required; use noul, choice, score, or box" }, false},
 		{"score before missing instructions", questions(question{Type: typeScore, Instructions: "judge", Criteria: []any{"one"}}, question{Type: typeNoul}), func(string) string { return "questions.b.instructions is required" }, false},
 		{"score bound before entry", evaluateIn{State: "fixture", Questions: map[string]question{"a": {Type: typeScore, Instructions: "judge", Criteria: levels}}}, func(string) string { return "questions.a.criteria[0] must be a string, object, or array" }, false},
 		{"choice bound before name", evaluateIn{State: "fixture", Questions: map[string]question{"a": {Type: typeChoice, Instructions: "judge", Criteria: options}}}, func(string) string { return "questions.a.criteria has a blank option name" }, false},
+	}
+	return cases
+}
+
+func precedenceImageCases(missing, malformed, tiny, large string) []requestRejectionCase {
+	imageInput := func(state any, images map[string]imageSource) evaluateIn {
+		return evaluateIn{State: state, Questions: simpleIn().Questions, Images: images}
+	}
+	cases := []requestRejectionCase{
 		{"context before malformed image", imageInput([]any{budgetText(300_000), "door"}, map[string]imageSource{"door": {Path: malformed}}), func(p string) string {
 			if p == "typesafe" {
 				return "the request is about 300012 tokens, over the 64000 the model accepts; send less state or fewer questions"
@@ -244,6 +270,14 @@ func TestRequestPrecedenceMatchesParent(t *testing.T) {
 			return "images together are over the 33554432 byte request limit once base64-encoded; send fewer or smaller images, or reference each one fewer times"
 		}, false},
 	}
+	return cases
+}
+
+func precedenceBoxCases(missing, malformed string) []requestRejectionCase {
+	box := func(images map[string]imageSource, state any) evaluateIn {
+		return evaluateIn{State: state, Questions: map[string]question{"a": {Type: typeBox, Instructions: "find door"}}, Images: images}
+	}
+	var cases []requestRejectionCase
 	// All model aliases here are the parent's explicit Jev 1.13 refusals.
 	for _, tc := range []struct {
 		name   string
@@ -255,12 +289,7 @@ func TestRequestPrecedenceMatchesParent(t *testing.T) {
 		{"box before no image", nil, "fixture"},
 		{"box before unreferenced image", map[string]imageSource{"door": {Path: malformed}}, "fixture"},
 	} {
-		cases = append(cases, struct {
-			name     string
-			in       evaluateIn
-			want     func(string) string
-			oldModel bool
-		}{tc.name, box(tc.images, tc.state), func(p string) string {
+		cases = append(cases, requestRejectionCase{tc.name, box(tc.images, tc.state), func(p string) string {
 			model := "jev-1.13.0"
 			if p == "openrouter" {
 				model = "typesafe/jev-1.13"
@@ -268,72 +297,73 @@ func TestRequestPrecedenceMatchesParent(t *testing.T) {
 			return "model " + model + " is Jev 1.13, which rejects box questions; use jev-latest or jev-1.14.0 on TypeSafe, or typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter"
 		}, true})
 	}
-	for _, tc := range cases {
-		for _, primary := range []string{"typesafe", "openrouter"} {
-			for _, fallback := range []bool{false, true} {
-				t.Run(fmt.Sprintf("%s/%s/fallback=%v", tc.name, primary, fallback), func(t *testing.T) {
-					isolateCallEnv(t)
-					t.Setenv("JEV_IMAGES", "true")
-					t.Setenv("JEV_LONG_CONTEXT", "false")
-					t.Setenv("JEV_PROVIDER", primary)
-					t.Setenv(providers[primary].APIKeyEnv, fixtureKey)
-					other := map[string]string{"typesafe": "openrouter", "openrouter": "typesafe"}[primary]
-					if fallback {
-						t.Setenv("JEV_FALLBACK_PROVIDER", other)
-						t.Setenv(providers[other].APIKeyEnv, fixtureKey)
-					}
-					in := tc.in
-					if tc.oldModel {
-						in.Model = "jev-1.13.0"
-						if primary == "openrouter" {
-							in.Model = "typesafe/jev-1.13"
-						}
-					}
-					p, f := newCountingBackend(t, 401, "{}"), newCountingBackend(t, 200, validAnswer)
-					input, err := json.Marshal(in)
-					if err != nil {
-						t.Fatal(err)
-					}
-					want := tc.want(primary)
-					switch tc.name {
-					case "box before no image":
-						want = "a box question needs an image in the request"
-					case "box before unreferenced image":
-						want = "images.door is not referenced from state, instructions, or criteria"
-					case "box before missing file":
-						if fallback {
-							want = "images.door: the image file cannot be read"
-						}
-					case "box before malformed file":
-						if fallback {
-							want = "images.door: not a PNG or JPEG"
-						}
-					}
-					result := runCallForTest(t, callOptions{retarget: retargetTo(p, f)}, string(input))
-					if result.code != 2 || result.stdout != "" || result.stderr != "evaluate: "+want+"\n" {
-						t.Errorf("call = %+v; want exit 2 and %q", result, want)
-					}
-					spec := withImages(providerAt(primary, p.URL))
-					chain := &chainRunner{log: io.Discard, hops: []*Client{{Provider: spec, Model: spec.DefaultModel, Timeout: time.Second, HTTP: p.Client()}}}
-					if fallback {
-						fs := withImages(providerAt(other, f.URL))
-						chain.hops = append(chain.hops, &Client{Provider: fs, Model: fs.DefaultModel, Timeout: time.Second, HTTP: f.Client()})
-					}
-					session := connect(t, Config{Provider: spec}, chain)
-					got, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "evaluate", Arguments: in})
-					if err != nil {
-						t.Fatal(err)
-					}
-					if !got.IsError || contentText(t, got) != want {
-						t.Errorf("MCP isError=%v message=%q; want %q", got.IsError, contentText(t, got), want)
-					}
-					if p.hits.Load() != 0 || f.hits.Load() != 0 || chain.current.Load() != 0 {
-						t.Errorf("locally refused call reached or moved hops: %d/%d, current=%d", p.hits.Load(), f.hits.Load(), chain.current.Load())
-					}
-				})
-			}
+	return cases
+}
+
+func checkRequestPrecedence(t *testing.T, tc requestRejectionCase, primary string, fallback bool) {
+	t.Helper()
+	isolateCallEnv(t)
+	t.Setenv("JEV_IMAGES", "true")
+	t.Setenv("JEV_LONG_CONTEXT", "false")
+	t.Setenv("JEV_PROVIDER", primary)
+	t.Setenv(providers[primary].APIKeyEnv, fixtureKey)
+	other := map[string]string{"typesafe": "openrouter", "openrouter": "typesafe"}[primary]
+	if fallback {
+		t.Setenv("JEV_FALLBACK_PROVIDER", other)
+		t.Setenv(providers[other].APIKeyEnv, fixtureKey)
+	}
+	in := tc.in
+	if tc.oldModel {
+		in.Model = "jev-1.13.0"
+		if primary == "openrouter" {
+			in.Model = "typesafe/jev-1.13"
 		}
 	}
+	p, f := newCountingBackend(t, 401, "{}"), newCountingBackend(t, 200, validAnswer)
+	input, err := json.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := precedenceRouteDiagnostic(tc.name, fallback, tc.want(primary))
+	result := runCallForTest(t, callOptions{retarget: retargetTo(p, f)}, string(input))
+	if result.code != 2 || result.stdout != "" || result.stderr != "evaluate: "+want+"\n" {
+		t.Errorf("call = %+v; want exit 2 and %q", result, want)
+	}
+	spec := withImages(providerAt(primary, p.URL))
+	chain := &chainRunner{log: io.Discard, hops: []*Client{{Provider: spec, Model: spec.DefaultModel, Timeout: time.Second, HTTP: p.Client()}}}
+	if fallback {
+		fs := withImages(providerAt(other, f.URL))
+		chain.hops = append(chain.hops, &Client{Provider: fs, Model: fs.DefaultModel, Timeout: time.Second, HTTP: f.Client()})
+	}
+	session := connect(t, Config{Provider: spec}, chain)
+	got, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "evaluate", Arguments: in})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.IsError || contentText(t, got) != want {
+		t.Errorf("MCP isError=%v message=%q; want %q", got.IsError, contentText(t, got), want)
+	}
+	if p.hits.Load() != 0 || f.hits.Load() != 0 || chain.current.Load() != 0 {
+		t.Errorf("locally refused call reached or moved hops: %d/%d, current=%d", p.hits.Load(), f.hits.Load(), chain.current.Load())
+	}
+}
+
+func precedenceRouteDiagnostic(name string, fallback bool, want string) string {
+	switch name {
+	case "box before no image":
+		want = "a box question needs an image in the request"
+	case "box before unreferenced image":
+		want = "images.door is not referenced from state, instructions, or criteria"
+	case "box before missing file":
+		if fallback {
+			want = "images.door: the image file cannot be read"
+		}
+	case "box before malformed file":
+		if fallback {
+			want = "images.door: not a PNG or JPEG"
+		}
+	}
+	return want
 }
 
 // Wrap the filesystem read seam on this call only. Later sources must never
@@ -344,29 +374,8 @@ func TestRefusedRequestLeavesLaterImageUnread(t *testing.T) {
 			t.Run(provider+"/"+refusal, func(t *testing.T) {
 				path := filepath.Join(t.TempDir(), "later.png")
 				data := mustPNG(t, 280, 280)
-				if err := os.WriteFile(path, data, 0o600); err != nil {
-					t.Fatal(err)
-				}
-				in := evaluateIn{State: []any{"a", "b"}, Questions: simpleIn().Questions, Images: map[string]imageSource{"b": {Path: path}}}
-				switch refusal {
-				case "box model":
-					in.Questions = map[string]question{"q": {Type: typeBox, Instructions: "find"}}
-					in.Model = "jev-1.13.0"
-					if provider == "openrouter" {
-						in.Model = "typesafe/jev-1.13"
-					}
-				case "dimensions":
-					in.Images["a"] = imageSource{DataBase64: b64(mustPNG(t, 100, 100))}
-				case "expanded budget":
-					in.State = []any{"a", "a", "a", "a", "b"}
-					in.Images["a"] = imageSource{DataBase64: b64(append(data, make([]byte, 9<<20)...))}
-				case "body budget":
-					in.State = []any{"a", "aa", "ab", "b"}
-					encoded := b64(append(data, make([]byte, 9<<20)...))
-					for _, name := range []string{"a", "aa", "ab"} {
-						in.Images[name] = imageSource{DataBase64: encoded}
-					}
-				}
+				writeImageFixture(t, path, data)
+				in := refusedImageRequest(t, provider, refusal, path, data)
 				spec := withImages(providers[provider])
 				shaped, err := shapeRequest(in)
 				if err != nil {
@@ -386,6 +395,31 @@ func TestRefusedRequestLeavesLaterImageUnread(t *testing.T) {
 			})
 		}
 	}
+}
+
+func refusedImageRequest(t *testing.T, provider, refusal, path string, data []byte) evaluateIn {
+	t.Helper()
+	in := evaluateIn{State: []any{"a", "b"}, Questions: simpleIn().Questions, Images: map[string]imageSource{"b": {Path: path}}}
+	switch refusal {
+	case "box model":
+		in.Questions = map[string]question{"q": {Type: typeBox, Instructions: "find"}}
+		in.Model = "jev-1.13.0"
+		if provider == "openrouter" {
+			in.Model = "typesafe/jev-1.13"
+		}
+	case "dimensions":
+		in.Images["a"] = imageSource{DataBase64: b64(mustPNG(t, 100, 100))}
+	case "expanded budget":
+		in.State = []any{"a", "a", "a", "a", "b"}
+		in.Images["a"] = imageSource{DataBase64: b64(append(data, make([]byte, 9<<20)...))}
+	case "body budget":
+		in.State = []any{"a", "aa", "ab", "b"}
+		encoded := b64(append(data, make([]byte, 9<<20)...))
+		for _, name := range []string{"a", "aa", "ab"} {
+			in.Images[name] = imageSource{DataBase64: encoded}
+		}
+	}
+	return in
 }
 
 func TestInternalPreparationErrorsNeverRefuseAHop(t *testing.T) {
@@ -408,5 +442,12 @@ func TestInternalPreparationErrorsNeverRefuseAHop(t *testing.T) {
 				t.Fatalf("internal error = %T %v; want unclassified %q", err, err, tc.want)
 			}
 		})
+	}
+}
+
+func writeImageFixture(t *testing.T, path string, data []byte) {
+	t.Helper()
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
 	}
 }

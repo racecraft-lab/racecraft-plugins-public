@@ -114,135 +114,176 @@ func checkedBackendTypes(t *testing.T, fset *token.FileSet, files []*ast.File, i
 func providerNameComparisons(file *ast.File, info *types.Info) []token.Pos {
 	var found []token.Pos
 	seen := map[*ast.Object]bool{}
-	var isProvider func(ast.Expr) bool
-	isProvider = func(expr ast.Expr) bool {
-		value := info.Types[expr].Value
-		if value != nil && value.Kind() == constant.String {
-			if _, ok := providers[constant.StringVal(value)]; ok {
-				return true
-			}
-		}
-		for {
-			paren, ok := expr.(*ast.ParenExpr)
-			if !ok {
-				break
-			}
-			expr = paren.X
-		}
-		// go/types links package variables to their initializers across files.
-		if id, ok := expr.(*ast.Ident); ok {
-			for _, init := range info.InitOrder {
-				if len(init.Lhs) == 1 && init.Lhs[0] == info.Uses[id] {
-					return isProvider(init.Rhs)
-				}
-			}
-		}
-		// The AST links local variable aliases to their initializers. Constant
-		// aliases are resolved by go/types above.
-		if id, ok := expr.(*ast.Ident); ok && id.Obj != nil && !seen[id.Obj] {
-			seen[id.Obj] = true
-			defer delete(seen, id.Obj)
-			switch decl := id.Obj.Decl.(type) {
-			case *ast.AssignStmt:
-				for i, lhs := range decl.Lhs {
-					if name, ok := lhs.(*ast.Ident); ok && name.Name == id.Name && i < len(decl.Rhs) {
-						return isProvider(decl.Rhs[i])
-					}
-				}
-			case *ast.ValueSpec:
-				for i, name := range decl.Names {
-					if name.Name == id.Name && i < len(decl.Values) {
-						return isProvider(decl.Values[i])
-					}
-				}
-			}
-		}
-		selector, ok := expr.(*ast.SelectorExpr)
-		if !ok {
-			return false
-		}
-		selection := info.Selections[selector]
-		if selection == nil || selection.Obj().Name() != "Name" {
-			return false
-		}
-		recv := selection.Recv()
-		if pointer, ok := recv.(*types.Pointer); ok {
-			recv = pointer.Elem()
-		}
-		named, ok := recv.(*types.Named)
-		return ok && named.Obj().Name() == "ProviderSpec"
-	}
+	isProvider := func(expr ast.Expr) bool { return isProviderName(expr, info, seen) }
 	ast.Inspect(file, func(node ast.Node) bool {
-		switch n := node.(type) {
-		case *ast.IndexExpr:
-			if isProvider(n.Index) {
-				found = append(found, n.Pos())
-			} else if literal, ok := n.X.(*ast.CompositeLit); ok {
-				for _, element := range literal.Elts {
-					if pair, ok := element.(*ast.KeyValueExpr); ok && isProvider(pair.Key) {
-						found = append(found, n.Pos())
-						break
-					}
-				}
-			}
-		case *ast.CallExpr:
-			fun := n.Fun
-			switch generic := fun.(type) {
-			case *ast.IndexExpr:
-				fun = generic.X
-			case *ast.IndexListExpr:
-				fun = generic.X
-			}
-			callee, ok := fun.(*ast.SelectorExpr)
-			if !ok {
-				break
-			}
-			object := info.Uses[callee.Sel]
-			if object == nil || object.Pkg() == nil {
-				break
-			}
-			comparison := false
-			switch object.Pkg().Path() + "." + object.Name() {
-			case "strings.EqualFold", "strings.Compare", "strings.Contains", "strings.HasPrefix", "strings.HasSuffix", "strings.Index", "slices.Contains", "slices.Index":
-				comparison = true
-			}
-			if comparison {
-				for _, arg := range n.Args {
-					matched := false
-					ast.Inspect(arg, func(child ast.Node) bool {
-						if expr, ok := child.(ast.Expr); ok && isProvider(expr) {
-							matched = true
-						}
-						return !matched
-					})
-					if matched {
-						found = append(found, n.Pos())
-						break
-					}
-				}
-			}
-		case *ast.BinaryExpr:
-			if (n.Op == token.EQL || n.Op == token.NEQ) && (isProvider(n.X) || isProvider(n.Y)) {
-				found = append(found, n.Pos())
-			}
-		case *ast.SwitchStmt:
-			if n.Tag != nil {
-				if isProvider(n.Tag) {
-					found = append(found, n.Tag.Pos())
-					break
-				}
-				for _, stmt := range n.Body.List {
-					clause := stmt.(*ast.CaseClause)
-					for _, value := range clause.List {
-						if isProvider(value) {
-							found = append(found, value.Pos())
-						}
-					}
-				}
-			}
-		}
+		found = append(found, providerComparisonPositions(node, info, isProvider)...)
 		return true
 	})
+	return found
+}
+
+func isProviderName(expr ast.Expr, info *types.Info, seen map[*ast.Object]bool) bool {
+	value := info.Types[expr].Value
+	if value != nil && value.Kind() == constant.String {
+		if _, ok := providers[constant.StringVal(value)]; ok {
+			return true
+		}
+	}
+	expr = ast.Unparen(expr)
+	if id, ok := expr.(*ast.Ident); ok {
+		// go/types links package variables to initializers across files.
+		if init := packageInitializer(id, info); init != nil {
+			return isProviderName(init, info, seen)
+		}
+		// AST objects link local aliases; go/types resolved constants above.
+		if id.Obj != nil && !seen[id.Obj] {
+			seen[id.Obj] = true
+			defer delete(seen, id.Obj)
+			if init := localInitializer(id); init != nil {
+				return isProviderName(init, info, seen)
+			}
+		}
+	}
+	return isProviderNameField(expr, info)
+}
+
+func packageInitializer(id *ast.Ident, info *types.Info) ast.Expr {
+	for _, init := range info.InitOrder {
+		if len(init.Lhs) == 1 && init.Lhs[0] == info.Uses[id] {
+			return init.Rhs
+		}
+	}
+	return nil
+}
+
+func localInitializer(id *ast.Ident) ast.Expr {
+	switch decl := id.Obj.Decl.(type) {
+	case *ast.AssignStmt:
+		for i, lhs := range decl.Lhs {
+			if name, ok := lhs.(*ast.Ident); ok && name.Name == id.Name && i < len(decl.Rhs) {
+				return decl.Rhs[i]
+			}
+		}
+	case *ast.ValueSpec:
+		for i, name := range decl.Names {
+			if name.Name == id.Name && i < len(decl.Values) {
+				return decl.Values[i]
+			}
+		}
+	}
+	return nil
+}
+
+func isProviderNameField(expr ast.Expr, info *types.Info) bool {
+	selector, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	selection := info.Selections[selector]
+	if selection == nil || selection.Obj().Name() != "Name" {
+		return false
+	}
+	recv := selection.Recv()
+	if pointer, ok := recv.(*types.Pointer); ok {
+		recv = pointer.Elem()
+	}
+	named, ok := recv.(*types.Named)
+	return ok && named.Obj().Name() == "ProviderSpec"
+}
+
+func providerComparisonPositions(node ast.Node, info *types.Info, isProvider func(ast.Expr) bool) []token.Pos {
+	switch n := node.(type) {
+	case *ast.IndexExpr:
+		if providerIndex(n, isProvider) {
+			return []token.Pos{n.Pos()}
+		}
+	case *ast.CallExpr:
+		if providerPredicate(n, info, isProvider) {
+			return []token.Pos{n.Pos()}
+		}
+	case *ast.BinaryExpr:
+		if (n.Op == token.EQL || n.Op == token.NEQ) && (isProvider(n.X) || isProvider(n.Y)) {
+			return []token.Pos{n.Pos()}
+		}
+	case *ast.SwitchStmt:
+		return providerSwitchPositions(n, isProvider)
+	}
+	return nil
+}
+
+func providerIndex(n *ast.IndexExpr, isProvider func(ast.Expr) bool) bool {
+	if isProvider(n.Index) {
+		return true
+	}
+	literal, ok := n.X.(*ast.CompositeLit)
+	if !ok {
+		return false
+	}
+	for _, element := range literal.Elts {
+		if pair, ok := element.(*ast.KeyValueExpr); ok && isProvider(pair.Key) {
+			return true
+		}
+	}
+	return false
+}
+
+func comparisonPredicate(fun ast.Expr, info *types.Info) bool {
+	switch generic := fun.(type) {
+	case *ast.IndexExpr:
+		fun = generic.X
+	case *ast.IndexListExpr:
+		fun = generic.X
+	}
+	callee, ok := fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	object := info.Uses[callee.Sel]
+	if object == nil || object.Pkg() == nil {
+		return false
+	}
+	switch object.Pkg().Path() + "." + object.Name() {
+	case "strings.EqualFold", "strings.Compare", "strings.Contains", "strings.HasPrefix", "strings.HasSuffix", "strings.Index", "slices.Contains", "slices.Index":
+		return true
+	}
+	return false
+}
+
+func providerPredicate(n *ast.CallExpr, info *types.Info, isProvider func(ast.Expr) bool) bool {
+	if !comparisonPredicate(n.Fun, info) {
+		return false
+	}
+	for _, arg := range n.Args {
+		matched := false
+		ast.Inspect(arg, func(child ast.Node) bool {
+			if expr, ok := child.(ast.Expr); ok && isProvider(expr) {
+				matched = true
+			}
+			return !matched
+		})
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+func providerSwitchPositions(n *ast.SwitchStmt, isProvider func(ast.Expr) bool) []token.Pos {
+	if n.Tag == nil {
+		return nil
+	}
+	if isProvider(n.Tag) {
+		return []token.Pos{n.Tag.Pos()}
+	}
+	var found []token.Pos
+	for _, stmt := range n.Body.List {
+		clause := stmt.(*ast.CaseClause)
+		for _, value := range clause.List {
+			if isProvider(value) {
+				found = append(found, value.Pos())
+			}
+		}
+	}
 	return found
 }
 
