@@ -110,8 +110,8 @@ relative to the root.
    it has rules, and everything else calls it. Examples: in `speckit-pro`,
    `stop_policy.py` with `references/stop-policy.md`, `host_skills.py`,
    `formal/pins.py` and `canonical_json.py`; in `typesafe-jev`,
-   `validation.go` for the one request shape both backends take and
-   `config.go` for backend specs; repository-wide, `scripts/pinned_archive.py`
+   `validation.go` for universal request shape and `config.go` for backend
+   specs and per-hop limits; repository-wide, `scripts/pinned_archive.py`
    for pinned downloads. Consolidate a scattered domain before adding to it.
    Extend the owner; a new module needs a stated reason the owner cannot hold
    it. A function-level import that dodges a cycle, or a new

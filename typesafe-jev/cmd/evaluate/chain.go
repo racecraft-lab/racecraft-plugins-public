@@ -76,8 +76,8 @@ func classify(err error) chainOutcome {
 }
 
 // chainRunner owns the session's position and move log. Clients carry only
-// per-backend HTTP settings. The index advances only after the next hop
-// accepts local preparation.
+// per-backend HTTP settings. A moving failure advances the index before the
+// next hop prepares, independently of that request's capability route.
 type chainRunner struct {
 	hops           []*Client
 	current        atomic.Int32
@@ -104,21 +104,9 @@ func (r *chainRunner) credentialExit() int { return r.credentialCode }
 
 func (r *chainRunner) servingHop() *Client { return r.hops[r.current.Load()] }
 
-// evaluate extends the existing fallback contract down the ordered hops. A call moves on
-// only when the primary will not serve this credential (401, 402, 403), has
-// moved (404), is throttling (429) or is down (5xx) after its own retries, or
-// cannot be reached. The session then stays there, so one session never
-// alternates between two accounts. A request rejected by shape (400, 413, 422)
-// or by local validation fails the same way anywhere, so it never moves.
-//
-// The backends' local gates differ (image limits, context budgets), so the
-// fallback checks the request before the session moves (FB-08). One it cannot
-// take leaves the session on the primary, and the caller sees the primary's
-// failure, whose class decides the exit code, rather than a local rejection
-// after a network call was made.
-//
-// All hops share the first loaded hop's deadline: a client that aborts a tool call
-// after a fixed time would otherwise kill a fallback given a fresh budget.
+// evaluate routes local hop refusals without moving the session. A failure on
+// the session's own hop moves it before the next hop is prepared, so a failure
+// and a capability route compose. All hops share the request deadline.
 func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
 	if len(r.hops) > 1 {
 		var cancel context.CancelFunc
@@ -129,7 +117,7 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 	if start > 0 || r.firstDropped {
 		in = fallbackRequest(in)
 	}
-	shaped, err := shapeRequest(in, r.hops[start].Provider.AllowImages)
+	shaped, err := shapeRequest(in)
 	if err != nil {
 		local := &requestInvalidError{err}
 		if start > 0 {
@@ -137,24 +125,46 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 		}
 		return nil, local
 	}
-	body, err := runShapedOn(ctx, r.hops[start], shaped)
-	for i := start; err != nil && i+1 < len(r.hops); i++ {
-		out := classify(&chainFailure{err: err, requestErr: ctx.Err()})
+	var networkErr error
+	sessionHop := start
+	for i := start; i < len(r.hops); i++ {
+		if i > start {
+			shaped.in = fallbackRequest(shaped.in)
+		}
+		p, local := prepareForHop(r.hops[i], shaped)
+		if local != nil {
+			reported := local
+			if networkErr != nil {
+				reported = fmt.Errorf("%w; the %s fallback cannot take this request: %v", networkErr, r.hops[i].Provider.Name, local)
+			}
+			var refusal *hopRefusalError
+			if !errors.As(local, &refusal) {
+				err = reported
+				break
+			}
+			if networkErr != nil || err == nil {
+				err = reported
+			}
+			continue
+		}
+		body, failure := send(ctx, r.hops[i], p)
+		if failure == nil {
+			return body, nil
+		}
+		err, networkErr = failure, failure
+		out := classify(&chainFailure{err: failure, requestErr: ctx.Err()})
 		if out.effect != moveSession && out.effect != moveAccount {
 			break
 		}
-		shaped.in = fallbackRequest(shaped.in)
-		p, local := prepareForHop(r.hops[i+1], shaped)
-		if local != nil {
-			return nil, fmt.Errorf("%w; the %s fallback cannot take this request: %v", err, r.hops[i+1].Provider.Name, local)
+		if i == sessionHop && i+1 < len(r.hops) {
+			r.move(int32(i), int32(i+1), out.reason)
+			sessionHop = i + 1
 		}
-		r.move(int32(i), int32(i+1), out.reason)
-		body, err = send(ctx, r.hops[i+1], p)
 	}
 	if start > 0 {
 		err = r.onTheFallback(err)
 	}
-	return body, err
+	return nil, err
 }
 
 // move only advances the hop that actually failed. Concurrent failures of an

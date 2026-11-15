@@ -324,20 +324,26 @@ this list does not name is sent through, so an operator's own model string is
 not rewritten into a 404 they did not ask to see. `prepare` fills the backend
 default before the check.
 
-### Fallback and the per-backend gates
+### Capability routes and the per-backend gates
 
 The two backends' local gates differ: the side minimum
 (280 on TypeSafe, 256 on OpenRouter), and the context budget (64,000 and
 32,000 on TypeSafe without `JEV_LONG_CONTEXT`, 262,144 on OpenRouter). The
-fallback never runs the caller's model, so:
+later hops never run the caller's model, so:
 
 - A box question on the fallback runs on that backend's default, which is
   Jev 1.14 on both: `jev-latest` on TypeSafe, `~typesafe/jev-latest` on
   OpenRouter.
-- When the primary fails in a way that would move the call, the fallback
-  checks the request first. A request it would refuse locally does not move
-  the session. The caller gets the primary's failure, and its exit code, with
-  the fallback's reason added.
+- Universal shape errors are rejected before per-hop limits and capabilities.
+  Each hop checks its own limits and image opt-in before any request is sent
+  to it. A refusal takes a capability route to the next able hop and leaves
+  the session where it is. Images are read at most once across those checks.
+- Only a failure on the session's own hop moves the session. A routed call
+  that fails on a later hop continues down without moving the session.
+- A failure moves the session before the next hop checks the request. If that
+  hop cannot take it, this call routes on while the session stays on that hop.
+  If no able hop remains, the caller gets the network failure (exit 5), with
+  the route reason added. With no network call, no able hop means exit 2.
 - Once a session is on the fallback, a local refusal there is still exit 2,
   since no call was made, and its message says the session is on the fallback.
 

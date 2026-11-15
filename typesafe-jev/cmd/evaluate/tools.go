@@ -68,14 +68,6 @@ func runOn(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
 	return send(ctx, c, p)
 }
 
-func runShapedOn(ctx context.Context, c *Client, shaped shapedCall) ([]byte, error) {
-	p, err := prepareForHop(c, shaped)
-	if err != nil {
-		return nil, err
-	}
-	return send(ctx, c, p)
-}
-
 // preparedCall is one request that passed every local check for one backend,
 // encoded for it.
 type preparedCall struct {
@@ -87,7 +79,7 @@ type preparedCall struct {
 // prepare resolves the model, validates, and encodes. It makes no network
 // call, and every error it returns is a *requestInvalidError.
 func prepare(c *Client, in evaluateIn) (preparedCall, error) {
-	shaped, err := shapeRequest(in, c.Provider.AllowImages)
+	shaped, err := shapeRequest(in)
 	if err != nil {
 		return preparedCall{}, &requestInvalidError{err}
 	}
