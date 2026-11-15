@@ -87,10 +87,7 @@ func (c *Client) post(ctx context.Context, body []byte, headers map[string]strin
 	for attempt := 0; ; attempt++ {
 		b, status, header, err := c.attempt(ctx, body, headers)
 		if err != nil {
-			if retryFailure != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				return nil, retryFailure
-			}
-			return nil, err
+			return nil, retryDeadlineError(ctx.Err(), retryFailure, err)
 		}
 		if status/100 == 2 {
 			return b, nil
@@ -111,13 +108,19 @@ func (c *Client) post(ctx context.Context, body []byte, headers map[string]strin
 				c.Provider.Name, status, budget)}
 		}
 		if err := sleep(ctx, wait); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
-				return nil, retryFailure
-			}
-			return nil, err
+			return nil, retryDeadlineError(err, retryFailure, err)
 		}
 		delay *= 2
 	}
+}
+
+// retryDeadlineError retains a backend status when its retry runs out of time.
+// Cancellation and other failures keep their original error.
+func retryDeadlineError(deadlineErr, retryFailure, failure error) error {
+	if retryFailure != nil && errors.Is(deadlineErr, context.DeadlineExceeded) {
+		return retryFailure
+	}
+	return failure
 }
 
 // sleep waits for d, or returns early if the call is cancelled.

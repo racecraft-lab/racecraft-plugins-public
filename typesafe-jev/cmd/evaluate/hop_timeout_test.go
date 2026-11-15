@@ -12,10 +12,9 @@ import (
 func TestCallRejectsInvalidHopTimeout(t *testing.T) {
 	for _, raw := range []string{"soon", "0", "-1s", "46s", " "} {
 		t.Run(raw, func(t *testing.T) {
-			isolateCallEnv(t)
-			t.Setenv("TYPESAFE_API_KEY", fixtureKey)
-			t.Setenv("JEV_HOP_TIMEOUT", raw)
-			result := runCallForTest(t, callOptions{check: true}, "")
+			result := checkCallWithEnv(t, callOptions{check: true}, map[string]string{
+				"TYPESAFE_API_KEY": fixtureKey, "JEV_HOP_TIMEOUT": raw,
+			})
 			if result.code != 4 || result.stdout != "" || !strings.Contains(result.stderr, "JEV_HOP_TIMEOUT") {
 				t.Fatalf("invalid hop timeout %q: %+v; want exit 4 naming JEV_HOP_TIMEOUT", raw, result)
 			}
@@ -137,18 +136,7 @@ func TestHopRetryDeadlineRetainsStatus(t *testing.T) {
 					HTTP: &http.Client{Transport: backendFixtureTransport(func(req *http.Request) (*http.Response, error) {
 						hits[i]++
 						if i == 0 {
-							if mode == "retry hangs" && hits[i] == 2 {
-								<-req.Context().Done()
-								return nil, req.Context().Err()
-							}
-							if mode == "status at deadline" {
-								<-req.Context().Done()
-							}
-							header := http.Header{"Retry-After": {"600"}}
-							if mode == "retry hangs" {
-								header = http.Header{}
-							}
-							return &http.Response{StatusCode: 429, Header: header, Body: io.NopCloser(strings.NewReader("{}"))}, nil
+							return hopRetryDeadlineResponse(req, mode, hits[i])
 						}
 						return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulReply))}, nil
 					})},
@@ -166,6 +154,22 @@ func TestHopRetryDeadlineRetainsStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+// hopRetryDeadlineResponse models the three status/retry deadline boundaries.
+func hopRetryDeadlineResponse(req *http.Request, mode string, hit int) (*http.Response, error) {
+	if mode == "retry hangs" && hit == 2 {
+		<-req.Context().Done()
+		return nil, req.Context().Err()
+	}
+	if mode == "status at deadline" {
+		<-req.Context().Done()
+	}
+	header := http.Header{"Retry-After": {"600"}}
+	if mode == "retry hangs" {
+		header = http.Header{}
+	}
+	return &http.Response{StatusCode: 429, Header: header, Body: io.NopCloser(strings.NewReader("{}"))}, nil
 }
 
 func TestSetupCarriesHopTimeout(t *testing.T) {

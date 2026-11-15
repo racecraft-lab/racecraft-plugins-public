@@ -175,22 +175,7 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 			stop = walk.localFailure(r.hops[i], local)
 			continue
 		}
-		hopCtx := ctx
-		cancelHop := func() {}
-		limit := r.hops[i].HopTimeout
-		if limit == 0 {
-			limit = defaultHopTimeout
-		}
-		deadline, _ := ctx.Deadline()
-		if time.Until(deadline) > limit && r.hasLaterHop(i, shaped) {
-			hopCtx, cancelHop = context.WithTimeout(ctx, limit)
-		}
-		body, failure := send(hopCtx, r.hops[i], p, nil)
-		hopErr := hopCtx.Err()
-		cancelHop()
-		if requestErr := ctx.Err(); requestErr != nil {
-			failure = requestErr
-		}
+		body, failure, hopErr := r.sendHop(ctx, i, shaped, p)
 		if failure == nil {
 			return body, nil
 		}
@@ -200,6 +185,27 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 		walk.err = r.onTheFallback(walk.err)
 	}
 	return nil, walk.err
+}
+
+// sendHop keeps the hop deadline and its provenance inside the request budget.
+func (r *chainRunner) sendHop(ctx context.Context, i int, shaped shapedCall, p preparedCall) ([]byte, error, error) {
+	hopCtx := ctx
+	cancelHop := func() {}
+	limit := r.hops[i].HopTimeout
+	if limit == 0 {
+		limit = defaultHopTimeout
+	}
+	deadline, _ := ctx.Deadline()
+	if time.Until(deadline) > limit && r.hasLaterHop(i, shaped) {
+		hopCtx, cancelHop = context.WithTimeout(ctx, limit)
+	}
+	body, failure := send(hopCtx, r.hops[i], p, nil)
+	hopErr := hopCtx.Err()
+	cancelHop()
+	if requestErr := ctx.Err(); requestErr != nil {
+		failure = requestErr
+	}
+	return body, failure, hopErr
 }
 
 // hasLaterHop checks reachability locally, using the same preparation and

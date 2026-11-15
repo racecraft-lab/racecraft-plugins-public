@@ -195,10 +195,9 @@ func checkResolutionServer(t *testing.T, state string, wantExit int, callCount *
 func TestCallStillRejectsThePrimaryAsFallback(t *testing.T) {
 	for _, provider := range []string{"typesafe", "openrouter"} {
 		t.Run(provider, func(t *testing.T) {
-			isolateCallEnv(t)
-			t.Setenv("JEV_PROVIDER", provider)
-			t.Setenv("JEV_FALLBACK_PROVIDER", provider)
-			got := runCallForTest(t, callOptions{check: true, pluginDefaults: true}, "")
+			got := checkCallWithEnv(t, callOptions{check: true, pluginDefaults: true}, map[string]string{
+				"JEV_PROVIDER": provider, "JEV_FALLBACK_PROVIDER": provider,
+			})
 			if got.code != 4 || got.stdout != "" || got.stderr != fmt.Sprintf("evaluate: JEV_FALLBACK_PROVIDER=%q is the primary backend; a fallback must be the other one\n", provider) {
 				t.Fatalf("unexpected CLI result: %+v", got)
 			}

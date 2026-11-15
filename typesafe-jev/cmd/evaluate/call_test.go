@@ -115,6 +115,16 @@ func runCallForTest(t *testing.T, opts callOptions, stdin string) callResult {
 	return callResult{code, stdout.String(), stderr.String()}
 }
 
+// checkCallWithEnv isolates a CLI configuration check from the host environment.
+func checkCallWithEnv(t *testing.T, opts callOptions, env map[string]string) callResult {
+	t.Helper()
+	isolateCallEnv(t)
+	for name, value := range env {
+		t.Setenv(name, value)
+	}
+	return runCallForTest(t, opts, "")
+}
+
 // CALL-01: every exit code in the contract, each from the situation it names.
 func TestCallExitCodes(t *testing.T) {
 	for _, tc := range []struct {
