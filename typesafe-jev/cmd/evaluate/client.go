@@ -67,9 +67,8 @@ func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
 	if err != nil {
 		return nil, nil, &requestInvalidError{err}
 	}
-	if overLimit(len(body), c.Provider.Limits.BodyBytes) {
-		return nil, nil, &requestInvalidError{fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state, fewer questions, or fewer or smaller images",
-			c.Provider.Name, len(body), c.Provider.Limits.BodyBytes)}
+	if err := checkBodySize(c.Provider, body); err != nil {
+		return nil, nil, &requestInvalidError{err}
 	}
 	return body, headers, nil
 }

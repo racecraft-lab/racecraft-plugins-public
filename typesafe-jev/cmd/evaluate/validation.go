@@ -8,7 +8,9 @@ import (
 	"strings"
 )
 
-// The two backends take the same request shape, and now accept the same values
+// Universal shape checks are independent of a backend. Hop preparation checks
+// its capabilities and limits (ADR 0028); it does not narrow the shared shape.
+// The two existing backends accept the same values
 // inside it. TypeSafe documents that instructions, choice option descriptions,
 // score level descriptions, and noul true/false descriptions all accept a
 // string, an object, an array, or null. OpenRouter's Decisions schemas typed
@@ -49,14 +51,33 @@ const (
 // Errors name the field path and never the value. A rejection message reaches
 // the agent's transcript, and the value may be the private state being judged.
 func validateRequest(spec ProviderSpec, in evaluateIn) error {
+	if err := validateRequestShape(in, spec.AllowImages); err != nil {
+		return &requestShapeError{err}
+	}
+	if err := validateHopRequest(spec, in); err != nil {
+		return &hopRefusalError{err}
+	}
+	return nil
+}
+
+// These types describe which phase refused a call. The compatibility boundary
+// still wraps both as requestInvalidError until capability routes land.
+type requestShapeError struct{ err error }
+
+func (e *requestShapeError) Error() string { return e.err.Error() }
+func (e *requestShapeError) Unwrap() error { return e.err }
+
+type hopRefusalError struct{ err error }
+
+func (e *hopRefusalError) Error() string { return e.err.Error() }
+func (e *hopRefusalError) Unwrap() error { return e.err }
+
+func validateRequestShape(in evaluateIn, allowImages bool) error {
 	if err := validateState(in.State); err != nil {
 		return err
 	}
 	if len(in.Questions) == 0 {
 		return fmt.Errorf("questions must not be empty")
-	}
-	if overLimit(len(in.Questions), spec.Limits.Questions) {
-		return fmt.Errorf("questions has %d entries, over the %d the backend accepts", len(in.Questions), spec.Limits.Questions)
 	}
 	if in.Model != "" && strings.TrimSpace(in.Model) == "" {
 		return fmt.Errorf("model is whitespace only; omit it to use the configured default")
@@ -65,14 +86,79 @@ func validateRequest(spec ProviderSpec, in evaluateIn) error {
 	// Sorted so a request with several problems reports the same one every
 	// time; map iteration order would make the message change run to run.
 	for _, id := range sortedKeys(in.Questions) {
+		if err := validateQuestionShape(id, in.Questions[id]); err != nil {
+			return err
+		}
+	}
+	return validateImageShape(in, allowImages)
+}
+
+func validateHopRequest(spec ProviderSpec, in evaluateIn) error {
+	if overLimit(len(in.Questions), spec.Limits.Questions) {
+		return fmt.Errorf("questions has %d entries, over the %d the backend accepts", len(in.Questions), spec.Limits.Questions)
+	}
+	for _, id := range sortedKeys(in.Questions) {
 		if err := validateQuestion(spec, id, in.Questions[id]); err != nil {
 			return err
 		}
 	}
-	if err := validateImageUse(spec, in); err != nil {
+	if err := validateImageHop(spec, in); err != nil {
 		return err
 	}
 	return validateBudget(spec, in.State, in.Questions)
+}
+
+// shapedCall holds backend-neutral input and image bytes, shared across hops.
+type shapedCall struct {
+	in     evaluateIn
+	images map[string]preparedImage
+	uses   map[string]int
+}
+
+func shapeRequest(in evaluateIn, allowImages bool) (shapedCall, error) {
+	if err := validateRequestShape(in, allowImages); err != nil {
+		return shapedCall{}, &requestShapeError{err}
+	}
+	images, uses, err := shapeImages(in)
+	if err != nil {
+		return shapedCall{}, &requestShapeError{err}
+	}
+	return shapedCall{in: in, images: images, uses: uses}, nil
+}
+
+func prepareForHop(c *Client, shaped shapedCall) (preparedCall, error) {
+	in := shaped.in
+	// Precedence: the tool call's model, then JEV_MODEL, then the backend
+	// default. c.Model already holds the resolved second and third of those.
+	//
+	// An explicit model passes through exactly as given. A "~typesafe/" prefix
+	// is neither added nor stripped: a mismatched id becomes a 404 the agent
+	// can read, which beats a silent rewrite to a model nobody asked for.
+	if in.Model == "" {
+		in.Model = c.Model
+	}
+	if err := validateHopRequest(c.Provider, in); err != nil {
+		return preparedCall{}, &requestInvalidError{&hopRefusalError{err}}
+	}
+	if err := validateLoadedImages(c.Provider, in.Images, shaped.images, shaped.uses); err != nil {
+		return preparedCall{}, &requestInvalidError{&hopRefusalError{err}}
+	}
+	body, headers, err := encodeLoadedRequest(c.Provider, in, shaped.images)
+	if err != nil {
+		return preparedCall{}, &requestInvalidError{&hopRefusalError{err}}
+	}
+	if err := checkBodySize(c.Provider, body); err != nil {
+		return preparedCall{}, &requestInvalidError{&hopRefusalError{err}}
+	}
+	return preparedCall{in: in, body: body, headers: headers}, nil
+}
+
+func checkBodySize(spec ProviderSpec, body []byte) error {
+	if overLimit(len(body), spec.Limits.BodyBytes) {
+		return fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state, fewer questions, or fewer or smaller images",
+			spec.Name, len(body), spec.Limits.BodyBytes)
+	}
+	return nil
 }
 
 // estimateTokens approximates the tokens a value costs once serialised.
@@ -143,6 +229,25 @@ func validateState(state any) error {
 
 func validateQuestion(spec ProviderSpec, id string, q question) error {
 	path := "questions." + id
+	if !slices.Contains(spec.QuestionTypes, q.Type) {
+		return fmt.Errorf("%s.type is not supported by %s", path, spec.Name)
+	}
+	if err := validateEntryCapability(spec, path+".instructions", q.Instructions); err != nil {
+		return err
+	}
+	switch q.Type {
+	case typeNoul:
+		return validateNoulCriteria(spec, path, q.Criteria)
+	case typeChoice:
+		return validateChoiceCriteria(spec, path, q.Criteria)
+	case typeScore:
+		return validateScoreCriteria(spec, path, q.Criteria)
+	}
+	return nil
+}
+
+func validateQuestionShape(id string, q question) error {
+	path := "questions." + id
 
 	switch q.Type {
 	case typeNoul, typeChoice, typeScore, typeBox:
@@ -152,19 +257,27 @@ func validateQuestion(spec ProviderSpec, id string, q question) error {
 		return fmt.Errorf("%s.type must be noul, choice, score, or box", path)
 	}
 
-	if !slices.Contains(spec.QuestionTypes, q.Type) {
-		return fmt.Errorf("%s.type is not supported by %s", path, spec.Name)
-	}
-
-	if err := validateEntry(spec, path+".instructions", q.Instructions, entryRequired); err != nil {
+	if err := validateEntryShape(path+".instructions", q.Instructions, entryRequired); err != nil {
 		return err
 	}
 
 	switch q.Type {
 	case typeNoul:
-		return validateNoulCriteria(spec, path, q.Criteria)
+		return validateNoulShape(path, q.Criteria)
 	case typeChoice:
-		return validateChoiceCriteria(spec, path, q.Criteria)
+		m, err := criteriaOf[map[string]any](choiceRule, path, q.Criteria)
+		if err != nil {
+			return err
+		}
+		for _, option := range sortedKeys(m) {
+			if strings.TrimSpace(option) == "" {
+				return fmt.Errorf("%s.criteria has a blank option name", path)
+			}
+			if err := validateEntryShape(path+".criteria."+option, m[option], entryOptional); err != nil {
+				return err
+			}
+		}
+		return nil
 	case typeBox:
 		// Box takes instructions and an image, nothing else. Dropping a
 		// criteria the caller sent would judge a different question than the
@@ -174,7 +287,16 @@ func validateQuestion(spec ProviderSpec, id string, q question) error {
 		}
 		return nil
 	default:
-		return validateScoreCriteria(spec, path, q.Criteria)
+		levels, err := criteriaOf[[]any](scoreRule, path, q.Criteria)
+		if err != nil {
+			return err
+		}
+		for i, level := range levels {
+			if err := validateEntryShape(fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 }
 
@@ -187,16 +309,24 @@ const (
 	entryOptional
 )
 
-// validateEntry checks one of TypeSafe's EntryType fields: instructions, an
-// option description, or a level description.
-func validateEntry(spec ProviderSpec, path string, v any, mode entryMode) error {
+// validateEntryCapability checks a hop's support for structured entries.
+func validateEntryCapability(spec ProviderSpec, path string, v any) error {
+	switch v.(type) {
+	case map[string]any, []any:
+		if !spec.StructuredEntries {
+			return fmt.Errorf("%s must be a string for the %s backend; structured %s are not accepted there",
+				path, spec.Name, describeKind(v))
+		}
+	}
+	return nil
+}
+
+func validateEntryShape(path string, v any, mode entryMode) error {
 	if v == nil {
 		if mode == entryRequired {
 			return fmt.Errorf("%s is required", path)
 		}
-		// A null description means "the option name says it". Both backends
-		// accept it in the one optional position this server has, a choice
-		// option description.
+		// A null choice description means "the option name says it".
 		return nil
 	}
 
@@ -207,12 +337,6 @@ func validateEntry(spec ProviderSpec, path string, v any, mode entryMode) error 
 		}
 		return nil
 	case map[string]any, []any:
-		if !spec.StructuredEntries {
-			// Not stringified silently: JSON-encoding an object into the
-			// instructions would send the model something nobody wrote.
-			return fmt.Errorf("%s must be a string for the %s backend; structured %s are not accepted there",
-				path, spec.Name, describeKind(v))
-		}
 		return nil
 	default:
 		return fmt.Errorf("%s must be a string, object, or array", path)
@@ -233,6 +357,19 @@ func validateNoulCriteria(spec ProviderSpec, path string, criteria any) error {
 	if criteria == nil {
 		return nil
 	}
+	m := criteria.(map[string]any) // shaping checked the map and required keys
+	for _, key := range []string{"true", "false"} {
+		if err := validateEntryCapability(spec, path+".criteria."+key, m[key]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateNoulShape(path string, criteria any) error {
+	if criteria == nil {
+		return nil
+	}
 	m, ok := criteria.(map[string]any)
 	if !ok {
 		return fmt.Errorf("%s.criteria must be an object with true and false descriptions", path)
@@ -242,7 +379,7 @@ func validateNoulCriteria(spec ProviderSpec, path string, criteria any) error {
 		if !present {
 			return fmt.Errorf("%s.criteria.%s is required when criteria is given", path, key)
 		}
-		if err := validateEntry(spec, path+".criteria."+key, v, entryRequired); err != nil {
+		if err := validateEntryShape(path+".criteria."+key, v, entryRequired); err != nil {
 			return err
 		}
 	}
@@ -270,10 +407,12 @@ type criteriaRule struct {
 var (
 	choiceRule = criteriaRule{
 		qtype: typeChoice, shape: "an object mapping each option to its description",
+		least: 0, most: noLimit,
 		few: "must name at least one option", verb: "names", unit: "options",
 	}
 	scoreRule = criteriaRule{
 		qtype: typeScore, shape: "an ordered array of level descriptions",
+		least: 0, most: noLimit,
 		verb: "has", unit: "levels",
 	}
 )
@@ -316,12 +455,7 @@ func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error 
 		return err
 	}
 	for _, option := range sortedKeys(m) {
-		if strings.TrimSpace(option) == "" {
-			return fmt.Errorf("%s.criteria has a blank option name", path)
-		}
-		// Optional: a null description is meaningful on TypeSafe, and
-		// validateEntry rejects it for OpenRouter.
-		if err := validateEntry(spec, path+".criteria."+option, m[option], entryOptional); err != nil {
+		if err := validateEntryCapability(spec, path+".criteria."+option, m[option]); err != nil {
 			return err
 		}
 	}
@@ -338,7 +472,7 @@ func validateScoreCriteria(spec ProviderSpec, path string, criteria any) error {
 		return err
 	}
 	for i, level := range levels {
-		if err := validateEntry(spec, fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired); err != nil {
+		if err := validateEntryCapability(spec, fmt.Sprintf("%s.criteria[%d]", path, i), level); err != nil {
 			return err
 		}
 	}

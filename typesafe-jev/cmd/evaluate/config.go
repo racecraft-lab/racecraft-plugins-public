@@ -135,6 +135,29 @@ func overLimit(value, limit int) bool {
 	return limit != noLimit && value > limit
 }
 
+// imageReadLimits bounds the shared snapshot by the largest request any
+// registered backend can take. Individual refusals remain per-hop checks.
+func imageReadLimits() (file, total int) {
+	for _, spec := range providers {
+		file = unionLimit(file, spec.Limits.ImageBytes)
+		bound := noLimit
+		for _, limit := range []int{spec.Limits.TotalImageBytes, spec.Limits.ExpandedBytes, spec.Limits.BodyBytes} {
+			if limit != noLimit && (bound == noLimit || limit < bound) {
+				bound = limit
+			}
+		}
+		total = unionLimit(total, bound)
+	}
+	return file, total
+}
+
+func unionLimit(a, b int) int {
+	if a == noLimit || b == noLimit {
+		return noLimit
+	}
+	return max(a, b)
+}
+
 // imageBounds is one backend's inclusive pixel limits for a single image.
 type imageBounds struct {
 	MinSide   int

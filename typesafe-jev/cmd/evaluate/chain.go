@@ -99,18 +99,35 @@ func (r *chainRunner) servingHop() *Client { return r.hops[r.current.Load()] }
 // local refusal is checked before a move (FB-08); capability routes and per-hop
 // deadlines belong to later layers. Both hops share the primary's deadline.
 func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
-	if len(r.hops) == 1 {
-		return runOn(ctx, r.hops[0], in)
+	if len(r.hops) > 1 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, r.hops[0].Timeout)
+		defer cancel()
 	}
-	ctx, cancel := context.WithTimeout(ctx, r.hops[0].Timeout)
-	defer cancel()
+	serving := r.servingHop()
+	onTheFallback := serving != r.hops[0]
+	if onTheFallback {
+		in = fallbackRequest(in)
+	}
+	shaped, err := shapeRequest(in, serving.Provider.AllowImages)
+	if err != nil {
+		local := &requestInvalidError{err}
+		if onTheFallback {
+			return nil, r.onTheFallback(local)
+		}
+		return nil, local
+	}
+	if len(r.hops) == 1 {
+		return runShapedOn(ctx, r.hops[0], shaped)
+	}
 
-	onFallback := fallbackRequest(in)
-	if r.current.Load() != 0 {
-		body, err := runOn(ctx, r.servingHop(), onFallback)
+	onFallback := shaped
+	onFallback.in = fallbackRequest(in)
+	if onTheFallback {
+		body, err := runShapedOn(ctx, serving, onFallback)
 		return body, r.onTheFallback(err)
 	}
-	body, err := runOn(ctx, r.hops[0], in)
+	body, err := runShapedOn(ctx, r.hops[0], shaped)
 	if err == nil {
 		return body, nil
 	}
@@ -118,7 +135,7 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 	if out.effect != moveSession && out.effect != moveAccount {
 		return body, err
 	}
-	p, local := prepare(r.hops[1], onFallback)
+	p, local := prepareForHop(r.hops[1], onFallback)
 	if local != nil {
 		return nil, fmt.Errorf("%w; the %s fallback cannot take this request: %v", err, r.hops[1].Provider.Name, local)
 	}
