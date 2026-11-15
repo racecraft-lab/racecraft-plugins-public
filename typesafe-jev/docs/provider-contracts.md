@@ -354,8 +354,9 @@ never duplicate bytes. Longer strings and object keys remain unchanged, as
 with the other encoders. Ollama accepts no `box` questions; those route on.
 The existing PNG/JPEG input contract remains; WebP is not enabled by this client.
 
-Ollama allows at most 4 images, 4 MiB per decoded file, 8 MiB of decoded files
-in total and 16,000,000 pixels per image, with no separate side-length cap.
+Ollama allows at most 4 images, 4 MiB each, 8 MiB in total and 16,000,000
+pixels per image, with no separate side-length cap. This client measures the
+byte caps on decoded file bytes.
 Every image refusal routes to a later able hop without moving the session.
 The final serialized body, including text and base64, must fit 13 MiB.
 Rate-limit behavior and image retention remain unconfirmed.

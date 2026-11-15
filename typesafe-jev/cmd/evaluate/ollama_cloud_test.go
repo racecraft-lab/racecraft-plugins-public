@@ -66,7 +66,7 @@ func TestOllamaCloudGoldenTextRequestAndAnswers(t *testing.T) {
 }
 
 func TestOllamaCloudCapabilityRoutesAndLocalExit(t *testing.T) {
-	for name, input := range ollamaRefusedRequests(t) {
+	for name, input := range ollamaCapabilityRequests(t) {
 		t.Run(name, func(t *testing.T) {
 			checkOllamaRoute(t, input, false, name == "image")
 			checkOllamaRoute(t, input, true, name == "image")
@@ -106,7 +106,7 @@ func checkOllamaRoute(t *testing.T, input evaluateIn, later, accepts bool) {
 	}
 }
 
-func ollamaRefusedRequests(t *testing.T) map[string]evaluateIn {
+func ollamaCapabilityRequests(t *testing.T) map[string]evaluateIn {
 	t.Helper()
 	many := simpleIn()
 	many.Questions = make(map[string]question)
