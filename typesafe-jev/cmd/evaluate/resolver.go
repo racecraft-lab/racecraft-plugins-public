@@ -99,11 +99,14 @@ func resolveHopConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	home := pluginHome(look, pluginDefaults)
 	for i := 2; i < len(names); i++ {
 		name := names[i]
-		keyFile, defaulted, err := resolveHopKeyFile(func(string) (string, bool) { return "", false }, pluginKeyFileEnv, name, home)
+		// Hops 3 and 4 have no key-file variable, so none is read or named.
+		keyFile, defaulted, err := resolveHopKeyFile(nil, "", name, home)
 		if err != nil {
 			return cfg, err
 		}
-		cfg.AdditionalHops = append(cfg.AdditionalHops, cfg.laterHop(providers[name], keyFile, defaulted))
+		hop := cfg.laterHop(providers[name], keyFile, defaulted)
+		hop.defaultKeyOnly = true
+		cfg.AdditionalHops = append(cfg.AdditionalHops, hop)
 	}
 	return cfg, nil
 }
@@ -197,17 +200,27 @@ func homeDir(look lookupFunc) string {
 
 // resolveHopKeyFile applies discovery only after provider selection, and
 // validates a discovered path at the same point as an explicit path. This keeps
-// diagnostics stable when more than one setting is invalid.
+// diagnostics stable when more than one setting is invalid. An empty name
+// means the hop has no key-file variable and uses discovery alone.
 func resolveHopKeyFile(look lookupFunc, name, provider, home string) (string, bool, error) {
-	path, err := resolveKeyFileVar(look, name)
-	if err != nil || path != "" || home == "" {
-		return path, false, err
+	if name != "" {
+		path, err := resolveKeyFileVar(look, name)
+		if err != nil || path != "" {
+			return path, false, err
+		}
+	}
+	if home == "" {
+		return "", false, nil
 	}
 	candidate := filepath.Join(home, filepath.FromSlash(pluginKeyDirectory), provider+".key")
 	if _, err := os.Lstat(candidate); err != nil {
 		return "", false, nil
 	}
-	path, err = resolveKeyFileVar(func(string) (string, bool) { return candidate, true }, name)
+	label := name
+	if label == "" {
+		label = "the default key file"
+	}
+	path, err := resolveKeyFileVar(func(string) (string, bool) { return candidate, true }, label)
 	return path, true, err
 }
 

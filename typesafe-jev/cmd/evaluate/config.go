@@ -363,6 +363,9 @@ type Config struct {
 	// empty for the primary, which reads JEV_API_KEY_FILE; fallbackConfig sets
 	// it to JEV_FALLBACK_API_KEY_FILE.
 	keyFileVar string
+	// defaultKeyOnly marks hops 3 and 4, which have no key-file variable: their
+	// key comes from the provider's environment variable or the default file.
+	defaultKeyOnly bool
 	// Fallback is the backend a call moves to when Provider refuses its
 	// credential or is unavailable, or nil for a one-hop chain. Chain resolution
 	// sets it from configuration or the built-in order, never from available keys.
@@ -434,6 +437,22 @@ func knownBoxReject(provider, model string) bool {
 
 func (spec ProviderSpec) rejectsBoxModel(model string) bool {
 	return slices.Contains(spec.UnsupportedBoxModels, model)
+}
+
+// keyFileLabel names where this Config's key file came from in diagnostics.
+func (c Config) keyFileLabel() string {
+	if c.defaultKeyOnly {
+		return "default key file"
+	}
+	return c.keyFileEnv()
+}
+
+// keyFileHint says how to supply a key file for this Config.
+func (c Config) keyFileHint() string {
+	if c.defaultKeyOnly {
+		return "put a private key file at ~/" + pluginKeyDirectory + "/" + c.Provider.Name + ".key (read under --plugin-defaults)"
+	}
+	return "point " + c.keyFileEnv() + " at a private key file"
 }
 
 // keyFileEnv names the variable that sets this Config's key file.
