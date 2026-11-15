@@ -124,7 +124,12 @@ func ollamaCapabilityRequests(t *testing.T) map[string]evaluateIn {
 	// Model is outside the context estimate. This isolates the serialized
 	// body cap without first tripping the smaller text budget.
 	body.Model = strings.Repeat("m", 13<<20)
-	return map[string]evaluateIn{"box": box, "65 questions": many, "one option": one, "image": image, "context": context, "body": body}
+	spaced := simpleIn()
+	spaced.Questions = map[string]question{"is this urgent?": {Type: typeNoul, Instructions: "Judge this"}}
+	long := simpleIn()
+	long.Questions = map[string]question{strings.Repeat("q", 101): {Type: typeNoul, Instructions: "Judge this"}}
+	return map[string]evaluateIn{"box": box, "65 questions": many, "one option": one, "image": image, "context": context, "body": body,
+		"id characters": spaced, "id length": long}
 }
 
 func ollamaRouteReply(req *http.Request) (*http.Response, error) {

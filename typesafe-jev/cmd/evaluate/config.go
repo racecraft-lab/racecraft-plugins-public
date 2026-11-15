@@ -83,12 +83,15 @@ const (
 )
 
 // Both Jev hosts accept objects and arrays at every entry position, as recorded
-// in docs/provider-contracts.md. The rows share this read-only capability table.
-var jevStructuredEntries = map[entryPosition]entryKinds{
-	entryInstructions:    entryObject | entryArray,
-	entryChoiceValue:     entryObject | entryArray,
-	entryScoreLevel:      entryObject | entryArray,
-	entryNoulDescription: entryObject | entryArray,
+// in docs/provider-contracts.md. Each row gets its own copy, so changing one
+// row's table never changes another's.
+func jevStructuredEntries() map[entryPosition]entryKinds {
+	return map[entryPosition]entryKinds{
+		entryInstructions:    entryObject | entryArray,
+		entryChoiceValue:     entryObject | entryArray,
+		entryScoreLevel:      entryObject | entryArray,
+		entryNoulDescription: entryObject | entryArray,
+	}
 }
 
 // backendLimits holds backend-specific caps. -1 explicitly means no limit;
@@ -104,6 +107,9 @@ type backendLimits struct {
 	ImageBytes      int
 	TotalImageBytes int
 	ExpandedBytes   int
+	// QuestionIDLength caps an id that must also be ASCII letters, digits,
+	// "_", "." or "-"; noLimit means any id the request shape accepts.
+	QuestionIDLength int
 }
 
 const (
@@ -224,7 +230,7 @@ var providers = map[string]ProviderSpec{
 		LongContextNote:      "\nLong context is enabled for the TypeSafe backend: its budgets are 262144 tokens and each TypeSafe request sends the long-context header.",
 		// TypeSafe documents string, object, array, or null for every
 		// instruction and description field.
-		StructuredEntries: jevStructuredEntries,
+		StructuredEntries: jevStructuredEntries(),
 		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// 529 is TypeSafe's overload status, which upstream already retried.
@@ -255,7 +261,7 @@ var providers = map[string]ProviderSpec{
 			" other questions still answer; treat a refusal as no judgment, never as a no.",
 		Attribution: true,
 		// Matches TypeSafe since OpenRouter republished the Decisions schemas.
-		StructuredEntries: jevStructuredEntries,
+		StructuredEntries: jevStructuredEntries(),
 		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// All four are documented on the Decisions path and transient in
@@ -306,7 +312,7 @@ func ollamaCloudSpec() ProviderSpec {
 			Questions: 64, ChoiceMin: 2, ChoiceMax: 255,
 			ScoreMin: 2, ScoreMax: 10, BodyBytes: 13 << 20,
 			Images: 4, ImageBytes: 4 << 20, TotalImageBytes: 8 << 20,
-			ExpandedBytes: noLimit,
+			ExpandedBytes: noLimit, QuestionIDLength: 100,
 		},
 		LongContextTokens: noLimit,
 		RequestTokens:     65_536,
@@ -325,6 +331,7 @@ func backendRequestLimits() backendLimits {
 		ScoreMin: minScoreLevels, ScoreMax: maxScoreLevels,
 		BodyBytes: maxRequestBody, Images: noLimit, ImageBytes: maxImageBytes,
 		TotalImageBytes: noLimit, ExpandedBytes: maxExpandedRequest,
+		QuestionIDLength: noLimit,
 	}
 }
 
@@ -336,6 +343,8 @@ func backendImageLimits(minSide int) imageBounds {
 }
 
 const (
+	// defaultProvider serves when no setting names a backend.
+	defaultProvider   = "typesafe"
 	defaultTimeout    = 45 * time.Second
 	defaultHopTimeout = 10 * time.Second
 	maxTimeout        = 5 * time.Minute
@@ -361,6 +370,9 @@ type Config struct {
 	// empty for the primary, which reads JEV_API_KEY_FILE; fallbackConfig sets
 	// it to JEV_FALLBACK_API_KEY_FILE.
 	keyFileVar string
+	// defaultKeyOnly marks hops 3 and 4, which have no key-file variable: their
+	// key comes from the provider's environment variable or the default file.
+	defaultKeyOnly bool
 	// Fallback is the backend a call moves to when Provider refuses its
 	// credential or is unavailable, or nil for a one-hop chain. Chain resolution
 	// sets it from configuration or the built-in order, never from available keys.
@@ -389,16 +401,23 @@ type FallbackConfig struct {
 // fallbackConfig is the Config a client for the fallback backend is built
 // from: its own provider, model default and key, and the primary's limits.
 func (c Config) fallbackConfig() Config {
+	hop := c.laterHop(c.Fallback.Provider, c.Fallback.KeyFile, c.Fallback.KeyFileDefaulted)
+	hop.keyFileVar = pluginFallbackFileEnv
+	return hop
+}
+
+// laterHop builds a hop after the first from the shared request settings, so
+// every later hop inherits the same timeout, retries and operator opt-ins.
+func (c Config) laterHop(spec ProviderSpec, keyFile string, keyFileDefaulted bool) Config {
 	return Config{
-		Provider:   c.Fallback.Provider,
-		Model:      c.Fallback.Provider.DefaultModel,
+		Provider:   spec,
+		Model:      spec.DefaultModel,
 		Timeout:    c.Timeout,
 		HopTimeout: c.HopTimeout,
 		MaxRetries: c.MaxRetries,
-		KeyFile:    c.Fallback.KeyFile,
+		KeyFile:    keyFile,
 
-		KeyFileDefaulted: c.Fallback.KeyFileDefaulted,
-		keyFileVar:       pluginFallbackFileEnv,
+		KeyFileDefaulted: keyFileDefaulted,
 		AllowImages:      c.AllowImages,
 		LongContext:      c.LongContext,
 	}
@@ -425,6 +444,22 @@ func knownBoxReject(provider, model string) bool {
 
 func (spec ProviderSpec) rejectsBoxModel(model string) bool {
 	return slices.Contains(spec.UnsupportedBoxModels, model)
+}
+
+// keyFileLabel names where this Config's key file came from in diagnostics.
+func (c Config) keyFileLabel() string {
+	if c.defaultKeyOnly {
+		return "default key file"
+	}
+	return c.keyFileEnv()
+}
+
+// keyFileHint says how to supply a key file for this Config.
+func (c Config) keyFileHint() string {
+	if c.defaultKeyOnly {
+		return "put a private key file at ~/" + pluginKeyDirectory + "/" + c.Provider.Name + ".key (read under --plugin-defaults)"
+	}
+	return "point " + c.keyFileEnv() + " at a private key file"
 }
 
 // keyFileEnv names the variable that sets this Config's key file.
@@ -467,7 +502,7 @@ func resolveOptIn(look lookupFunc, name string) (bool, error) {
 func resolveProvider(look lookupFunc) (ProviderSpec, error) {
 	raw, set := look("JEV_PROVIDER")
 	if !set {
-		return providers["typesafe"], nil
+		return providers[defaultProvider], nil
 	}
 	name := strings.TrimSpace(raw)
 	if name == "" {

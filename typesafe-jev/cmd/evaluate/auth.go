@@ -68,7 +68,7 @@ func loadCredentialSource(cfg Config, look lookupFunc) loadedCredential {
 		if cfg.KeyFileDefaulted {
 			s.Source = "default-file"
 		}
-		loaded.key, loaded.err = readKeyFile(cfg.keyFileEnv(), cfg.KeyFile)
+		loaded.key, loaded.err = readKeyFile(cfg.keyFileLabel(), cfg.KeyFile)
 		if loaded.err != nil {
 			s.State, s.reason = "unusable", loaded.err.Error()
 		} else {
@@ -79,8 +79,8 @@ func loadCredentialSource(cfg Config, look lookupFunc) loadedCredential {
 	raw, ok := look(cfg.Provider.APIKeyEnv)
 	if !ok || raw == "" {
 		s.Source, s.State = "none", "absent"
-		loaded.err = fmt.Errorf("%s: %w; set %s, or point %s at a private key file",
-			cfg.Provider.Name, errNoCredential, cfg.Provider.APIKeyEnv, cfg.keyFileEnv())
+		loaded.err = fmt.Errorf("%s: %w; set %s, or %s",
+			cfg.Provider.Name, errNoCredential, cfg.Provider.APIKeyEnv, cfg.keyFileHint())
 		return loaded
 	}
 	s.Source = "environment"

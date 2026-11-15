@@ -156,8 +156,8 @@ mask the operator's chain file. Resolution order is:
    `typesafe` alone. Both modes use `jev-latest` on TypeSafe.
 
 A chain accepts at most four distinct registered providers, with no empty
-entries. This layer registers `typesafe` and `openrouter`; Ollama remains for
-later layers. A missing chain file uses the built-in order; an unreadable or
+entries. The registered providers are `typesafe`, `openrouter` and `ollama`
+(Ollama Cloud, opt-in through the chain). A missing chain file uses the built-in order; an unreadable or
 invalid file fails startup. Environment configuration wins without reading the
 file. `evaluate call --plugin-defaults` and the MCP server resolve identically.
 If the home directory is empty or relative, no chain file is read; the mode's
@@ -178,9 +178,14 @@ even if that hop is dropped. Every later hop uses its provider's default.
 
 A failure with 401, 402, 403, 404, 429, 5xx or an unreachable destination moves
 the session down one hop after that hop's retries. It never moves back until a
-restart. Local refusal by the next hop still prevents a move (FB-08); capability
-routing, account skipping and per-hop deadlines belong to later layers. The
-backend note lists the loaded order and updates the tool description with the
+restart. Each hop enforces its own row's limits. A request one hop cannot take
+goes to the first later hop that can, before any network call, and the session
+stays where it is. A failure and a route compose: when the session's hop fails
+and the next hop cannot take this request, the session still moves and the call
+routes on (FB-08). Account skipping belongs to a later layer. Each hop's
+attempts stop at `JEV_HOP_TIMEOUT` (10s by default), and the last hop that can
+take the request gets the time left; a hop deadline routes only that call on
+(see [provider-contracts.md](provider-contracts.md)). The backend note lists the loaded order and updates the tool description with the
 serving hop after a move. Clients receive a tool-list change notification.
 All hops share the one 45s budget, so the client's 75s abort still fits.
 
