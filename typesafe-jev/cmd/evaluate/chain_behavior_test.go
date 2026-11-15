@@ -43,13 +43,13 @@ func TestChainBehaviorFixture(t *testing.T) {
 			{"connection refused", 0, &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}, true},
 		} {
 			t.Run(primary+"/"+tc.name, func(t *testing.T) {
-				checkChainBehavior(t, primary, tc)
+				runChainBehaviorFixture(t, primary, tc)
 			})
 		}
 	}
 }
 
-func checkChainBehavior(t *testing.T, primary string, tc chainBehaviorCase) {
+func runChainBehaviorFixture(t *testing.T, primary string, tc chainBehaviorCase) {
 	t.Helper()
 	fallback := map[string]string{"typesafe": "openrouter", "openrouter": "typesafe"}[primary]
 	calls := map[string]int{}
@@ -61,7 +61,7 @@ func checkChainBehavior(t *testing.T, primary string, tc chainBehaviorCase) {
 	}}
 	cfg := Config{Provider: providers[primary], Fallback: &FallbackConfig{Provider: providers[fallback]}}
 	session := connect(t, cfg, client)
-	checkChainReplies(t, session, tc)
+	checkChainBehaviorReplies(t, session, tc.status != 200 && !tc.move)
 	wantPrimary, wantFallback, wantLog := 2, 0, ""
 	if tc.move {
 		wantPrimary, wantFallback = 1, 2
@@ -106,7 +106,7 @@ func chainBehaviorTransport(t *testing.T, primary, fallback string, tc chainBeha
 	})
 }
 
-func checkChainReplies(t *testing.T, session *mcp.ClientSession, tc chainBehaviorCase) {
+func checkChainBehaviorReplies(t *testing.T, session *mcp.ClientSession, wantError bool) {
 	t.Helper()
 	for range 2 {
 		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "evaluate", Arguments: evaluateIn{
@@ -115,7 +115,6 @@ func checkChainReplies(t *testing.T, session *mcp.ClientSession, tc chainBehavio
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantError := tc.status != 200 && !tc.move
 		if result.IsError != wantError {
 			t.Fatalf("tool error=%v, want %v: %s", result.IsError, wantError, contentText(t, result))
 		}

@@ -250,9 +250,9 @@ func questionChecks(id string, q question) requestCheckList {
 	case typeNoul:
 		checks = append(checks, noulChecks(path, q.Criteria)...)
 	case typeChoice:
-		checks = append(checks, choiceChecks(path, q.Criteria)...)
+		checks = append(checks, criteriaChecks[map[string]any](choiceRule, path, q.Criteria)...)
 	case typeScore:
-		checks = append(checks, scoreChecks(path, q.Criteria)...)
+		checks = append(checks, criteriaChecks[[]any](scoreRule, path, q.Criteria)...)
 	case typeBox:
 		if q.Criteria != nil {
 			checks.shape(fmt.Errorf("%s.criteria is not accepted on a box question", path))
@@ -406,36 +406,18 @@ func criteriaOf[T map[string]any | []any](rule criteriaRule, path string, criter
 // validateChoiceCriteria requires a non-empty option map. Option names are the
 // answer space, so they are preserved exactly.
 func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error {
-	return choiceChecks(path, criteria).validate(spec, evaluateIn{})
+	return criteriaChecks[map[string]any](choiceRule, path, criteria).validate(spec, evaluateIn{})
 }
 
-func choiceChecks(path string, criteria any) requestCheckList {
-	m, checks := criteriaChecks[map[string]any](choiceRule, path, criteria)
-	for _, option := range sortedKeys(m) {
-		if strings.TrimSpace(option) == "" {
-			checks.shape(fmt.Errorf("%s.criteria has a blank option name", path))
-		}
-		checks = append(checks, entryChecks(path+".criteria."+option, m[option], entryOptional)...)
-	}
-	return checks
-}
-
-// Score levels retain their order: each level's number is its position.
-func scoreChecks(path string, criteria any) requestCheckList {
-	levels, checks := criteriaChecks[[]any](scoreRule, path, criteria)
-	for i, level := range levels {
-		checks = append(checks, entryChecks(fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired)...)
-	}
-	return checks
-}
-
-// criteriaChecks keeps shape errors before per-hop bounds, then entry checks.
-func criteriaChecks[T map[string]any | []any](rule criteriaRule, path string, criteria any) (T, requestCheckList) {
+// criteriaChecks caches shape results before per-hop bounds, then visits entries
+// in semantic order: sorted option names for choices, original score positions.
+// A score level's number is its position, so scores are never sorted or deduplicated.
+func criteriaChecks[T map[string]any | []any](rule criteriaRule, path string, criteria any) requestCheckList {
 	var checks requestCheckList
 	entries, err := criteriaOf[T](rule, path, criteria)
 	checks.shape(err)
 	if err != nil {
-		return entries, checks
+		return checks
 	}
 	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
 		least, most := spec.Limits.ChoiceMin, spec.Limits.ChoiceMax
@@ -445,7 +427,21 @@ func criteriaChecks[T map[string]any | []any](rule criteriaRule, path string, cr
 		_, err := criteriaOf[T](rule.withBounds(least, most), path, criteria)
 		return err
 	})
-	return entries, checks
+	switch entries := any(entries).(type) {
+	case map[string]any:
+		for _, option := range sortedKeys(entries) {
+			if strings.TrimSpace(option) == "" {
+				checks.shape(fmt.Errorf("%s.criteria has a blank option name", path))
+			}
+			// Optional descriptions, including null, use the backend's entry rule.
+			checks = append(checks, entryChecks(path+".criteria."+option, entries[option], entryOptional)...)
+		}
+	case []any:
+		for i, level := range entries {
+			checks = append(checks, entryChecks(fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired)...)
+		}
+	}
+	return checks
 }
 
 // validateResponse checks that what came back answers what was asked, without
