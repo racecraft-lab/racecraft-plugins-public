@@ -100,12 +100,7 @@ func loadCredentialSource(cfg Config, look lookupFunc) loadedCredential {
 // read cannot slip past. envVar names the variable the path came from, such as
 // JEV_FALLBACK_API_KEY_FILE, so each diagnostic points at the setting to fix.
 func readKeyFile(envVar, path string) (credential, error) {
-	// O_NONBLOCK, because os.Open on a named pipe blocks until a writer
-	// appears, and it does so before any check below has run: the server would
-	// hang at startup with no message rather than refusing a file that is not
-	// a regular file. The flag changes nothing for a regular file, which is
-	// the only kind this accepts anyway.
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	f, info, err := openRegularFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return "", fmt.Errorf("%s %s does not exist", envVar, path)
@@ -113,17 +108,13 @@ func readKeyFile(envVar, path string) (credential, error) {
 		if errors.Is(err, os.ErrPermission) {
 			return "", fmt.Errorf("%s %s is not readable", envVar, path)
 		}
+		if errors.Is(err, errNotRegularFile) {
+			return "", fmt.Errorf("%s %s %w", envVar, path, err)
+		}
 		return "", fmt.Errorf("%s %s: %w", envVar, path, err)
 	}
 	defer f.Close()
 
-	info, err := f.Stat()
-	if err != nil {
-		return "", fmt.Errorf("%s %s: %w", envVar, path, err)
-	}
-	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("%s %s is not a regular file", envVar, path)
-	}
 	// Protecting a plaintext file is not encryption; it only keeps other
 	// local accounts from reading it. Windows does not carry these bits.
 	if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
@@ -156,6 +147,27 @@ func readKeyFile(envVar, path string) (credential, error) {
 		return "", fmt.Errorf("%s %s %w", envVar, path, err)
 	}
 	return key, nil
+}
+
+var errNotRegularFile = errors.New("is not a regular file")
+
+// openRegularFile checks the opened descriptor, never a path that can be
+// swapped. O_NONBLOCK lets a FIFO fail the regular-file check without waiting
+// for a writer. It has no effect on the regular files accepted here.
+func openRegularFile(path string) (*os.File, os.FileInfo, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+	info, err := f.Stat()
+	if err == nil && !info.Mode().IsRegular() {
+		err = errNotRegularFile
+	}
+	if err != nil {
+		f.Close()
+		return nil, nil, err
+	}
+	return f, info, nil
 }
 
 // The reasons a candidate key is rejected. They are package-level values built
