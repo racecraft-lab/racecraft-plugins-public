@@ -27,23 +27,27 @@ func TestNoHopStartsNamesEveryHop(t *testing.T) {
 	}
 }
 
-// A session moved past two hops names both as failed, not only the first.
+// A session moved past two hops names each hop that ran and failed, and
+// leaves out a hop skipped for its billing account, which never ran.
 func TestMovedSessionNamesEveryFailedHop(t *testing.T) {
-	r := &chainRunner{hops: []*Client{{Provider: providers["typesafe"]}, {Provider: providers["openrouter"]}, {Provider: providers["ollama"]}}}
-	r.current.Store(2)
-	err := r.onTheFallback(&requestInvalidError{errors.New("too many questions")})
-	if want := "this session is on the ollama fallback since typesafe and openrouter failed; too many questions"; err.Error() != want {
-		t.Errorf("got %q, want %q", err, want)
-	}
-}
-
-// A hop skipped for its account never ran, so a moved session does not name it.
-func TestMovedSessionOmitsAccountSkippedHops(t *testing.T) {
-	r := &chainRunner{hops: []*Client{{Provider: providers["ollama-local"]}, {Provider: providers["ollama"]}, {Provider: providers["typesafe"]}}}
-	r.current.Store(2)
-	r.skipped.Store(1 << 1)
-	err := r.onTheFallback(&requestInvalidError{errors.New("too small")})
-	if want := "this session is on the typesafe fallback since ollama-local failed; too small"; err.Error() != want {
-		t.Errorf("got %q, want %q", err, want)
+	for name, tc := range map[string]struct {
+		hops    []string
+		skipped uint32
+		want    string
+	}{
+		"both ran":     {[]string{"typesafe", "openrouter", "ollama"}, 0, "this session is on the ollama fallback since typesafe and openrouter failed; refused"},
+		"account skip": {[]string{"ollama-local", "ollama", "typesafe"}, 1 << 1, "this session is on the typesafe fallback since ollama-local failed; refused"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			r := &chainRunner{}
+			for _, hop := range tc.hops {
+				r.hops = append(r.hops, &Client{Provider: providers[hop]})
+			}
+			r.current.Store(2)
+			r.skipped.Store(tc.skipped)
+			if err := r.onTheFallback(&requestInvalidError{errors.New("refused")}); err.Error() != tc.want {
+				t.Errorf("got %q, want %q", err, tc.want)
+			}
+		})
 	}
 }
