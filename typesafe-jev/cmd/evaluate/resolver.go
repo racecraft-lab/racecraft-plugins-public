@@ -273,9 +273,9 @@ func (r resolvedHops) clients(startupLog io.Writer) ([]*Client, Config, error) {
 	}
 	if len(usable) == 0 {
 		err := r.hops[0].loaded.err
-		if len(r.hops) > 1 {
+		for _, hop := range r.hops[1:] {
 			err = fmt.Errorf("%w; the %s fallback cannot start either: %v", err,
-				r.hops[1].config.Provider.Name, r.hops[1].loaded.err)
+				hop.config.Provider.Name, hop.loaded.err)
 		}
 		return nil, r.config, err
 	}
