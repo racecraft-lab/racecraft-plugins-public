@@ -129,7 +129,7 @@ vendored copy adds a section that makes the distinction, and leaves the rest of
 upstream's text alone.
 
 Provenance is recorded in the file's own header: `typesafe-ai/skills`, plugin
-version 0.5.7, MIT, with the licence kept beside it. A test asserts the licence,
+version 0.6.2, MIT, with the licence kept beside it. A test asserts the licence,
 the provenance, and that upstream's guidance survived the edit.
 
 When TypeSafe publishes a new skill version, re-vendor it and re-apply the two

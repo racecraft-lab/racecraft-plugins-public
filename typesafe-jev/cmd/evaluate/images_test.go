@@ -728,9 +728,9 @@ func TestBoxModelGate(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	for _, model := range []string{"jev-latest", "jev-1.13.0", "jev-1.13"} {
+	for _, model := range []string{"jev-1.13.0", "jev-1.13"} {
 		c := testClient(withImages(providerAt("typesafe", srv.URL)), srv)
-		c.Model = "jev-preview" // must not override an explicit 1.13
+		c.Model = "jev-latest" // must not override an explicit 1.13
 		in := box(model)
 		_, err := runEvaluate(context.Background(), c, in)
 		if err == nil || !strings.Contains(err.Error(), "1.13") || !strings.Contains(err.Error(), model) {
@@ -739,14 +739,6 @@ func TestBoxModelGate(t *testing.T) {
 	}
 	if calls.Load() != 0 {
 		t.Fatalf("known 1.13 models were billed: %d", calls.Load())
-	}
-
-	// The TypeSafe default is jev-latest. An omitted model must still fail
-	// locally, because runOn fills that default before the check.
-	c := testClient(withImages(providerAt("typesafe", srv.URL)), srv)
-	in := box("")
-	if _, err := runEvaluate(context.Background(), c, in); err == nil || !strings.Contains(err.Error(), "jev-latest") {
-		t.Fatalf("default model: %v", err)
 	}
 
 	for _, model := range []string{"typesafe/jev-1.13", "~typesafe/jev-1.13"} {
@@ -760,6 +752,7 @@ func TestBoxModelGate(t *testing.T) {
 		provider string
 		model    string
 	}{
+		{"typesafe", "jev-latest"},
 		{"typesafe", "jev-preview"},
 		{"typesafe", "jev-1.14.0"},
 		{"openrouter", "typesafe/jev-1.14"},
@@ -770,6 +763,18 @@ func TestBoxModelGate(t *testing.T) {
 		if err != nil {
 			t.Errorf("%s %s: %v", tc.provider, tc.model, err)
 		}
+	}
+}
+
+// The TypeSafe default, jev-latest, has pointed at Jev 1.14 since 2026-10-14
+// (https://docs.typesafe.ai/models.md). prepare fills that default before the
+// box check, so an omitted model must pass it.
+func TestBoxRunsOnTheTypeSafeDefault(t *testing.T) {
+	spec := withImages(providers["typesafe"])
+	in := imageRequest(mustPNG(t, 280, 280), "")
+	in.Questions = map[string]question{"mug": {Type: typeBox, Instructions: "the mug in the photo"}}
+	if _, err := prepare(&Client{Provider: spec, Model: spec.DefaultModel}, in); err != nil {
+		t.Fatalf("default model: %v", err)
 	}
 }
 

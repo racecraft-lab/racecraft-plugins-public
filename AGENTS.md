@@ -326,6 +326,7 @@ in step.
   names the open phase; the Phase Lock PR check fails a PR that closes a
   `phase-locked` or later-phase issue. When the file changes on main, the Phase
   Unlock workflow swaps `phase-locked` for each ticket's pickup label. Leave
-  `phase-locked` for that workflow; never remove it by hand.
+  `phase-locked` for that workflow; never remove it by hand. A locked ticket
+  with no phase label never unlocks; it waits for a human to add one.
 - **Domain docs:** single-context (root `GLOSSARY.md`, `docs/adr/`). See
   `docs/agents/domain.md`.

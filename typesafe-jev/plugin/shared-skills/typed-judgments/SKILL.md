@@ -46,7 +46,7 @@ Use it **before** asserting the judgment, not to confirm one already given.
   be enumerable, at most 255 options.
 - A judgment the user already made. Their decision stands.
 
-## The three primitives
+## The four primitives
 
 - **`noul`** — the probability a yes/no condition holds. Optional `criteria`
   is `{"true": "...", "false": "..."}`.
@@ -56,6 +56,8 @@ Use it **before** asserting the judgment, not to confirm one already given.
   descriptions. The answer is probability-weighted, so `2.13` means mostly
   level 2 with some weight on 3. That fraction is the signal; do not round it
   away.
+- **`box`** — the four edges of one target in an image. It takes instructions
+  and no criteria; see "Images, box, and long context" below.
 
 ## Learning to ask a better question
 
@@ -74,7 +76,7 @@ the whole site.
 | What to put in `state` and how to shape it | [State](https://docs.typesafe.ai/concepts/state.md) |
 | An answer whose confidence is low, or what to do about it | [Confidence](https://docs.typesafe.ai/confidence.md), [Confidence-gated routing](https://docs.typesafe.ai/patterns/confidence-routing.md) |
 | A judgment too big for one question | [Composite scoring](https://docs.typesafe.ai/patterns/composite-scoring.md), [Speculative fan-out](https://docs.typesafe.ai/patterns/fan-out.md) |
-| A large state, and whether accuracy holds | [Models](https://docs.typesafe.ai/models.md), [Jev 1.13 jaggedness](https://docs.typesafe.ai/model-jaggedness/jev-1.13.md) |
+| A large state, and whether accuracy holds | [Models](https://docs.typesafe.ai/models.md), [Jaggedness](https://docs.typesafe.ai/model-jaggedness.md) (known weak spots of each Jev version) |
 | A picture, or a region inside one | [Images](https://docs.typesafe.ai/images.md), [Box](https://docs.typesafe.ai/primitives/box.md) |
 | Anything else | the [documentation index](https://docs.typesafe.ai/llms.txt) |
 
@@ -111,8 +113,11 @@ accurate.
 **Put the evidence in `state`.** Prefer a JSON object with named fields, and
 point at them with backticked paths: ``judge only from `ticket.messages` ``.
 
-**Give `choice` a no-match option.** Without one the model must pick from your
-list even when nothing fits, and you will never know that happened.
+**Ask whether anything fits.** A `choice` always picks an option and a `box`
+always returns a location, even when nothing fits, and you will never know that
+happened. Pair either with a companion `noul` in the same call ("Does
+`message` name any of our products?"). As of Jev 1.14 that usually works
+better than a no-match option.
 
 **Score levels describe situations, not adjectives.** "Severe: a large account
 is blocked from an imminent renewal" produces a usable answer. "High" does not.
@@ -120,12 +125,16 @@ is blocked from an imminent renewal" produces a usable answer. "High" does not.
 **Read the numbers correctly.** A `noul` near 0.5 means *uncertain*, not
 "medium intensity". `confidence` measures how concentrated the distribution is,
 not whether the answer is right: a confidently wrong answer is what badly drawn
-criteria produce.
+criteria produce. For a `noul`, 0.7 and 0.3 are good starting cut-offs: above
+0.7 reads as yes, below 0.3 as no, and the band between means the state does
+not settle the question. Say so rather than rounding it to a side.
 
 **A missing number is not a zero.** On the `openrouter` backend, `confidence`
 and `probabilities` are optional on a choice or score answer; the `typesafe`
 backend always sends them. The tool reports an absent field as absent and never
-substitutes a value, so check it is there before you branch on it. Structured
+substitutes a value, so check it is there before you branch on it. A question
+the provider declines comes back as `{"type": "refusal"}` with no value, while
+the others still answer: report it as no judgment, never as a "no". Structured
 instructions and criteria, by contrast, work on both backends.
 
 ## Example
@@ -163,14 +172,13 @@ Images and `box` stay off until the operator sets `JEV_IMAGES=true`. Name each
 PNG or JPEG in an `images` map (`path` or `data_base64`) and reference that
 name as a whole string, or as `{"image":"name"}`, inside `state`,
 `instructions`, or `criteria`. Do not paste an `assets` map or an `image_url`
-part. The server builds the wire format, and an `assets` map sent to
-OpenRouter is ignored and still billed. The bytes leave the machine and are
-billed. Do not put a secret in an image.
+part. The server builds each backend's wire format. The bytes leave the
+machine and are billed. Do not put a secret in an image.
 
 `box` locates one target. It takes instructions and no criteria, and it needs
-Jev 1.14: `jev-preview` or `jev-1.14.0` on TypeSafe, `typesafe/jev-1.14` or
-`~typesafe/jev-latest` on OpenRouter. TypeSafe's `jev-latest` is still 1.13
-and is refused locally. The answer is `top`, `bottom`, `left`, and `right`,
+Jev 1.14, which is the default model on both backends: `jev-latest` or
+`jev-1.14.0` on TypeSafe, `typesafe/jev-1.14` or `~typesafe/jev-latest` on
+OpenRouter. A Jev 1.13 model is refused locally. The answer is `top`, `bottom`, `left`, and `right`,
 each from 0 to 1, with the left edge before the right and the top before the
 bottom.
 

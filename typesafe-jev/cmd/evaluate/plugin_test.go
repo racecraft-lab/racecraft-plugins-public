@@ -204,7 +204,7 @@ func TestVendoredSkillKeepsProvenance(t *testing.T) {
 
 	for _, want := range []string{
 		"typesafe-ai/skills",    // where it came from
-		"version 0.5.7",         // which version
+		"version 0.6.2",         // which version
 		"Make the judgment now", // the addition that routes to the tool
 		"`evaluate`",            // names the tool
 		// The backend note. It used to warn that OpenRouter took only
@@ -223,7 +223,8 @@ func TestVendoredSkillKeepsProvenance(t *testing.T) {
 	for _, want := range []string{
 		"System One",
 		"docs.typesafe.ai/llms.txt",
-		"no separate confidence",
+		"decisions in code",
+		"Confidence is rarely the gate",
 	} {
 		if !strings.Contains(skill, want) {
 			t.Errorf("vendored SKILL.md lost upstream guidance %q", want)
@@ -606,10 +607,10 @@ func TestJudgmentSkillNamesItsTriggers(t *testing.T) {
 	// The three rules that decide whether an answer is worth having. Each was
 	// established against the live backend, not inferred.
 	for _, rule := range []string{
-		"no-match",       // a choice without one hides a bad fit
-		"0.5",            // uncertain, not medium intensity
-		"parallel",       // batched questions cannot see each other
-		"probability-we", // score is weighted, not an index
+		"companion `noul`", // a choice or box alone hides a bad fit
+		"0.5",              // uncertain, not medium intensity
+		"parallel",         // batched questions cannot see each other
+		"probability-we",   // score is weighted, not an index
 	} {
 		if !strings.Contains(string(body), rule) {
 			t.Errorf("SKILL.md omits the %q rule", rule)

@@ -336,6 +336,36 @@ func TestResponseRejectsNonJudgments(t *testing.T) {
 	}
 }
 
+// RES-05: OpenRouter answers {"type":"refusal"} when a provider declines one
+// question, and still answers the others. A refusal is that question's answer,
+// passed through with no value, never a failure of the whole call and never a
+// value filled in. One that also carries a value is malformed.
+func TestResponseAcceptsRefusals(t *testing.T) {
+	for _, q := range []question{
+		{Type: typeNoul, Instructions: "i"},
+		{Type: typeChoice, Instructions: "i", Criteria: map[string]any{"a": "x"}},
+		{Type: typeScore, Instructions: "i", Criteria: []any{"low", "high"}},
+		{Type: typeBox, Instructions: "i"},
+	} {
+		in := evaluateIn{State: "x", Questions: map[string]question{"r": q, "ok": {Type: typeNoul, Instructions: "i"}}}
+		reply := func(refusal string) []byte {
+			return []byte(`{"model":"m","usage":{"input_tokens":1,"output_tokens":1},"answers":{"r":` + refusal +
+				`,"ok":{"type":"noul","noul":0.8,"confidence":0.6}}}`)
+		}
+		for _, spec := range []ProviderSpec{openrouterSpec, providers["typesafe"]} {
+			// The second spelling is the same JSON string, escaped.
+			for _, refusal := range []string{`{"type":"refusal"}`, `{"type":"ref\u0075sal"}`} {
+				if err := validateResponse(spec, in, reply(refusal)); err != nil {
+					t.Errorf("%s %s %s: %v", spec.Name, q.Type, refusal, err)
+				}
+			}
+		}
+		if validateResponse(openrouterSpec, in, reply(`{"type":"refusal","confidence":0.5}`)) == nil {
+			t.Errorf("%s: accepted a refusal that carries a value", q.Type)
+		}
+	}
+}
+
 // RES-02: unknown fields and provider metadata reach the caller untouched. A
 // narrower output struct would silently drop cost, usage, and ids.
 func TestResponseMetadataIsPreserved(t *testing.T) {
