@@ -301,9 +301,13 @@ func (r *chainRunner) onTheFallback(err error) error {
 		return err
 	}
 	serving := r.current.Load()
-	failed := make([]string, serving)
-	for i := range failed {
-		failed[i] = r.hops[i].Provider.Name
+	// A hop skipped for its account never ran, so it is not named as failed.
+	skipped := r.skipped.Load()
+	var failed []string
+	for i := range int(serving) {
+		if skipped&(1<<i) == 0 {
+			failed = append(failed, r.hops[i].Provider.Name)
+		}
 	}
 	return &requestInvalidError{fmt.Errorf("this session is on the %s fallback since %s failed; %w",
 		r.hops[serving].Provider.Name, strings.Join(failed, " and "), local.err)}

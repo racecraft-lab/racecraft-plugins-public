@@ -36,3 +36,14 @@ func TestMovedSessionNamesEveryFailedHop(t *testing.T) {
 		t.Errorf("got %q, want %q", err, want)
 	}
 }
+
+// A hop skipped for its account never ran, so a moved session does not name it.
+func TestMovedSessionOmitsAccountSkippedHops(t *testing.T) {
+	r := &chainRunner{hops: []*Client{{Provider: providers["ollama-local"]}, {Provider: providers["ollama"]}, {Provider: providers["typesafe"]}}}
+	r.current.Store(2)
+	r.skipped.Store(1 << 1)
+	err := r.onTheFallback(&requestInvalidError{errors.New("too small")})
+	if want := "this session is on the typesafe fallback since ollama-local failed; too small"; err.Error() != want {
+		t.Errorf("got %q, want %q", err, want)
+	}
+}
