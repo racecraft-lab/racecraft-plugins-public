@@ -435,15 +435,32 @@ Not attempted, by design:
 | 5xx, and `Retry-After` on it | Cannot be caused on purpose. |
 | Daemon-route 401 for an unlinked device key | Needs the device unlinked from the account. `ollama signin` and sign-out were not run. |
 
+## Public evidence found later (2026-11-14, deep research)
+
+A second pass over public sources, after the probes. The questionnaire
+(`to-questionnaire-ollama-systemone-clef.md`) carries the full answer to each
+question.
+
+| Finding | Kind | Source |
+|---|---|---|
+| A Pro-plan user saw `429 Too Many Requests: timed out waiting for a concurrent request slot` after 5m0s on the daemon's `/api/chat`, during a suspected incident. No headers captured. Not `/v1/systemone`. | Observed by one user | [ollama/ollama#19111](https://github.com/ollama/ollama/issues/19111) |
+| The official `ollama-python` client (0.6.0 to 0.6.3) turns every non-2xx into `ResponseError(text, status)`, drops headers, never reads `Retry-After` and never retries. | Primary (source) | `ollama/ollama-python` `ollama/_client.py` |
+| The pricing page says the old session and weekly limits no longer apply; usage is monthly credits, with an email at 90% on paid plans. It lists no per-minute limit. | Primary | `PR` |
+| The clef cloud tags (`clef:cloud`, `clef:27b-cloud`) list a 64K context and share digest `5896d5380b6c`. Local tags list 256K. Bare `clef:27b` is a local tag. | Primary (listing) | `LCT` |
+| `api/errors.md` lists 502 "when a cloud model cannot be reached"; no 503 is documented anywhere. | Primary | `ERR` |
+| The Terms (August 2026) incorporate only the Privacy Policy, so the policy, not the FAQ, is the binding retention text. No document treats images separately. | Primary | `https://ollama.com/terms`, `PP` |
+
 ## Still Unconfirmed
 
 | Item | Where it was searched |
 |---|---|
 | Whether 402 still applies to a pay-as-you-go account with no credits | `OA` text names a "Free plan" that `PR` no longer lists. Not probed. |
-| Whether the cloud sends 429 on `/v1/systemone`, and with `Retry-After` | `OA`, `OAY`, `ERR`, `PR`. None in 15 sequential probes. |
+| Whether the cloud sends 429 on `/v1/systemone`, and with `Retry-After` | `OA`, `OAY`, `ERR`, `PR`. None in 15 sequential probes. One user saw a queue-timeout 429 on `/api/chat` (#19111). |
 | `Retry-After` on 402, 429 or 5xx | `OAY`, `OA`. Absent on every 400 and 401 observed. |
-| Request-rate limit for `/v1/systemone` | `PR`, `FAQ`, `CM`, `OA`, `ERR`. |
+| Request-rate limit for `/v1/systemone` | `PR`, `FAQ`, `CM`, `OA`, `ERR`. The pricing page lists none and dropped the old session and weekly limits. |
 | Real body of an upstream 401 for an unlinked device key (daemon route) | `OA`, `AUTH`, `ERR`; daemon tests give fixtures only. |
 | Status for an over-size body with a valid key (`OA` lists 413) | Not probed with a key; the unauthenticated 14 MiB probe got 401. |
-| Cloud context window for clef-flash | `LF`, `LFT`, `CFM` disagree. Not probed. |
+| Cloud context window and score cap for clef-flash | `LF`, `LFT`, `CFM` disagree; `LF` says 2 to 26 score levels. Not probed. |
 | Whether ollama.com accepts `Content-Encoding: zstd` directly | Not documented. Needs an API key; only the daemon route was probed. |
+| Whether 400 or 5xx responses are billed | `PR`, `ERR`, `OA`, public issues. |
+| Whether images are retained differently from text | `FAQ`, `PP`, Terms. |
