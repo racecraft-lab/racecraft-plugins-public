@@ -69,6 +69,8 @@ these ids. Raw copies are in `typesafe-jev/.artifacts/ollama-systemone/`
 | `CFM` Cloudflare model pages | `https://developers.cloudflare.com/workers-ai/models/clef/index.md`, `.../clef-flash/index.md` | 2026-11-14 | sha256 `9512dfa3857d378d9d0d579e3b6c013daebb32d7d1d6df6b6354f6c0539df0c3` (clef), `6203f680e7ee670b2d2968e2af24789835863254a470504edea0e668bc114e03` (clef-flash) |
 | `CFS` Cloudflare input schema | `https://developers.cloudflare.com/workers-ai/models/clef/schema-input.json` | 2026-11-14 | sha256 `9f6014fdb6f1d3cc32e1f8d01262b9f137743f0590402940c28f8a45114cb683`; byte-identical for `clef-flash` |
 | `OR` OpenRouter Decisions reference | `https://openrouter.ai/docs/api-reference/decisions` | 2026-11-14 | sha256 `e8842e794b02b6eb982a3659aadc355fc7559bd083e31b289af2ce8928b85267`. Lists `cloudflare/clef-flash` among popular models. No Clef entry for the 27B model. |
+| `PP` Ollama privacy policy | `https://ollama.com/privacy` | 2026-11-14 | sha256 `fc79e67f9b357631bcfb6373e6a7e1cd802edbf53ba220cb2e2c395559a0fc3b`, 26 326 bytes, `ollama.com_privacy` |
+| `PB` Unauthenticated live probes | `https://ollama.com/v1/systemone` | 2026-11-14 | Six requests with no credential or a fake bearer. Redacted request, status, headers and body are in `typesafe-jev/.artifacts/ollama-systemone/probes/` (files `01` to `06`). |
 | `PC` Existing contracts file | `typesafe-jev/docs/provider-contracts.md` | 2026-11-14 | Source of the OpenRouter column. |
 
 Cloudflare and OpenRouter pages are comparison sources. They describe other
@@ -93,7 +95,7 @@ the publisher edited the page. Compare the tables below before changing code.
 | 3 | Score levels cap: 10 or 26? | **Confirmed: 10**. The 26 is a different cap | 10: `OA` `maxItems: 10` and answer `maximum: 9`; `DG` "2–10 descriptions"; `LC` "2 to 10 level descriptions"; `GH` `decision/systemone.go` `ValidateLimits` (line 51, `len(levels) > 10`), which `Compile` calls for the `clef` encoding; `CFS` `maxItems: 10`. 26: `GH` `decision/clef.go` line 148 and `DG` "2–26 named options" cap **choice** options locally. `LF` says "2 to 26 levels" for score. That one page is the outlier, and the schema, the code and the sibling page all disagree with it. |
 | 4 | Rate limits | **Confirmed** for concurrency, **Unconfirmed** for request rate | `PR`: Pay as you go and Pro 3 concurrent requests; Max and Team 10. Requests over the limit queue, and "if the queue is full, the request will be rejected" with no status or queue size stated. No requests-per-minute or tokens-per-minute figure for `/v1/systemone` appears in `OA`, `DG`, `CM`, `FAQ`, `PR` or `ERR`. Searched: all of those, plus `OAY` for `429` and `Retry-After`. The only documented per-minute limit (10 requests per minute) belongs to the separate usage endpoint, `docs.ollama.com/api/cloud-usage.md`. |
 | 5 | Pricing | **Confirmed**: $0.24 per million input tokens | `PR` model table: `clef` input `$0.24`, cached input `-`, output `-`. `DG`: "billed per input token at the listed price". `CFM` lists the same $0.24 for Cloudflare's own hosting. No price exists for clef-flash on Ollama Cloud. Note: `OA` 402 text says "isn't included in the Free plan", and `PR` now shows "Pay as you go" at $0 with per-token billing, not a "Free plan". Whether 402 still fires for an account with no credits is **Unconfirmed**. |
-| 6 | Data retention | **Confirmed**: zero data retention | `FAQ`: "Ollama operates with a zero data retention (ZDR) policy"; prompts and responses are processed "transiently", not stored or logged, and never used for training. `PR` privacy answers: "Prompt or response data is never logged or trained on", and hosting partners must have "no logging, no training, and zero data retention". Account and usage metadata are kept; the FAQ says it excludes prompt and response content. The legal text at `https://ollama.com/privacy` was not fetched. |
+| 6 | Data retention | **Confirmed**: zero data retention | `FAQ`: "Ollama operates with a zero data retention (ZDR) policy"; prompts and responses are processed "transiently", not stored or logged, and never used for training. `PR` privacy answers: "Prompt or response data is never logged or trained on", and hosting partners must have "no logging, no training, and zero data retention". Account and usage metadata are kept; the FAQ says it excludes prompt and response content. The privacy policy (`PP`, fetched 2026-11-14) agrees: cloud prompts and responses are processed "transiently" and "not stored beyond the time required to fulfill the request", with "technical measures designed to minimize retention", and are not used for training. It also keeps account, billing and usage metadata. The wording is "designed to minimize", slightly softer than the FAQ's "does not store or log"; both say no training. |
 | 7 | Is 429 ever returned? | **Unconfirmed** for `/v1/systemone` | `OA` lists 400, 401, 402, 404, 413 and 500, and no 429. `ERR` lists 429 for the API in general ("e.g. when a rate limit is exceeded"). `PR` describes queueing and rejection. The daemon forwards any upstream status and `Retry-After` (see below), so a 429 would reach the client unchanged. No source says the System One cloud service sends one. |
 
 ## Endpoints and routes
@@ -357,12 +359,60 @@ These follow from the rows above. They are not decisions.
 - Retrying 429, 502 or other 5xx is a policy choice. Ollama documents none of
   them as safe to retry, and a replayed call may bill again.
 
+## Live probes (2026-11-14)
+
+Each row is **observed once on 2026-11-14**. It is not a documented contract.
+Artifacts are in `typesafe-jev/.artifacts/ollama-systemone/probes/` (ignored by
+git), with request ids, cookies, trace ids and UUIDs redacted.
+
+Billed probes through the local daemon were **not run**. The permission system
+denied the first billed call, so zero billed calls were made in this round. The
+rows below are the free, no-credential probes against `ollama.com` and the
+privacy-policy fetch.
+
+| # | Route | Request summary | Status | Key fact | Artifact |
+|---|---|---|---|---|---|
+| 1 | Cloud direct, no credential | Valid noul request, model `clef` | 401 | Body `{"error":"Unauthorized"}`, `content-type: application/json`. No `Retry-After`. No `signin_url`. A `set-cookie` header is sent. | `01_noauth_valid.headers`, `01_noauth_valid.body` |
+| 2 | Cloud direct, no credential | Same shape with a 14 MiB `state` | 401 | Auth runs before the size check. No 413. Answered in about 0.15 s. | `02_noauth_big14mib.txt` |
+| 3 | Cloud direct, no credential | `state` of 80 000 words (well over 65,536 tokens) | 401 | Auth runs before the context check, so 400 versus 413 for context overflow cannot be probed without a credential. | `03_noauth_ctx70k.txt` |
+| 4 | Cloud direct, no credential | Truncated JSON body | 401 | Auth runs before body parsing. | `04_noauth_badjson.txt` |
+| 5 | Cloud direct, no credential | No `model` field | 401 | Auth runs before field validation. | `05_noauth_nomodel.txt` |
+| 6 | Cloud direct, fake bearer | `Authorization: Bearer not-a-real-key` | 401 | Same body as no credential. A fake key is not told apart from a missing one. | `06_badkey_valid.txt` |
+| 7 | Free read | `GET https://ollama.com/privacy` | 200 | Retention wording recorded in open point 6. | `ollama.com_privacy` (in the parent directory) |
+| 8 | Local daemon | `POST /api/me` (free, no model call) | 200 | The daemon reported a signed-in account with a plan. No account detail was recorded. | not saved |
+
+What these settle:
+
+- **Direct 401 body** is now observed: `{"error":"Unauthorized"}` (capital U).
+  `OA` says only that the 401 has an `error` string. A `signin_url` does not
+  appear on the direct route.
+- **`Retry-After` on a 401** is absent on the direct route. Whether it
+  appears on 402, 429 or 5xx stays Unconfirmed.
+- **The direct route authenticates before it validates anything.** A client
+  cannot learn a size, context or schema error without a valid key.
+
+Not run, and why: every item below needs a billed call through the daemon,
+which the permission system denied. They stay Unconfirmed.
+
+| Planned probe | Status |
+|---|---|
+| Upstream answer for `clef-flash:cloud` and plain `clef-flash` | Unconfirmed |
+| Context overflow: 400 or 413, with body | Unconfirmed |
+| Object criteria for a choice option and a score level | Unconfirmed |
+| Server-side rounding of probabilities | Unconfirmed |
+| `Retry-After` on a System One error from a valid call | Unconfirmed |
+| `clef:27b-cloud` accepted upstream (the daemon sends `clef:27b`) | Unconfirmed |
+| `keep_alive` effect on a cloud call | Unconfirmed |
+| zstd request body through the daemon | Unconfirmed |
+| 402: needs an account with no credits | Not attempted by design |
+| 429: not to be provoked by load | Not attempted by design |
+
 ## Still Unconfirmed
 
 | Item | Where it was searched |
 |---|---|
 | Upstream response to `clef-flash:cloud` | Not called. `DG`, `CM`, `OA`, `LFT`, `TAGS`, `PR`, `SC`. |
-| Real body of an upstream 401 for an unlinked device key | `OA`, `AUTH`, `ERR`; daemon tests give fixtures only. |
+| Real body of an upstream 401 for an unlinked device key (daemon route) | `OA`, `AUTH`, `ERR`; daemon tests give fixtures only. The direct route's no-credential 401 was observed (see "Live probes"); the daemon route's was not, because billed daemon calls were blocked. |
 | Status for context overflow (400 or 413) | `OA` states both. |
 | Cloud acceptance of object or array criteria | `OA` says string or null. `CFS` allows more. Local Clef code accepts any JSON. |
 | Server-side rounding of `probabilities` and `confidence` | `OA` rounds examples only. |
@@ -372,4 +422,3 @@ These follow from the rows above. They are not decisions.
 | Direct acceptance of `clef:27b` | `TAGS` lists it; `CM` and `DG` say `clef`. |
 | `keep_alive` effect on cloud | `LC` says "local only"; `OA` accepts the field. |
 | Whether the cloud accepts `Content-Encoding: zstd` | Not documented. |
-| Privacy policy text | `https://ollama.com/privacy` was not fetched. |
