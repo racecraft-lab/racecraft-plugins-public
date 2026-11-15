@@ -174,7 +174,8 @@ func validateQuestion(spec ProviderSpec, id string, q question) error {
 		}
 		return nil
 	default:
-		return validateScoreCriteria(spec, path, q.Criteria)
+		rule := scoreRule.withBounds(spec.Limits.ScoreMin, spec.Limits.ScoreMax)
+		return validateCriteria[[]any](spec, rule, path, q.Criteria)
 	}
 }
 
@@ -310,36 +311,33 @@ func criteriaOf[T map[string]any | []any](rule criteriaRule, path string, criter
 // validateChoiceCriteria requires a non-empty option map. Option names are the
 // answer space, so they are preserved exactly.
 func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error {
-	rule := choiceRule.withBounds(spec.Limits.ChoiceMin, spec.Limits.ChoiceMax)
-	m, err := criteriaOf[map[string]any](rule, path, criteria)
-	if err != nil {
-		return err
-	}
-	for _, option := range sortedKeys(m) {
-		if strings.TrimSpace(option) == "" {
-			return fmt.Errorf("%s.criteria has a blank option name", path)
-		}
-		// Optional: a null description is meaningful on TypeSafe, and
-		// validateEntry rejects it for OpenRouter.
-		if err := validateEntry(spec, path+".criteria."+option, m[option], entryOptional); err != nil {
-			return err
-		}
-	}
-	return nil
+	return validateCriteria[map[string]any](spec, choiceRule.withBounds(spec.Limits.ChoiceMin, spec.Limits.ChoiceMax), path, criteria)
 }
 
-// validateScoreCriteria requires an ordered list of levels. Order is the
-// meaning: a level's number is its position, so the slice is never sorted or
-// deduplicated.
-func validateScoreCriteria(spec ProviderSpec, path string, criteria any) error {
-	rule := scoreRule.withBounds(spec.Limits.ScoreMin, spec.Limits.ScoreMax)
-	levels, err := criteriaOf[[]any](rule, path, criteria)
+// validateCriteria checks the shape once, then visits entries in their semantic
+// order: sorted option names for choices, original positions for scores. A
+// score level's number is its position, so scores are never sorted or deduplicated.
+func validateCriteria[T map[string]any | []any](spec ProviderSpec, rule criteriaRule, path string, criteria any) error {
+	entries, err := criteriaOf[T](rule, path, criteria)
 	if err != nil {
 		return err
 	}
-	for i, level := range levels {
-		if err := validateEntry(spec, fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired); err != nil {
-			return err
+	switch entries := any(entries).(type) {
+	case map[string]any:
+		for _, option := range sortedKeys(entries) {
+			if strings.TrimSpace(option) == "" {
+				return fmt.Errorf("%s.criteria has a blank option name", path)
+			}
+			// Optional descriptions, including null, use the backend's entry rule.
+			if err := validateEntry(spec, path+".criteria."+option, entries[option], entryOptional); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for i, level := range entries {
+			if err := validateEntry(spec, fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
