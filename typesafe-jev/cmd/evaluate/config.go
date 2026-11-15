@@ -447,58 +447,86 @@ func resolveModel(look lookupFunc, spec ProviderSpec) (string, error) {
 	return raw, nil
 }
 
-// resolveSetting owns optional numeric setting lookup and parsing; callers
-// retain their setting-specific bounds and diagnostics.
-func resolveSetting[T any](look lookupFunc, name string, fallback T, parse func(string) (T, error), invalid string) (T, string, error) {
-	raw, set := look(name)
-	if !set || raw == "" {
-		return fallback, "", nil
-	}
-	value, err := parse(strings.TrimSpace(raw))
-	if err != nil {
-		var zero T
-		return zero, raw, fmt.Errorf("%s=%q %s", name, raw, invalid)
-	}
-	return value, raw, nil
+// numericSetting owns optional numeric setting parsing and bounds; diagnostics
+// stay with the setting that supplies the parser and accepted range.
+type numericSetting[T ~int | ~int64] struct {
+	name                       string
+	fallback, minimum, ceiling T
+	parse                      func(string) (T, error)
+	invalid                    func(string) error
+	outOfRange                 func(string, T) error
 }
 
-func resolveTimeout(look lookupFunc) (time.Duration, error) {
-	d, raw, err := resolveSetting(look, "JEV_REQUEST_TIMEOUT", defaultTimeout, time.ParseDuration, "is not a duration such as 45s or 2m")
-	if err != nil || raw == "" {
-		return d, err
+func resolveSetting[T ~int | ~int64](look lookupFunc, setting numericSetting[T]) (T, error) {
+	raw, set := look(setting.name)
+	if !set || raw == "" {
+		return setting.fallback, nil
+	}
+	var zero T
+	value, err := setting.parse(strings.TrimSpace(raw))
+	if err != nil {
+		return zero, setting.invalid(raw)
+	}
+	if value < setting.minimum || value > setting.ceiling {
+		return zero, setting.outOfRange(raw, value)
+	}
+	return value, nil
+}
+
+// durationSetting owns optional duration parsing and bounds. Both deadline
+// settings use the same walk while retaining their established diagnostics.
+type durationSetting struct {
+	name              string
+	fallback, ceiling time.Duration
+}
+
+func (s durationSetting) resolve(look lookupFunc) (time.Duration, error) {
+	return resolveSetting(look, numericSetting[time.Duration]{
+		name: s.name, fallback: s.fallback, minimum: 1, ceiling: s.ceiling,
+		parse: time.ParseDuration, invalid: s.invalid, outOfRange: s.outOfRange,
+	})
+}
+
+func (s durationSetting) invalid(raw string) error {
+	example := "45s or 2m"
+	if s.name == "JEV_HOP_TIMEOUT" {
+		example = "10s"
+	}
+	return fmt.Errorf("%s=%q is not a duration such as %s", s.name, raw, example)
+}
+
+func (s durationSetting) outOfRange(raw string, d time.Duration) error {
+	if s.name == "JEV_HOP_TIMEOUT" {
+		if d <= 0 {
+			return fmt.Errorf("JEV_HOP_TIMEOUT must be positive")
+		}
+		return fmt.Errorf("JEV_HOP_TIMEOUT=%s exceeds JEV_REQUEST_TIMEOUT=%s", d, s.ceiling)
 	}
 	if d <= 0 {
-		return 0, fmt.Errorf("JEV_REQUEST_TIMEOUT=%q must be positive", raw)
+		return fmt.Errorf("JEV_REQUEST_TIMEOUT=%q must be positive", raw)
 	}
-	if d > maxTimeout {
-		return 0, fmt.Errorf("JEV_REQUEST_TIMEOUT=%q is above the %s ceiling", raw, maxTimeout)
-	}
-	return d, nil
+	return fmt.Errorf("JEV_REQUEST_TIMEOUT=%q is above the %s ceiling", raw, s.ceiling)
+}
+
+var requestTimeoutSetting = durationSetting{"JEV_REQUEST_TIMEOUT", defaultTimeout, maxTimeout}
+
+func resolveTimeout(look lookupFunc) (time.Duration, error) {
+	return requestTimeoutSetting.resolve(look)
 }
 
 func resolveHopTimeout(look lookupFunc, requestTimeout time.Duration) (time.Duration, error) {
-	d, raw, err := resolveSetting(look, "JEV_HOP_TIMEOUT", min(defaultHopTimeout, requestTimeout), time.ParseDuration, "is not a duration such as 10s")
-	if err != nil || raw == "" {
-		return d, err
-	}
-	if d <= 0 {
-		return 0, fmt.Errorf("JEV_HOP_TIMEOUT must be positive")
-	}
-	if d > requestTimeout {
-		return 0, fmt.Errorf("JEV_HOP_TIMEOUT=%s exceeds JEV_REQUEST_TIMEOUT=%s", d, requestTimeout)
-	}
-	return d, nil
+	return (durationSetting{"JEV_HOP_TIMEOUT", min(defaultHopTimeout, requestTimeout), requestTimeout}).resolve(look)
 }
 
 func resolveMaxRetries(look lookupFunc) (int, error) {
-	n, raw, err := resolveSetting(look, "JEV_MAX_RETRIES", defaultMaxRetries, strconv.Atoi, "is not a whole number")
-	if err != nil {
-		return 0, err
-	}
-	if n < 0 || n > maxMaxRetries {
-		return 0, fmt.Errorf("JEV_MAX_RETRIES=%q is outside the accepted range 0-%d", raw, maxMaxRetries)
-	}
-	return n, nil
+	return resolveSetting(look, numericSetting[int]{
+		name: "JEV_MAX_RETRIES", fallback: defaultMaxRetries, minimum: 0, ceiling: maxMaxRetries,
+		parse:   strconv.Atoi,
+		invalid: func(raw string) error { return fmt.Errorf("JEV_MAX_RETRIES=%q is not a whole number", raw) },
+		outOfRange: func(raw string, _ int) error {
+			return fmt.Errorf("JEV_MAX_RETRIES=%q is outside the accepted range 0-%d", raw, maxMaxRetries)
+		},
+	})
 }
 
 func resolveKeyFileVar(look lookupFunc, name string) (string, error) {

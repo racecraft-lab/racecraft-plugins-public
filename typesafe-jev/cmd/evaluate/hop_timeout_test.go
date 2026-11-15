@@ -9,17 +9,12 @@ import (
 	"time"
 )
 
+var invalidHopTimeoutCases = callRejectionCases{
+	setting: "JEV_HOP_TIMEOUT", values: []string{"soon", "0", "-1s", "46s", " "},
+}
+
 func TestCallRejectsInvalidHopTimeout(t *testing.T) {
-	for _, raw := range []string{"soon", "0", "-1s", "46s", " "} {
-		t.Run(raw, func(t *testing.T) {
-			result := checkCallWithEnv(t, callOptions{check: true}, map[string]string{
-				"TYPESAFE_API_KEY": fixtureKey, "JEV_HOP_TIMEOUT": raw,
-			})
-			if result.code != 4 || result.stdout != "" || !strings.Contains(result.stderr, "JEV_HOP_TIMEOUT") {
-				t.Fatalf("invalid hop timeout %q: %+v; want exit 4 naming JEV_HOP_TIMEOUT", raw, result)
-			}
-		})
-	}
+	invalidHopTimeoutCases.run(t)
 }
 
 func TestWholeDeadlineReturnsTimeoutWithoutMove(t *testing.T) {
@@ -129,19 +124,15 @@ func TestHopRetryDeadlineRetainsStatus(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			hits := [2]int{}
 			log := new(strings.Builder)
-			chain := &chainRunner{log: log}
-			for i, spec := range []ProviderSpec{typesafeSpec, providers["openrouter"]} {
-				chain.hops = append(chain.hops, &Client{Provider: spec, Model: spec.DefaultModel,
-					Timeout: time.Second, HopTimeout: 20 * time.Millisecond, MaxRetries: 3,
-					HTTP: &http.Client{Transport: backendFixtureTransport(func(req *http.Request) (*http.Response, error) {
-						hits[i]++
-						if i == 0 {
-							return hopRetryDeadlineResponse(req, mode, hits[i])
-						}
-						return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulReply))}, nil
-					})},
+			chain := hopDeadlineChain(log, 3, []ProviderSpec{typesafeSpec, providers["openrouter"]}, func(i int) http.RoundTripper {
+				return backendFixtureTransport(func(req *http.Request) (*http.Response, error) {
+					hits[i]++
+					if i == 0 {
+						return hopRetryDeadlineResponse(req, mode, hits[i])
+					}
+					return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulReply))}, nil
 				})
-			}
+			})
 			session := connect(t, Config{Provider: typesafeSpec}, chain)
 			capabilityCall(t, session, simpleIn(), false, `"noul":0.9`)
 			capabilityCall(t, session, simpleIn(), false, `"noul":0.9`)
@@ -225,28 +216,36 @@ func TestShortRequestTimeoutKeepsImplicitHopDefaultUsable(t *testing.T) {
 func TestFailureAfterHopTimeoutKeepsOriginalSession(t *testing.T) {
 	hits := [3]int{}
 	log := new(strings.Builder)
-	chain := &chainRunner{log: log}
-	for i, spec := range []ProviderSpec{typesafeSpec, providers["openrouter"], typesafeSpec} {
-		chain.hops = append(chain.hops, &Client{Provider: spec, Model: spec.DefaultModel,
-			Timeout: time.Second, HopTimeout: 20 * time.Millisecond,
-			HTTP: &http.Client{Transport: backendFixtureTransport(func(req *http.Request) (*http.Response, error) {
-				hits[i]++
-				if i == 0 && hits[i] == 1 {
-					<-req.Context().Done()
-					return nil, req.Context().Err()
-				}
-				status := 200
-				if i == 1 {
-					status = 401
-				}
-				return &http.Response{StatusCode: status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulReply))}, nil
-			})},
+	chain := hopDeadlineChain(log, 0, []ProviderSpec{typesafeSpec, providers["openrouter"], typesafeSpec}, func(i int) http.RoundTripper {
+		return backendFixtureTransport(func(req *http.Request) (*http.Response, error) {
+			hits[i]++
+			if i == 0 && hits[i] == 1 {
+				<-req.Context().Done()
+				return nil, req.Context().Err()
+			}
+			status := 200
+			if i == 1 {
+				status = 401
+			}
+			return &http.Response{StatusCode: status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(noulReply))}, nil
 		})
-	}
+	})
 	session := connect(t, Config{Provider: typesafeSpec}, chain)
 	capabilityCall(t, session, simpleIn(), false, `"noul":0.9`)
 	capabilityCall(t, session, simpleIn(), false, `"noul":0.9`)
 	if hits != [3]int{2, 1, 1} || log.Len() != 0 {
 		t.Fatalf("hits=%v log=%q; want [2 1 1] and no session move", hits, log.String())
 	}
+}
+
+// hopDeadlineChain owns the common client budgets for deadline routing fixtures.
+func hopDeadlineChain(log io.Writer, retries int, specs []ProviderSpec, transport func(int) http.RoundTripper) *chainRunner {
+	chain := &chainRunner{log: log}
+	for i, spec := range specs {
+		chain.hops = append(chain.hops, &Client{Provider: spec, Model: spec.DefaultModel,
+			Timeout: time.Second, HopTimeout: 20 * time.Millisecond, MaxRetries: retries,
+			HTTP: &http.Client{Transport: transport(i)},
+		})
+	}
+	return chain
 }

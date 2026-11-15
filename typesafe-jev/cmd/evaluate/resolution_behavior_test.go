@@ -192,17 +192,12 @@ func checkResolutionServer(t *testing.T, state string, wantExit int, callCount *
 	return &log
 }
 
+var primaryAsFallbackCases = callRejectionCases{
+	setting: "JEV_FALLBACK_PROVIDER", values: []string{"typesafe", "openrouter"}, pluginDefaults: true,
+}
+
 func TestCallStillRejectsThePrimaryAsFallback(t *testing.T) {
-	for _, provider := range []string{"typesafe", "openrouter"} {
-		t.Run(provider, func(t *testing.T) {
-			got := checkCallWithEnv(t, callOptions{check: true, pluginDefaults: true}, map[string]string{
-				"JEV_PROVIDER": provider, "JEV_FALLBACK_PROVIDER": provider,
-			})
-			if got.code != 4 || got.stdout != "" || got.stderr != fmt.Sprintf("evaluate: JEV_FALLBACK_PROVIDER=%q is the primary backend; a fallback must be the other one\n", provider) {
-				t.Fatalf("unexpected CLI result: %+v", got)
-			}
-		})
-	}
+	primaryAsFallbackCases.run(t)
 }
 
 // A discovered key path is validated at the same point as an explicit one,
