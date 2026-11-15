@@ -33,3 +33,4 @@ an earlier one; its status says so.
 | [0025](0025-trigger-drafts-bind-at-check-time.md) | Bind trigger campaign templates at check time | Accepted |
 | [0026](0026-plan-stage-phase-drivers.md) | Run each planning phase in a phase driver | Accepted |
 | [0027](0027-canary-drives-the-real-scaffold-grill.md) | The canary drives the real scaffold grill through an operator agent | Accepted |
+| [0028](0028-backend-chain-moves-down-only.md) | The backend chain moves down only and skips hops on the same account | Accepted |
