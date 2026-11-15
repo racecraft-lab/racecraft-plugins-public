@@ -178,8 +178,12 @@ even if that hop is dropped. Every later hop uses its provider's default.
 
 A failure with 401, 402, 403, 404, 429, 5xx or an unreachable destination moves
 the session down one hop after that hop's retries. It never moves back until a
-restart. Local refusal by the next hop still prevents a move (FB-08); capability
-routing, account skipping and per-hop deadlines belong to later layers. The
+restart. Each hop enforces its own row's limits. A request one hop cannot take
+goes to the first later hop that can, before any network call, and the session
+stays where it is. A failure and a route compose: when the session's hop fails
+and the next hop cannot take this request, the session still moves and the call
+routes on (FB-08). Account skipping and per-hop deadlines belong to later
+layers. The
 backend note lists the loaded order and updates the tool description with the
 serving hop after a move. Clients receive a tool-list change notification.
 All hops share the one 45s budget, so the client's 75s abort still fits.
