@@ -111,9 +111,10 @@ exits 0, 3, or 4. It prints the value-free credential status as JSON.`,
 
 // checkReport is what `call --check` prints on stdout.
 type checkReport struct {
-	Exit     int           `json:"exit"`
-	Primary  sourceStatus  `json:"primary"`
-	Fallback *sourceStatus `json:"fallback"`
+	Exit     int            `json:"exit"`
+	Primary  sourceStatus   `json:"primary"`
+	Fallback *sourceStatus  `json:"fallback"`
+	Hops     []sourceStatus `json:"hops,omitempty"`
 }
 
 // runCall is `evaluate call`. It returns the exit code, and writes the
@@ -131,21 +132,16 @@ func runCall(ctx context.Context, opts callOptions, stdin io.Reader, stdout, std
 	}
 
 	resolved := resolveConfiguredHops(cfg, os.LookupEnv)
-	primary, fallback := resolved.sources()
 	chain, _, startErr := startChain(resolved, stderr, io.Discard)
 	code := chain.credentialExit()
-	for _, s := range []*sourceStatus{&primary, fallback} {
-		if s != nil && s.State == "unusable" {
-			fmt.Fprintf(stderr, "evaluate: %s credential (%s) is unusable: %s\n", s.Provider, s.Source, s.reason)
-		}
-	}
+	resolved.reportUnusable(stderr)
 	if code == exitUnconfigured {
 		fmt.Fprintf(stderr, "evaluate: no credential is configured; create ~/%s/%s.key (mode 600) or set %s\n",
 			pluginKeyDirectory, cfg.Provider.Name, cfg.Provider.APIKeyEnv)
 	}
 
 	if opts.check {
-		report := checkReport{Exit: code, Primary: primary, Fallback: fallback}
+		report := resolved.report()
 		b, err := json.Marshal(report)
 		if err != nil {
 			fmt.Fprintln(stderr, "evaluate: encoding the check report:", err)

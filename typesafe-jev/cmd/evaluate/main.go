@@ -154,7 +154,7 @@ func buildCommit() string {
 func newServer(cfg Config, chain *chainRunner) *mcp.Server {
 	s := mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
-		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg)},
+		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg) + chain.backendNote()},
 	)
 	registerTools(s, cfg, chain)
 	return s

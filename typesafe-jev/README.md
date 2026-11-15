@@ -231,17 +231,21 @@ the primary.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `JEV_PROVIDER` | `typesafe` | Which backend to use |
-| `JEV_MODEL` | backend default | Model id, passed through unchanged |
+| `JEV_CHAIN` | `typesafe,openrouter` | Ordered distinct providers, up to four; overrides the chain file and cannot be combined with the legacy provider pair |
+| `JEV_PROVIDER` | unset | Legacy first backend; by itself selects one hop |
+| `JEV_MODEL` | backend default | Model id for configured hop 1 only, passed through unchanged |
 | `JEV_API_KEY_FILE` | unset | Absolute path to a private key file; wins over the environment key |
 | `JEV_REQUEST_TIMEOUT` | `45s` | Bounds the whole evaluation, retry waits included |
 | `JEV_MAX_RETRIES` | `3` | Additional attempts, 0 to 5 |
-| `JEV_FALLBACK_PROVIDER` | unset | Opt-in second backend, used when the primary refuses its credential (401, 402, 403), is not found (404), throttles (429), fails (5xx) or cannot be reached. The session then stays on it. Never used for a request the primary rejected by shape |
+| `JEV_FALLBACK_PROVIDER` | unset | Legacy second backend, used when the primary refuses its credential (401, 402, 403), is not found (404), throttles (429), fails (5xx) or cannot be reached. The session then stays on it. Never used for a request the primary rejected by shape |
 | `JEV_FALLBACK_API_KEY_FILE` | unset | The fallback's key file, by the same rules as `JEV_API_KEY_FILE` |
 | `JEV_IMAGES` | unset (off) | `true` or `1` sends images and allows `box`. `false` or `0` is off. Any other value is a startup error |
 | `JEV_LONG_CONTEXT` | unset (off) | `true` or `1` raises TypeSafe's budgets to 262,144 tokens and sends its long-context header on every TypeSafe request. OpenRouter already uses that window and takes no header |
 
 An invalid value for any of these is a startup error, not a silent fallback.
+Without chain environment settings, the comma-separated file
+`~/.config/racecraft-jev/chain` precedes the built-in order. See
+[chain resolution and credential rules](docs/plugin.md#defaults-the-plugin-sets).
 
 ### Using the official TypeSafe skill alongside this server
 

@@ -25,7 +25,7 @@ const validRequest = `{"state":"checkout is down","questions":{"q":{"type":"noul
 // Each call test clears all of them first, so a key on the developer's machine
 // can neither make a "no key" case pass nor turn a test into a billed call.
 var credentialEnv = []string{
-	"JEV_PROVIDER", "JEV_MODEL", "JEV_FALLBACK_PROVIDER",
+	"JEV_CHAIN", "JEV_PROVIDER", "JEV_MODEL", "JEV_FALLBACK_PROVIDER",
 	"JEV_API_KEY_FILE", "JEV_FALLBACK_API_KEY_FILE",
 	"JEV_REQUEST_TIMEOUT", "JEV_MAX_RETRIES",
 	"TYPESAFE_API_KEY", "OPENROUTER_API_KEY",

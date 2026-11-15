@@ -7,9 +7,6 @@
       ],
       "cwd": ".",
       "env": {
-        "JEV_PROVIDER": "typesafe",
-        "JEV_MODEL": "jev-latest",
-        "JEV_FALLBACK_PROVIDER": "openrouter",
         "JEV_REQUEST_TIMEOUT": "45s"
       },
       "startup_timeout_sec": 10,
