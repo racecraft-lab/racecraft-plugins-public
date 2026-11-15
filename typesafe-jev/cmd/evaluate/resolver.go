@@ -199,6 +199,9 @@ func homeDir(look lookupFunc) string {
 // validates a discovered path at the same point as an explicit path. This keeps
 // diagnostics stable when more than one setting is invalid.
 func resolveHopKeyFile(look lookupFunc, name, provider, home string) (string, bool, error) {
+	if providers[provider].AuthKind == authNone {
+		return "", false, nil
+	}
 	path, err := resolveKeyFileVar(look, name)
 	if err != nil || path != "" || home == "" {
 		return path, false, err

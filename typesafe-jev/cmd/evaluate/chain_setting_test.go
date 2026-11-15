@@ -111,6 +111,7 @@ func TestThreeHopSessionMovesDownAndKeepsModels(t *testing.T) {
 	isolateCallEnv(t)
 	third := providers["typesafe"]
 	third.Name = "fixture-third"
+	third.BillingAccount = third.Name
 	third.EndpointURL = "https://third.invalid/decide"
 	third.DefaultModel = "third-default"
 	providers[third.Name] = third

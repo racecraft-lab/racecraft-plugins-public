@@ -63,6 +63,10 @@ type loadedCredential struct {
 func loadCredentialSource(cfg Config, look lookupFunc) loadedCredential {
 	loaded := loadedCredential{status: sourceStatus{Provider: cfg.Provider.Name}}
 	s := &loaded.status
+	if cfg.Provider.AuthKind == authNone {
+		s.Source, s.State = "none", "ok"
+		return loaded
+	}
 	if cfg.KeyFile != "" {
 		s.Source = "explicit-file"
 		if cfg.KeyFileDefaulted {

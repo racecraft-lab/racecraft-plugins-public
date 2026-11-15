@@ -124,6 +124,7 @@ func TestCapabilityRouteLeavesNextCallOnSessionHop(t *testing.T) {
 func TestCapabilityRouteComposesWithFailures(t *testing.T) {
 	third := typesafeSpec
 	third.Name, third.DefaultModel = "third", "third-default"
+	third.BillingAccount = third.Name
 	for _, tc := range []struct {
 		name                      string
 		limited                   int

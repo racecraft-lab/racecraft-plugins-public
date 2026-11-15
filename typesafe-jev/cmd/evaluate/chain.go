@@ -37,7 +37,7 @@ type chainFailure struct {
 	requestErr error
 	hopErr     error
 	// Daemon provenance is supplied by the caller, never inferred from a
-	// provider name here. No daemon is enabled in this prefactor.
+	// provider name here.
 	daemon bool
 }
 
@@ -82,6 +82,7 @@ func classify(err error) chainOutcome {
 type chainRunner struct {
 	hops           []*Client
 	current        atomic.Int32
+	skipped        atomic.Uint32
 	log            io.Writer
 	credentialCode int
 	moveMu         sync.Mutex
@@ -109,6 +110,7 @@ func (r *chainRunner) servingHop() *Client { return r.hops[r.current.Load()] }
 type chainWalk struct {
 	err, networkErr error
 	sessionHop      int
+	skipped         uint32
 }
 
 func (w *chainWalk) localFailure(hop *Client, local error) bool {
@@ -135,7 +137,7 @@ func (w *chainWalk) sendFailure(ctx context.Context, r *chainRunner, i int, fail
 		hopErr = nil
 	}
 	w.err, w.networkErr = failure, failure
-	out := classify(&chainFailure{err: failure, requestErr: ctx.Err(), hopErr: hopErr})
+	out := classify(&chainFailure{err: failure, requestErr: ctx.Err(), hopErr: hopErr, daemon: r.hops[i].Provider.Daemon})
 	if out.effect == nextHopForCall {
 		w.sessionHop = -1
 		return false
@@ -143,11 +145,42 @@ func (w *chainWalk) sendFailure(ctx context.Context, r *chainRunner, i int, fail
 	if out.effect != moveSession && out.effect != moveAccount {
 		return true
 	}
-	if i == w.sessionHop && i+1 < len(r.hops) {
-		r.move(int32(i), int32(i+1), out.reason)
-		w.sessionHop = i + 1
+	w.skipped |= r.skipFailedAccount(i, w.sessionHop, out.effect)
+	to := r.nextHop(i, w.skipped)
+	if i == w.sessionHop && to < len(r.hops) {
+		r.move(int32(i), int32(to), out.reason)
+		w.sessionHop = to
 	}
 	return false
+}
+
+// skipFailedAccount remembers session failures and returns call-only skips for
+// routed failures. Skips survive intervening hops on a different account.
+func (r *chainRunner) skipFailedAccount(from, sessionHop int, effect chainEffect) uint32 {
+	var skipped uint32
+	if effect != moveAccount {
+		return skipped
+	}
+	for i := from + 1; i < len(r.hops); i++ {
+		if r.hops[i].Provider.BillingAccount == r.hops[from].Provider.BillingAccount {
+			skipped |= 1 << i
+		}
+	}
+	r.moveMu.Lock()
+	if from == sessionHop && r.current.Load() == int32(from) {
+		r.skipped.Or(skipped)
+	}
+	r.moveMu.Unlock()
+	return skipped
+}
+
+func (r *chainRunner) nextHop(after int, skipped uint32) int {
+	skipped |= r.skipped.Load()
+	i := after + 1
+	for i < len(r.hops) && skipped&(1<<i) != 0 {
+		i++
+	}
+	return i
 }
 
 // evaluate routes local hop refusals without moving the session. A failure on
@@ -166,7 +199,7 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 		walk.err = &requestInvalidError{err}
 	}
 	stop := err != nil
-	for i := start; i < len(r.hops) && !stop; i++ {
+	for i := start; i < len(r.hops) && !stop; i = r.nextHop(i, walk.skipped) {
 		if i > start {
 			shaped.in = fallbackRequest(shaped.in)
 		}
@@ -175,7 +208,7 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 			stop = walk.localFailure(r.hops[i], local)
 			continue
 		}
-		body, failure, hopErr := r.sendHop(ctx, i, shaped, p)
+		body, failure, hopErr := r.sendHop(ctx, i, shaped, p, walk.skipped)
 		if failure == nil {
 			return body, nil
 		}
@@ -188,7 +221,7 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 }
 
 // sendHop keeps the hop deadline and its provenance inside the request budget.
-func (r *chainRunner) sendHop(ctx context.Context, i int, shaped shapedCall, p preparedCall) ([]byte, error, error) {
+func (r *chainRunner) sendHop(ctx context.Context, i int, shaped shapedCall, p preparedCall, skipped uint32) ([]byte, error, error) {
 	hopCtx := ctx
 	cancelHop := func() {}
 	limit := r.hops[i].HopTimeout
@@ -196,7 +229,7 @@ func (r *chainRunner) sendHop(ctx context.Context, i int, shaped shapedCall, p p
 		limit = defaultHopTimeout
 	}
 	deadline, _ := ctx.Deadline()
-	if time.Until(deadline) > limit && r.hasLaterHop(i, shaped) {
+	if time.Until(deadline) > limit && r.hasLaterHop(i, shaped, skipped) {
 		hopCtx, cancelHop = context.WithTimeout(ctx, limit)
 	}
 	body, failure := send(hopCtx, r.hops[i], p, nil)
@@ -211,10 +244,10 @@ func (r *chainRunner) sendHop(ctx context.Context, i int, shaped shapedCall, p p
 // hasLaterHop checks reachability locally, using the same preparation and
 // shared image cache as routing. A later refusal cannot shorten the last able
 // hop's time. Other errors stop routing when that hop is reached.
-func (r *chainRunner) hasLaterHop(after int, shaped shapedCall) bool {
+func (r *chainRunner) hasLaterHop(after int, shaped shapedCall, skipped uint32) bool {
 	shaped.in = fallbackRequest(shaped.in)
-	for _, hop := range r.hops[after+1:] {
-		_, err := prepareForHop(hop, shaped)
+	for i := r.nextHop(after, skipped); i < len(r.hops); i = r.nextHop(i, skipped) {
+		_, err := prepareForHop(r.hops[i], shaped)
 		if err == nil {
 			return true
 		}

@@ -21,9 +21,11 @@ type ProviderSpec struct {
 	// from. A backend never falls back to another backend's variable.
 	APIKeyEnv string
 	// DefaultModel applies when neither the tool call nor JEV_MODEL names one.
-	DefaultModel         string
-	AuthKind             authKind
-	BillingAccount       string
+	DefaultModel   string
+	AuthKind       authKind
+	BillingAccount string
+	// Daemon marks local proxy statuses that mean the cloud path is down.
+	Daemon               bool
 	WireFormat           imageWireFormat
 	QuestionTypes        []string
 	UnsupportedBoxModels []string
@@ -168,7 +170,10 @@ type imageBounds struct {
 
 type authKind string
 
-const authBearer authKind = "bearer"
+const (
+	authBearer authKind = "bearer"
+	authNone   authKind = "none"
+)
 
 // Only images.go selects an encoding from this enum.
 type imageWireFormat int
@@ -187,7 +192,8 @@ const imageTrustOperatorOptIn imageTrust = 1
 // to change where a request goes; there is deliberately no environment
 // variable that points the server at an arbitrary host.
 var providers = map[string]ProviderSpec{
-	"ollama": ollamaCloudSpec(),
+	"ollama":       ollamaCloudSpec(),
+	"ollama-local": ollamaLocalSpec(),
 	"typesafe": {
 		Name:        "typesafe",
 		EndpointURL: "https://api.typesafe.ai/v1/systemone",
@@ -255,6 +261,17 @@ var providers = map[string]ProviderSpec{
 		// https://openrouter.ai/docs/guides/community/multimodal-decisions (2026-10-17).
 		ImageLimits: backendImageLimits(openrouterSideMin),
 	},
+}
+
+func ollamaLocalSpec() ProviderSpec {
+	spec := ollamaCloudSpec()
+	spec.Name = "ollama-local"
+	spec.EndpointURL = "http://localhost:11434/v1/systemone"
+	spec.DefaultModel = "clef:cloud"
+	spec.AuthKind = authNone
+	spec.APIKeyEnv = ""
+	spec.Daemon = true
+	return spec
 }
 
 func ollamaCloudSpec() ProviderSpec {
