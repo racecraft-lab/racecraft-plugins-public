@@ -65,7 +65,7 @@ class DiscoveredCommit:
 
 
 @dataclass(frozen=True)
-class _FenceOpening:
+class FenceOpening:
     character: str
     length: int
     quote_depth: int
@@ -129,7 +129,7 @@ def _strip_quote_prefix(line: str, depth: int | None = None) -> tuple[str, int] 
     return rest, count
 
 
-def _opening_fence(line: str) -> _FenceOpening | None:
+def opening_fence(line: str) -> FenceOpening | None:
     quoted = _strip_quote_prefix(line)
     if quoted is None:
         return None
@@ -145,7 +145,7 @@ def _opening_fence(line: str) -> _FenceOpening | None:
     marker_space = match.group("marker_space") or ""
     body_indent = len(match.group("indent")) + len(marker) + len(marker_space)
     container_indent = body_indent if marker else 0
-    return _FenceOpening(
+    return FenceOpening(
         fence[0],
         len(fence),
         quote_depth,
@@ -155,7 +155,7 @@ def _opening_fence(line: str) -> _FenceOpening | None:
     )
 
 
-def _container_content(line: str, opening: _FenceOpening) -> str | None:
+def _container_content(line: str, opening: FenceOpening) -> str | None:
     quoted = _strip_quote_prefix(line, opening.quote_depth)
     if quoted is None:
         return None
@@ -167,7 +167,7 @@ def _container_content(line: str, opening: _FenceOpening) -> str | None:
     return rest[removable:]
 
 
-def _is_closing_fence(line: str, opening: _FenceOpening) -> bool:
+def is_closing_fence(line: str, opening: FenceOpening) -> bool:
     quoted = _strip_quote_prefix(line, opening.quote_depth)
     if quoted is None:
         return False
@@ -187,7 +187,7 @@ def extract_release_note(pr_body: str) -> str | None:
     malformed = False
     index = 0
     while index < len(lines):
-        opening = _opening_fence(lines[index])
+        opening = opening_fence(lines[index])
         if opening is None:
             index += 1
             continue
@@ -196,7 +196,7 @@ def extract_release_note(pr_body: str) -> str | None:
         close_index: int | None = None
         for candidate_index in range(index + 1, len(lines)):
             candidate = lines[candidate_index]
-            if _is_closing_fence(candidate, opening):
+            if is_closing_fence(candidate, opening):
                 close_index = candidate_index
                 break
             content = _container_content(candidate, opening)
