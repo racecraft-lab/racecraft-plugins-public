@@ -8,7 +8,9 @@ import (
 	"strings"
 )
 
-// The two backends take the same request shape, and now accept the same values
+// Universal shape checks are independent of a backend. Hop preparation checks
+// its capabilities and limits (ADR 0028); it does not narrow the shared shape.
+// The two existing backends accept the same values
 // inside it. TypeSafe documents that instructions, choice option descriptions,
 // score level descriptions, and noul true/false descriptions all accept a
 // string, an object, an array, or null. OpenRouter's Decisions schemas typed
@@ -42,37 +44,121 @@ const (
 	bytesPerToken = 4
 )
 
-// validateRequest checks a call before it costs anything. The MCP schema
-// already rejects some of this, but a client-side schema is a convenience, not
-// a boundary: the handler validates again.
-//
-// Errors name the field path and never the value. A rejection message reaches
-// the agent's transcript, and the value may be the private state being judged.
+// validateRequest checks the cached shape results and hop capabilities in the
+// parent's order. Shape failures name fields, never private request values.
+// Checking each question before the next preserves the first refusal.
 func validateRequest(spec ProviderSpec, in evaluateIn) error {
-	if err := validateState(in.State); err != nil {
-		return err
-	}
-	if len(in.Questions) == 0 {
-		return fmt.Errorf("questions must not be empty")
-	}
-	if overLimit(len(in.Questions), spec.Limits.Questions) {
-		return fmt.Errorf("questions has %d entries, over the %d the backend accepts", len(in.Questions), spec.Limits.Questions)
-	}
-	if in.Model != "" && strings.TrimSpace(in.Model) == "" {
-		return fmt.Errorf("model is whitespace only; omit it to use the configured default")
-	}
+	return requestChecks(in, spec.AllowImages).validate(spec, in)
+}
 
-	// Sorted so a request with several problems reports the same one every
-	// time; map iteration order would make the message change run to run.
-	for _, id := range sortedKeys(in.Questions) {
-		if err := validateQuestion(spec, id, in.Questions[id]); err != nil {
+// These types describe the rule that refused a call, independently of when
+// its result is reported. Internal errors belong to neither class.
+type requestShapeError struct{ err error }
+
+func (e *requestShapeError) Error() string { return e.err.Error() }
+func (e *requestShapeError) Unwrap() error { return e.err }
+
+type hopRefusalError struct{ err error }
+
+func (e *hopRefusalError) Error() string { return e.err.Error() }
+func (e *hopRefusalError) Unwrap() error { return e.err }
+
+// requestCheck holds either a shape result computed once or a per-hop check.
+// Keeping both in order lets an earlier hop refusal beat a later shape error.
+type requestCheck func(ProviderSpec, evaluateIn) error
+type requestCheckList []requestCheck
+
+func (checks *requestCheckList) shape(err error) {
+	if err != nil {
+		result := &requestShapeError{err}
+		*checks = append(*checks, func(ProviderSpec, evaluateIn) error { return result })
+	}
+}
+
+func (checks *requestCheckList) hop(check func(ProviderSpec, evaluateIn) error) {
+	*checks = append(*checks, func(spec ProviderSpec, in evaluateIn) error {
+		if err := check(spec, in); err != nil {
+			return &hopRefusalError{err}
+		}
+		return nil
+	})
+}
+
+func (checks requestCheckList) validate(spec ProviderSpec, in evaluateIn) error {
+	for _, check := range checks {
+		if err := check(spec, in); err != nil {
 			return err
 		}
 	}
-	if err := validateImageUse(spec, in); err != nil {
-		return err
+	return nil
+}
+
+func requestChecks(in evaluateIn, allowImages bool) requestCheckList {
+	var checks requestCheckList
+	checks.shape(validateState(in.State))
+	if len(in.Questions) == 0 {
+		checks.shape(fmt.Errorf("questions must not be empty"))
 	}
-	return validateBudget(spec, in.State, in.Questions)
+	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
+		if overLimit(len(in.Questions), spec.Limits.Questions) {
+			return fmt.Errorf("questions has %d entries, over the %d the backend accepts", len(in.Questions), spec.Limits.Questions)
+		}
+		return nil
+	})
+	if in.Model != "" && strings.TrimSpace(in.Model) == "" {
+		checks.shape(fmt.Errorf("model is whitespace only; omit it to use the configured default"))
+	}
+	for _, id := range sortedKeys(in.Questions) {
+		checks = append(checks, questionChecks(id, in.Questions[id])...)
+	}
+	checks = append(checks, imageUseChecks(in, allowImages)...)
+	checks = append(checks, func(spec ProviderSpec, in evaluateIn) error {
+		return validateBudget(spec, in.State, in.Questions)
+	})
+	return checks
+}
+
+// shapedCall shares ordered shape results and a lazy image snapshot across
+// hops. Sources open only when all preceding checks for that hop have passed.
+type shapedCall struct {
+	in     evaluateIn
+	checks requestCheckList
+	images *shapedImages
+}
+
+func shapeRequest(in evaluateIn, allowImages bool) (shapedCall, error) {
+	return shapedCall{in: in, checks: requestChecks(in, allowImages), images: &shapedImages{read: readOneImage}}, nil
+}
+
+func prepareForHop(c *Client, shaped shapedCall) (preparedCall, error) {
+	in := shaped.in
+	// The call's model takes precedence over the configured backend default.
+	// An explicit id passes through exactly as given, including its prefix.
+	if in.Model == "" {
+		in.Model = c.Model
+	}
+	if err := shaped.checks.validate(c.Provider, in); err != nil {
+		return preparedCall{}, &requestInvalidError{err}
+	}
+	if err := shaped.images.prepare(c.Provider, in); err != nil {
+		return preparedCall{}, &requestInvalidError{err}
+	}
+	body, headers, err := encodeLoadedRequest(c.Provider, in, shaped.images.loaded)
+	if err != nil {
+		return preparedCall{}, &requestInvalidError{err}
+	}
+	if err := checkBodySize(c.Provider, body); err != nil {
+		return preparedCall{}, &requestInvalidError{&hopRefusalError{err}}
+	}
+	return preparedCall{in: in, body: body, headers: headers}, nil
+}
+
+func checkBodySize(spec ProviderSpec, body []byte) error {
+	if overLimit(len(body), spec.Limits.BodyBytes) {
+		return fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state, fewer questions, or fewer or smaller images",
+			spec.Name, len(body), spec.Limits.BodyBytes)
+	}
+	return nil
 }
 
 // estimateTokens approximates the tokens a value costs once serialised.
@@ -108,12 +194,12 @@ func validateBudget[Q any](spec ProviderSpec, state any, questions map[string]Q)
 	}
 
 	if overLimit(total, spec.RequestTokens) {
-		return budgetTooLarge(spec, total, fmt.Sprintf("the request is about %d tokens, over the %d the model accepts; send less state or fewer questions",
-			total, spec.RequestTokens))
+		return &hopRefusalError{budgetTooLarge(spec, total, fmt.Sprintf("the request is about %d tokens, over the %d the model accepts; send less state or fewer questions",
+			total, spec.RequestTokens))}
 	}
 	if statePlus := stateTokens + longest; overLimit(statePlus, spec.QuestionTokens) {
-		return budgetTooLarge(spec, statePlus, fmt.Sprintf("state plus the longest question (questions.%s) is about %d tokens, over the %d the model accepts for the two together; send less state",
-			longestID, statePlus, spec.QuestionTokens))
+		return &hopRefusalError{budgetTooLarge(spec, statePlus, fmt.Sprintf("state plus the longest question (questions.%s) is about %d tokens, over the %d the model accepts for the two together; send less state",
+			longestID, statePlus, spec.QuestionTokens))}
 	}
 	return nil
 }
@@ -141,42 +227,45 @@ func validateState(state any) error {
 	}
 }
 
-func validateQuestion(spec ProviderSpec, id string, q question) error {
+func questionChecks(id string, q question) requestCheckList {
+	var checks requestCheckList
 	path := "questions." + id
-
 	switch q.Type {
 	case typeNoul, typeChoice, typeScore, typeBox:
 	case "":
-		return fmt.Errorf("%s.type is required; use noul, choice, score, or box", path)
+		checks.shape(fmt.Errorf("%s.type is required; use noul, choice, score, or box", path))
+		return checks
 	default:
-		return fmt.Errorf("%s.type must be noul, choice, score, or box", path)
+		checks.shape(fmt.Errorf("%s.type must be noul, choice, score, or box", path))
+		return checks
 	}
-
-	if !slices.Contains(spec.QuestionTypes, q.Type) {
-		return fmt.Errorf("%s.type is not supported by %s", path, spec.Name)
-	}
-
-	if err := validateEntry(spec, path+".instructions", q.Instructions, entryRequired); err != nil {
-		return err
-	}
-
-	switch q.Type {
-	case typeNoul:
-		return validateNoulCriteria(spec, path, q.Criteria)
-	case typeChoice:
-		return validateChoiceCriteria(spec, path, q.Criteria)
-	case typeBox:
-		// Box takes instructions and an image, nothing else. Dropping a
-		// criteria the caller sent would judge a different question than the
-		// one they wrote.
-		if q.Criteria != nil {
-			return fmt.Errorf("%s.criteria is not accepted on a box question", path)
+	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
+		if !slices.Contains(spec.QuestionTypes, q.Type) {
+			return fmt.Errorf("%s.type is not supported by %s", path, spec.Name)
 		}
 		return nil
-	default:
-		rule := scoreRule.withBounds(spec.Limits.ScoreMin, spec.Limits.ScoreMax)
-		return validateCriteria[[]any](spec, rule, path, q.Criteria)
+	})
+	checks = append(checks, entryChecks(path+".instructions", q.Instructions, entryRequired)...)
+	switch q.Type {
+	case typeNoul:
+		checks = append(checks, noulChecks(path, q.Criteria)...)
+	case typeChoice:
+		checks = append(checks, criteriaChecks[map[string]any](choiceRule, path, q.Criteria)...)
+	case typeScore:
+		checks = append(checks, criteriaChecks[[]any](scoreRule, path, q.Criteria)...)
+	case typeBox:
+		if q.Criteria != nil {
+			checks.shape(fmt.Errorf("%s.criteria is not accepted on a box question", path))
+		}
 	}
+	return checks
+}
+
+func entryChecks(path string, v any, mode entryMode) requestCheckList {
+	var checks requestCheckList
+	checks.shape(validateEntryShape(path, v, mode))
+	checks.hop(func(spec ProviderSpec, _ evaluateIn) error { return validateEntryCapability(spec, path, v) })
+	return checks
 }
 
 // entryRequired marks a field that must be present. Optional fields skip the
@@ -188,16 +277,24 @@ const (
 	entryOptional
 )
 
-// validateEntry checks one of TypeSafe's EntryType fields: instructions, an
-// option description, or a level description.
-func validateEntry(spec ProviderSpec, path string, v any, mode entryMode) error {
+// validateEntryCapability checks a hop's support for structured entries.
+func validateEntryCapability(spec ProviderSpec, path string, v any) error {
+	switch v.(type) {
+	case map[string]any, []any:
+		if !spec.StructuredEntries {
+			return fmt.Errorf("%s must be a string for the %s backend; structured %s are not accepted there",
+				path, spec.Name, describeKind(v))
+		}
+	}
+	return nil
+}
+
+func validateEntryShape(path string, v any, mode entryMode) error {
 	if v == nil {
 		if mode == entryRequired {
 			return fmt.Errorf("%s is required", path)
 		}
-		// A null description means "the option name says it". Both backends
-		// accept it in the one optional position this server has, a choice
-		// option description.
+		// A null choice description means "the option name says it".
 		return nil
 	}
 
@@ -208,12 +305,6 @@ func validateEntry(spec ProviderSpec, path string, v any, mode entryMode) error 
 		}
 		return nil
 	case map[string]any, []any:
-		if !spec.StructuredEntries {
-			// Not stringified silently: JSON-encoding an object into the
-			// instructions would send the model something nobody wrote.
-			return fmt.Errorf("%s must be a string for the %s backend; structured %s are not accepted there",
-				path, spec.Name, describeKind(v))
-		}
 		return nil
 	default:
 		return fmt.Errorf("%s must be a string, object, or array", path)
@@ -227,32 +318,34 @@ func describeKind(v any) string {
 	return "objects"
 }
 
-// validateNoulCriteria allows criteria to be omitted on both backends. When it
+// noulChecks allows criteria to be omitted on both backends. When it
 // is present, both true and false descriptions are required: OpenRouter's
 // schema requires the pair, and a half-described noul is ambiguous anyway.
-func validateNoulCriteria(spec ProviderSpec, path string, criteria any) error {
+func noulChecks(path string, criteria any) requestCheckList {
+	var checks requestCheckList
 	if criteria == nil {
-		return nil
+		return checks
 	}
 	m, ok := criteria.(map[string]any)
 	if !ok {
-		return fmt.Errorf("%s.criteria must be an object with true and false descriptions", path)
+		checks.shape(fmt.Errorf("%s.criteria must be an object with true and false descriptions", path))
+		return checks
 	}
 	for _, key := range []string{"true", "false"} {
 		v, present := m[key]
 		if !present {
-			return fmt.Errorf("%s.criteria.%s is required when criteria is given", path, key)
+			checks.shape(fmt.Errorf("%s.criteria.%s is required when criteria is given", path, key))
+			return checks
 		}
-		if err := validateEntry(spec, path+".criteria."+key, v, entryRequired); err != nil {
-			return err
-		}
+		checks = append(checks, entryChecks(path+".criteria."+key, v, entryRequired)...)
 	}
 	for key := range m {
 		if key != "true" && key != "false" {
-			return fmt.Errorf("%s.criteria has an unexpected key %q; a noul takes only true and false", path, key)
+			checks.shape(fmt.Errorf("%s.criteria has an unexpected key %q; a noul takes only true and false", path, key))
+			break
 		}
 	}
-	return nil
+	return checks
 }
 
 // criteriaRule is one question type's contract for its criteria: present, the
@@ -271,10 +364,12 @@ type criteriaRule struct {
 var (
 	choiceRule = criteriaRule{
 		qtype: typeChoice, shape: "an object mapping each option to its description",
+		least: 0, most: noLimit,
 		few: "must name at least one option", verb: "names", unit: "options",
 	}
 	scoreRule = criteriaRule{
 		qtype: typeScore, shape: "an ordered array of level descriptions",
+		least: 0, most: noLimit,
 		verb: "has", unit: "levels",
 	}
 )
@@ -311,36 +406,42 @@ func criteriaOf[T map[string]any | []any](rule criteriaRule, path string, criter
 // validateChoiceCriteria requires a non-empty option map. Option names are the
 // answer space, so they are preserved exactly.
 func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error {
-	return validateCriteria[map[string]any](spec, choiceRule.withBounds(spec.Limits.ChoiceMin, spec.Limits.ChoiceMax), path, criteria)
+	return criteriaChecks[map[string]any](choiceRule, path, criteria).validate(spec, evaluateIn{})
 }
 
-// validateCriteria checks the shape once, then visits entries in their semantic
-// order: sorted option names for choices, original positions for scores. A
-// score level's number is its position, so scores are never sorted or deduplicated.
-func validateCriteria[T map[string]any | []any](spec ProviderSpec, rule criteriaRule, path string, criteria any) error {
+// criteriaChecks caches shape results before per-hop bounds, then visits entries
+// in semantic order: sorted option names for choices, original score positions.
+// A score level's number is its position, so scores are never sorted or deduplicated.
+func criteriaChecks[T map[string]any | []any](rule criteriaRule, path string, criteria any) requestCheckList {
+	var checks requestCheckList
 	entries, err := criteriaOf[T](rule, path, criteria)
+	checks.shape(err)
 	if err != nil {
-		return err
+		return checks
 	}
+	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
+		least, most := spec.Limits.ChoiceMin, spec.Limits.ChoiceMax
+		if rule.qtype == typeScore {
+			least, most = spec.Limits.ScoreMin, spec.Limits.ScoreMax
+		}
+		_, err := criteriaOf[T](rule.withBounds(least, most), path, criteria)
+		return err
+	})
 	switch entries := any(entries).(type) {
 	case map[string]any:
 		for _, option := range sortedKeys(entries) {
 			if strings.TrimSpace(option) == "" {
-				return fmt.Errorf("%s.criteria has a blank option name", path)
+				checks.shape(fmt.Errorf("%s.criteria has a blank option name", path))
 			}
 			// Optional descriptions, including null, use the backend's entry rule.
-			if err := validateEntry(spec, path+".criteria."+option, entries[option], entryOptional); err != nil {
-				return err
-			}
+			checks = append(checks, entryChecks(path+".criteria."+option, entries[option], entryOptional)...)
 		}
 	case []any:
 		for i, level := range entries {
-			if err := validateEntry(spec, fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired); err != nil {
-				return err
-			}
+			checks = append(checks, entryChecks(fmt.Sprintf("%s.criteria[%d]", path, i), level, entryRequired)...)
 		}
 	}
-	return nil
+	return checks
 }
 
 // validateResponse checks that what came back answers what was asked, without

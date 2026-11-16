@@ -45,18 +45,32 @@ const (
 // TypeSafe body will use. The token is minted here so a short caller name
 // such as "cat" cannot match inside "category" once it becomes an asset key.
 type preparedImage struct {
-	format string // "png" or "jpg"
-	data   []byte
-	ref    string
+	format        string // "png" or "jpg"
+	data          []byte
+	ref           string
+	width, height int
+	sizeError     *imageSizeError
+	readError     error
 }
 
 // encodeRequest builds the body and the extra headers for one backend. It
-// trusts a request validateRequest has passed: the opt-in, the entry shapes,
-// the media-part guard, and the references are checked there, once per call.
+// trusts a request validateRequest has passed. Image reads and decoding are
+// cached lazily, after the ordered request checks and each earlier image's
+// hop limits pass; a refused prefix never opens a later source.
 // A request with no images is marshalled as it always was, so the bytes on
 // the wire do not change for existing callers. Headers are still applied:
 // long context is a property of the process, not of the payload.
 func encodeRequest(spec ProviderSpec, in evaluateIn) ([]byte, map[string]string, error) {
+	images := shapedImages{read: readOneImage}
+	if err := images.prepare(spec, in); err != nil {
+		return nil, nil, err
+	}
+	return encodeLoadedRequest(spec, in, images.loaded)
+}
+
+// encodeLoadedRequest never opens an image source. Each hop builds its own
+// wire representation from the shared snapshot, without rereading sources.
+func encodeLoadedRequest(spec ProviderSpec, in evaluateIn, loaded map[string]preparedImage) ([]byte, map[string]string, error) {
 	switch spec.WireFormat {
 	case wireTypeSafeAssets, wireOpenRouterParts:
 	default:
@@ -74,10 +88,6 @@ func encodeRequest(spec ProviderSpec, in evaluateIn) ([]byte, map[string]string,
 	}
 
 	state, questions, err := imageTrees(in)
-	if err != nil {
-		return nil, nil, err
-	}
-	loaded, err := loadImages(spec, in.Images, state, questions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -167,44 +177,44 @@ func requestHasBox(in evaluateIn) bool {
 	return false
 }
 
-// validateImageUse checks everything about images and box that does not need
-// the file bytes: the media-part guard, the opt-in, the entry shape, the
-// model, and that every image is referenced. validateRequest is its only
-// caller, so it runs once per call. File bytes are checked in loadImages,
-// after this, so a request that is not allowed never opens a path.
-func validateImageUse(spec ProviderSpec, in evaluateIn) error {
-	// Every request, with or without an images map: a hand-written media part
-	// skipped JEV_IMAGES and every local check, and OpenRouter would send it
-	// on. The same walk counts references.
+// imageUseChecks preserves the parent's order: media guard, opt-in, count,
+// entries, box model, box image requirement, then references. None opens paths.
+func imageUseChecks(in evaluateIn, allowImages bool) requestCheckList {
+	var checks requestCheckList
 	sites, err := scanImageSites(in)
-	if err != nil {
-		return err
-	}
+	checks.shape(err)
 	hasBox := requestHasBox(in)
 	if len(in.Images) == 0 && !hasBox {
-		return nil
+		return checks
 	}
-	if spec.ImageTrust != imageTrustOperatorOptIn || !spec.AllowImages {
-		return errors.New("images and box questions are disabled; set JEV_IMAGES=true to send them")
-	}
-	if overLimit(len(in.Images), spec.Limits.Images) {
-		return fmt.Errorf("images has %d entries, over the %d the backend accepts", len(in.Images), spec.Limits.Images)
-	}
-	if err := validateImageEntries(in.Images); err != nil {
-		return err
-	}
-	if hasBox {
-		if err := validateBoxModel(spec, in.Model); err != nil {
+	checks.shape(requireImageOptIn(allowImages))
+	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
+		if err := requireImageOptIn(spec.ImageTrust == imageTrustOperatorOptIn); err != nil {
 			return err
 		}
+		if overLimit(len(in.Images), spec.Limits.Images) {
+			return fmt.Errorf("images has %d entries, over the %d the backend accepts", len(in.Images), spec.Limits.Images)
+		}
+		return nil
+	})
+	checks.shape(validateImageEntries(in.Images))
+	if hasBox {
+		checks.hop(func(spec ProviderSpec, resolved evaluateIn) error { return validateBoxModel(spec, resolved.Model) })
 		if len(in.Images) == 0 {
-			return errors.New("a box question needs an image in the request")
+			checks.shape(errors.New("a box question needs an image in the request"))
 		}
 	}
-	if len(in.Images) == 0 {
-		return nil
+	if len(in.Images) > 0 {
+		checks.shape(sites.check(in.Images))
 	}
-	return sites.check(in.Images)
+	return checks
+}
+
+func requireImageOptIn(allowed bool) error {
+	if !allowed {
+		return errors.New("images and box questions are disabled; set JEV_IMAGES=true to send them")
+	}
+	return nil
 }
 
 func validateImageEntries(images map[string]imageSource) error {
@@ -411,39 +421,90 @@ func toTree(v any) (any, error) {
 	return out, nil
 }
 
-func loadImages(spec ProviderSpec, sources map[string]imageSource, state any, questions map[string]any) (map[string]preparedImage, error) {
+// shapedImages caches each read, including errors, across hop preparations.
+// Reads stay incremental: only an allowed image prefix may open the next path.
+type shapedImages struct {
+	read     func(string, imageSource, int, string) (preparedImage, error)
+	loaded   map[string]preparedImage
+	uses     map[string]int
+	haystack string
+}
+
+func (images *shapedImages) prepare(spec ProviderSpec, in evaluateIn) error {
+	if len(in.Images) == 0 {
+		return nil
+	}
 	if spec.ImageLimits.MaxSide <= 0 {
-		return nil, fmt.Errorf("internal: %s has no image limits", spec.Name)
+		return fmt.Errorf("internal: %s has no image limits", spec.Name)
 	}
-	haystack, err := referenceHaystack(state, questions)
-	if err != nil {
-		return nil, err
-	}
-	// Checked as each image loads, so a request past either limit stops
-	// before every byte is held, encoded, and marshalled.
-	uses, err := countImageUses(state, questions, sources)
-	if err != nil {
-		return nil, err
+	if err := images.initialize(in); err != nil {
+		return &requestShapeError{err}
 	}
 	var budget imageBudget
-	loaded := make(map[string]preparedImage, len(sources))
-	for _, name := range sortedKeys(sources) {
-		img, err := loadOneImage(name, sources[name], spec, haystack)
-		if err != nil {
-			return nil, err
+	fileLimit, _ := imageReadLimits()
+	for _, name := range sortedKeys(in.Images) {
+		img, ok := images.loaded[name]
+		if !ok {
+			var err error
+			img, err = images.read(name, in.Images[name], fileLimit, images.haystack)
+			img.readError = err
+			images.loaded[name] = img
 		}
-		n := max(uses[name], 1)
+		if err := img.validateForHop(spec, name, in.Images[name]); err != nil {
+			return err
+		}
+		n := max(images.uses[name], 1)
 		inBody := n
 		if spec.WireFormat == wireTypeSafeAssets {
-			// TypeSafe carries each file once, in assets.
 			inBody = 1
 		}
 		if err := budget.add(spec.Limits, len(img.data), inBody, n); err != nil {
-			return nil, err
+			return &hopRefusalError{err}
 		}
-		loaded[name] = img
 	}
-	return loaded, nil
+	return nil
+}
+
+// initialize records reference sites before opening the first image.
+func (images *shapedImages) initialize(in evaluateIn) error {
+	if images.loaded != nil {
+		return nil
+	}
+	state, questions, err := imageTrees(in)
+	if err != nil {
+		return err
+	}
+	images.haystack, err = referenceHaystack(state, questions)
+	if err != nil {
+		return err
+	}
+	images.uses, err = countImageUses(state, questions, in.Images)
+	if err != nil {
+		return err
+	}
+	images.loaded = make(map[string]preparedImage, len(in.Images))
+	return nil
+}
+
+// validateForHop preserves size, read, then dimension diagnostic precedence.
+func (img preparedImage) validateForHop(spec ProviderSpec, name string, source imageSource) error {
+	if img.sizeError != nil {
+		return &hopRefusalError{img.sizeError.forLimit(spec.Limits.ImageBytes)}
+	}
+	if overLimit(len(img.data), spec.Limits.ImageBytes) {
+		size := int64(-1)
+		if source.Path != "" {
+			size = int64(len(img.data))
+		}
+		return &hopRefusalError{(&imageSizeError{imageLabel(name), size, spec.Limits.ImageBytes}).forLimit(spec.Limits.ImageBytes)}
+	}
+	if img.readError != nil {
+		return &requestShapeError{img.readError}
+	}
+	if err := checkImageDimensions(imageLabel(name), img.width, img.height, spec.ImageLimits); err != nil {
+		return &hopRefusalError{err}
+	}
+	return nil
 }
 
 // imageBudget tracks wire-body, expanded-request, and decoded-file totals.
@@ -479,33 +540,53 @@ func referenceHaystack(state any, questions map[string]any) (string, error) {
 	return string(b), nil
 }
 
-func loadOneImage(name string, src imageSource, spec ProviderSpec, haystack string) (preparedImage, error) {
+func readOneImage(name string, src imageSource, limit int, haystack string) (preparedImage, error) {
 	label := imageLabel(name)
-	data, err := imageBytes(label, src, spec.Limits.ImageBytes)
+	data, err := imageBytes(label, src, limit)
 	if err != nil {
+		var size *imageSizeError
+		if errors.As(err, &size) {
+			// No hop can take this file; retain its size refusal without
+			// allocating the bytes or treating a hop limit as a shape error.
+			return preparedImage{sizeError: size}, nil
+		}
 		return preparedImage{}, err
 	}
 	if animatedPNG(data) {
-		return preparedImage{}, fmt.Errorf("%s: animated PNGs are rejected", label)
+		return preparedImage{data: data}, fmt.Errorf("%s: animated PNGs are rejected", label)
 	}
 	cfg, detected, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
-		return preparedImage{}, fmt.Errorf("%s: not a PNG or JPEG", label)
+		return preparedImage{data: data}, fmt.Errorf("%s: not a PNG or JPEG", label)
 	}
 	format, ok := canonicalFormat(detected)
 	if !ok {
-		return preparedImage{}, fmt.Errorf("%s: not a PNG or JPEG", label)
+		return preparedImage{data: data}, fmt.Errorf("%s: not a PNG or JPEG", label)
 	}
 	if src.Format != "" {
 		want, _ := canonicalFormat(src.Format)
 		if want != format {
-			return preparedImage{}, fmt.Errorf("%s: format does not match the file", label)
+			return preparedImage{data: data}, fmt.Errorf("%s: format does not match the file", label)
 		}
 	}
-	if err := checkImageDimensions(label, cfg.Width, cfg.Height, spec.ImageLimits); err != nil {
-		return preparedImage{}, err
+	return preparedImage{format: format, data: data, ref: referenceToken(name, haystack), width: cfg.Width, height: cfg.Height}, nil
+}
+
+// imageSizeError preserves the old file/base64 diagnostics while deferring a
+// read ceiling to hop preparation. Exact file sizes never include the path.
+type imageSizeError struct {
+	label string
+	size  int64
+	limit int
+}
+
+func (e *imageSizeError) Error() string { return e.forLimit(e.limit).Error() }
+
+func (e *imageSizeError) forLimit(limit int) error {
+	if e.size >= 0 {
+		return fmt.Errorf("%s: the file is %d bytes, over the %d byte limit", e.label, e.size, limit)
 	}
-	return preparedImage{format: format, data: data, ref: referenceToken(name, haystack)}, nil
+	return fmt.Errorf("%s: the file is over the %d byte limit", e.label, limit)
 }
 
 // imageBytes reads one image from its single source. validateImageEntries is
@@ -531,7 +612,7 @@ func readImageFile(label, path string, limit int) ([]byte, error) {
 		return nil, fmt.Errorf("%s: the image file cannot be read", label)
 	}
 	if limit != noLimit && info.Size() > int64(limit) {
-		return nil, fmt.Errorf("%s: the file is %d bytes, over the %d byte limit", label, info.Size(), limit)
+		return nil, &imageSizeError{label, info.Size(), limit}
 	}
 	var reader io.Reader = f
 	if limit != noLimit {
@@ -540,7 +621,7 @@ func readImageFile(label, path string, limit int) ([]byte, error) {
 	b, err := io.ReadAll(reader)
 	if err != nil || overLimit(len(b), limit) {
 		if err == nil {
-			return nil, fmt.Errorf("%s: the file is over the %d byte limit", label, limit)
+			return nil, &imageSizeError{label, -1, limit}
 		}
 		return nil, fmt.Errorf("%s: the image file cannot be read", label)
 	}
@@ -552,14 +633,14 @@ func decodeImageBase64(label, s string, limit int) ([]byte, error) {
 		return nil, fmt.Errorf("%s: data_base64 must be standard base64 with no whitespace and no data: prefix", label)
 	}
 	if limit != noLimit && len(s) > base64.StdEncoding.EncodedLen(limit) {
-		return nil, fmt.Errorf("%s: the file is over the %d byte limit", label, limit)
+		return nil, &imageSizeError{label, -1, limit}
 	}
 	b, err := base64.StdEncoding.Strict().DecodeString(s)
 	if err != nil {
 		return nil, fmt.Errorf("%s: data_base64 is not standard base64", label)
 	}
 	if len(b) == 0 || overLimit(len(b), limit) {
-		return nil, fmt.Errorf("%s: the file is over the %d byte limit", label, limit)
+		return nil, &imageSizeError{label, -1, limit}
 	}
 	return b, nil
 }

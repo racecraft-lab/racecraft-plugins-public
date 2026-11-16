@@ -59,17 +59,16 @@ func newHTTPClient() *http.Client {
 }
 
 // encode builds this backend's wire body and headers. It trusts the request:
-// prepare validates before it encodes. Every error is a
-// *requestInvalidError: a bad image or a body over the cap never leaves the
-// machine, and call maps that type to exit 2.
+// callers validate before encoding. Ordered hop checks and lazy image reads
+// compose in prepareForHop; this compatibility entry point still wraps local
+// errors as requestInvalidError, which call maps to exit 2.
 func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
 	body, headers, err := encodeRequest(c.Provider, in)
+	if err == nil {
+		err = checkBodySize(c.Provider, body)
+	}
 	if err != nil {
 		return nil, nil, &requestInvalidError{err}
-	}
-	if overLimit(len(body), c.Provider.Limits.BodyBytes) {
-		return nil, nil, &requestInvalidError{fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state, fewer questions, or fewer or smaller images",
-			c.Provider.Name, len(body), c.Provider.Limits.BodyBytes)}
 	}
 	return body, headers, nil
 }

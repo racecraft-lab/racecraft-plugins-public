@@ -53,13 +53,14 @@ func registerTools(s *mcp.Server, _ Config, chain *chainRunner) {
 	})
 }
 
-// runOn is one evaluation on one backend.
+// runOn uses the chain's single-hop path for one evaluation on one backend.
 func runOn(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
-	p, err := prepare(c, in)
-	if err != nil {
-		return nil, err
-	}
-	return send(ctx, c, p)
+	return (&chainRunner{hops: []*Client{c}}).evaluate(ctx, in)
+}
+
+func runShapedOn(ctx context.Context, c *Client, shaped shapedCall) ([]byte, error) {
+	p, err := prepareForHop(c, shaped)
+	return send(ctx, c, p, err)
 }
 
 // preparedCall is one request that passed every local check for one backend,
@@ -73,27 +74,18 @@ type preparedCall struct {
 // prepare resolves the model, validates, and encodes. It makes no network
 // call, and every error it returns is a *requestInvalidError.
 func prepare(c *Client, in evaluateIn) (preparedCall, error) {
-	// Precedence: the tool call's model, then JEV_MODEL, then the backend
-	// default. c.Model already holds the resolved second and third of those.
-	//
-	// An explicit model passes through exactly as given. A "~typesafe/" prefix
-	// is neither added nor stripped: a mismatched id becomes a 404 the agent
-	// can read, which beats a silent rewrite to a model nobody asked for.
-	if in.Model == "" {
-		in.Model = c.Model
-	}
-	if err := validateRequest(c.Provider, in); err != nil {
+	shaped, err := shapeRequest(in, c.Provider.AllowImages)
+	if err != nil {
 		return preparedCall{}, &requestInvalidError{err}
 	}
-	body, headers, err := c.encode(in)
-	if err != nil {
-		return preparedCall{}, err
-	}
-	return preparedCall{in: in, body: body, headers: headers}, nil
+	return prepareForHop(c, shaped)
 }
 
-// send posts a prepared call and validates the reply.
-func send(ctx context.Context, c *Client, p preparedCall) ([]byte, error) {
+// send propagates preparation failures before posting and validating a reply.
+func send(ctx context.Context, c *Client, p preparedCall, preparationError error) ([]byte, error) {
+	if preparationError != nil {
+		return nil, preparationError
+	}
 	body, err := c.post(ctx, p.body, p.headers)
 	if err != nil {
 		return nil, err
