@@ -183,6 +183,13 @@ class MoveTests(GitFixture):
 
 
 class AssertionTests(GitFixture):
+    def test_fstring_literal_assertions_do_not_hide_two_lost_lines(self) -> None:
+        path = "tests/test_sample.py"
+        before = 'def test_one():\n    x = 1\n    assert x == 1\n    assert x > 0\n'
+        after = 'def test_one():\n    x = 1\n    print(f"assert x == 1 {x}")\n    print(f"assert x > 0 {x}")\n'
+        self.transition({path: before}, {path: after})
+        self.assertIn(f'`{path}` (2 net assertion lines lost)', self.expect(1))
+
     def test_commented_assertions_are_losses_and_literals_do_not_count(self) -> None:
         python = 'def test_gate():\n    assert check("bad") == 1\n'
         go = 'package sample\nfunc TestGate(t *testing.T) {\n    t.Fatal("bad")\n}\n'
@@ -365,6 +372,15 @@ class ComparisonTests(GitFixture):
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_disclosure_job_pins_python_to_the_pr_checks_version_and_action(self) -> None:
+        workflows = REPO_ROOT / ".github/workflows"
+        checks = (workflows / "pr-checks.yml").read_text(encoding="utf-8")
+        metadata = (workflows / "pr-metadata.yml").read_text(encoding="utf-8")
+        setup = checks.split("      - name: Set up Python 3.11\n", 1)[1].split("\n\n", 1)[0]
+        job = metadata.split("  validate-test-changes:\n", 1)[1]
+        self.assertIn(setup, job)
+        self.assertLess(job.index(setup), job.index("run: python3"))
+
     def test_job_uses_full_history_exact_pr_head_and_environment_inputs(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/pr-metadata.yml").read_text(encoding="utf-8")
         job = workflow.split("  validate-test-changes:\n", 1)[1]

@@ -93,10 +93,17 @@ def mask_non_code(source: bytes, *, go: bool) -> str:
     text = source.decode("utf-8")
     if go:
         return GO_LITERALS.sub(lambda match: re.sub(r"[^\n]", " ", match[0]), text)
+    literal_tokens = (
+        tokenize.COMMENT, tokenize.STRING,
+        *(getattr(tokenize, name, None) for name in (
+            "FSTRING_START", "FSTRING_MIDDLE", "FSTRING_END",
+            "TSTRING_START", "TSTRING_MIDDLE", "TSTRING_END",
+        )),
+    )
     tokens = tokenize.generate_tokens(io.StringIO(text).readline)
     return tokenize.untokenize(
         token._replace(string=re.sub(r"[^\n]", " ", token.string))
-        if token.type in (tokenize.COMMENT, tokenize.STRING) else token
+        if token.type in literal_tokens else token
         for token in tokens
     )
 

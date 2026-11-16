@@ -111,6 +111,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Set up Python 3.11
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
       - name: Authenticate manual PR metadata
         id: metadata
         if: github.event_name == 'workflow_dispatch'
