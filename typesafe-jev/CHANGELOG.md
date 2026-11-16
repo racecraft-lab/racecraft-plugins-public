@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.10.0...typesafe-jev-v0.11.0) (2026-11-16)
+
+
+### Features
+
+* **typesafe-jev:** add an Ollama cloud backend for Clef ([#1452](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1452)) ([aa0f4e4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/aa0f4e41c6cbd8d128cbf55f1f59a1b1b1aa5676))
+* **typesafe-jev:** add the local Ollama daemon backend with the same-account skip ([#1454](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1454)) ([a711379](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a711379b7ecb2d6ddf18f1594c88b16dda15b67e))
+* **typesafe-jev:** give each backend its own time limit inside the request deadline ([#1451](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1451)) ([22dd12c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/22dd12cd7b4fef5a6410f26005716959ca735fe0))
+* **typesafe-jev:** route requests past a backend that cannot take them ([#1450](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1450)) ([f6f96fc](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f6f96fce5b1602979d692418ca0bedc88639e304))
+* **typesafe-jev:** send images to the Ollama backend ([#1453](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1453)) ([45314d8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/45314d8bb1108d30f0ced4b240c9ab5fcf0321f8))
+* **typesafe-jev:** set the backend chain with JEV_CHAIN or a chain file ([#1449](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1449)) ([2c50151](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2c5015172dcf64418de09bc171cb80762c30d223))
+
+
+### Bug Fixes
+
+* **typesafe-jev:** align the evaluate tool with Jev 1.14 and OpenRouter refusals ([#1423](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1423)) ([dc56a85](https://github.com/racecraft-lab/racecraft-plugins-public/commit/dc56a85ecbc99df15718fb5f49deb41b12661d23))
+* **typesafe-jev:** describe the Ollama backend in the skills, server text and setup message ([#1457](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1457)) ([1d8fc43](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1d8fc43ee3471c55a4f07a72a65d6aec7e3519cd))
+* **typesafe-jev:** never class a request timeout as an unreachable backend ([#1444](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1444)) ([6e54e72](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6e54e72c12acddc99c6f09046fc1fa5fac5f8032))
+
 ## [0.10.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.9.2...typesafe-jev-v0.10.0) (2026-10-17)
 
 
