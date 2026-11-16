@@ -307,7 +307,8 @@ session. Exhausting the whole request deadline ends the call as a timeout
 call remain unreachable failures.
 
 If a retry cannot finish within the hop deadline, its HTTP status keeps its
-meaning for session moves. This rule is provisional pending owner review.
+meaning for session moves: a 429 cut short still moves the session (owner
+decision, 2026-11-15).
 
 ## Attribution headers
 
