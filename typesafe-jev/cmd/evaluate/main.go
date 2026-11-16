@@ -227,22 +227,47 @@ func distinctNotes(specs []ProviderSpec, note func(ProviderSpec) string) string 
 }
 
 // setupInstructions is what the plugin's server says, with no tools, when no
-// credential source is configured at all.
-const setupInstructions = `Jev has no TypeSafe or OpenRouter credential on this machine, so this server offers no tools.
-To enable the evaluate tool:
-1. Put a TypeSafe key in ~/.config/racecraft-jev/typesafe.key, or an OpenRouter key in ~/.config/racecraft-jev/openrouter.key, readable only by you (chmod 600).
-2. Reconnect this MCP server.
-Until then, make any judgment yourself in the ordinary way.`
+// hop in the configured chain has a credential. It names that chain's
+// backends and their key files, not a fixed pair.
+func setupInstructions(r resolvedHops) string {
+	files := make([]string, len(r.hops))
+	for i, hop := range r.hops {
+		p := hop.config.Provider
+		files[i] = indefiniteArticle(p.Label) + " " + p.Label + " key in ~/" + pluginKeyDirectory + "/" + p.Name + ".key"
+	}
+	return "The evaluate server has no " + missingCredentials(r) + " credential on this machine, so it offers no tools.\n" +
+		"To enable the evaluate tool:\n" +
+		"1. Put " + strings.Join(files, ", or ") + ", readable only by you (chmod 600).\n" +
+		"2. Reconnect this MCP server.\n" +
+		"Until then, make any judgment yourself in the ordinary way."
+}
+
+// missingCredentials names the chain's backends for the setup text and its
+// stderr line, so the two cannot disagree.
+func missingCredentials(r resolvedHops) string {
+	labels := make([]string, len(r.hops))
+	for i, hop := range r.hops {
+		labels[i] = hop.config.Provider.Label
+	}
+	return strings.Join(labels, " or ")
+}
+
+func indefiniteArticle(word string) string {
+	if word != "" && strings.ContainsRune("AEIOU", rune(word[0])) {
+		return "an"
+	}
+	return "a"
+}
 
 // newSetupServer is the server `mcp --plugin-defaults` runs when nothing is
 // configured: connected, with no tools, and instructions that say how to set
 // Jev up. A user without a key then sees a server that explains itself
 // rather than one that failed to start.
-func newSetupServer() *mcp.Server {
+func newSetupServer(resolved resolvedHops) *mcp.Server {
 	return mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
 		&mcp.ServerOptions{
-			Instructions: setupInstructions,
+			Instructions: setupInstructions(resolved),
 			// Advertised, with an empty list, so a client that asks for tools
 			// gets none rather than an error.
 			Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}},
@@ -262,8 +287,8 @@ func serve(ctx context.Context, pluginDefaults bool) error {
 	chain, cfg, err := startChain(resolved, os.Stderr, os.Stderr)
 	if pluginDefaults {
 		if chain.credentialExit() == exitUnconfigured {
-			fmt.Fprintln(os.Stderr, "evaluate: no TypeSafe or OpenRouter credential is configured; serving setup instructions with no tools")
-			return newSetupServer().Run(ctx, &mcp.StdioTransport{})
+			fmt.Fprintln(os.Stderr, "evaluate: no "+missingCredentials(resolved)+" credential is configured; serving setup instructions with no tools")
+			return newSetupServer(resolved).Run(ctx, &mcp.StdioTransport{})
 		}
 	}
 	if err != nil {
