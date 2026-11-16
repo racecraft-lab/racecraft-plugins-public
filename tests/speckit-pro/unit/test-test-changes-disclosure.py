@@ -194,7 +194,7 @@ class AssertionTests(GitFixture):
         output = self.expect(1)
         self.assertIn('`tests/test_gate.py` (1 net assertion line lost)', output)
         self.assertIn('`pkg/gate_test.go` (1 net assertion line lost)', output)
-        self.write("tests/test_gate.py", python + '''    # assert False
+        self.write("tests/test_gate.py", '"""Module docstring: assert False\nself.assertTrue(False)\n"""\n' + python + '''    # assert False
     """assert False
     self.assertEqual(1, 2)
     """
@@ -210,6 +210,11 @@ t.Error("bad")
 ''')
         self.commit()
         self.expect(0)
+        self.git("branch", "literal-base")
+        self.write("tests/test_gate.py", python)
+        self.write("pkg/gate_test.go", go)
+        self.commit()
+        self.expect(0, BASE_REF="literal-base")
 
     def test_assertion_losses_require_each_file_path_and_report_net_count(self) -> None:
         self.base({"pkg/sample_test.go": GO, "tests/test_sample.py": PYTHON})
