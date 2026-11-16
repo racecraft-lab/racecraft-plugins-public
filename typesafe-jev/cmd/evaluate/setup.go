@@ -196,6 +196,9 @@ func generatedEnv(cfg Config, keyFile string) []envPair {
 		{"JEV_MODEL", cfg.Model},
 		{"JEV_REQUEST_TIMEOUT", cfg.Timeout.String()},
 	}
+	if cfg.HopTimeout > 0 && cfg.HopTimeout != defaultHopTimeout {
+		env = append(env, envPair{"JEV_HOP_TIMEOUT", cfg.HopTimeout.String()})
+	}
 	if cfg.MaxRetries != defaultMaxRetries {
 		env = append(env, envPair{"JEV_MAX_RETRIES", fmt.Sprint(cfg.MaxRetries)})
 	}

@@ -182,9 +182,10 @@ restart. Each hop enforces its own row's limits. A request one hop cannot take
 goes to the first later hop that can, before any network call, and the session
 stays where it is. A failure and a route compose: when the session's hop fails
 and the next hop cannot take this request, the session still moves and the call
-routes on (FB-08). Account skipping and per-hop deadlines belong to later
-layers. The
-backend note lists the loaded order and updates the tool description with the
+routes on (FB-08). Account skipping belongs to a later layer. Each hop's
+attempts stop at `JEV_HOP_TIMEOUT` (10s by default), and the last hop that can
+take the request gets the time left; a hop deadline routes only that call on
+(see [provider-contracts.md](provider-contracts.md)). The backend note lists the loaded order and updates the tool description with the
 serving hop after a move. Clients receive a tool-list change notification.
 All hops share the one 45s budget, so the client's 75s abort still fits.
 

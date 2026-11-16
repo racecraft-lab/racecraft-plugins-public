@@ -152,6 +152,9 @@ func resolveLegacyConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	if cfg.Timeout, err = resolveTimeout(look); err != nil {
 		return cfg, err
 	}
+	if cfg.HopTimeout, err = resolveHopTimeout(look, cfg.Timeout); err != nil {
+		return cfg, err
+	}
 	if cfg.MaxRetries, err = resolveMaxRetries(look); err != nil {
 		return cfg, err
 	}
@@ -293,7 +296,7 @@ func clientForHop(hop resolvedHop) *Client {
 	cfg := hop.config
 	return &Client{
 		Provider: applyOperator(cfg.Provider, cfg.AllowImages, cfg.LongContext),
-		Model:    cfg.Model, APIKey: hop.loaded.key, Timeout: cfg.Timeout,
+		Model:    cfg.Model, APIKey: hop.loaded.key, Timeout: cfg.Timeout, HopTimeout: cfg.HopTimeout,
 		MaxRetries: cfg.MaxRetries, HTTP: newHTTPClient(), Backoff: time.Second,
 	}
 }

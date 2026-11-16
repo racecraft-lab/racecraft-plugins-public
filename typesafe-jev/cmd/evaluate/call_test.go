@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -27,7 +28,7 @@ const validRequest = `{"state":"checkout is down","questions":{"q":{"type":"noul
 var credentialEnv = []string{
 	"JEV_CHAIN", "JEV_PROVIDER", "JEV_MODEL", "JEV_FALLBACK_PROVIDER",
 	"JEV_API_KEY_FILE", "JEV_FALLBACK_API_KEY_FILE",
-	"JEV_REQUEST_TIMEOUT", "JEV_MAX_RETRIES",
+	"JEV_REQUEST_TIMEOUT", "JEV_HOP_TIMEOUT", "JEV_MAX_RETRIES",
 	"TYPESAFE_API_KEY", "OPENROUTER_API_KEY",
 }
 
@@ -113,6 +114,54 @@ func runCallForTest(t *testing.T, opts callOptions, stdin string) callResult {
 	var stdout, stderr strings.Builder
 	code := runCall(context.Background(), opts, strings.NewReader(stdin), &stdout, &stderr)
 	return callResult{code, stdout.String(), stderr.String()}
+}
+
+// checkCallWithEnv isolates a CLI configuration check from the host environment.
+func checkCallWithEnv(t *testing.T, opts callOptions, env map[string]string) callResult {
+	t.Helper()
+	isolateCallEnv(t)
+	for name, value := range env {
+		t.Setenv(name, value)
+	}
+	return runCallForTest(t, opts, "")
+}
+
+// callRejectionCases owns isolated CLI rejection setup and invocation. The
+// setting selects its exact pre-existing assertion and diagnostic contract.
+type callRejectionCases struct {
+	setting        string
+	values         []string
+	pluginDefaults bool
+}
+
+func (cases callRejectionCases) run(t *testing.T) {
+	t.Helper()
+	for _, value := range cases.values {
+		t.Run(value, func(t *testing.T) {
+			env := map[string]string{cases.setting: value}
+			if cases.setting == "JEV_HOP_TIMEOUT" {
+				env["TYPESAFE_API_KEY"] = fixtureKey
+			} else {
+				env["JEV_PROVIDER"] = value
+			}
+			result := checkCallWithEnv(t, callOptions{check: true, pluginDefaults: cases.pluginDefaults}, env)
+			cases.check(t, value, result)
+		})
+	}
+}
+
+func (cases callRejectionCases) check(t *testing.T, raw string, result callResult) {
+	t.Helper()
+	if cases.setting == "JEV_HOP_TIMEOUT" {
+		if result.code != 4 || result.stdout != "" || !strings.Contains(result.stderr, "JEV_HOP_TIMEOUT") {
+			t.Fatalf("invalid hop timeout %q: %+v; want exit 4 naming JEV_HOP_TIMEOUT", raw, result)
+		}
+		return
+	}
+	provider, got := raw, result
+	if got.code != 4 || got.stdout != "" || got.stderr != fmt.Sprintf("evaluate: JEV_FALLBACK_PROVIDER=%q is the primary backend; a fallback must be the other one\n", provider) {
+		t.Fatalf("unexpected CLI result: %+v", got)
+	}
 }
 
 // CALL-01: every exit code in the contract, each from the situation it names.
