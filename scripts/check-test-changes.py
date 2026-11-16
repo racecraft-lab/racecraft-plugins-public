@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import ast
 import io
+import json
 import os
 import re
 import subprocess
@@ -52,11 +53,15 @@ def commit_ref(ref: str) -> str:
     return command(["rev-parse", "--verify", "--end-of-options", f"{ref}^{{commit}}"]).decode().strip()
 
 
-def is_test_file(path: str) -> bool:
+def is_test_file(path: str, registered: set[str]) -> bool:
     file = PurePosixPath(path)
     if path.endswith("_test.go"):
         return True
-    if not path.startswith("tests/") or file.suffix != ".py":
+    if file.suffix != ".py":
+        return False
+    if path in registered:
+        return True
+    if not path.startswith("tests/"):
         return False
     return (
         file.name.startswith("test_") or file.name.endswith("_test.py")
@@ -112,10 +117,34 @@ def go_names(source: bytes) -> tuple[str, ...]:
     return tuple(names)
 
 
-def inventory(ref: str) -> dict[str, TestFile]:
+def registered_tests(ref: str) -> set[str]:
+    path = "tests/speckit-pro/suite-manifest.json"
+    try:
+        manifest = json.loads(command(["show", f"{ref}:{path}"]))
+        layers = manifest["layers"]
+        if not isinstance(layers, list):
+            raise ValueError("layers must be a list")
+        paths = set()
+        for layer in layers:
+            scripts = layer["scripts"]
+            if not isinstance(scripts, list):
+                raise ValueError("scripts must be a list")
+            for script in scripts:
+                name = script["path"]
+                if not isinstance(name, str) or not name:
+                    raise ValueError("script path must be non-empty text")
+                paths.add(name)
+        return paths
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"unreadable or unparseable {path} at {ref}: {exc}") from exc
+
+
+def inventory(ref: str, registered: set[str]) -> dict[str, TestFile]:
     paths = command(["ls-tree", "-r", "--name-only", "-z", ref]).decode("utf-8").split("\0")
     files = {}
-    for path in filter(is_test_file, paths):
+    for path in paths:
+        if not is_test_file(path, registered):
+            continue
         source = command(["show", f"{ref}:{path}"])
         try:
             names = go_names(source) if path.endswith(".go") else python_names(source)
@@ -208,7 +237,8 @@ def main() -> int:
         base = commit_ref(os.environ.get("BASE_REF", ""))
         head = commit_ref(os.environ.get("HEAD_REF", "HEAD"))
         merge_base = command(["merge-base", base, head]).decode().strip()
-        entries = disclosures(inventory(merge_base), inventory(head))
+        registered = registered_tests(merge_base) | registered_tests(head)
+        entries = disclosures(inventory(merge_base, registered), inventory(head, registered))
         missing = missing_disclosures(entries, disclosure_section(os.environ.get("PR_BODY", "")))
     except (OSError, ValueError, UnicodeError) as exc:
         print("::error::Test changes check failed.", file=sys.stderr)

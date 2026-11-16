@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import json
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,7 @@ class GitFixture(unittest.TestCase):
         commit_baseline(self.repo)
 
     def base(self, files: dict[str, str]) -> None:
+        files = {"tests/speckit-pro/suite-manifest.json": '{"layers": []}\n'} | files
         for path in files:
             self.write(path, files[path])
         self.commit()
@@ -87,6 +89,22 @@ class UnchangedTests(GitFixture):
 
 
 class RemovalTests(GitFixture):
+    def test_manifest_registered_files_at_either_ref_are_tests(self) -> None:
+        paths = ("tests/speckit-pro/unit/validate-old.py", "tests/speckit-pro/unit/validate-new.py")
+        manifest = "tests/speckit-pro/suite-manifest.json"
+        self.base({
+            manifest: json.dumps({"layers": [{"scripts": [{"path": paths[0]}]}]}),
+            paths[0]: PYTHON, paths[1]: PYTHON,
+        })
+        self.write(manifest, json.dumps({"layers": [{"scripts": [{"path": paths[1]}]}]}))
+        self.write(paths[0], "")
+        self.write(paths[1], PYTHON.replace("assert True", "pass"))
+        self.commit()
+        output = self.expect(1)
+        self.assertIn(f'`test_kept` (`{paths[0]}`)', output)
+        for path in paths:
+            self.assertIn(f'`{path}` (1 net assertion line lost)', output)
+
     def test_removed_go_test_requires_exact_name_in_the_section(self) -> None:
         self.base({"pkg/sample_test.go": GO})
         self.write("pkg/sample_test.go", "package sample\n")
@@ -221,6 +239,24 @@ func TestString(t *testing.T) {}
 
 
 class FailClosedTests(GitFixture):
+    def test_missing_or_malformed_manifest_at_either_ref_fails_closed(self) -> None:
+        path = "tests/speckit-pro/suite-manifest.json"
+        self.base({"tests/test_sample.py": PYTHON})
+        for value in (None, "{", "[]", '{"layers": [{}]}', '{"layers": [{"scripts": [null]}]}'):
+            with self.subTest(value=value):
+                if value is None:
+                    (self.repo / path).unlink()
+                else:
+                    self.write(path, value)
+                self.commit()
+                output = self.expect(1)
+                self.assertIn("suite-manifest.json", output)
+                # Reverse refs so the broken manifest is also checked at the merge-base.
+                broken = self.git("rev-parse", "HEAD")
+                self.write(path, '{"layers": []}\n')
+                self.commit()
+                self.assertIn("suite-manifest.json", self.expect(1, BASE_REF=broken))
+
     def test_git_errors_and_missing_inputs_fail_closed(self) -> None:
         self.base({"tests/test_sample.py": PYTHON})
         for environment in ({"BASE_REF": "missing"}, {"HEAD_REF": "missing"}, {"BASE_REF": ""}):
