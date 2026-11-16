@@ -24,7 +24,7 @@ In scope:
 
 - A credential leaking anywhere it should not be: stdout, stderr, an error
   message, a tool result, generated configuration, or a crash dump.
-- Request state reaching a host other than the configured endpoint.
+- Request state reaching a host other than the configured endpoints.
 - A response being presented as a valid judgment when it is not.
 - The updater or installer fetching or executing something other than a
   verified release artifact of this repository.

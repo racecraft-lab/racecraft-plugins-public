@@ -323,9 +323,11 @@ func ollamaCloudSpec() ProviderSpec {
 			entryChoiceValue: entryObject,
 			entryScoreLevel:  entryObject,
 		},
-		AnswerNote: "\nOllama serves Clef: noul answers omit confidence, and answers omit id." +
+		AnswerNote: "\nOllama serves Clef: noul answers omit confidence." +
 			" Choice and score confidence measures entropy, not calibrated correctness;" +
-			" thresholds tuned for Jev do not carry over. Images require JEV_IMAGES=true.",
+			" thresholds tuned for Jev do not carry over. Clef takes no box questions and" +
+			" only plain-string instructions; a request it cannot take goes to the next" +
+			" backend in the chain that can, with no Ollama call. Images require JEV_IMAGES=true.",
 		// No automatic replay: Ollama does not document retries as safe,
 		// and a repeated inference may bill again. Endpoint 429 behavior
 		// and Retry-After remain unconfirmed in the research matrix.

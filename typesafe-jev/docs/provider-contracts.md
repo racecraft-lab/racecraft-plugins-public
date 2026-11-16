@@ -135,6 +135,7 @@ continues to require non-blank instructions and complete noul criteria.
 | Choice options | 1–255 | 1–255 | 2–255 | same as `ollama` |
 | Score levels | 2–10 | 2–10 | 2–10 | same as `ollama` |
 | Serialized body | 32 MiB | 32 MiB | 13 MiB | same as `ollama` |
+| Context tokens | 64,000 per request, 32,000 for state plus the longest question; 262,144 with `JEV_LONG_CONTEXT` | 262,144 | 65,536 | same as `ollama` |
 | Images in this implementation | operator opt-in | operator opt-in | operator opt-in | same as `ollama` |
 
 Every Ollama per-hop refusal takes a capability route to a later able hop;
@@ -187,8 +188,8 @@ instead of spending a request. Do not cite them as provider requirements.
 
 ## Response: what comes back
 
-Both backends return a `model`, a `usage` block, and an `answers` map keyed by
-the request's question ids.
+Every backend returns a `model`, a `usage` block, and an `answers` map keyed
+by the request's question ids.
 
 | Field | TypeSafe | OpenRouter | Ollama | `ollama-local` |
 |---|---|---|---|---|
@@ -361,8 +362,8 @@ because the bytes leave the machine and are billed. While it is off, the
 server opens no image file and makes no request.
 
 The encoder in `images.go` is the only place that chooses a wire format.
-Multipart is TypeSafe's preferred upload and OpenRouter rejects it, so both
-backends get base64 JSON.
+Multipart is TypeSafe's preferred upload and OpenRouter rejects it, so every
+backend gets base64 JSON.
 
 | | TypeSafe | OpenRouter | Ollama | `ollama-local` |
 | --- | --- | --- | --- | --- |

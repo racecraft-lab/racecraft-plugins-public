@@ -24,8 +24,8 @@ func init() {
 	}
 }
 
-const instructions = `The evaluate tool runs Jev, a TypeSafe System One model that returns typed judgments and probabilities, not generated text.
-- Question types: noul (probability a yes/no condition holds), choice (one option from a criteria map), score (probability-weighted position on 2 to 10 ordered criteria levels), box (the four edges of one target in an image; needs Jev 1.14 and an image, and takes no criteria).
+const instructions = `The evaluate tool asks a decision model for typed judgments and probabilities, not generated text: TypeSafe's Jev, or Cloudflare's Clef through Ollama, whichever backend in the chain below serves the call.
+- Question types: noul (probability a yes/no condition holds), choice (one option from a criteria map), score (probability-weighted position on 2 to 10 ordered criteria levels), box (the four edges of one target in an image; needs Jev 1.14 and an image, and takes no criteria; Clef has no box).
 - Images go in the images map under a name you choose. Reference that name as a whole string value, or as {"image":"name"}, inside state, instructions, or criteria. The server builds the provider's wire format. Images and box are off until the operator sets JEV_IMAGES=true; when on, the bytes leave the machine and are billed.
 - Ask one narrow judgment per question. Question ids are NOT sent to the model, so instructions must carry the full meaning.
 - Put everything the judgment needs in state; prefer a JSON object with named fields, and reference nested fields with backticked paths like ` + "`ticket.messages[0].text`" + `.
