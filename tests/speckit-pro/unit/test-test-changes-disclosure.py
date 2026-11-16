@@ -90,6 +90,19 @@ class UnchangedTests(GitFixture):
 
 
 class RemovalTests(GitFixture):
+    def test_removal_disclosure_pairs_name_and_path_on_each_line(self) -> None:
+        paths = ("tests/test_kept.py", "tests/nested/test_other.py")
+        self.transition({path: PYTHON for path in paths}, {path: None for path in paths})
+        for body in (
+            "## Test changes\ntests/test_kept.py tests/nested/test_other.py",
+            "## Test changes\ntest_kept tests/test_kept.py",
+            "## Test changes\ntest_kept\ntests/test_kept.py\ntests/nested/test_other.py",
+        ):
+            with self.subTest(body=body):
+                output = self.expect(1, body)
+                self.assertIn('`test_kept` (`tests/nested/test_other.py`)', output)
+        self.expect(0, "## Test changes\ntest_kept tests/test_kept.py\ntest_kept tests/nested/test_other.py")
+
     def test_manifest_registered_files_at_either_ref_are_tests(self) -> None:
         paths = ("tests/speckit-pro/unit/validate-old.py", "tests/speckit-pro/unit/validate-new.py")
         manifest = "tests/speckit-pro/suite-manifest.json"
@@ -132,7 +145,7 @@ class RemovalTests(GitFixture):
             result.stderr,
         )
         self.expect(1, "## Test changes\ntest_after")
-        self.expect(0, "## Test changes\ntest_before")
+        self.expect(0, "## Test changes\ntest_before tests/test_sample.py")
 
 
 class MoveTests(GitFixture):
@@ -247,7 +260,8 @@ func Testhelper(t *testing.T) {}
         output = self.expect(1)
         for name in ("TestKept", "ExampleSample", "test_kept", "test_other"):
             self.assertIn(f"`{name}`", output)
-        self.expect(0, "## Test changes\nTestKept ExampleSample test_kept test_other")
+        self.expect(0, "## Test changes\nTestKept ExampleSample pkg/sample_test.go\n"
+                    "test_kept test_other tests/speckit-pro/unit/test-sample.py")
 
     def test_benchmarks_fuzz_and_examples_ignore_comments_and_strings(self) -> None:
         source = GO + '''func BenchmarkWork(b *testing.B) {}

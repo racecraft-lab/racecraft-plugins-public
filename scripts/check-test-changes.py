@@ -207,24 +207,24 @@ def disclosure_section(body: str) -> str:
     return "\n".join(section)
 
 
-def disclosures(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[tuple[str, str]]:
+def disclosures(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[tuple[tuple[str, ...], str]]:
     entries = [
-        (name, f"- Removed or renamed `{name}` (`{path}`).")
+        ((path, name), f"- Removed or renamed `{name}` (`{path}`).")
         for path, name in removed_tests(before, after)
     ]
     for path in sorted(before.keys() & after.keys()):
         lost = before[path].assertions - after[path].assertions
         if lost > 0:
             noun = "line" if lost == 1 else "lines"
-            entries.append((path, f"- Lost assertions: `{path}` ({lost} net assertion {noun} lost)."))
+            entries.append(((path,), f"- Lost assertions: `{path}` ({lost} net assertion {noun} lost)."))
     return entries
 
 
-def missing_disclosures(entries: list[tuple[str, str]], section: str) -> list[str]:
+def missing_disclosures(entries: list[tuple[tuple[str, ...], str]], section: str) -> list[str]:
     missing = []
-    for token, description in entries:
-        boundary = r"[\w./-]" if "/" in token else r"\w"
-        if not re.search(rf"(?<!{boundary}){re.escape(token)}(?!{boundary})", section):
+    for tokens, description in entries:
+        patterns = [re.compile(rf"(?<![\w./-]){re.escape(token)}(?![\w./-])") for token in tokens]
+        if not any(all(pattern.search(line) for pattern in patterns) for line in section.splitlines()):
             missing.append(description)
     return missing
 
