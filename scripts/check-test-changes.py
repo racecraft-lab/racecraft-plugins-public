@@ -3,7 +3,8 @@
 
 Run from the repository root with BASE_REF, HEAD_REF (default HEAD), and PR_BODY.
 Reads committed blobs at merge-base(BASE_REF, HEAD_REF) and HEAD_REF. Python
-uses ast; Go uses gofmt's parser (Go must be installed). No source is executed.
+uses ast; Go declarations use a masked lexical scan. No source is executed,
+and only Python's standard library and git are needed.
 """
 
 from __future__ import annotations
@@ -22,7 +23,8 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 
 GO_LITERALS = re.compile(r'//[^\n]*|/\*.*?\*/|`[^`]*`|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', re.S)
-GO_FUNCTION = re.compile(r"^func\s+(\w+)\s*\(([^)]*)\)", re.M)
+GO_TOKEN = re.compile(r"\bfunc\s+(\w+)\s*\(|[()[\]{}]")
+GO_TEST_NAME = re.compile(r"(?:(?:Test|Benchmark|Fuzz)(?![a-z])\w*|Example\w*)\Z")
 GO_ASSERTION = re.compile(r"\b(?:t\.(?:Fatalf?|Errorf?)\s*\(|(?:require|assert)\.)")
 PY_ASSERTION = re.compile(r"\bassert\s+|\bself\.assert\w*\s*\(|\bpytest\.raises\s*\(")
 
@@ -97,23 +99,23 @@ def mask_non_code(source: bytes, *, go: bool) -> str:
 
 
 def go_names(source: bytes) -> tuple[str, ...]:
-    result = subprocess.run(["gofmt"], input=source, capture_output=True, check=False, shell=False)
-    formatted = command_output(result, "gofmt").decode("utf-8")
-    masked = mask_non_code(formatted.encode("utf-8"), go=True)
-    # gofmt on stdin accepts fragments; a tracked Go file must be a full file.
+    masked = mask_non_code(source, go=True)
     if not re.match(r"\s*package\s+\w+", masked):
         raise ValueError("Go file has no package declaration")
     names = []
-    for name, parameters in GO_FUNCTION.findall(masked):
-        if name.startswith("Example") and not parameters.strip():
+    stack: list[str] = []
+    pairs = {")": "(", "]": "[", "}": "{"}
+    for token in GO_TOKEN.finditer(masked):
+        name = token[1]
+        if name and not stack and GO_TEST_NAME.fullmatch(name):
             names.append(name)
-            continue
-        for prefix, argument in (("Test", "T"), ("Benchmark", "B"), ("Fuzz", "F")):
-            suffix = name.removeprefix(prefix)
-            if not name.startswith(prefix) or (suffix and suffix[0].islower()):
-                continue
-            if re.fullmatch(rf"\w+\s+\*\s*testing\s*\.\s*{argument}\s*,?", parameters.strip()):
-                names.append(name)
+        delimiter = token[0][-1]
+        if delimiter in "([{":
+            stack.append(delimiter)
+        elif not stack or stack.pop() != pairs[delimiter]:
+            raise ValueError("Go file has mismatched delimiters")
+    if stack:
+        raise ValueError("Go file has unclosed delimiters")
     return tuple(names)
 
 

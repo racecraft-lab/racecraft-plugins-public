@@ -120,12 +120,6 @@ jobs:
           PR_INCLUDE_BASE_REF: 'true'
         run: python3 scripts/pr_metadata.py
 
-      - name: Set up Go parser
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: typesafe-jev/go.mod
-          cache: false
-
       - name: Validate test changes
         if: github.event_name != 'workflow_dispatch' || fromJSON(steps.metadata.outputs.metadata).draft == false
         env:

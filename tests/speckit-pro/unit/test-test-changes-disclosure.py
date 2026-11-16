@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -210,6 +211,30 @@ t.Error("bad")
 
 
 class DeletedFileTests(GitFixture):
+    def test_go_inventory_needs_no_go_and_excludes_receiver_methods(self) -> None:
+        source = GO + '''func BenchmarkWork(b *testing.B) {}
+func FuzzWork(f *testing.F) {}
+func ExampleWork() {}
+func (r Receiver) TestMethod(t *testing.T) {}
+func Testhelper(t *testing.T) {}
+'''
+        self.base({"pkg/sample_test.go": source})
+        with tempfile.TemporaryDirectory() as directory:
+            git = shutil.which("git")
+            self.assertIsNotNone(git)
+            (Path(directory) / "git").symlink_to(str(git))
+            path = directory + os.pathsep + os.pathsep.join(("/usr/bin", "/bin"))
+            self.assertIsNone(shutil.which("go", path=path))
+            self.assertIsNone(shutil.which("gofmt", path=path))
+            self.expect(0, PATH=path)
+            self.write("pkg/sample_test.go", "package sample\n")
+            self.commit()
+            output = self.expect(1, PATH=path)
+        for name in ("TestKept", "BenchmarkWork", "FuzzWork", "ExampleWork"):
+            self.assertIn(f"`{name}`", output)
+        self.assertNotIn("TestMethod", output)
+        self.assertNotIn("Testhelper", output)
+
     def test_deleted_test_files_list_every_function_and_cover_layer_script_names(self) -> None:
         files = {
             "pkg/sample_test.go": GO + "func ExampleSample() {}\n",
@@ -316,11 +341,12 @@ class WorkflowTests(unittest.TestCase):
             "'manual-validate-test-changes' || 'validate-test-changes'",
             "BASE_REF:", "github.event.pull_request.base.sha", "HEAD_REF:",
             "github.event.pull_request.head.sha", "PR_BODY:", "PR_INCLUDE_BASE_REF: 'true'",
-            "run: python3 scripts/check-test-changes.py", "go-version-file: typesafe-jev/go.mod",
+            "run: python3 scripts/check-test-changes.py",
         ):
             with self.subTest(contract=contract):
                 self.assertIn(contract, job)
         self.assertFalse(any("${{" in line for line in job.splitlines() if "run:" in line))
+        self.assertNotIn("actions/setup-go", job)
 
     def test_manual_metadata_can_supply_the_authenticated_base_ref(self) -> None:
         metadata = load_script("test_change_metadata", REPO_ROOT / "scripts/pr_metadata.py")
