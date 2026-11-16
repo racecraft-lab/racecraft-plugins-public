@@ -261,8 +261,9 @@ mirrors section 11; `speckit-pro/codex-agents/*.toml` are generated from
   yet `validate-plugins` passes. One concern per PR.
 - Work with dependent parts is a stack: plan the layers, then `gh stack init`
   before writing code, one concern per layer, foundations at the bottom.
-  Unrelated work gets its own stack off `main`. Merge with
-  `gh stack merge <pr> --yes`, never `gh pr merge`.
+  Unrelated work gets its own stack off `main`. Merge a stack of two or more
+  PRs with `gh stack merge <pr> --yes`, never `gh pr merge`. GitHub links a
+  stack only at two PRs, so a one-PR stack merges with `gh pr merge --squash`.
 - Only `feat` and `fix` PRs fill the `release-note` fence, required unless
   labeled `release-note/skip`; any unlabeled fence is published.
 

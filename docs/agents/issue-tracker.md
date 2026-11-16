@@ -33,7 +33,7 @@ Open every PR with `gh stack`, never bare `gh pr create`; see `AGENTS.md` sectio
 - **One ticket, one concern:** `gh stack init <branch>` off `main`, commit, then `gh stack submit --auto`.
 - **Dependent tickets** (one builds on another's unmerged code): plan the layers before writing code, one ticket per layer, foundations at the bottom. `gh stack add <branch>` for each next layer.
 - **Independent tickets:** a separate stack per ticket, each rooted on `main`.
-- **Merge** with `gh stack merge <pr> --yes`; `gh pr merge` cannot merge a stack and auto-merge is unsupported.
+- **Merge** a stack of two or more PRs with `gh stack merge <pr> --yes`; `gh pr merge` cannot merge a stack and auto-merge is unsupported. A one-PR stack is not a stack on GitHub: merge it with `gh pr merge <pr> --squash`.
 - Put `Closes #<n>` in each layer's PR body so the ticket closes when that layer merges.
 
 ## When a skill says "publish to the issue tracker"
