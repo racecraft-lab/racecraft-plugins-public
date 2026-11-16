@@ -72,7 +72,7 @@ func encodeRequest(spec ProviderSpec, in evaluateIn) ([]byte, map[string]string,
 // wire representation from the shared snapshot, without rereading sources.
 func encodeLoadedRequest(spec ProviderSpec, in evaluateIn, loaded map[string]preparedImage) ([]byte, map[string]string, error) {
 	switch spec.WireFormat {
-	case wireTypeSafeAssets, wireOpenRouterParts:
+	case wireTypeSafeAssets, wireOpenRouterParts, wireOllamaImages:
 	default:
 		return nil, nil, fmt.Errorf("internal: %s has no supported image wire format", spec.Name)
 	}
@@ -188,7 +188,7 @@ func imageUseChecks(in evaluateIn) requestCheckList {
 		return checks
 	}
 	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
-		if err := requireImageOptIn(spec.AllowImages && spec.ImageTrust == imageTrustOperatorOptIn); err != nil {
+		if err := requireBackendImages(spec); err != nil {
 			return err
 		}
 		if overLimit(len(in.Images), spec.Limits.Images) {
@@ -212,6 +212,16 @@ func imageUseChecks(in evaluateIn) requestCheckList {
 func requireImageOptIn(allowed bool) error {
 	if !allowed {
 		return errors.New("images and box questions are disabled; set JEV_IMAGES=true to send them")
+	}
+	return nil
+}
+
+func requireBackendImages(spec ProviderSpec) error {
+	if err := requireImageOptIn(spec.AllowImages && spec.ImageTrust == imageTrustOperatorOptIn); err != nil {
+		return err
+	}
+	if spec.WireFormat == wireOllamaImages {
+		return fmt.Errorf("image encoding is not enabled for %s", spec.Name)
 	}
 	return nil
 }

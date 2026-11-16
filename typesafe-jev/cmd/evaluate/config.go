@@ -36,17 +36,9 @@ type ProviderSpec struct {
 	// Attribution is sent as fixed HTTP-Referer / X-OpenRouter-Title headers
 	// when set. It is a constant, never derived from local paths or content.
 	Attribution bool
-	// StructuredEntries reports whether the backend accepts a JSON object or
-	// array where an instruction or a description is expected, rather than a
-	// plain string.
-	//
-	// Both backends do. OpenRouter's Decisions schemas typed these fields as
-	// plain strings until it republished them; as of the 2026-09-20 fetch
-	// recorded in docs/provider-contracts.md they are anyOf string, object, or
-	// array, matching what TypeSafe documents. It stays a capability rather
-	// than an assumption so a re-narrowing is one field to flip, not a hunt
-	// through the validator.
-	StructuredEntries bool
+	// StructuredEntries lists the object and array kinds each entry position
+	// accepts. An absent position accepts neither; strings use the shared shape.
+	StructuredEntries map[entryPosition]entryKinds
 	// RetryStatuses are the HTTP statuses worth a second attempt on this
 	// backend. See docs/provider-contracts.md: this is fork policy, not a
 	// provider guarantee.
@@ -72,6 +64,36 @@ type ProviderSpec struct {
 	LongContext bool
 }
 
+// Entry positions and kinds describe capabilities, independently of question
+// paths and validation. Backend rows own the permissions for each combination.
+type entryPosition int
+
+const (
+	entryInstructions entryPosition = iota
+	entryChoiceValue
+	entryScoreLevel
+	entryNoulDescription
+)
+
+type entryKinds uint8
+
+const (
+	entryObject entryKinds = 1 << iota
+	entryArray
+)
+
+// Both Jev hosts accept objects and arrays at every entry position, as recorded
+// in docs/provider-contracts.md. Each row gets its own copy, so changing one
+// row's table never changes another's.
+func jevStructuredEntries() map[entryPosition]entryKinds {
+	return map[entryPosition]entryKinds{
+		entryInstructions:    entryObject | entryArray,
+		entryChoiceValue:     entryObject | entryArray,
+		entryScoreLevel:      entryObject | entryArray,
+		entryNoulDescription: entryObject | entryArray,
+	}
+}
+
 // backendLimits holds backend-specific caps. -1 explicitly means no limit;
 // zero is always an incomplete row, never an implicit unlimited value.
 type backendLimits struct {
@@ -85,6 +107,9 @@ type backendLimits struct {
 	ImageBytes      int
 	TotalImageBytes int
 	ExpandedBytes   int
+	// QuestionIDLength caps an id that must also be ASCII letters, digits,
+	// "_", "." or "-"; noLimit means any id the request shape accepts.
+	QuestionIDLength int
 }
 
 const (
@@ -170,8 +195,7 @@ type authKind string
 
 const authBearer authKind = "bearer"
 
-// Only images.go selects an encoding from this enum. The third format is
-// reserved for the Ollama layer; no Ollama backend is registered here.
+// Only images.go selects an encoding from this enum.
 type imageWireFormat int
 
 const (
@@ -182,13 +206,13 @@ const (
 
 type imageTrust int
 
-// Both current backends require the operator's explicit image opt-in.
 const imageTrustOperatorOptIn imageTrust = 1
 
 // providers is the closed set of backends. Adding a URL here is the only way
 // to change where a request goes; there is deliberately no environment
 // variable that points the server at an arbitrary host.
 var providers = map[string]ProviderSpec{
+	"ollama": ollamaCloudSpec(),
 	"typesafe": {
 		Name:        "typesafe",
 		EndpointURL: "https://api.typesafe.ai/v1/systemone",
@@ -206,7 +230,7 @@ var providers = map[string]ProviderSpec{
 		LongContextNote:      "\nLong context is enabled for the TypeSafe backend: its budgets are 262144 tokens and each TypeSafe request sends the long-context header.",
 		// TypeSafe documents string, object, array, or null for every
 		// instruction and description field.
-		StructuredEntries: true,
+		StructuredEntries: jevStructuredEntries(),
 		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// 529 is TypeSafe's overload status, which upstream already retried.
@@ -237,7 +261,7 @@ var providers = map[string]ProviderSpec{
 			" other questions still answer; treat a refusal as no judgment, never as a no.",
 		Attribution: true,
 		// Matches TypeSafe since OpenRouter republished the Decisions schemas.
-		StructuredEntries: true,
+		StructuredEntries: jevStructuredEntries(),
 		Limits:            backendRequestLimits(),
 		LongContextTokens: longContextTokens,
 		// All four are documented on the Decisions path and transient in
@@ -258,6 +282,47 @@ var providers = map[string]ProviderSpec{
 	},
 }
 
+func ollamaCloudSpec() ProviderSpec {
+	return ProviderSpec{
+		Name:           "ollama",
+		EndpointURL:    "https://ollama.com/v1/systemone",
+		APIKeyEnv:      "OLLAMA_API_KEY",
+		DefaultModel:   "clef",
+		AuthKind:       authBearer,
+		BillingAccount: "ollama",
+		WireFormat:     wireOllamaImages,
+		QuestionTypes:  []string{typeNoul, typeChoice, typeScore},
+		ImageTrust:     imageTrustOperatorOptIn,
+		// Only choice objects (b08) and score objects (b09) were observed in
+		// the 2026-11-14 probes, beyond the published string schema. Arrays
+		// and noul objects were not probed; other structured positions route.
+		StructuredEntries: map[entryPosition]entryKinds{
+			entryChoiceValue: entryObject,
+			entryScoreLevel:  entryObject,
+		},
+		AnswerNote: "\nOllama serves Clef: noul answers omit confidence, and answers omit id." +
+			" Choice and score confidence measures entropy, not calibrated correctness;" +
+			" thresholds tuned for Jev do not carry over. Images are not enabled on this backend yet.",
+		// No automatic replay: Ollama does not document retries as safe,
+		// and a repeated inference may bill again. Endpoint 429 behavior
+		// and Retry-After remain unconfirmed in the research matrix.
+		RetryStatuses: []int{},
+		// Ollama System One schema and decision guide, fetched 2026-11-14.
+		Limits: backendLimits{
+			Questions: 64, ChoiceMin: 2, ChoiceMax: 255,
+			ScoreMin: 2, ScoreMax: 10, BodyBytes: 13 << 20,
+			Images: 4, ImageBytes: 4 << 20, TotalImageBytes: 8 << 20,
+			ExpandedBytes: noLimit, QuestionIDLength: 100,
+		},
+		LongContextTokens: noLimit,
+		RequestTokens:     65_536,
+		QuestionTokens:    65_536,
+		ImageLimits: imageBounds{
+			MinSide: noLimit, MaxSide: noLimit, MinPixels: noLimit, MaxPixels: 16_000_000,
+		},
+	}
+}
+
 // Both current rows share these caps; each gets its own value to keep copies
 // independently configurable by the operator and tests.
 func backendRequestLimits() backendLimits {
@@ -266,6 +331,7 @@ func backendRequestLimits() backendLimits {
 		ScoreMin: minScoreLevels, ScoreMax: maxScoreLevels,
 		BodyBytes: maxRequestBody, Images: noLimit, ImageBytes: maxImageBytes,
 		TotalImageBytes: noLimit, ExpandedBytes: maxExpandedRequest,
+		QuestionIDLength: noLimit,
 	}
 }
 
@@ -304,6 +370,9 @@ type Config struct {
 	// empty for the primary, which reads JEV_API_KEY_FILE; fallbackConfig sets
 	// it to JEV_FALLBACK_API_KEY_FILE.
 	keyFileVar string
+	// defaultKeyOnly marks hops 3 and 4, which have no key-file variable: their
+	// key comes from the provider's environment variable or the default file.
+	defaultKeyOnly bool
 	// Fallback is the backend a call moves to when Provider refuses its
 	// credential or is unavailable, or nil for a one-hop chain. Chain resolution
 	// sets it from configuration or the built-in order, never from available keys.
@@ -375,6 +444,22 @@ func knownBoxReject(provider, model string) bool {
 
 func (spec ProviderSpec) rejectsBoxModel(model string) bool {
 	return slices.Contains(spec.UnsupportedBoxModels, model)
+}
+
+// keyFileLabel names where this Config's key file came from in diagnostics.
+func (c Config) keyFileLabel() string {
+	if c.defaultKeyOnly {
+		return "default key file"
+	}
+	return c.keyFileEnv()
+}
+
+// keyFileHint says how to supply a key file for this Config.
+func (c Config) keyFileHint() string {
+	if c.defaultKeyOnly {
+		return "put a private key file at ~/" + pluginKeyDirectory + "/" + c.Provider.Name + ".key (read under --plugin-defaults)"
+	}
+	return "point " + c.keyFileEnv() + " at a private key file"
 }
 
 // keyFileEnv names the variable that sets this Config's key file.

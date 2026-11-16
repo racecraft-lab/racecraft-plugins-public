@@ -1,4 +1,4 @@
-# Provider contracts: OpenRouter Decisions and TypeSafe System One
+# Provider contracts: TypeSafe, OpenRouter and Ollama System One
 
 This is a hand-written field matrix, not a byte-for-byte copy of either
 publisher's schema. It records what was actually fetched and inspected, so the
@@ -30,6 +30,12 @@ payload rewrite.
 | OpenRouter multimodal decisions | `https://openrouter.ai/docs/guides/community/multimodal-decisions` | 2026-10-17 | `image_url` data URLs; pixel and byte limits |
 | TypeSafe score semantics | `https://docs.typesafe.ai/primitives/score.md` | 2026-09-18 | level numbering and score range |
 | TypeSafe response envelope | `https://docs.typesafe.ai/sdk/python/api/types/responses.md` | 2026-09-18 | `SystemOneResponse` JSON schema |
+| Ollama System One schema | `https://docs.ollama.com/api/systemone.md` | 2026-11-14 | sha256 `a6c1b4701110553624ea2bfe045ac1663198240d185f8b93a4c1dde71294f381` |
+| Ollama decision guide | `https://docs.ollama.com/capabilities/decision.md` | 2026-11-14 | Cloud limits and confidence semantics; recorded in the research branch's `docs/ai/research/ollama-systemone-field-matrix.md` |
+
+The Ollama column follows that field matrix, including its distinction between
+published contracts, observations and unconfirmed behavior. No live probes are
+part of the backend's tests; they intercept the HTTP transport.
 
 The raw documents are kept in the ignored `.artifacts/` directory. Reproduce the
 hash with:
@@ -72,6 +78,12 @@ box, and now also allows `null`. Choice and score require only `type` and
 |---|---|---|---|
 | `typesafe` | `https://api.typesafe.ai/v1/systemone` | `Authorization: Bearer <TYPESAFE_API_KEY>` | `jev-latest` |
 | `openrouter` | `https://openrouter.ai/api/alpha/decisions` | `Authorization: Bearer <OPENROUTER_API_KEY>` | `~typesafe/jev-latest` |
+| `ollama` | `https://ollama.com/v1/systemone` | `Authorization: Bearer <OLLAMA_API_KEY>` | `clef` |
+
+Ollama is opt-in through the chain. Under `--plugin-defaults`, it discovers
+`~/.config/racecraft-jev/ollama.key`, with the same private-file checks and
+positional key-file overrides as the other backends. `call --check` reports an
+unusable key with exit 4 without HTTP. A server drops that hop at startup.
 
 The OpenAPI document lists a `servers` base of `https://openrouter.ai/api/v1`,
 but the Decisions path key is `/api/alpha/decisions`, absolute from the host
@@ -94,17 +106,38 @@ says every field below accepts `string`, `object`, `array`, or `null`.
 OpenRouter's Decisions schemas now type the same fields as `anyOf` string,
 object, or array, and additionally allow `null` for choice option descriptions.
 
-| Field | TypeSafe accepts | OpenRouter accepts |
-|---|---|---|
-| `instructions` (noul, choice, score, box) | string, object, array, null | string, object, array, null (required on box only) |
-| choice `criteria` values | string, object, array, null | string, object, array, **null** |
-| score `criteria` entries | string, object, array, null | string, object, array (`minItems: 1`; no null) |
-| noul `criteria.true` / `.false` | string, object, array, null | string, object, array; when `criteria` is present both keys are required (no null) |
+| Field | TypeSafe accepts | OpenRouter accepts | Ollama accepts |
+|---|---|---|---|
+| `instructions` (noul, choice, score, box) | string, object, array, null | string, object, array, null (required on box only) | required for noul, choice and score; locally restricted to strings; no box |
+| choice `criteria` values | string, object, array, null | string, object, array, **null** | documented string or null; object values accepted in research probes |
+| score `criteria` entries | string, object, array, null | string, object, array (`minItems: 1`; no null) | documented strings; object levels accepted in research probes |
+| noul `criteria.true` / `.false` | string, object, array, null | string, object, array; when `criteria` is present both keys are required (no null) | optional criteria; when given, true and false string descriptions |
+
+Ollama's structured criteria capability follows the 2026-11-14 observations
+for choice and score, beyond the published string schema. The local validator
+continues to require non-blank instructions and complete noul criteria.
+
+| Per-hop limit | TypeSafe | OpenRouter | Ollama |
+|---|---|---|---|
+| Question types | noul, choice, score, box | noul, choice, score, box | noul, choice, score |
+| Questions | no local count cap | no local count cap | 64 |
+| Question ids | no local id rule | no local id rule | up to 100 ASCII letters, digits, `_`, `.`, `-` |
+| Choice options | 1–255 | 1–255 | 2–255 |
+| Score levels | 2–10 | 2–10 | 2–10 |
+| Serialized body | 32 MiB | 32 MiB | 13 MiB |
+| Images in this implementation | operator opt-in | operator opt-in | unavailable in this layer, including with `JEV_IMAGES=true` |
+
+Every Ollama per-hop refusal takes a capability route to a later able hop;
+with none available it is exit 2 and sends no HTTP request. Image support is
+deferred: the published limits are 4 images, 4 MiB each, 8 MiB total, using a
+top-level base64 array. Ollama has the same operator image trust as OpenRouter;
+that wire encoding is not enabled yet.
 
 All that survives of the divergence is `null` in the three positions this server
 requires a value anyway, so no per-backend rule is left in the validator. The
-capability is still carried on `ProviderSpec.StructuredEntries` rather than
-assumed, so a backend that re-narrows is one field to flip.
+capability is still carried per entry position on each row's
+`ProviderSpec.StructuredEntries` rather than assumed, so a backend that
+re-narrows changes only its own row, as Ollama's does.
 
 **What changed on 2026-09-20.** `validateEntry` no longer rejects objects and
 arrays on OpenRouter, and the separate narrow tool schema that typed
@@ -147,21 +180,26 @@ instead of spending a request. Do not cite them as provider requirements.
 Both backends return a `model`, a `usage` block, and an `answers` map keyed by
 the request's question ids.
 
-| Field | TypeSafe | OpenRouter |
-|---|---|---|
-| top-level required | `model`, `answers`, `usage` | `model`, `answers`, `usage` |
-| `usage` | `input_tokens`, `output_tokens` | `input_tokens`, `output_tokens` required; `cost`, `input_tokens_details.cached_tokens` optional |
-| `id`, `provider`, `annotations` | not present | optional |
+| Field | TypeSafe | OpenRouter | Ollama |
+|---|---|---|---|
+| top-level required | `model`, `answers`, `usage` | `model`, `answers`, `usage` | `model`, `answers`, `usage` |
+| `usage` | `input_tokens`, `output_tokens` | `input_tokens`, `output_tokens` required; `cost`, `input_tokens_details.cached_tokens` optional | `input_tokens`, `output_tokens` (often zero) |
+| `id`, `provider`, `annotations` | not present | optional | not present |
 
 Answer shapes, with **required** properties in bold:
 
-| Answer | TypeSafe | OpenRouter |
-|---|---|---|
-| `noul` | **`noul`** | **`type`**, **`noul`**; `confidence` optional |
-| `choice` | **`choice`**, **`confidence`**, **`probabilities`** | **`type`**, **`choice`**; `confidence`, `probabilities` optional |
-| `score` | **`score`**, **`confidence`**, **`legend`**, **`probabilities`** | **`type`**, **`score`**; `confidence`, `legend`, `probabilities` optional |
-| `box` | **`box`** (`top`, `bottom`, `left`, `right`), **`confidence`** (number or `null`) | **`type`**, **`box`**; `confidence` optional |
-| `refusal` | not sent | **`type`** only: the provider declined this question |
+| Answer | TypeSafe | OpenRouter | Ollama |
+|---|---|---|---|
+| `noul` | **`noul`** | **`type`**, **`noul`**; `confidence` optional | **`type`**, **`noul`**; no confidence or probabilities |
+| `choice` | **`choice`**, **`confidence`**, **`probabilities`** | **`type`**, **`choice`**; `confidence`, `probabilities` optional | **`type`**, **`choice`**, **`confidence`**, **`probabilities`** |
+| `score` | **`score`**, **`confidence`**, **`legend`**, **`probabilities`** | **`type`**, **`score`**; `confidence`, `legend`, `probabilities` optional | **`type`**, **`score`**, **`confidence`**, **`legend`**, **`probabilities`** |
+| `box` | **`box`** (`top`, `bottom`, `left`, `right`), **`confidence`** (number or `null`) | **`type`**, **`box`**; `confidence` optional | not supported |
+| `refusal` | not sent | **`type`** only: the provider declined this question | not documented |
+
+Ollama's choice and score confidence is `1 - H(p) / ln(N)`, an entropy
+measure, not calibrated correctness. Thresholds tuned for Jev do not transfer.
+The existing decoder accepts missing ids and noul confidence without filling
+them in, and preserves the original response bytes.
 
 This asymmetry is the single most important response fact for this server:
 **OpenRouter may omit `confidence` and `probabilities` where TypeSafe always
@@ -212,6 +250,15 @@ The retry policy in `client.go` is this fork's, not a provider guarantee:
 |---|---|
 | `typesafe` | 429, 529 |
 | `openrouter` | 429, 503, 524, 529 |
+| `ollama` | none; automatic replay is not documented as safe and may bill again |
+
+Ollama's endpoint documents 400, 401, 402, 404, 413 and 500, with
+`{"error":"<string>"}` bodies. Context overflow was observed as 400.
+Endpoint 429 behavior and `Retry-After` on 402, 429 or 5xx remain unconfirmed.
+The chain still applies its account-status policy to a received 401, 402,
+403, 429 or 5xx; a 404 is a path failure. These are client policy, not claims
+that Ollama promises those statuses. Image retention differences remain
+unconfirmed as well.
 
 Authentication, credit, validation, payload, and not-found failures are never
 retried: a replay would fail the same way and bill again. `500` and `502` are
@@ -377,11 +424,11 @@ TypeSafe's long-context header raises both of its budgets. OpenRouter's window
 is already the long one, and image requests there already run in that mode on
 the far side. No header is sent to OpenRouter.
 
-| Budget | TypeSafe, default | TypeSafe, `JEV_LONG_CONTEXT=true` | OpenRouter |
-| --- | --- | --- | --- |
-| Whole request: state plus every question | 64,000 tokens | 262,144 tokens | 262,144 tokens |
-| State plus the single longest question | 32,000 tokens | 262,144 tokens | 262,144 tokens |
-| Header | none | `TypeSafe-Danger-Zone-Long-Context: true` on every TypeSafe request while the flag is set, including ones that fit the default window | none |
+| Budget | TypeSafe, default | TypeSafe, `JEV_LONG_CONTEXT=true` | OpenRouter | Ollama |
+| --- | --- | --- | --- | --- |
+| Whole request: state plus every question | 64,000 tokens | 262,144 tokens | 262,144 tokens | 65,536 tokens |
+| State plus the single longest question | 32,000 tokens | 262,144 tokens | 262,144 tokens | 65,536 tokens (whole-input window; no separate larger mode) |
+| Header | none | `TypeSafe-Danger-Zone-Long-Context: true` on every TypeSafe request while the flag is set, including ones that fit the default window | none | none; `JEV_LONG_CONTEXT` never raises this budget |
 
 The flag is process-wide, parsed like `JEV_IMAGES`. Leaving it unset is the
 right default: TypeSafe documents the long window as slower and less accurate.

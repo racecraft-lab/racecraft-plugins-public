@@ -156,8 +156,8 @@ mask the operator's chain file. Resolution order is:
    `typesafe` alone. Both modes use `jev-latest` on TypeSafe.
 
 A chain accepts at most four distinct registered providers, with no empty
-entries. This layer registers `typesafe` and `openrouter`; Ollama remains for
-later layers. A missing chain file uses the built-in order; an unreadable or
+entries. The registered providers are `typesafe`, `openrouter` and `ollama`
+(Ollama Cloud, opt-in through the chain). A missing chain file uses the built-in order; an unreadable or
 invalid file fails startup. Environment configuration wins without reading the
 file. `evaluate call --plugin-defaults` and the MCP server resolve identically.
 If the home directory is empty or relative, no chain file is read; the mode's

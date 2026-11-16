@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -47,10 +48,15 @@ type evaluateIn struct {
 // both backends accept a string, an object, or an array. Exporting the narrow
 // shape now would hide a capability the backend has, which is the same failure
 // as advertising one it lacks, so one schema serves both.
-func registerTools(s *mcp.Server, _ Config, chain *chainRunner) {
+func registerTools(s *mcp.Server, cfg Config, chain *chainRunner) {
+	var refreshMu sync.Mutex
 	refresh := func() {
+		// Serialize the serving-hop snapshot with publication. An older move
+		// callback must not overwrite a newer note after building its schema.
+		refreshMu.Lock()
+		defer refreshMu.Unlock()
 		tool := evaluateTool()
-		tool.Description += chain.backendNote() + " Serving hop: " + chain.servingHop().Provider.Name + "."
+		tool.Description += backendNote(cfg) + chain.backendNote() + " Serving hop: " + chain.servingHop().Provider.Name + "."
 		add(s, tool, func(ctx context.Context, in evaluateIn) ([]byte, error) {
 			return chain.evaluate(ctx, in)
 		})

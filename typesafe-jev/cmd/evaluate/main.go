@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"strings"
 	"syscall"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -172,30 +173,57 @@ func newServer(cfg Config, chain *chainRunner) *mcp.Server {
 // provider declines. An agent that branches on a number which is simply
 // absent misreads the answer, so the note says so up front.
 func backendNote(cfg Config) string {
-	note := "\nBackend: " + cfg.Provider.Name + ". Calling this tool sends the state and questions" +
-		" you pass to that provider, which bills for the call."
-	if cfg.Fallback != nil {
-		note = "\nBackend: " + cfg.Provider.Name + ", with " + cfg.Fallback.Provider.Name + " as fallback." +
-			" Calling this tool sends the state and questions you pass to " + cfg.Provider.Name +
-			", or to " + cfg.Fallback.Provider.Name + " when " + cfg.Provider.Name + " refuses its credential" +
-			", is unavailable, or cannot take the request; the provider that answers bills for the call."
+	var specs []ProviderSpec
+	for _, hop := range cfg.chainConfigs() {
+		specs = append(specs, hop.Provider)
 	}
-	note += cfg.Provider.AnswerNote
-	if cfg.Fallback != nil && cfg.Fallback.Provider.AnswerNote != cfg.Provider.AnswerNote {
-		note += cfg.Fallback.Provider.AnswerNote
-	}
+	note := trustSentence(specs)
+	note += distinctNotes(specs, func(spec ProviderSpec) string { return spec.AnswerNote })
 	if cfg.AllowImages {
 		note += "\nImages and box questions are enabled. Image bytes are sent to the provider and billed."
 	} else {
 		note += "\nImages and box questions are disabled until the operator sets JEV_IMAGES=true."
 	}
 	if cfg.LongContext {
-		note += cfg.Provider.LongContextNote
-		if cfg.Fallback != nil && cfg.Fallback.Provider.LongContextNote != cfg.Provider.LongContextNote {
-			note += cfg.Fallback.Provider.LongContextNote
-		}
+		note += distinctNotes(specs, func(spec ProviderSpec) string { return spec.LongContextNote })
 	}
 	return note
+}
+
+// trustSentence names every loaded hop in order and when state reaches each.
+func trustSentence(specs []ProviderSpec) string {
+	first := specs[0].Name
+	switch len(specs) {
+	case 1:
+		return "\nBackend: " + first + ". Calling this tool sends the state and questions" +
+			" you pass to that provider, which bills for the call."
+	case 2:
+		return "\nBackend: " + first + ", with " + specs[1].Name + " as fallback." +
+			" Calling this tool sends the state and questions you pass to " + first +
+			", or to " + specs[1].Name + " when " + first + " refuses its credential" +
+			", is unavailable, or cannot take the request; the provider that answers bills for the call."
+	}
+	names := make([]string, len(specs))
+	for i, spec := range specs {
+		names[i] = spec.Name
+	}
+	return "\nBackend: " + strings.Join(names, ", then ") + "." +
+		" Calling this tool sends the state and questions you pass to " + first +
+		", or to the next backend in that order when the one before refuses its credential" +
+		", is unavailable, or cannot take the request; the provider that answers bills for the call."
+}
+
+// distinctNotes appends each hop's note once, in chain order.
+func distinctNotes(specs []ProviderSpec, note func(ProviderSpec) string) string {
+	var out string
+	seen := map[string]bool{}
+	for _, spec := range specs {
+		if text := note(spec); !seen[text] {
+			seen[text] = true
+			out += text
+		}
+	}
+	return out
 }
 
 // setupInstructions is what the plugin's server says, with no tools, when no
