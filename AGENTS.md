@@ -298,7 +298,10 @@ in step.
   ID, or test code that reads a `specs/<feature>/` path from disk at run time;
   a correctness bug in repository tooling or tests, such as a check that passes
   on nothing; a ripwire `--quality-delta` regression left in place (section
-  10), unless acked as a genuine false positive.
+  10), unless acked as a genuine false positive; shipped guidance (skills,
+  tool descriptions, server instructions) whose absolute claim about runtime
+  behavior no test pins or a code path contradicts; a behavior choice the
+  spec, ticket, or ADR left open that the PR body does not name for the owner.
 - **Minor:** style, naming, prose, and refactoring notes; add none on re-review.
 - **Skip:** generated reference pages and payloads, vendored upstream content,
   lockfiles, archived specs, and what CI enforces (only the `ruff.toml` rules F,
