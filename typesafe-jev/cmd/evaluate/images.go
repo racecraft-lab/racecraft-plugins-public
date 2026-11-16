@@ -177,9 +177,9 @@ func requestHasBox(in evaluateIn) bool {
 	return false
 }
 
-// imageUseChecks preserves the parent's order: media guard, opt-in, count,
-// entries, box model, box image requirement, then references. None opens paths.
-func imageUseChecks(in evaluateIn, allowImages bool) requestCheckList {
+// imageUseChecks separates universal media and reference rules from per-hop
+// opt-in, count and box capability checks. None opens paths.
+func imageUseChecks(in evaluateIn) requestCheckList {
 	var checks requestCheckList
 	sites, err := scanImageSites(in)
 	checks.shape(err)
@@ -187,9 +187,8 @@ func imageUseChecks(in evaluateIn, allowImages bool) requestCheckList {
 	if len(in.Images) == 0 && !hasBox {
 		return checks
 	}
-	checks.shape(requireImageOptIn(allowImages))
 	checks.hop(func(spec ProviderSpec, _ evaluateIn) error {
-		if err := requireImageOptIn(spec.ImageTrust == imageTrustOperatorOptIn); err != nil {
+		if err := requireImageOptIn(spec.AllowImages && spec.ImageTrust == imageTrustOperatorOptIn); err != nil {
 			return err
 		}
 		if overLimit(len(in.Images), spec.Limits.Images) {

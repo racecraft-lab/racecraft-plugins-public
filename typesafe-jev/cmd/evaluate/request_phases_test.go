@@ -190,8 +190,9 @@ type requestRejectionCase struct {
 	oldModel bool
 }
 
-// Parent 0c66afb92 is the oracle for multiply-invalid requests. Exercise both
-// shipped entry points and ensure no locally refused call reaches either hop.
+// Universal shape errors now precede hop refusals (ADR 0028). Keep the
+// parent fixture strict at both entry points, with only replaced contracts
+// updated; no locally refused call may reach or move either hop.
 func TestRequestPrecedenceMatchesParent(t *testing.T) {
 	for _, tc := range requestPrecedenceCases(t) {
 		runTestMatrix(t, []string{"typesafe", "openrouter"}, []bool{false, true}, func(primary string, fallback bool) string {
@@ -228,10 +229,10 @@ func precedenceQuestionCases() []requestRejectionCase {
 		return evaluateIn{State: "fixture", Questions: map[string]question{"a": a, "b": b}}
 	}
 	cases := []requestRejectionCase{
-		{"choice before missing type", questions(question{Type: typeChoice, Instructions: "judge", Criteria: map[string]any{}}, question{Instructions: "judge"}), func(string) string { return "questions.a.criteria must name at least one option" }, false},
-		{"score before missing instructions", questions(question{Type: typeScore, Instructions: "judge", Criteria: []any{"one"}}, question{Type: typeNoul}), func(string) string { return "questions.a.criteria needs at least 2 ordered levels" }, false},
-		{"score bound before entry", evaluateIn{State: "fixture", Questions: map[string]question{"a": {Type: typeScore, Instructions: "judge", Criteria: levels}}}, func(string) string { return "questions.a.criteria has 11 levels, over the 10 the backend accepts" }, false},
-		{"choice bound before name", evaluateIn{State: "fixture", Questions: map[string]question{"a": {Type: typeChoice, Instructions: "judge", Criteria: options}}}, func(string) string { return "questions.a.criteria names 256 options, over the 255 the backend accepts" }, false},
+		{"choice before missing type", questions(question{Type: typeChoice, Instructions: "judge", Criteria: map[string]any{}}, question{Instructions: "judge"}), func(string) string { return "questions.b.type is required; use noul, choice, score, or box" }, false},
+		{"score before missing instructions", questions(question{Type: typeScore, Instructions: "judge", Criteria: []any{"one"}}, question{Type: typeNoul}), func(string) string { return "questions.b.instructions is required" }, false},
+		{"score bound before entry", evaluateIn{State: "fixture", Questions: map[string]question{"a": {Type: typeScore, Instructions: "judge", Criteria: levels}}}, func(string) string { return "questions.a.criteria[0] must be a string, object, or array" }, false},
+		{"choice bound before name", evaluateIn{State: "fixture", Questions: map[string]question{"a": {Type: typeChoice, Instructions: "judge", Criteria: options}}}, func(string) string { return "questions.a.criteria has a blank option name" }, false},
 	}
 	return cases
 }
@@ -323,7 +324,7 @@ func checkRequestPrecedence(t *testing.T, tc requestRejectionCase, primary strin
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := tc.want(primary)
+	want := precedenceRouteDiagnostic(tc.name, fallback, tc.want(primary))
 	result := runCallForTest(t, callOptions{retarget: retargetTo(p, f)}, string(input))
 	if result.code != 2 || result.stdout != "" || result.stderr != "evaluate: "+want+"\n" {
 		t.Errorf("call = %+v; want exit 2 and %q", result, want)
@@ -347,6 +348,24 @@ func checkRequestPrecedence(t *testing.T, tc requestRejectionCase, primary strin
 	}
 }
 
+func precedenceRouteDiagnostic(name string, fallback bool, want string) string {
+	switch name {
+	case "box before no image":
+		want = "a box question needs an image in the request"
+	case "box before unreferenced image":
+		want = "images.door is not referenced from state, instructions, or criteria"
+	case "box before missing file":
+		if fallback {
+			want = "images.door: the image file cannot be read"
+		}
+	case "box before malformed file":
+		if fallback {
+			want = "images.door: not a PNG or JPEG"
+		}
+	}
+	return want
+}
+
 // Wrap the filesystem read seam on this call only. Later sources must never
 // be read, even when their contents would otherwise be valid.
 func TestRefusedRequestLeavesLaterImageUnread(t *testing.T) {
@@ -358,7 +377,7 @@ func TestRefusedRequestLeavesLaterImageUnread(t *testing.T) {
 				writeImageFixture(t, path, data)
 				in := refusedImageRequest(t, provider, refusal, path, data)
 				spec := withImages(providers[provider])
-				shaped, err := shapeRequest(in, true)
+				shaped, err := shapeRequest(in)
 				if err != nil {
 					t.Fatal(err)
 				}

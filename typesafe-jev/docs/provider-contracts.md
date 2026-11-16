@@ -135,8 +135,8 @@ instead of spending a request. Do not cite them as provider requirements.
   `minItems: 1`; a one-level scale is a degenerate question, not a schema error.
 - A score question takes at most ten levels. TypeSafe's API page says the API
   accepts up to 10 (fetched 2026-10-17). OpenRouter's schema sets no
-  `maxItems`. The cap is applied on both backends so a request cannot pass one
-  and fail the fallback.
+  `maxItems`. Each backend's row carries its own cap, and a request over one
+  hop's cap routes to a later hop that can take it (ADR 0028).
 - A serialized request is capped at 32 MiB, the body limit both publishers
   document. The response is still capped at 16 MiB. One decoded image file is
   capped at 16 MiB, which base64 expands to about 22 MiB of JSON, so the old
@@ -324,20 +324,29 @@ this list does not name is sent through, so an operator's own model string is
 not rewritten into a 404 they did not ask to see. `prepare` fills the backend
 default before the check.
 
-### Fallback and the per-backend gates
+### Capability routes and the per-backend gates
 
 The two backends' local gates differ: the side minimum
 (280 on TypeSafe, 256 on OpenRouter), and the context budget (64,000 and
 32,000 on TypeSafe without `JEV_LONG_CONTEXT`, 262,144 on OpenRouter). The
-fallback never runs the caller's model, so:
+later hops never run the caller's model, so:
 
 - A box question on the fallback runs on that backend's default, which is
   Jev 1.14 on both: `jev-latest` on TypeSafe, `~typesafe/jev-latest` on
   OpenRouter.
-- When the primary fails in a way that would move the call, the fallback
-  checks the request first. A request it would refuse locally does not move
-  the session. The caller gets the primary's failure, and its exit code, with
-  the fallback's reason added.
+- Universal shape errors are rejected before per-hop limits and capabilities,
+  except image-file errors. Image files are read lazily, so a file that cannot
+  be read or is not PNG or JPEG is reported only after a hop's earlier checks
+  pass; a hop refusal can therefore be reported first. Either way the request
+  is a local rejection (exit 2) and nothing is sent. Each hop checks its own limits and image opt-in before any request is sent
+  to it. A refusal takes a capability route to the next able hop and leaves
+  the session where it is. Images are read at most once across those checks.
+- Only a failure on the session's own hop moves the session. A routed call
+  that fails on a later hop continues down without moving the session.
+- A failure moves the session before the next hop checks the request. If that
+  hop cannot take it, this call routes on while the session stays on that hop.
+  If no able hop remains, the caller gets the network failure (exit 5), with
+  the route reason added. With no network call, no able hop means exit 2.
 - Once a session is on the fallback, a local refusal there is still exit 2,
   since no call was made, and its message says the session is on the fallback.
 

@@ -288,9 +288,9 @@ func TestFallbackRunsBoxOnABoxCapableModel(t *testing.T) {
 	}
 }
 
-// FB-08: a request the fallback would refuse locally does not move the
-// session there. The caller sees the primary's failure, with the fallback's
-// reason, and the next call still goes to the primary.
+// FB-08: a failure moves the session even when the next hop refuses this
+// request. This call retains the network failure with the route reason;
+// the next call starts on the moved session and can be rejected locally.
 func TestFallbackLocalRefusalKeepsThePrimary(t *testing.T) {
 	cases := map[string]struct {
 		in   evaluateIn
@@ -304,20 +304,30 @@ func TestFallbackLocalRefusalKeepsThePrimary(t *testing.T) {
 			c, primary, fallback := openRouterFirst(t, http.StatusServiceUnavailable, noulOK)
 			for call := range 2 {
 				_, err := runEvaluate(context.Background(), c, tc.in)
-				var local *requestInvalidError
-				var status *statusErr
-				if errors.As(err, &local) || !errors.As(err, &status) || status.Status != http.StatusServiceUnavailable {
-					t.Fatalf("call %d: want the primary's 503, not a local rejection: %v", call, err)
+				wantLocal := call == 1
+				checkFallbackRefusalKind(t, call, err, wantLocal)
+				wantContext := "fallback cannot take this request"
+				if wantLocal {
+					wantContext = "this session is on the typesafe fallback since openrouter failed"
 				}
-				if !strings.Contains(err.Error(), "fallback cannot take this request") || !strings.Contains(err.Error(), tc.want) {
+				if !strings.Contains(err.Error(), wantContext) || !strings.Contains(err.Error(), tc.want) {
 					t.Fatalf("call %d: error = %v", call, err)
 				}
 			}
-			if (c.current.Load() != 0) || fallback.calls.Load() != 0 || primary.calls.Load() != 2 {
-				t.Fatalf("switched=%v; calls primary %d, fallback %d; want false, 2, 0",
+			if (c.current.Load() != 1) || fallback.calls.Load() != 0 || primary.calls.Load() != 1 {
+				t.Fatalf("switched=%v; calls primary %d, fallback %d; want true, 1, 0",
 					(c.current.Load() != 0), primary.calls.Load(), fallback.calls.Load())
 			}
 		})
+	}
+}
+
+func checkFallbackRefusalKind(t *testing.T, call int, err error, wantLocal bool) {
+	t.Helper()
+	var local *requestInvalidError
+	var status *statusErr
+	if errors.As(err, &local) != wantLocal || errors.As(err, &status) == wantLocal || (!wantLocal && status.Status != http.StatusServiceUnavailable) {
+		t.Fatalf("call %d: want local=%v, otherwise primary's 503: %v", call, wantLocal, err)
 	}
 }
 

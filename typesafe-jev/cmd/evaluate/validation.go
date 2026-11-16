@@ -44,11 +44,10 @@ const (
 	bytesPerToken = 4
 )
 
-// validateRequest checks the cached shape results and hop capabilities in the
-// parent's order. Shape failures name fields, never private request values.
-// Checking each question before the next preserves the first refusal.
+// validateRequest checks the universal shape before this hop's capabilities.
+// Shape failures name fields, never private request values.
 func validateRequest(spec ProviderSpec, in evaluateIn) error {
-	return requestChecks(in, spec.AllowImages).validate(spec, in)
+	return requestChecks(in).validate(spec, in)
 }
 
 // These types describe the rule that refused a call, independently of when
@@ -63,37 +62,53 @@ type hopRefusalError struct{ err error }
 func (e *hopRefusalError) Error() string { return e.err.Error() }
 func (e *hopRefusalError) Unwrap() error { return e.err }
 
-// requestCheck holds either a shape result computed once or a per-hop check.
-// Keeping both in order lets an earlier hop refusal beat a later shape error.
-type requestCheck func(ProviderSpec, evaluateIn) error
+// requestCheck holds either a universal shape result or a per-hop check.
+// Shape results always win, even over an earlier hop refusal (ADR 0028).
+type requestCheck struct {
+	shapeErr error
+	prepare  func(ProviderSpec, evaluateIn) error
+}
 type requestCheckList []requestCheck
 
 func (checks *requestCheckList) shape(err error) {
 	if err != nil {
-		result := &requestShapeError{err}
-		*checks = append(*checks, func(ProviderSpec, evaluateIn) error { return result })
+		*checks = append(*checks, requestCheck{shapeErr: &requestShapeError{err}})
 	}
 }
 
 func (checks *requestCheckList) hop(check func(ProviderSpec, evaluateIn) error) {
-	*checks = append(*checks, func(spec ProviderSpec, in evaluateIn) error {
+	*checks = append(*checks, requestCheck{prepare: func(spec ProviderSpec, in evaluateIn) error {
 		if err := check(spec, in); err != nil {
 			return &hopRefusalError{err}
 		}
 		return nil
-	})
+	}})
 }
 
-func (checks requestCheckList) validate(spec ProviderSpec, in evaluateIn) error {
+func (checks requestCheckList) shapeError() error {
 	for _, check := range checks {
-		if err := check(spec, in); err != nil {
-			return err
+		if check.shapeErr != nil {
+			return check.shapeErr
 		}
 	}
 	return nil
 }
 
-func requestChecks(in evaluateIn, allowImages bool) requestCheckList {
+func (checks requestCheckList) validate(spec ProviderSpec, in evaluateIn) error {
+	if err := checks.shapeError(); err != nil {
+		return err
+	}
+	for _, check := range checks {
+		if check.prepare != nil {
+			if err := check.prepare(spec, in); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func requestChecks(in evaluateIn) requestCheckList {
 	var checks requestCheckList
 	checks.shape(validateState(in.State))
 	if len(in.Questions) == 0 {
@@ -111,14 +126,14 @@ func requestChecks(in evaluateIn, allowImages bool) requestCheckList {
 	for _, id := range sortedKeys(in.Questions) {
 		checks = append(checks, questionChecks(id, in.Questions[id])...)
 	}
-	checks = append(checks, imageUseChecks(in, allowImages)...)
-	checks = append(checks, func(spec ProviderSpec, in evaluateIn) error {
+	checks = append(checks, imageUseChecks(in)...)
+	checks = append(checks, requestCheck{prepare: func(spec ProviderSpec, in evaluateIn) error {
 		return validateBudget(spec, in.State, in.Questions)
-	})
+	}})
 	return checks
 }
 
-// shapedCall shares ordered shape results and a lazy image snapshot across
+// shapedCall shares checked universal shape and a lazy image snapshot across
 // hops. Sources open only when all preceding checks for that hop have passed.
 type shapedCall struct {
 	in     evaluateIn
@@ -126,8 +141,12 @@ type shapedCall struct {
 	images *shapedImages
 }
 
-func shapeRequest(in evaluateIn, allowImages bool) (shapedCall, error) {
-	return shapedCall{in: in, checks: requestChecks(in, allowImages), images: &shapedImages{read: readOneImage}}, nil
+func shapeRequest(in evaluateIn) (shapedCall, error) {
+	checks := requestChecks(in)
+	if err := checks.shapeError(); err != nil {
+		return shapedCall{}, err
+	}
+	return shapedCall{in: in, checks: checks, images: &shapedImages{read: readOneImage}}, nil
 }
 
 func prepareForHop(c *Client, shaped shapedCall) (preparedCall, error) {
