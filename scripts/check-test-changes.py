@@ -30,16 +30,36 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from release_note_policy import FenceOpening, is_closing_fence, opening_fence  # noqa: E402
 
 GO_LITERALS = re.compile(r'//[^\n]*|/\*.*?\*/|`[^`]*`|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', re.S)
-GO_TOKEN = re.compile(r"\bfunc\s+(\w+)\s*\(|[()[\]{}]")
+# A depth-0 match opens a scope: a receiver method, a function, or a var/const/type/import block.
+GO_TOKEN = re.compile(
+    r"\bfunc\s*\(([^(){}]*)\)\s*(\w+)\s*\(|\bfunc\s+(\w+)\s*[(\[]"
+    r"|\b(?:var|const|type|import)\b|[()[\]{}]"
+)
+GO_RECEIVER_TYPE = re.compile(r"(\w+)\s*(?:\[[^\]]*\])?\s*\Z")
 GO_TEST_NAME = re.compile(r"(?:(?:Test|Benchmark|Fuzz)(?![a-z])\w*|Example\w*)\Z")
 GO_ASSERTION = re.compile(r"\b(?:t\.(?:Fatalf?|Errorf?)\s*\(|(?:require|assert)\.)")
 PY_ASSERTION = re.compile(r"\bassert\s+|\bself\.assert\w*\s*\(|\bpytest\.raises\s*\(")
+PY_STRING_OPENERS = {getattr(tokenize, name, None) for name in ("FSTRING_START", "TSTRING_START")} - {None}
+PY_STRING_CLOSERS = {getattr(tokenize, name, None) for name in ("FSTRING_END", "TSTRING_END")} - {None}
+# Assertion scope for code outside every function; module scopes never move between files.
+MODULE = ""
 
 
 @dataclass(frozen=True)
 class TestFile:
     names: tuple[str, ...]
-    assertions: int
+    # Function key (`name`, `Class.method`, `Receiver.Method`, or MODULE) -> normalized assertion statements.
+    assertions: dict[str, tuple[str, ...]]
+
+
+EMPTY = TestFile((), {})
+
+
+@dataclass(frozen=True)
+class Layout:
+    names: tuple[str, ...]
+    owners: list[str]
+    keys: frozenset[str]
 
 
 def command(arguments: list[str]) -> bytes:
@@ -78,59 +98,144 @@ def is_test_file(path: str, registered: set[str]) -> bool:
     )
 
 
-def python_names(source: bytes) -> tuple[str, ...]:
-    tree = ast.parse(source)
-    # Only module-level tests and class methods, not nested helper functions.
-    nodes: list[ast.AST] = list(tree.body)
-    names = []
-    while nodes:
-        node = nodes.pop()
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if node.name.startswith("test_"):
-                names.append(node.name)
-        else:
-            nodes.extend(ast.iter_child_nodes(node))
-    return tuple(names)
+def source_rows(text: str) -> list[str]:
+    return io.StringIO(text).readlines()
 
 
-def mask_non_code(source: bytes, *, go: bool) -> str:
-    text = source.decode("utf-8")
-    if go:
-        return GO_LITERALS.sub(lambda match: re.sub(r"[^\n]", " ", match[0]), text)
-    literal_tokens = (
-        tokenize.COMMENT, tokenize.STRING,
-        *(getattr(tokenize, name, None) for name in (
-            "FSTRING_START", "FSTRING_MIDDLE", "FSTRING_END",
-            "TSTRING_START", "TSTRING_MIDDLE", "TSTRING_END",
-        )),
+def blank(text: str) -> str:
+    return re.sub(r"[^\r\n]", " ", text)
+
+
+def blank_span(rows: list[list[str]], start: tuple[int, int], end: tuple[int, int]) -> None:
+    for index in range(start[0] - 1, end[0]):
+        row = rows[index]
+        first = start[1] if index == start[0] - 1 else 0
+        last = end[1] if index == end[0] - 1 else len(row)
+        for column in range(first, min(last, len(row))):
+            if row[column] not in "\r\n":
+                row[column] = " "
+
+
+def python_views(text: str) -> tuple[list[str], list[str]]:
+    """Return rows with comments and literals blanked, and rows with only comments blanked."""
+    code = [list(row) for row in source_rows(text)]
+    readable = [list(row) for row in source_rows(text)]
+    opened: list[tuple[int, int]] = []
+    for token in tokenize.generate_tokens(io.StringIO(text).readline):
+        if token.type in PY_STRING_OPENERS:
+            opened.append(token.start)
+        elif token.type in PY_STRING_CLOSERS:
+            # Blank the whole outermost f-string or t-string, interpolations included.
+            start = opened.pop()
+            if not opened:
+                blank_span(code, start, token.end)
+        elif token.type == tokenize.STRING and not opened:
+            blank_span(code, token.start, token.end)
+        if token.type == tokenize.COMMENT:
+            blank_span(code, token.start, token.end)
+            blank_span(readable, token.start, token.end)
+    return ["".join(row) for row in code], ["".join(row) for row in readable]
+
+
+def python_functions(tree: ast.Module) -> list[tuple[str, int, int, bool]]:
+    """Functions and classes outside every function, as (key, first row, last row, is_function), outer first."""
+    found: list[tuple[str, int, int, bool]] = []
+
+    def walk(nodes: list[ast.AST], prefix: str) -> None:
+        for node in nodes:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                key = prefix + node.name
+                first = min([decorator.lineno for decorator in node.decorator_list] + [node.lineno])
+                is_function = not isinstance(node, ast.ClassDef)
+                found.append((key, first, node.end_lineno or node.lineno, is_function))
+                if not is_function:
+                    walk(list(node.body), key + ".")
+            else:
+                walk(list(ast.iter_child_nodes(node)), prefix)
+
+    walk(list(tree.body), "")
+    return found
+
+
+def python_layout(tree: ast.Module, rows: int) -> Layout:
+    functions = python_functions(tree)
+    owners = [MODULE] * rows
+    for key, first, last, _ in functions:
+        owners[first - 1:last] = [key] * (last - first + 1)
+    names = tuple(
+        key.rsplit(".", 1)[-1] for key, _, _, is_function in functions
+        if is_function and key.rsplit(".", 1)[-1].startswith("test_")
     )
-    tokens = tokenize.generate_tokens(io.StringIO(text).readline)
-    return tokenize.untokenize(
-        token._replace(string=re.sub(r"[^\n]", " ", token.string))
-        if token.type in literal_tokens else token
-        for token in tokens
-    )
+    return Layout(names, owners, frozenset(key for key, *_ in functions))
 
 
-def go_names(source: bytes) -> tuple[str, ...]:
-    masked = mask_non_code(source, go=True)
+def go_scope(token: re.Match[str]) -> str | None:
+    if token[3]:
+        return token[3]
+    if token[2]:
+        receiver = GO_RECEIVER_TYPE.search(token[1].strip())
+        if receiver is None:
+            raise ValueError(f"Go method {token[2]} has an unreadable receiver")
+        return f"{receiver[1]}.{token[2]}"
+    return MODULE if token[0][-1].isalpha() else None
+
+
+def go_layout(masked: str) -> Layout:
     if not re.match(r"\s*package\s+\w+", masked):
         raise ValueError("Go file has no package declaration")
     names = []
+    starts: list[tuple[int, str]] = []
     stack: list[str] = []
     pairs = {")": "(", "]": "[", "}": "{"}
     for token in GO_TOKEN.finditer(masked):
-        name = token[1]
-        if name and not stack and GO_TEST_NAME.fullmatch(name):
-            names.append(name)
+        scope = None if stack else go_scope(token)
+        if scope is not None:
+            starts.append((masked.count("\n", 0, token.start()), scope))
+            if token[3] and token[0][-1] == "(" and GO_TEST_NAME.fullmatch(token[3]):
+                names.append(token[3])
         delimiter = token[0][-1]
         if delimiter in "([{":
             stack.append(delimiter)
-        elif not stack or stack.pop() != pairs[delimiter]:
+        elif delimiter in ")]}" and (not stack or stack.pop() != pairs[delimiter]):
             raise ValueError("Go file has mismatched delimiters")
     if stack:
         raise ValueError("Go file has unclosed delimiters")
-    return tuple(names)
+    owners = [MODULE] * len(source_rows(masked))
+    for row, scope in starts:
+        owners[row:] = [scope] * (len(owners) - row)
+    return Layout(tuple(names), owners, frozenset(scope for _, scope in starts))
+
+
+def statement_end(code: list[str], row: int, column: int) -> int:
+    """Last row of the statement starting at (row, column): brackets still open, or a backslash, continue it."""
+    depth, segment = 0, code[row][column:]
+    while True:
+        depth += sum(map(segment.count, "([{")) - sum(map(segment.count, ")]}"))
+        if (depth <= 0 and not segment.rstrip().endswith("\\")) or row + 1 == len(code):
+            return row
+        row += 1
+        segment = code[row]
+
+
+def parse_test_file(path: str, source: bytes) -> TestFile:
+    text = source.decode("utf-8")
+    if path.endswith(".go"):
+        code = source_rows(GO_LITERALS.sub(lambda match: blank(match[0]), text))
+        readable = source_rows(GO_LITERALS.sub(
+            lambda match: blank(match[0]) if match[0][:2] in ("//", "/*") else match[0], text,
+        ))
+        layout, pattern = go_layout("".join(code)), GO_ASSERTION
+    else:
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        tree = ast.parse(text)
+        code, readable = python_views(text)
+        layout, pattern = python_layout(tree, len(code)), PY_ASSERTION
+    assertions: dict[str, list[str]] = {key: [] for key in layout.keys | {MODULE}}
+    for row, line in enumerate(code):
+        if match := pattern.search(line):
+            last = statement_end(code, row, match.start())
+            assertions[layout.owners[row]].append(" ".join(" ".join(readable[row:last + 1]).split()))
+    return TestFile(layout.names, {key: tuple(lines) for key, lines in assertions.items()})
 
 
 def registered_tests(ref: str) -> set[str]:
@@ -163,13 +268,9 @@ def inventory(ref: str, registered: set[str]) -> dict[str, TestFile]:
             continue
         source = command(["show", f"{ref}:{path}"])
         try:
-            names = go_names(source) if path.endswith(".go") else python_names(source)
-            pattern = GO_ASSERTION if path.endswith(".go") else PY_ASSERTION
-            masked = mask_non_code(source, go=path.endswith(".go"))
-            count = sum(bool(pattern.search(line)) for line in masked.splitlines())
-        except (SyntaxError, UnicodeError, ValueError) as exc:
+            files[path] = parse_test_file(path, source)
+        except (SyntaxError, UnicodeError, ValueError, tokenize.TokenError) as exc:
             raise ValueError(f"unparseable test file {path} at {ref}: {exc}") from exc
-        files[path] = TestFile(names, count)
     return files
 
 
@@ -183,8 +284,8 @@ def removed_tests(before: dict[str, TestFile], after: dict[str, TestFile]) -> li
     removed: list[tuple[str, str]] = []
     added: Counter[tuple[str, str]] = Counter()
     for path in sorted(before.keys() | after.keys()):
-        old = Counter(before.get(path, TestFile((), 0)).names)
-        new = Counter(after.get(path, TestFile((), 0)).names)
+        old = Counter(before.get(path, EMPTY).names)
+        new = Counter(after.get(path, EMPTY).names)
         removed.extend((path, name) for name in (old - new).elements())
         added.update((move_scope(path), name) for name in (new - old).elements())
     missing = []
@@ -218,19 +319,23 @@ def disclosure_section(body: str) -> str:
     return "\n".join(section)
 
 
+def assertion_count(file: TestFile) -> int:
+    return sum(map(len, file.assertions.values()))
+
+
 def assertion_losses(before: dict[str, TestFile], after: dict[str, TestFile]) -> dict[str, int]:
     losses = {
-        path: before[path].assertions - after[path].assertions
+        path: assertion_count(before[path]) - assertion_count(after[path])
         for path in before.keys() & after.keys()
     }
     added: Counter[str] = Counter()
     for path in after.keys() - before.keys():
-        added[move_scope(path)] += after[path].assertions
+        added[move_scope(path)] += assertion_count(after[path])
     for path in sorted(before.keys() - after.keys()):
         scope = move_scope(path)
-        credit = min(before[path].assertions, added[scope])
+        credit = min(assertion_count(before[path]), added[scope])
         added[scope] -= credit
-        losses[path] = before[path].assertions - credit
+        losses[path] = assertion_count(before[path]) - credit
     return losses
 
 
