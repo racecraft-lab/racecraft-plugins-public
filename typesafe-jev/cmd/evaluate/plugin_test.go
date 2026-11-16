@@ -121,8 +121,8 @@ func TestPluginManifestsResolve(t *testing.T) {
 	}
 }
 
-// The MCP entries must launch the shipped launcher, name the backend
-// explicitly, and carry no credential. A key in a committed manifest is a key
+// The MCP entries must launch the shipped launcher, leave backend selection
+// to runtime configuration, and carry no credential. A key in a committed manifest is a key
 // in everyone's checkout.
 func TestPluginMCPEntries(t *testing.T) {
 	root := repoRoot(t)
@@ -150,19 +150,15 @@ func TestPluginMCPEntries(t *testing.T) {
 		}
 
 		env, _ := entry["env"].(map[string]any)
-		// TypeSafe first, with OpenRouter as the operator's explicit fallback,
-		// each with its own model id: the ids differ per backend.
-		for key, want := range map[string]string{
-			"JEV_PROVIDER":          "typesafe",
-			"JEV_MODEL":             "jev-latest",
-			"JEV_FALLBACK_PROVIDER": "openrouter",
-		} {
-			if got, _ := env[key].(string); got != want {
-				t.Errorf("%s: %s = %q, want %q", tc.file, key, got, want)
+		// Backend and model selection belong to runtime configuration: any of
+		// these in the manifest would outrank the user's chain file.
+		for _, key := range []string{"JEV_CHAIN", "JEV_PROVIDER", "JEV_MODEL", "JEV_FALLBACK_PROVIDER"} {
+			if got, set := env[key]; set {
+				t.Errorf("%s: %s = %v, want absent", tc.file, key, got)
 			}
 		}
-		// The binary's own default stays typesafe; the plugin opts in rather
-		// than the server guessing from which keys are set.
+		// The provider table keeps TypeSafe registered independently of the
+		// runtime chain selection.
 		if providers["typesafe"].Name != "typesafe" {
 			t.Fatal("provider table changed")
 		}

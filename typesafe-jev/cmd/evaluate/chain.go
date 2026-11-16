@@ -8,6 +8,8 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strings"
+	"sync"
 	"sync/atomic"
 )
 
@@ -74,12 +76,18 @@ func classify(err error) chainOutcome {
 }
 
 // chainRunner owns the session's position and move log. Clients carry only
-// per-backend HTTP settings. This prefactor still runs today's one or two hops.
+// per-backend HTTP settings. The index advances only after the next hop
+// accepts local preparation.
 type chainRunner struct {
 	hops           []*Client
 	current        atomic.Int32
 	log            io.Writer
 	credentialCode int
+	moveMu         sync.Mutex
+	logMu          sync.Mutex
+	onMove         func()
+	// firstDropped keeps model overrides tied to the configured first hop.
+	firstDropped bool
 }
 
 // startChain retains the credential verdict even if no hop can start, so
@@ -88,6 +96,7 @@ func startChain(resolved resolvedHops, log, startupLog io.Writer) (*chainRunner,
 	r := &chainRunner{log: log, credentialCode: resolved.credentialExit()}
 	hops, cfg, err := resolved.clients(startupLog)
 	r.hops = hops
+	r.firstDropped = len(resolved.hops) > 0 && resolved.hops[0].loaded.err != nil
 	return r, cfg, err
 }
 
@@ -95,7 +104,7 @@ func (r *chainRunner) credentialExit() int { return r.credentialCode }
 
 func (r *chainRunner) servingHop() *Client { return r.hops[r.current.Load()] }
 
-// evaluate keeps the existing two-hop contract. A call moves to the fallback
+// evaluate extends the existing fallback contract down the ordered hops. A call moves on
 // only when the primary will not serve this credential (401, 402, 403), has
 // moved (404), is throttling (429) or is down (5xx) after its own retries, or
 // cannot be reached. The session then stays there, so one session never
@@ -108,7 +117,7 @@ func (r *chainRunner) servingHop() *Client { return r.hops[r.current.Load()] }
 // failure, whose class decides the exit code, rather than a local rejection
 // after a network call was made.
 //
-// Both hops share the primary's deadline: a client that aborts a tool call
+// All hops share the first loaded hop's deadline: a client that aborts a tool call
 // after a fixed time would otherwise kill a fallback given a fresh budget.
 func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
 	if len(r.hops) > 1 {
@@ -116,60 +125,63 @@ func (r *chainRunner) evaluate(ctx context.Context, in evaluateIn) ([]byte, erro
 		ctx, cancel = context.WithTimeout(ctx, r.hops[0].Timeout)
 		defer cancel()
 	}
-	serving := r.servingHop()
-	onTheFallback := serving != r.hops[0]
-	if onTheFallback {
+	start := int(r.current.Load())
+	if start > 0 || r.firstDropped {
 		in = fallbackRequest(in)
 	}
-	shaped, err := shapeRequest(in, serving.Provider.AllowImages)
+	shaped, err := shapeRequest(in, r.hops[start].Provider.AllowImages)
 	if err != nil {
 		local := &requestInvalidError{err}
-		if onTheFallback {
+		if start > 0 {
 			return nil, r.onTheFallback(local)
 		}
 		return nil, local
 	}
-	if len(r.hops) == 1 {
-		return runShapedOn(ctx, r.hops[0], shaped)
+	body, err := runShapedOn(ctx, r.hops[start], shaped)
+	for i := start; err != nil && i+1 < len(r.hops); i++ {
+		out := classify(&chainFailure{err: err, requestErr: ctx.Err()})
+		if out.effect != moveSession && out.effect != moveAccount {
+			break
+		}
+		shaped.in = fallbackRequest(shaped.in)
+		p, local := prepareForHop(r.hops[i+1], shaped)
+		if local != nil {
+			return nil, fmt.Errorf("%w; the %s fallback cannot take this request: %v", err, r.hops[i+1].Provider.Name, local)
+		}
+		r.move(int32(i), int32(i+1), out.reason)
+		body, err = send(ctx, r.hops[i+1], p, nil)
 	}
-
-	onFallback := shaped
-	onFallback.in = fallbackRequest(in)
-	if onTheFallback {
-		body, err := runShapedOn(ctx, serving, onFallback)
-		return body, r.onTheFallback(err)
+	if start > 0 {
+		err = r.onTheFallback(err)
 	}
-	body, err := runShapedOn(ctx, r.hops[0], shaped)
-	if err == nil {
-		return body, nil
-	}
-	out := classify(&chainFailure{err: err, requestErr: ctx.Err()})
-	if out.effect != moveSession && out.effect != moveAccount {
-		return body, err
-	}
-	p, local := prepareForHop(r.hops[1], onFallback)
-	if local != nil {
-		return nil, fmt.Errorf("%w; the %s fallback cannot take this request: %v", err, r.hops[1].Provider.Name, local)
-	}
-	r.move(0, 1, out.reason)
-	return send(ctx, r.hops[1], p, nil)
+	return body, err
 }
 
 // move only advances the hop that actually failed. Concurrent failures of an
 // older hop cannot move a session again; only the CAS winner writes the log.
 func (r *chainRunner) move(from, to int32, reason string) {
+	r.moveMu.Lock()
 	for {
 		current := r.current.Load()
 		if current != from || to <= current {
+			r.moveMu.Unlock()
 			return
 		}
 		if r.current.CompareAndSwap(current, to) {
+			onMove := r.onMove
+			r.moveMu.Unlock()
+			// Keep writers serialized without holding up session moves or MCP I/O.
+			r.logMu.Lock()
 			log := r.log
 			if log == nil {
 				log = os.Stderr
 			}
 			fmt.Fprintf(log, "evaluate: %s refused or failed the call (%s); using the %s fallback for the rest of this session\n",
 				r.hops[from].Provider.Name, reason, r.hops[to].Provider.Name)
+			r.logMu.Unlock()
+			if onMove != nil {
+				onMove()
+			}
 			return
 		}
 	}
@@ -188,4 +200,13 @@ func (r *chainRunner) onTheFallback(err error) error {
 	}
 	return &requestInvalidError{fmt.Errorf("this session is on the %s fallback since %s failed; %w",
 		r.servingHop().Provider.Name, r.hops[0].Provider.Name, local.err)}
+}
+
+// backendNote reports the fixed loaded order for MCP.
+func (r *chainRunner) backendNote() string {
+	names := make([]string, len(r.hops))
+	for i, hop := range r.hops {
+		names[i] = hop.Provider.Name
+	}
+	return "\nBackend chain: " + strings.Join(names, " -> ") + "."
 }

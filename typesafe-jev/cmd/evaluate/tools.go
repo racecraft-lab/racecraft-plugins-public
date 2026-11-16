@@ -48,9 +48,15 @@ type evaluateIn struct {
 // shape now would hide a capability the backend has, which is the same failure
 // as advertising one it lacks, so one schema serves both.
 func registerTools(s *mcp.Server, _ Config, chain *chainRunner) {
-	add(s, evaluateTool(), func(ctx context.Context, in evaluateIn) ([]byte, error) {
-		return chain.evaluate(ctx, in)
-	})
+	refresh := func() {
+		tool := evaluateTool()
+		tool.Description += chain.backendNote() + " Serving hop: " + chain.servingHop().Provider.Name + "."
+		add(s, tool, func(ctx context.Context, in evaluateIn) ([]byte, error) {
+			return chain.evaluate(ctx, in)
+		})
+	}
+	chain.onMove = refresh
+	refresh()
 }
 
 // runOn uses the chain's single-hop path for one evaluation on one backend.

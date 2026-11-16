@@ -189,8 +189,10 @@ provider and is billed there. The read-only annotation means it changes
 nothing on this machine, not that it is free or private. Do not put a secret
 in `state` or in an image.
 
-Which backend is used is fixed by the operator's `JEV_PROVIDER` setting, not by
-anything you pass.
+The operator configures an ordered backend chain with `JEV_CHAIN`, the legacy
+provider pair, or the chain file. The tool's backend note lists the loaded hops
+in order and names the serving hop after a move. Read that note for which
+providers may receive your state; a tool argument cannot change the order.
 
 ## If the tool is not there
 

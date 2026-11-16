@@ -277,6 +277,8 @@ func backendImageLimits(minSide int) imageBounds {
 }
 
 const (
+	// defaultProvider serves when no setting names a backend.
+	defaultProvider   = "typesafe"
 	defaultTimeout    = 45 * time.Second
 	maxTimeout        = 5 * time.Minute
 	defaultMaxRetries = 3
@@ -301,9 +303,11 @@ type Config struct {
 	// it to JEV_FALLBACK_API_KEY_FILE.
 	keyFileVar string
 	// Fallback is the backend a call moves to when Provider refuses its
-	// credential or is unavailable, or nil. It is set only by the operator
-	// (JEV_FALLBACK_PROVIDER): which keys happen to exist never creates one.
+	// credential or is unavailable, or nil for a one-hop chain. Chain resolution
+	// sets it from configuration or the built-in order, never from available keys.
 	Fallback *FallbackConfig
+	// AdditionalHops continues the configured order after the legacy pair.
+	AdditionalHops []Config
 	// AllowImages is JEV_IMAGES. Box questions use the same opt-in: TypeSafe
 	// requires the images danger-zone header for either, and a box needs an image.
 	AllowImages bool
@@ -326,15 +330,22 @@ type FallbackConfig struct {
 // fallbackConfig is the Config a client for the fallback backend is built
 // from: its own provider, model default and key, and the primary's limits.
 func (c Config) fallbackConfig() Config {
+	hop := c.laterHop(c.Fallback.Provider, c.Fallback.KeyFile, c.Fallback.KeyFileDefaulted)
+	hop.keyFileVar = pluginFallbackFileEnv
+	return hop
+}
+
+// laterHop builds a hop after the first from the shared request settings, so
+// every later hop inherits the same timeout, retries and operator opt-ins.
+func (c Config) laterHop(spec ProviderSpec, keyFile string, keyFileDefaulted bool) Config {
 	return Config{
-		Provider:   c.Fallback.Provider,
-		Model:      c.Fallback.Provider.DefaultModel,
+		Provider:   spec,
+		Model:      spec.DefaultModel,
 		Timeout:    c.Timeout,
 		MaxRetries: c.MaxRetries,
-		KeyFile:    c.Fallback.KeyFile,
+		KeyFile:    keyFile,
 
-		KeyFileDefaulted: c.Fallback.KeyFileDefaulted,
-		keyFileVar:       pluginFallbackFileEnv,
+		KeyFileDefaulted: keyFileDefaulted,
 		AllowImages:      c.AllowImages,
 		LongContext:      c.LongContext,
 	}
@@ -403,7 +414,7 @@ func resolveOptIn(look lookupFunc, name string) (bool, error) {
 func resolveProvider(look lookupFunc) (ProviderSpec, error) {
 	raw, set := look("JEV_PROVIDER")
 	if !set {
-		return providers["typesafe"], nil
+		return providers[defaultProvider], nil
 	}
 	name := strings.TrimSpace(raw)
 	if name == "" {
@@ -526,4 +537,28 @@ func (c Config) credentialSource() string {
 		return "file " + c.KeyFile
 	}
 	return "environment " + c.Provider.APIKeyEnv
+}
+
+// parseChain rejects configuration mistakes before any credential is loaded.
+func parseChain(raw, source string) ([]string, error) {
+	names := strings.Split(raw, ",")
+	if len(names) > 4 {
+		return nil, fmt.Errorf("%s allows at most four hops", source)
+	}
+	seen := map[string]bool{}
+	for i, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return nil, fmt.Errorf("%s contains an empty hop", source)
+		}
+		if _, ok := providers[name]; !ok {
+			return nil, fmt.Errorf("%s contains unknown provider %q; use one of %s", source, name, providerNames())
+		}
+		if seen[name] {
+			return nil, fmt.Errorf("%s repeats provider %q", source, name)
+		}
+		seen[name], names[i] = true, name
+	}
+
+	return names, nil
 }

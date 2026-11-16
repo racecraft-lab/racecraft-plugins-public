@@ -5,10 +5,12 @@ package main
 // putting that work in the backend-spec owner would mix data with runtime state.
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -24,7 +26,7 @@ type resolvedHops struct {
 	hops   []resolvedHop
 }
 
-// resolveHops returns today's ordered list (at most two hops), including the
+// resolveHops returns the configured ordered list, including the
 // verdict for an unusable hop so --check can remain stricter than the server.
 func resolveHops(look lookupFunc, pluginDefaults bool) (resolvedHops, error) {
 	cfg, err := resolveHopConfig(look, pluginDefaults)
@@ -34,34 +36,109 @@ func resolveHops(look lookupFunc, pluginDefaults bool) (resolvedHops, error) {
 	return resolveConfiguredHops(cfg, look), nil
 }
 
+// chainConfigs is the one walk of a Config's hops in chain order: the first
+// hop, the fallback, then any later hops.
+func (c Config) chainConfigs() []Config {
+	configs := []Config{c}
+	if c.Fallback != nil {
+		configs = append(configs, c.fallbackConfig())
+	}
+	return append(configs, c.AdditionalHops...)
+}
+
 func resolveConfiguredHops(cfg Config, look lookupFunc) resolvedHops {
 	r := resolvedHops{config: cfg}
-	configs := []Config{cfg}
-	if cfg.Fallback != nil {
-		configs = append(configs, cfg.fallbackConfig())
-	}
-	for _, hop := range configs {
+	for _, hop := range cfg.chainConfigs() {
 		r.hops = append(r.hops, resolvedHop{config: hop, loaded: loadCredentialSource(hop, look)})
 	}
 	return r
 }
 
+// resolveConfig retains the legacy pair entry point used by single-backend
+// callers. Runtime and setup use resolveHopConfig for chain precedence.
 func resolveConfig(look lookupFunc) (Config, error) {
-	return resolveHopConfig(look, false)
+	return resolveLegacyConfig(look, false)
 }
 
 func resolveCallConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	return resolveHopConfig(look, pluginDefaults)
 }
 
-// resolveHopConfig is the configuration policy shared by setup and runtime.
-// Setup deliberately resolves settings without opening any credential file.
+// resolveHopConfig uses the same precedence for setup, call and the server.
+// Legacy settings are resolved unchanged, including their existing diagnostics.
 func resolveHopConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
-	var cfg Config
-	home := ""
-	if pluginDefaults {
-		home = homeDir(look)
+	raw, chainSet := look("JEV_CHAIN")
+	_, primarySet := look("JEV_PROVIDER")
+	fallback, _ := look("JEV_FALLBACK_PROVIDER")
+	fallbackSet := fallback != ""
+	if chainSet && (primarySet || fallbackSet) {
+		return Config{}, fmt.Errorf("JEV_CHAIN cannot be combined with JEV_PROVIDER or JEV_FALLBACK_PROVIDER")
 	}
+	if !chainSet && (primarySet || fallbackSet) {
+		return resolveLegacyConfig(look, pluginDefaults)
+	}
+	raw, source, err := chainSetting(look, raw, chainSet, pluginDefaults)
+	if err != nil {
+		return Config{}, err
+	}
+	names, err := parseChain(raw, source)
+	if err != nil {
+		return Config{}, err
+	}
+	pair := func(key string) (string, bool) {
+		switch key {
+		case "JEV_PROVIDER":
+			return names[0], true
+		case "JEV_FALLBACK_PROVIDER":
+			if len(names) > 1 {
+				return names[1], true
+			}
+			return "", false
+		}
+		return look(key)
+	}
+	cfg, err := resolveLegacyConfig(pair, pluginDefaults)
+	if err != nil {
+		return cfg, err
+	}
+	home := pluginHome(look, pluginDefaults)
+	for i := 2; i < len(names); i++ {
+		name := names[i]
+		keyFile, defaulted, err := resolveHopKeyFile(func(string) (string, bool) { return "", false }, pluginKeyFileEnv, name, home)
+		if err != nil {
+			return cfg, err
+		}
+		cfg.AdditionalHops = append(cfg.AdditionalHops, cfg.laterHop(providers[name], keyFile, defaulted))
+	}
+	return cfg, nil
+}
+
+// chainSetting reads the file only after environment precedence is settled.
+func chainSetting(look lookupFunc, raw string, chainSet, pluginDefaults bool) (string, string, error) {
+	if chainSet {
+		return raw, "JEV_CHAIN", nil
+	}
+	if home := homeDir(look); filepath.IsAbs(home) {
+		path := filepath.Join(home, filepath.FromSlash(pluginKeyDirectory), "chain")
+		data, err := os.ReadFile(path)
+		if err == nil {
+			return strings.TrimSpace(string(data)), "chain file", nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", "", fmt.Errorf("reading chain file: %w", err)
+		}
+	}
+	if pluginDefaults {
+		return defaultProvider + ",openrouter", "built-in chain", nil
+	}
+	return defaultProvider, "built-in chain", nil
+}
+
+// resolveLegacyConfig validates the existing provider/pair settings.
+// Setup deliberately resolves settings without opening any credential file.
+func resolveLegacyConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
+	var cfg Config
+	home := pluginHome(look, pluginDefaults)
 
 	spec, err := resolveProvider(look)
 	if err != nil {
@@ -94,6 +171,14 @@ func resolveHopConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	return cfg, nil
 }
 
+// pluginHome is the key-file discovery root, which only --plugin-defaults enables.
+func pluginHome(look lookupFunc, pluginDefaults bool) string {
+	if !pluginDefaults {
+		return ""
+	}
+	return homeDir(look)
+}
+
 // homeDir is $HOME, or the platform's home directory when HOME is unset.
 func homeDir(look lookupFunc) string {
 	if home, ok := look("HOME"); ok && home != "" {
@@ -119,14 +204,28 @@ func resolveHopKeyFile(look lookupFunc, name, provider, home string) (string, bo
 	return path, true, err
 }
 
-// sources preserves call's two-source report while resolution owns the list.
-func (r resolvedHops) sources() (sourceStatus, *sourceStatus) {
-	primary := r.hops[0].loaded.status
-	if len(r.hops) == 1 {
-		return primary, nil
+// report keeps the legacy primary/fallback fields and exposes longer chains.
+func (r resolvedHops) report() checkReport {
+	report := checkReport{Exit: r.credentialExit(), Primary: r.hops[0].loaded.status}
+	if len(r.hops) > 1 {
+		fallback := r.hops[1].loaded.status
+		report.Fallback = &fallback
 	}
-	fallback := r.hops[1].loaded.status
-	return primary, &fallback
+	if len(r.hops) > 2 {
+		for _, hop := range r.hops {
+			report.Hops = append(report.Hops, hop.loaded.status)
+		}
+	}
+	return report
+}
+
+func (r resolvedHops) reportUnusable(out io.Writer) {
+	for _, hop := range r.hops {
+		s := hop.loaded.status
+		if s.State == "unusable" {
+			fmt.Fprintf(out, "evaluate: %s credential (%s) is unusable: %s\n", s.Provider, s.Source, s.reason)
+		}
+	}
 }
 
 func (r resolvedHops) credentialExit() int {
@@ -154,7 +253,7 @@ func (r resolvedHops) clients(startupLog io.Writer) ([]*Client, Config, error) {
 	}
 	if len(usable) == 0 {
 		err := r.hops[0].loaded.err
-		if len(r.hops) == 2 {
+		if len(r.hops) > 1 {
 			err = fmt.Errorf("%w; the %s fallback cannot start either: %v", err,
 				r.hops[1].config.Provider.Name, r.hops[1].loaded.err)
 		}
@@ -167,15 +266,27 @@ func (r resolvedHops) clients(startupLog io.Writer) ([]*Client, Config, error) {
 	}
 	if len(usable) == 1 {
 		cfg.Fallback = nil
-		if len(r.hops) == 2 {
-			if r.hops[0].loaded.err != nil {
-				fmt.Fprintf(startupLog, "evaluate: %v; using the %s fallback\n", r.hops[0].loaded.err, cfg.Provider.Name)
-			} else {
-				fmt.Fprintf(startupLog, "evaluate: the %s fallback is off: %v\n", r.hops[1].config.Provider.Name, r.hops[1].loaded.err)
-			}
+	}
+	r.logDropped(startupLog, usable)
+
+	return clients, cfg, nil
+}
+
+// logDropped preserves pair diagnostics and logs each unusable later hop once.
+func (r resolvedHops) logDropped(out io.Writer, usable []resolvedHop) {
+	if len(r.hops) == 2 && len(usable) == 1 {
+		if r.hops[0].loaded.err != nil {
+			fmt.Fprintf(out, "evaluate: %v; using the %s fallback\n", r.hops[0].loaded.err, usable[0].config.Provider.Name)
+		} else {
+			fmt.Fprintf(out, "evaluate: the %s fallback is off: %v\n", r.hops[1].config.Provider.Name, r.hops[1].loaded.err)
+		}
+		return
+	}
+	for _, hop := range r.hops {
+		if hop.loaded.err != nil {
+			fmt.Fprintf(out, "evaluate: dropping %s hop: %v\n", hop.config.Provider.Name, hop.loaded.err)
 		}
 	}
-	return clients, cfg, nil
 }
 
 func clientForHop(hop resolvedHop) *Client {
@@ -199,4 +310,13 @@ func newClient(cfg Config) (*Client, error) {
 
 func newClients(cfg Config, log io.Writer) (*chainRunner, Config, error) {
 	return startChain(resolveConfiguredHops(cfg, os.LookupEnv), log, log)
+}
+
+// configuredChainNames serializes setup's resolved order, including later hops.
+func configuredChainNames(cfg Config) string {
+	var names []string
+	for _, hop := range cfg.chainConfigs() {
+		names = append(names, hop.Provider.Name)
+	}
+	return strings.Join(names, ",")
 }
