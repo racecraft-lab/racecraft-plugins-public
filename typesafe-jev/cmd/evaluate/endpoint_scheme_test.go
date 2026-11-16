@@ -13,11 +13,12 @@ func TestProviderEndpointsAreHTTPSOrLoopbackDaemon(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s endpoint %q: %v", name, spec.EndpointURL, err)
 		}
-		switch {
-		case u.Scheme == "https":
-		case u.Scheme == "http" && spec.Daemon && u.Hostname() == "localhost":
-		default:
-			t.Errorf("%s endpoint %q must be HTTPS, or HTTP to localhost for a daemon row", name, spec.EndpointURL)
+		if spec.Daemon {
+			if u.Scheme != "http" || u.Hostname() != "localhost" {
+				t.Errorf("%s is a daemon row, so its endpoint %q must be HTTP to localhost", name, spec.EndpointURL)
+			}
+		} else if u.Scheme != "https" {
+			t.Errorf("%s endpoint %q must be HTTPS", name, spec.EndpointURL)
 		}
 	}
 }
