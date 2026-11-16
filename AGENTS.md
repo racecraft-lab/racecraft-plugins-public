@@ -160,8 +160,10 @@ depend on either.
   (`--quality-delta=$(git merge-base origin/main HEAD)..HEAD`) and confirm its
   graph with a read. `ripwire . --arch=.ripwire_arch_rules` checks layering
   against `.ripwire_arch_baseline` (exit 2 means a new violation); never
-  re-baseline to hide a new edge. Config details and the advisory job:
-  `docs/agent-runbook.md`.
+  re-baseline to hide a new edge. When ripwire is installed, an empty
+  `--quality-delta` regression list for your range is part of done (section
+  10); the CI job is advisory only because CI may lack ripwire. Config
+  details and that job: `docs/agent-runbook.md`.
 - **Jev** (the `typesafe-jev` plugin's `evaluate` tool) gives advisory
   judgments only: its verdict never approves a destructive step, and each call
   bills a third party, so send no secrets or local paths.
@@ -271,6 +273,13 @@ mirrors section 11; `speckit-pro/codex-agents/*.toml` are generated from
   changed.
 - When Python changed, ruff and mypy pass locally too; `mypy-ratchet` is not
   required, so CI will not stop a regression.
+- When ripwire is installed, `ripwire . --quality-delta=<merge-base>..HEAD`
+  lists no regression for your range: every row is fixed in the change that
+  introduced it, gating or not (complexity, clones, verbosity, dead code).
+  "Advisory" or "pre-existing" is not a reason to leave one. Accept a row with
+  `--quality-ack="<reason>"` only when every remaining row is a genuine false
+  positive, such as dead code on a test function its runner calls; never ack a
+  real finding.
 - Every rule you relied on that was missing here is added, or the PR says why.
 
 ## 11. Code Review Rules
@@ -288,7 +297,8 @@ in step.
   untrusted PR content; a script or test filename coupled to a temporary spec
   ID, or test code that reads a `specs/<feature>/` path from disk at run time;
   a correctness bug in repository tooling or tests, such as a check that passes
-  on nothing.
+  on nothing; a ripwire `--quality-delta` regression left in place (section
+  10), unless acked as a genuine false positive.
 - **Minor:** style, naming, prose, and refactoring notes; add none on re-review.
 - **Skip:** generated reference pages and payloads, vendored upstream content,
   lockfiles, archived specs, and what CI enforces (only the `ruff.toml` rules F,
