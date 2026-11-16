@@ -225,12 +225,15 @@ backend later in the chain that can take it answers. When none is left, the
 tool fails locally with the reason, and nothing is sent or billed. The skip
 covers that call only; the session stays where it was.
 
-**A failure moves the session down.** A refused credential, an exhausted
-account, or an unreachable backend moves the session to the next backend for
-good. A failure skips every later backend on the same account, so `ollama`
-after a failed `ollama-local` is skipped too. The exception is when the local
-Ollama app is not running or cannot reach the cloud: then `ollama` still gets
-its turn.
+**A failure on the serving backend moves the session down.** When the backend
+the session is on refuses its credential, runs out of credit, throttles, fails
+or cannot be reached, the session moves to the next backend and stays there. A
+failure on a backend that a skipped call reached affects that call only. An
+account failure (a refused key, no credit, throttling, a server error) also
+skips every later backend on the same account, so `ollama` after a failed
+`ollama-local` is skipped too. An unreachable backend, a 404, or a local Ollama
+app that cannot reach the cloud moves on without that skip, so `ollama` still
+gets its turn.
 
 ## Cost and privacy
 
