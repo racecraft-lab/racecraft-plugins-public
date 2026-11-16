@@ -15,6 +15,8 @@ import (
 type ProviderSpec struct {
 	// Name is the JEV_PROVIDER value that selects this backend.
 	Name string
+	// Label names the backend to a person, as in "a TypeSafe key".
+	Label string
 	// EndpointURL is the complete URL to POST to, not a base to append to.
 	EndpointURL string
 	// APIKeyEnv is the only environment variable this backend reads a key
@@ -221,6 +223,7 @@ var providers = map[string]ProviderSpec{
 	"ollama-local": ollamaLocalSpec(),
 	"typesafe": {
 		Name:        "typesafe",
+		Label:       "TypeSafe",
 		EndpointURL: "https://api.typesafe.ai/v1/systemone",
 		APIKeyEnv:   "TYPESAFE_API_KEY",
 		// jev-1.14.0 since 2026-10-14 (https://docs.typesafe.ai/models.md).
@@ -250,6 +253,7 @@ var providers = map[string]ProviderSpec{
 	},
 	"openrouter": {
 		Name:        "openrouter",
+		Label:       "OpenRouter",
 		EndpointURL: "https://openrouter.ai/api/alpha/decisions",
 		APIKeyEnv:   "OPENROUTER_API_KEY",
 		// Jev 1.14 (https://openrouter.ai/docs/guides/community/jev, 2026-10-17).
@@ -291,6 +295,7 @@ var providers = map[string]ProviderSpec{
 func ollamaLocalSpec() ProviderSpec {
 	spec := ollamaCloudSpec()
 	spec.Name = "ollama-local"
+	spec.Label = "Ollama app"
 	spec.EndpointURL = "http://localhost:11434/v1/systemone"
 	spec.DefaultModel = "clef:cloud"
 	spec.AuthKind = authNone
@@ -302,6 +307,7 @@ func ollamaLocalSpec() ProviderSpec {
 func ollamaCloudSpec() ProviderSpec {
 	return ProviderSpec{
 		Name:           "ollama",
+		Label:          "Ollama Cloud",
 		EndpointURL:    "https://ollama.com/v1/systemone",
 		APIKeyEnv:      "OLLAMA_API_KEY",
 		DefaultModel:   "clef",
@@ -317,9 +323,11 @@ func ollamaCloudSpec() ProviderSpec {
 			entryChoiceValue: entryObject,
 			entryScoreLevel:  entryObject,
 		},
-		AnswerNote: "\nOllama serves Clef: noul answers omit confidence, and answers omit id." +
+		AnswerNote: "\nOllama serves Clef: noul answers omit confidence." +
 			" Choice and score confidence measures entropy, not calibrated correctness;" +
-			" thresholds tuned for Jev do not carry over. Images require JEV_IMAGES=true.",
+			" thresholds tuned for Jev do not carry over. Clef takes no box questions and" +
+			" only plain-string instructions; a request it cannot take goes to the next" +
+			" backend in the chain that can, with no Ollama call. Images require JEV_IMAGES=true.",
 		// No automatic replay: Ollama does not document retries as safe,
 		// and a repeated inference may bill again. Endpoint 429 behavior
 		// and Retry-After remain unconfirmed in the research matrix.

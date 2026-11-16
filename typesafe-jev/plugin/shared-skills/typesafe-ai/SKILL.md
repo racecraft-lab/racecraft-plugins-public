@@ -84,11 +84,22 @@ provider settings, or the chain file; otherwise the built-in order applies.
 The server's instructions list the hop order. The tool description names the
 serving hop and refreshes when the session moves down the chain.
 
+**Clef through Ollama.** The chain may also hold Cloudflare's Clef, served by
+Ollama (`ollama` for Ollama Cloud, `ollama-local` for the signed-in Ollama
+app). Clef has no `box`, takes plain-string instructions only, at most 64
+questions and 65,536 tokens, and sends no `confidence` on a noul. Its choice
+and score `confidence` measures entropy, so a threshold tuned for Jev does not
+carry over. A request Clef cannot take skips the Ollama hops with no Ollama
+call, and a later hop answers; when none is left, the call stops without
+another request. The
+`typed-judgments` skill has the full per-backend table.
+
 **Images, box, and long context.** Images and `box` stay off until the operator
 sets `JEV_IMAGES=true`. Name a PNG or JPEG in `images` and reference that name
 as a whole string or `{"image":"name"}`. The server builds TypeSafe's `assets`
-map or OpenRouter's `image_url` data URL; do not send either yourself. `box`
-needs Jev 1.14, which is the default model on both backends, and returns four
+map, OpenRouter's `image_url` data URL, or Ollama's base64 array; do not send
+any of them yourself. `box` needs Jev 1.14, which is the default model on both
+Jev backends, and returns four
 edges from 0 to 1. TypeSafe's default window is 64,000 and 32,000 tokens;
 `JEV_LONG_CONTEXT=true` raises both to 262,144. OpenRouter's window is already
 262,144. Image bytes leave the machine and are billed.
@@ -240,12 +251,14 @@ about what might make something fraud or spam. Each question tends to work best 
 <!-- Racecraft Lab addition. -->
 **What the `evaluate` tool's answers can lack.** On the `openrouter` backend,
 `confidence` and `probabilities` are optional on choice and score answers,
-where the TypeSafe backend always sends them. A question the provider declines
+where the TypeSafe backend always sends them. Clef, on the Ollama backends,
+sends no `confidence` on a noul. A question the provider declines
 comes back as `{"type": "refusal"}` with no value, while the other questions in
 the call still answer. The tool reports an absent field as absent and never
 substitutes a number, so check the field is there before you branch on it, and
 treat a refusal as no judgment, never as a "no". Instructions and criteria take
-the structured form this skill teaches on both backends.
+the structured form this skill teaches on both Jev backends; Clef takes
+plain-string instructions only, and a structured one skips the Ollama hops.
 
 <!-- Racecraft Lab addition, updated 2026-11-14. -->
 **Images and box on the APIs themselves.** An application that calls TypeSafe

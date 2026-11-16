@@ -24,8 +24,8 @@ func init() {
 	}
 }
 
-const instructions = `The evaluate tool runs Jev, a TypeSafe System One model that returns typed judgments and probabilities, not generated text.
-- Question types: noul (probability a yes/no condition holds), choice (one option from a criteria map), score (probability-weighted position on 2 to 10 ordered criteria levels), box (the four edges of one target in an image; needs Jev 1.14 and an image, and takes no criteria).
+const instructions = `The evaluate tool asks a decision model for typed judgments and probabilities, not generated text: TypeSafe's Jev, or Cloudflare's Clef through Ollama, whichever backend in the chain below serves the call.
+- Question types: noul (probability a yes/no condition holds), choice (one option from a criteria map), score (probability-weighted position on 2 to 10 ordered criteria levels), box (the four edges of one target in an image; needs Jev 1.14 and an image, and takes no criteria; Clef has no box).
 - Images go in the images map under a name you choose. Reference that name as a whole string value, or as {"image":"name"}, inside state, instructions, or criteria. The server builds the provider's wire format. Images and box are off until the operator sets JEV_IMAGES=true; when on, the bytes leave the machine and are billed.
 - Ask one narrow judgment per question. Question ids are NOT sent to the model, so instructions must carry the full meaning.
 - Put everything the judgment needs in state; prefer a JSON object with named fields, and reference nested fields with backticked paths like ` + "`ticket.messages[0].text`" + `.
@@ -226,23 +226,42 @@ func distinctNotes(specs []ProviderSpec, note func(ProviderSpec) string) string 
 	return out
 }
 
-// setupInstructions is what the plugin's server says, with no tools, when no
-// credential source is configured at all.
-const setupInstructions = `Jev has no TypeSafe or OpenRouter credential on this machine, so this server offers no tools.
-To enable the evaluate tool:
-1. Put a TypeSafe key in ~/.config/racecraft-jev/typesafe.key, or an OpenRouter key in ~/.config/racecraft-jev/openrouter.key, readable only by you (chmod 600).
-2. Reconnect this MCP server.
-Until then, make any judgment yourself in the ordinary way.`
+// setupMessage is what the plugin's server says, with no tools, when no hop
+// in the configured chain has a credential. It names that chain's backends
+// (missing, also used in the stderr line) and their key files, not a fixed
+// pair.
+func setupMessage(r resolvedHops) (missing, instructions string) {
+	labels := make([]string, len(r.hops))
+	files := make([]string, len(r.hops))
+	for i, hop := range r.hops {
+		p := hop.config.Provider
+		labels[i] = p.Label
+		files[i] = indefiniteArticle(p.Label) + " " + p.Label + " key in ~/" + pluginKeyDirectory + "/" + p.Name + ".key"
+	}
+	missing = strings.Join(labels, " or ")
+	return missing, "The evaluate server has no " + missing + " credential on this machine, so it offers no tools.\n" +
+		"To enable the evaluate tool:\n" +
+		"1. Put " + strings.Join(files, ", or ") + ", readable only by you (chmod 600).\n" +
+		"2. Reconnect this MCP server.\n" +
+		"Until then, make any judgment yourself in the ordinary way."
+}
+
+func indefiniteArticle(word string) string {
+	if word != "" && strings.ContainsRune("AEIOU", rune(word[0])) {
+		return "an"
+	}
+	return "a"
+}
 
 // newSetupServer is the server `mcp --plugin-defaults` runs when nothing is
 // configured: connected, with no tools, and instructions that say how to set
 // Jev up. A user without a key then sees a server that explains itself
 // rather than one that failed to start.
-func newSetupServer() *mcp.Server {
+func newSetupServer(text string) *mcp.Server {
 	return mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
 		&mcp.ServerOptions{
-			Instructions: setupInstructions,
+			Instructions: text,
 			// Advertised, with an empty list, so a client that asks for tools
 			// gets none rather than an error.
 			Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}},
@@ -262,8 +281,9 @@ func serve(ctx context.Context, pluginDefaults bool) error {
 	chain, cfg, err := startChain(resolved, os.Stderr, os.Stderr)
 	if pluginDefaults {
 		if chain.credentialExit() == exitUnconfigured {
-			fmt.Fprintln(os.Stderr, "evaluate: no TypeSafe or OpenRouter credential is configured; serving setup instructions with no tools")
-			return newSetupServer().Run(ctx, &mcp.StdioTransport{})
+			missing, setup := setupMessage(resolved)
+			fmt.Fprintln(os.Stderr, "evaluate: no "+missing+" credential is configured; serving setup instructions with no tools")
+			return newSetupServer(setup).Run(ctx, &mcp.StdioTransport{})
 		}
 	}
 	if err != nil {

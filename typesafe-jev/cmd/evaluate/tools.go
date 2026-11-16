@@ -109,14 +109,14 @@ func send(ctx context.Context, c *Client, p preparedCall, preparationError error
 func evaluateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name: "evaluate",
-		Description: "Jev is a fast structured-decision model: unstructured state in, typed answers " +
-			"(noul, choice, score, box) with calibrated confidence out; 70-500ms, schema-enforced. " +
+		Description: "Asks a structured-decision model (TypeSafe's Jev, or Cloudflare's Clef through Ollama): unstructured state in, " +
+			"typed answers (noul, choice, score, box) with confidence out; fast and schema-enforced. " +
 			"Use for classification, routing, scoring, extraction, branching, guardrails/judging, " +
 			"and map-reduce over large data — wherever hand-written logic is too brittle or latency matters. " +
 			"Not for prose, code, or free-form text: the answer space must be enumerable up front (max 255 options, score scales of 2 to 10). " +
 			"Images are named in the images map and referenced from state, instructions, or criteria; " +
 			"they are sent only when the operator set JEV_IMAGES=true, and the bytes leave the machine and are billed. " +
-			"Box locates one target in an image and needs Jev 1.14. " +
+			"Box locates one target in an image and needs Jev 1.14; Clef has no box, so a box question skips Ollama backends. " +
 			"Calling this sends the supplied state, images, and questions to an external provider and may incur charges; " +
 			"the read-only hint means it changes nothing locally, not that it is free or private.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},

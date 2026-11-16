@@ -103,8 +103,10 @@ gh attestation verify evaluate-darwin-arm64.tar.gz --bundle provenance.sigstore.
 |---|---|---|---|
 | unset or `typesafe` | `https://api.typesafe.ai/v1/systemone` | `TYPESAFE_API_KEY` | `jev-latest` |
 | `openrouter` | `https://openrouter.ai/api/alpha/decisions` | `OPENROUTER_API_KEY` | `~typesafe/jev-latest` |
+| `ollama` | `https://ollama.com/v1/systemone` | `OLLAMA_API_KEY` | `clef` |
+| `ollama-local` | `http://localhost:11434/v1/systemone` | none: the signed-in Ollama app | `clef:cloud` |
 
-Get a TypeSafe key at <https://console.typesafe.ai/>, or an OpenRouter key at <https://openrouter.ai/keys>. OpenRouter's Decisions endpoint is on its `/api/alpha/` path and may move.
+Get a TypeSafe key at <https://console.typesafe.ai/>, or an OpenRouter key at <https://openrouter.ai/keys>. OpenRouter's Decisions endpoint is on its `/api/alpha/` path and may move. The two Ollama backends serve Cloudflare's Clef instead of Jev and are opt-in: `ollama` takes a key from <https://ollama.com/settings/keys>, and `ollama-local` uses the Ollama app you signed in with `ollama signin`. Put them in a chain with `JEV_CHAIN`, for example `typesafe,openrouter,ollama-local,ollama`.
 
 **3. Put the key in a private file.** This is preferred over an environment variable, which a client launched from the desktop does not inherit from your shell:
 
@@ -236,6 +238,7 @@ the primary.
 | `JEV_MODEL` | backend default | Model id for configured hop 1 only, passed through unchanged |
 | `JEV_API_KEY_FILE` | unset | Absolute path to a private key file; wins over the environment key |
 | `JEV_REQUEST_TIMEOUT` | `45s` | Bounds the whole evaluation, retry waits included |
+| `JEV_HOP_TIMEOUT` | `10s` | Bounds each hop's attempts and retry waits; positive, and no longer than `JEV_REQUEST_TIMEOUT`. The last hop that can take the request gets all the time left |
 | `JEV_MAX_RETRIES` | `3` | Additional attempts, 0 to 5 |
 | `JEV_FALLBACK_PROVIDER` | unset | Legacy second backend, used when the primary refuses its credential (401, 402, 403), is not found (404), throttles (429), fails (5xx) or cannot be reached. The session then stays on it. Never used for a request the primary rejected by shape |
 | `JEV_FALLBACK_API_KEY_FILE` | unset | The fallback's key file, by the same rules as `JEV_API_KEY_FILE` |
