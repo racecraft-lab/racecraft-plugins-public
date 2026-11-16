@@ -274,8 +274,7 @@ class DeletedFileTests(GitFixture):
     def test_deleted_file_assertions_are_lost_even_when_names_are_disclosed(self) -> None:
         path = "tests/test_sample.py"
         self.transition({path: PYTHON + '    assert 1 == 1\n'}, {path: None})
-        output = self.expect(1)
-        self.assertIn(f'`{path}` (2 net assertion lines lost)', output)
+        self.assertIn(f'`{path}` (2 net assertion lines lost)', self.expect(1))
         self.expect(0, f"## Test changes\ntest_kept {path}")
 
     def test_go_inventory_needs_no_go_and_excludes_receiver_methods(self) -> None:
