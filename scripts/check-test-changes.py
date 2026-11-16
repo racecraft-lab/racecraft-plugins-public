@@ -20,7 +20,10 @@ import sys
 import tokenize
 from collections import Counter
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from release_note_policy import FenceOpening, is_closing_fence, opening_fence  # noqa: E402
 
 GO_LITERALS = re.compile(r'//[^\n]*|/\*.*?\*/|`[^`]*`|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', re.S)
 GO_TOKEN = re.compile(r"\bfunc\s+(\w+)\s*\(|[()[\]{}]")
@@ -183,29 +186,22 @@ def removed_tests(before: dict[str, TestFile], after: dict[str, TestFile]) -> li
     return missing
 
 
-def fence_after(line: str, fence: str) -> str:
-    marker = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
-    if not marker:
-        return fence
-    token = marker[1]
-    if not fence:
-        return token
-    return "" if token[0] == fence[0] and len(token) >= len(fence) else fence
-
-
 def disclosure_section(body: str) -> str:
     body = re.sub(r"<!--.*?(?:-->|\Z)", "", body, flags=re.S)
     section = []
     active = False
-    fence = ""
+    fence: FenceOpening | None = None
     for line in body.splitlines():
-        next_fence = fence_after(line, fence)
-        if not fence and not next_fence:
+        if fence is not None:
+            if is_closing_fence(line, fence):
+                fence = None
+        elif (opening := opening_fence(line)) is not None:
+            fence = opening
+        else:
             heading = re.match(r"^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$", line)
             if heading and len(heading[1]) <= 2:
                 active = heading[1] == "##" and heading[2] == "Test changes"
                 continue
-        fence = next_fence
         if active:
             section.append(line)
     return "\n".join(section)

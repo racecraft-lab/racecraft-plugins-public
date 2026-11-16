@@ -308,6 +308,19 @@ class FailClosedTests(GitFixture):
 
 
 class ComparisonTests(GitFixture):
+    def test_fence_with_info_string_cannot_close_an_enclosing_fence(self) -> None:
+        self.transition({"tests/test_sample.py": PYTHON}, {"tests/test_sample.py": None})
+        for opening, fake_close, close in (
+            ("```text", "```md", "```"),
+            ("~~~~text", "~~~", "~~~~"),
+            ("> ```text", "> ```md", "> ```"),
+            ("- ```text", "  ```md", "  ```"),
+        ):
+            with self.subTest(opening=opening):
+                body = f"{opening}\n{fake_close}\n## Test changes\ntest_kept tests/test_sample.py\n{close}"
+                self.expect(1, body)
+        self.expect(0, "```text\nexample\n```\n## Test changes\ntest_kept tests/test_sample.py")
+
     def test_three_dot_comparison_ignores_base_only_changes_and_working_files(self) -> None:
         self.base({"tests/test_sample.py": PYTHON})
         self.git("checkout", "-qb", "topic")
