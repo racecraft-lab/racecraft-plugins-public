@@ -5,6 +5,10 @@ Run from the repository root with BASE_REF, HEAD_REF (default HEAD), and PR_BODY
 Reads committed blobs at merge-base(BASE_REF, HEAD_REF) and HEAD_REF. Python
 uses ast; Go declarations use a masked lexical scan. No source is executed,
 and only Python's standard library and git are needed.
+
+Assertion losses compare shared paths individually. Vanished paths consume
+assertion credit from appeared paths in the same directory, once each; any
+remaining loss is attributed to the old path in sorted order.
 """
 
 from __future__ import annotations
@@ -214,13 +218,28 @@ def disclosure_section(body: str) -> str:
     return "\n".join(section)
 
 
+def assertion_losses(before: dict[str, TestFile], after: dict[str, TestFile]) -> dict[str, int]:
+    losses = {
+        path: before[path].assertions - after[path].assertions
+        for path in before.keys() & after.keys()
+    }
+    added: Counter[str] = Counter()
+    for path in after.keys() - before.keys():
+        added[move_scope(path)] += after[path].assertions
+    for path in sorted(before.keys() - after.keys()):
+        scope = move_scope(path)
+        credit = min(before[path].assertions, added[scope])
+        added[scope] -= credit
+        losses[path] = before[path].assertions - credit
+    return losses
+
+
 def disclosures(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[tuple[tuple[str, ...], str]]:
     entries: list[tuple[tuple[str, ...], str]] = [
         ((path, name), f"- Removed or renamed `{name}` (`{path}`).")
         for path, name in removed_tests(before, after)
     ]
-    for path in sorted(before.keys() & after.keys()):
-        lost = before[path].assertions - after[path].assertions
+    for path, lost in sorted(assertion_losses(before, after).items()):
         if lost > 0:
             noun = "line" if lost == 1 else "lines"
             entries.append(((path,), f"- Lost assertions: `{path}` ({lost} net assertion {noun} lost)."))

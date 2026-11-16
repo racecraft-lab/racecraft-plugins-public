@@ -151,6 +151,39 @@ class RemovalTests(GitFixture):
 
 
 class MoveTests(GitFixture):
+    def test_same_directory_rename_reports_two_lost_assertions_at_old_path(self) -> None:
+        source = 'def test_one():\n    x = 1\n    assert x == 1\n    assert x > 0\n'
+        self.transition(
+            {"tests/test_a.py": source},
+            {"tests/test_a.py": None, "tests/test_b.py": 'def test_one():\n    x = 1\n'},
+        )
+        output = self.expect(1)
+        self.assertIn('`tests/test_a.py` (2 net assertion lines lost)', output)
+        self.assertNotIn("Removed or renamed", output)
+        self.expect(0, "## Test changes\ntests/test_a.py")
+
+    def test_same_directory_rename_preserves_every_assertion(self) -> None:
+        source = PYTHON + '    assert 1 == 1\n'
+        self.transition(
+            {"tests/test_a.py": source},
+            {"tests/test_a.py": None, "tests/test_b.py": source},
+        )
+        self.expect(0)
+
+    def test_vanished_files_share_only_new_file_assertions_in_the_same_scope(self) -> None:
+        self.transition(
+            {"tests/test_a.py": PYTHON, "tests/test_b.py": PYTHON, "tests/test_kept.py": PYTHON},
+            {
+                "tests/test_a.py": None, "tests/test_b.py": None,
+                "tests/test_c.py": PYTHON,
+                "tests/nested/test_d.py": PYTHON,
+                "tests/test_kept.py": PYTHON + '    assert 1 == 1\n',
+            },
+        )
+        output = self.expect(1)
+        self.assertEqual(1, output.count("net assertion line lost"))
+        self.assertIn('`tests/test_b.py` (1 net assertion line lost)', output)
+
     def test_go_move_in_same_package_passes_but_other_package_does_not(self) -> None:
         self.base({"pkg/old_test.go": GO})
         (self.repo / "pkg/old_test.go").unlink()
@@ -238,6 +271,13 @@ t.Error("bad")
 
 
 class DeletedFileTests(GitFixture):
+    def test_deleted_file_assertions_are_lost_even_when_names_are_disclosed(self) -> None:
+        path = "tests/test_sample.py"
+        self.transition({path: PYTHON + '    assert 1 == 1\n'}, {path: None})
+        output = self.expect(1)
+        self.assertIn(f'`{path}` (2 net assertion lines lost)', output)
+        self.expect(0, f"## Test changes\ntest_kept {path}")
+
     def test_go_inventory_needs_no_go_and_excludes_receiver_methods(self) -> None:
         source = GO + '''func BenchmarkWork(b *testing.B) {}
 func FuzzWork(f *testing.F) {}
