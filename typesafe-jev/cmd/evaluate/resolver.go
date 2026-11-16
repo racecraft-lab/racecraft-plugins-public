@@ -353,9 +353,15 @@ func newClients(cfg Config, log io.Writer) (*chainRunner, Config, error) {
 
 // configuredChainNames serializes setup's resolved order, including later hops.
 func configuredChainNames(cfg Config) string {
-	var names []string
-	for _, hop := range cfg.chainConfigs() {
-		names = append(names, hop.Provider.Name)
+	return cfg.chainProviders(func(spec ProviderSpec) string { return spec.Name }, ",")
+}
+
+// chainProviders joins one field of every configured hop's provider, in chain
+// order.
+func (c Config) chainProviders(field func(ProviderSpec) string, sep string) string {
+	var parts []string
+	for _, hop := range c.chainConfigs() {
+		parts = append(parts, field(hop.Provider))
 	}
-	return strings.Join(names, ",")
+	return strings.Join(parts, sep)
 }

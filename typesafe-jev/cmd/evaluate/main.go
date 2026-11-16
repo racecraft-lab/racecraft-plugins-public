@@ -245,11 +245,7 @@ func setupInstructions(r resolvedHops) string {
 // missingCredentials names the chain's backends for the setup text and its
 // stderr line, so the two cannot disagree.
 func missingCredentials(r resolvedHops) string {
-	labels := make([]string, len(r.hops))
-	for i, hop := range r.hops {
-		labels[i] = hop.config.Provider.Label
-	}
-	return strings.Join(labels, " or ")
+	return r.config.chainProviders(func(spec ProviderSpec) string { return spec.Label }, " or ")
 }
 
 func indefiniteArticle(word string) string {
