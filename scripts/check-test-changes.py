@@ -190,26 +190,35 @@ def go_scope(token: re.Match[str]) -> str | None:
     return MODULE if token[0][-1].isalpha() else None
 
 
+def go_top_level_tokens(masked: str) -> list[re.Match[str]]:
+    """GO_TOKEN matches outside every bracket; unbalanced brackets fail."""
+    found = []
+    stack: list[str] = []
+    pairs = {")": "(", "]": "[", "}": "{"}
+    for token in GO_TOKEN.finditer(masked):
+        if not stack:
+            found.append(token)
+        delimiter = token[0][-1]
+        if delimiter in "([{":
+            stack.append(delimiter)
+        elif delimiter in pairs and (not stack or stack.pop() != pairs[delimiter]):
+            raise ValueError("Go file has mismatched delimiters")
+    if stack:
+        raise ValueError("Go file has unclosed delimiters")
+    return found
+
+
 def go_layout(masked: str) -> Layout:
     if not re.match(r"\s*package\s+\w+", masked):
         raise ValueError("Go file has no package declaration")
     names = []
     starts: list[tuple[int, str]] = []
-    stack: list[str] = []
-    pairs = {")": "(", "]": "[", "}": "{"}
-    for token in GO_TOKEN.finditer(masked):
-        scope = None if stack else go_scope(token)
+    for token in go_top_level_tokens(masked):
+        scope = go_scope(token)
         if scope is not None:
             starts.append((masked.count("\n", 0, token.start()), scope))
             if token[3] and token[0][-1] == "(" and GO_TEST_NAME.fullmatch(token[3]):
                 names.append(token[3])
-        delimiter = token[0][-1]
-        if delimiter in "([{":
-            stack.append(delimiter)
-        elif delimiter in ")]}" and (not stack or stack.pop() != pairs[delimiter]):
-            raise ValueError("Go file has mismatched delimiters")
-    if stack:
-        raise ValueError("Go file has unclosed delimiters")
     owners = [MODULE] * len(source_rows(masked))
     for row, scope in starts:
         owners[row:] = [scope] * (len(owners) - row)

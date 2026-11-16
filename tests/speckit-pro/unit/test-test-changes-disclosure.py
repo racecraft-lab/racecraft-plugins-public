@@ -277,7 +277,7 @@ def asserts(prefix: str, count: int) -> str:
     return "".join(f"    assert {prefix}{index} == {index}\n" for index in range(count))
 
 
-class FunctionAccountingTests(GitFixture):
+class FunctionMoveTests(GitFixture):
     def test_rename_cannot_borrow_assertions_from_an_unrelated_new_file(self) -> None:
         self.transition(
             {"tests/test_a.py": "def test_a():\n" + asserts("x", 3)},
@@ -306,6 +306,18 @@ class FunctionAccountingTests(GitFixture):
         )
         self.expect(0)
 
+    def test_function_moved_to_another_directory_needs_disclosure(self) -> None:
+        helper = "def check_value(value):\n    assert value > 0\n"
+        self.transition(
+            {"tests/test_a.py": PYTHON + helper},
+            {"tests/test_a.py": PYTHON + "    assert 1 == 1\n", "tests/nested/test_helpers.py": helper},
+        )
+        output = self.expect(1)
+        self.assertIn("- Lost assertions: `tests/test_a.py` (1 net assertion line lost) in `check_value`.", output)
+        self.expect(0, "## Test changes\ncheck_value tests/test_a.py")
+
+
+class AssertionChangeTests(GitFixture):
     def test_rewritten_assertions_with_the_same_count_need_disclosure(self) -> None:
         python = 'def test_one(value):\n    assert value == "abc"\n    self.assertEqual(\n        1,\n        value,\n    )\n'
         go = 'package sample\ntype fixture struct{}\nfunc (f *fixture) check(t *testing.T) {\n    t.Fatalf("want %d", 1)\n}\n'
@@ -328,16 +340,6 @@ class FunctionAccountingTests(GitFixture):
             {"tests/test_sample.py": before.replace("# first", "# renamed comment") + "    assert   value > 0\n"},
         )
         self.expect(0)
-
-    def test_function_moved_to_another_directory_needs_disclosure(self) -> None:
-        helper = "def check_value(value):\n    assert value > 0\n"
-        self.transition(
-            {"tests/test_a.py": PYTHON + helper},
-            {"tests/test_a.py": PYTHON + "    assert 1 == 1\n", "tests/nested/test_helpers.py": helper},
-        )
-        output = self.expect(1)
-        self.assertIn("- Lost assertions: `tests/test_a.py` (1 net assertion line lost) in `check_value`.", output)
-        self.expect(0, "## Test changes\ncheck_value tests/test_a.py")
 
     def test_printed_disclosures_pasted_back_pass(self) -> None:
         self.transition(
