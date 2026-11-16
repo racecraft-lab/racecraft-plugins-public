@@ -194,7 +194,9 @@ func (c *Client) attempt(ctx context.Context, body []byte, extra map[string]stri
 	if err != nil {
 		return nil, 0, "", err
 	}
-	r.Header.Set("Authorization", "Bearer "+c.APIKey.reveal())
+	if c.Provider.AuthKind != authNone {
+		r.Header.Set("Authorization", "Bearer "+c.APIKey.reveal())
+	}
 	r.Header.Set("Content-Type", "application/json")
 	for key, value := range extra {
 		// Only the headers encodeRequest decided this backend may send.

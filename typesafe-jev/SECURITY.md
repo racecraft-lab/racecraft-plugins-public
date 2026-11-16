@@ -17,7 +17,8 @@ repository's [disclosure process](../SECURITY.md#disclosure-process).
 ## Scope
 
 This is a local stdio MCP server. It runs as a subprocess of your agent, with
-your permissions, and talks to one configured provider endpoint.
+your permissions, and talks only to the provider endpoints in its configured
+backend chain.
 
 In scope:
 
@@ -43,8 +44,13 @@ Out of scope:
 
 ## What this tool does with your data
 
-Calling `evaluate` sends the `state` and `questions` of that call to the
-configured provider over HTTPS. Nothing else does. There is no telemetry, no
+Calling `evaluate` sends the `state` and `questions` of that call to a
+provider in the configured backend chain. Remote providers are reached over
+HTTPS. The one exception is `ollama-local`, which sends them over plain HTTP to
+`localhost:11434`, the signed-in Ollama daemon on your own machine, with no
+credential. Any local process listening on that port receives them, so add
+`ollama-local` to the chain only on a machine where you run that daemon.
+Nothing else sends request contents. There is no telemetry, no
 background activity, and no logging of request contents.
 
 The tool is annotated read-only, meaning it changes nothing on your machine.

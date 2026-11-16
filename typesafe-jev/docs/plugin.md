@@ -156,8 +156,10 @@ mask the operator's chain file. Resolution order is:
    `typesafe` alone. Both modes use `jev-latest` on TypeSafe.
 
 A chain accepts at most four distinct registered providers, with no empty
-entries. The registered providers are `typesafe`, `openrouter` and `ollama`
-(Ollama Cloud, opt-in through the chain). A missing chain file uses the built-in order; an unreadable or
+entries. The registered providers are `typesafe`, `openrouter`, `ollama`
+(Ollama Cloud) and `ollama-local` (the signed-in local daemon); both Ollama
+routes are opt-in through the chain. A missing chain file uses the built-in
+order; an unreadable or
 invalid file fails startup. Environment configuration wins without reading the
 file. `evaluate call --plugin-defaults` and the MCP server resolve identically.
 If the home directory is empty or relative, no chain file is read; the mode's
@@ -182,7 +184,11 @@ restart. Each hop enforces its own row's limits. A request one hop cannot take
 goes to the first later hop that can, before any network call, and the session
 stays where it is. A failure and a route compose: when the session's hop fails
 and the next hop cannot take this request, the session still moves and the call
-routes on (FB-08). Account skipping belongs to a later layer. Each hop's
+routes on (FB-08). An account failure (401, 402, 403, 429 or 5xx) also skips
+every later hop that bills the same account: when `ollama-local` fails that
+way, the call does not try `ollama` next. A daemon 502 or 503 is the exception:
+it means the daemon could not reach the cloud, so `ollama` is still tried (see
+[provider-contracts.md](provider-contracts.md)). Each hop's
 attempts stop at `JEV_HOP_TIMEOUT` (10s by default), and the last hop that can
 take the request gets the time left; a hop deadline routes only that call on
 (see [provider-contracts.md](provider-contracts.md)). The backend note lists the loaded order and updates the tool description with the

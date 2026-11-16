@@ -208,6 +208,9 @@ func homeDir(look lookupFunc) string {
 // diagnostics stable when more than one setting is invalid. An empty name
 // means the hop has no key-file variable and uses discovery alone.
 func resolveHopKeyFile(look lookupFunc, name, provider, home string) (string, bool, error) {
+	if providers[provider].AuthKind == authNone {
+		return "", false, nil
+	}
 	if name != "" {
 		path, err := resolveKeyFileVar(look, name)
 		if err != nil || path != "" {
