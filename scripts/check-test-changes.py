@@ -208,7 +208,7 @@ def disclosure_section(body: str) -> str:
 
 
 def disclosures(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[tuple[tuple[str, ...], str]]:
-    entries = [
+    entries: list[tuple[tuple[str, ...], str]] = [
         ((path, name), f"- Removed or renamed `{name}` (`{path}`).")
         for path, name in removed_tests(before, after)
     ]
