@@ -58,8 +58,8 @@ repository tooling or tests giving a wrong answer:
   open, when the PR body does not name it as a decision for the owner. Typical
   cases: how an error is classified, whether a failure moves a session or one
   call, a default value, a retry or timeout rule. Ask for a "Decisions made
-  here" line in the PR body; the finding clears once the owner has seen it,
-  whatever they decide.
+  here" line in the PR body; the finding clears once the PR body names the
+  decision, whatever the owner later decides about it.
 
 Style, naming, prose, and refactoring suggestions are Nit at most.
 
