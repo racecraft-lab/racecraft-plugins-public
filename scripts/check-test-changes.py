@@ -158,7 +158,7 @@ def inventory(ref: str, registered: set[str]) -> dict[str, TestFile]:
 
 
 def move_scope(path: str) -> str:
-    return str(PurePosixPath(path).parent) if path.endswith(".go") else "python"
+    return str(PurePosixPath(path).parent)
 
 
 def removed_tests(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[tuple[str, str]]:

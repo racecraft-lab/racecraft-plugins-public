@@ -153,12 +153,17 @@ class MoveTests(GitFixture):
         )
         self.assertIn("`test_kept` (`tests/test_old.py`)", self.expect(1))
 
-    def test_python_move_between_test_files_passes(self) -> None:
-        self.base({"tests/test_old.py": PYTHON})
+    def test_python_move_requires_same_directory(self) -> None:
+        source = 'def test_invalid_input_fails_closed():\n    assert check("bad") == 1\n'
+        self.base({"tests/test_old.py": source})
         (self.repo / "tests/test_old.py").unlink()
-        self.write("tests/nested/new_test.py", PYTHON)
+        self.write("tests/new_test.py", source)
         self.commit()
         self.expect(0)
+        (self.repo / "tests/new_test.py").unlink()
+        self.write("tests/nested/new_test.py", source.replace('assert check("bad") == 1', "pass"))
+        self.commit()
+        self.assertIn('`test_invalid_input_fails_closed` (`tests/test_old.py`)', self.expect(1))
 
 
 class AssertionTests(GitFixture):
