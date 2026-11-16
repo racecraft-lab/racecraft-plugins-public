@@ -9,3 +9,5 @@ still contain text.
 ```release-note
 
 ```
+
+<!-- Optional: add a ## Test changes section naming removed/renamed test functions and paths with net assertion losses. -->

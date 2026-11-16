@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""Require disclosure of removed tests and net assertion losses.
+
+Run from the repository root with BASE_REF, HEAD_REF (default HEAD), and PR_BODY.
+Reads committed blobs at merge-base(BASE_REF, HEAD_REF) and HEAD_REF. Python
+uses ast; Go uses gofmt's parser (Go must be installed). No source is executed.
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import os
+import re
+import subprocess
+import sys
+from collections import Counter
+from dataclasses import dataclass
+from pathlib import PurePosixPath
+
+GO_LITERALS = re.compile(r'//[^\n]*|/\*.*?\*/|`[^`]*`|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', re.S)
+GO_FUNCTION = re.compile(r"^func\s+(\w+)\s*\(([^)]*)\)", re.M)
+GO_ASSERTION = re.compile(r"\b(?:t\.(?:Fatalf?|Errorf?)\s*\(|(?:require|assert)\.)")
+PY_ASSERTION = re.compile(r"\bassert\s+|\bself\.assert\w*\s*\(|\bpytest\.raises\s*\(")
+
+
+@dataclass(frozen=True)
+class TestFile:
+    names: tuple[str, ...]
+    assertions: int
+
+
+def command(arguments: list[str]) -> bytes:
+    result = subprocess.run(
+        ["git", *arguments], capture_output=True, check=False, shell=False,
+    )
+    return command_output(result, "git")
+
+
+def command_output(result: subprocess.CompletedProcess[bytes], executable: str) -> bytes:
+    if result.returncode:
+        detail = result.stderr.decode("utf-8", errors="replace").strip()
+        raise ValueError(f"{executable} failed (exit {result.returncode}): {detail}")
+    return result.stdout
+
+
+def commit_ref(ref: str) -> str:
+    if not ref:
+        raise ValueError("BASE_REF and HEAD_REF must be non-empty")
+    return command(["rev-parse", "--verify", "--end-of-options", f"{ref}^{{commit}}"]).decode().strip()
+
+
+def is_test_file(path: str) -> bool:
+    file = PurePosixPath(path)
+    if path.endswith("_test.go"):
+        return True
+    if not path.startswith("tests/") or file.suffix != ".py":
+        return False
+    return (
+        file.name.startswith("test_") or file.name.endswith("_test.py")
+        or (path.startswith("tests/speckit-pro/") and file.name.startswith("test-"))
+    )
+
+
+def python_names(source: bytes) -> tuple[str, ...]:
+    tree = ast.parse(source)
+    # Only module-level tests and class methods, not nested helper functions.
+    nodes: list[ast.AST] = list(tree.body)
+    names = []
+    while nodes:
+        node = nodes.pop()
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name.startswith("test_"):
+                names.append(node.name)
+        else:
+            nodes.extend(ast.iter_child_nodes(node))
+    return tuple(names)
+
+
+def go_names(source: bytes) -> tuple[str, ...]:
+    result = subprocess.run(["gofmt"], input=source, capture_output=True, check=False, shell=False)
+    formatted = command_output(result, "gofmt").decode("utf-8")
+    masked = GO_LITERALS.sub(lambda match: re.sub(r"[^\n]", " ", match[0]), formatted)
+    # gofmt on stdin accepts fragments; a tracked Go file must be a full file.
+    if not re.match(r"\s*package\s+\w+", masked):
+        raise ValueError("Go file has no package declaration")
+    names = []
+    for name, parameters in GO_FUNCTION.findall(masked):
+        if name.startswith("Example") and not parameters.strip():
+            names.append(name)
+            continue
+        for prefix, argument in (("Test", "T"), ("Benchmark", "B"), ("Fuzz", "F")):
+            suffix = name.removeprefix(prefix)
+            if not name.startswith(prefix) or (suffix and suffix[0].islower()):
+                continue
+            if re.fullmatch(rf"\w+\s+\*\s*testing\s*\.\s*{argument}\s*,?", parameters.strip()):
+                names.append(name)
+    return tuple(names)
+
+
+def inventory(ref: str) -> dict[str, TestFile]:
+    paths = command(["ls-tree", "-r", "--name-only", "-z", ref]).decode("utf-8").split("\0")
+    files = {}
+    for path in filter(is_test_file, paths):
+        source = command(["show", f"{ref}:{path}"])
+        try:
+            names = go_names(source) if path.endswith(".go") else python_names(source)
+            pattern = GO_ASSERTION if path.endswith(".go") else PY_ASSERTION
+            count = sum(bool(pattern.search(line)) for line in source.decode("utf-8").splitlines())
+        except (SyntaxError, UnicodeError, ValueError) as exc:
+            raise ValueError(f"unparseable test file {path} at {ref}: {exc}") from exc
+        files[path] = TestFile(names, count)
+    return files
+
+
+def move_scope(path: str) -> str:
+    return str(PurePosixPath(path).parent) if path.endswith(".go") else "python"
+
+
+def removed_tests(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[tuple[str, str]]:
+    # Match unchanged identities first, then consume newly located functions
+    # once each. A pre-existing namesake must not hide a removal.
+    removed: list[tuple[str, str]] = []
+    added: Counter[tuple[str, str]] = Counter()
+    for path in sorted(before.keys() | after.keys()):
+        old = Counter(before.get(path, TestFile((), 0)).names)
+        new = Counter(after.get(path, TestFile((), 0)).names)
+        removed.extend((path, name) for name in (old - new).elements())
+        added.update((move_scope(path), name) for name in (new - old).elements())
+    missing = []
+    for path, name in removed:
+        key = (move_scope(path), name)
+        if added[key]:
+            added[key] -= 1
+        else:
+            missing.append((path, name))
+    return missing
+
+
+def fence_after(line: str, fence: str) -> str:
+    marker = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+    if not marker:
+        return fence
+    token = marker[1]
+    if not fence:
+        return token
+    return "" if token[0] == fence[0] and len(token) >= len(fence) else fence
+
+
+def disclosure_section(body: str) -> str:
+    body = re.sub(r"<!--.*?(?:-->|\Z)", "", body, flags=re.S)
+    section = []
+    active = False
+    fence = ""
+    for line in body.splitlines():
+        next_fence = fence_after(line, fence)
+        if not fence and not next_fence:
+            heading = re.match(r"^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$", line)
+            if heading and len(heading[1]) <= 2:
+                active = heading[1] == "##" and heading[2] == "Test changes"
+                continue
+        fence = next_fence
+        if active:
+            section.append(line)
+    return "\n".join(section)
+
+
+def disclosures(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[tuple[str, str]]:
+    entries = [
+        (name, f"- Removed or renamed `{name}` (`{path}`).")
+        for path, name in removed_tests(before, after)
+    ]
+    for path in sorted(before.keys() & after.keys()):
+        lost = before[path].assertions - after[path].assertions
+        if lost > 0:
+            noun = "line" if lost == 1 else "lines"
+            entries.append((path, f"- Lost assertions: `{path}` ({lost} net assertion {noun} lost)."))
+    return entries
+
+
+def missing_disclosures(entries: list[tuple[str, str]], section: str) -> list[str]:
+    missing = []
+    for token, description in entries:
+        boundary = r"[\w./-]" if "/" in token else r"\w"
+        if not re.search(rf"(?<!{boundary}){re.escape(token)}(?!{boundary})", section):
+            missing.append(description)
+    return missing
+
+
+def main() -> int:
+    argparse.ArgumentParser(description=__doc__).parse_args()
+    try:
+        base = commit_ref(os.environ.get("BASE_REF", ""))
+        head = commit_ref(os.environ.get("HEAD_REF", "HEAD"))
+        merge_base = command(["merge-base", base, head]).decode().strip()
+        entries = disclosures(inventory(merge_base), inventory(head))
+        missing = missing_disclosures(entries, disclosure_section(os.environ.get("PR_BODY", "")))
+    except (OSError, ValueError, UnicodeError) as exc:
+        print("::error::Test changes check failed.", file=sys.stderr)
+        print(f"Reason: {str(exc)!r}", file=sys.stderr)
+        return 1
+    if missing:
+        print("::error::Test changes require disclosure in a ## Test changes section.", file=sys.stderr)
+        print("Missing disclosures (paste into the PR body):\n## Test changes", file=sys.stderr)
+        print("\n".join(missing), file=sys.stderr)
+        return 1
+    print("Test changes: " + ("all changes disclosed." if entries else "no removals or assertion losses."))
+    for _, description in entries:
+        print(description)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
