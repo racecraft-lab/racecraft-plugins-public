@@ -56,17 +56,18 @@ func TestDialTimeoutMovesSessionToFallback(t *testing.T) {
 	t.Cleanup(transport.CloseIdleConnections)
 	c := &Client{
 		Provider: providerAt("typesafe", "http://127.0.0.1:1"), Model: "jev-latest",
-		Timeout: time.Minute, Log: log,
-		HTTP: &http.Client{Transport: transport},
-		Fallback: &Client{
-			Provider: providers["openrouter"], Model: "~typesafe/jev-latest",
-			Timeout: time.Minute,
-			HTTP: &http.Client{Transport: timeoutTransport(func(*http.Request) (*http.Response, error) {
-				fallbackCalls++
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(noulReply)), Header: http.Header{}}, nil
-			})},
-		},
+		Timeout: time.Minute,
+		HTTP:    &http.Client{Transport: transport},
 	}
+	chain := &chainRunner{log: log, hops: []*Client{c, {
+		Provider: providers["openrouter"], Model: "~typesafe/jev-latest",
+		Timeout: time.Minute,
+		HTTP: &http.Client{Transport: timeoutTransport(func(*http.Request) (*http.Response, error) {
+			fallbackCalls++
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(noulReply)), Header: http.Header{}}, nil
+		})},
+	},
+	}}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	_, err := runOn(ctx, c, simpleIn())
@@ -77,7 +78,7 @@ func TestDialTimeoutMovesSessionToFallback(t *testing.T) {
 		t.Errorf("dial timeout classified as (%q, %v); want (\"unreachable\", true)", reason, move)
 	}
 	for call := 0; call < 2; call++ {
-		body, err := runEvaluate(ctx, c, simpleIn())
+		body, err := runEvaluate(ctx, chain, simpleIn())
 		if err != nil || string(body) != noulReply {
 			t.Errorf("call %d: body %s, error %v; want fallback reply", call, body, err)
 		}
@@ -107,7 +108,7 @@ func TestRequestTimeoutKeepsThePrimary(t *testing.T) {
 			log := &strings.Builder{}
 			c := &Client{
 				Provider: providers["typesafe"], Model: "jev-latest",
-				Timeout: tc.requestTimeout, Log: log,
+				Timeout: tc.requestTimeout,
 			}
 			c.HTTP = &http.Client{Transport: timeoutTransport(func(r *http.Request) (*http.Response, error) {
 				primaryCalls++
@@ -117,7 +118,7 @@ func TestRequestTimeoutKeepsThePrimary(t *testing.T) {
 				}
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(noulReply)), Header: http.Header{}}, nil
 			})}
-			c.Fallback = &Client{
+			fallback := &Client{
 				Provider: providers["openrouter"], Model: "~typesafe/jev-latest",
 				Timeout: time.Second,
 				HTTP: &http.Client{Transport: timeoutTransport(func(*http.Request) (*http.Response, error) {
@@ -125,16 +126,17 @@ func TestRequestTimeoutKeepsThePrimary(t *testing.T) {
 					return nil, errors.New("unexpected fallback call")
 				})},
 			}
+			chain := &chainRunner{hops: []*Client{c, fallback}, log: log}
 			ctx, cancel := context.WithTimeout(context.Background(), tc.callerTimeout)
 			defer cancel()
-			if _, err := runEvaluate(ctx, c, simpleIn()); !errors.Is(err, context.DeadlineExceeded) {
+			if _, err := runEvaluate(ctx, chain, simpleIn()); !errors.Is(err, context.DeadlineExceeded) {
 				t.Fatalf("want the request timeout, got %v", err)
 			}
 			if fallbackCalls != 0 || log.Len() != 0 {
 				t.Fatalf("timeout called the fallback %d times; log %q", fallbackCalls, log.String())
 			}
 			c.Timeout = time.Second
-			body, err := runEvaluate(context.Background(), c, simpleIn())
+			body, err := runEvaluate(context.Background(), chain, simpleIn())
 			if err != nil || string(body) != noulReply {
 				t.Fatalf("next call: body %s, error %v", body, err)
 			}

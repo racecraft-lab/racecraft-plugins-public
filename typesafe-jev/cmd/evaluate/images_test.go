@@ -879,10 +879,9 @@ func TestFallbackRebuildsTheOtherWireFormat(t *testing.T) {
 
 	primaryClient := testClient(withImages(providerAt("typesafe", primarySrv.URL)), primarySrv)
 	primaryClient.MaxRetries = 0
-	primaryClient.Fallback = testClient(withImages(providerAt("openrouter", fallbackSrv.URL)), fallbackSrv)
-	primaryClient.Log = &bytes.Buffer{}
+	chain := &chainRunner{hops: []*Client{primaryClient, testClient(withImages(providerAt("openrouter", fallbackSrv.URL)), fallbackSrv)}, log: &bytes.Buffer{}}
 
-	if _, err := runEvaluate(context.Background(), primaryClient, imageRequest(pngBytes, "")); err != nil {
+	if _, err := runEvaluate(context.Background(), chain, imageRequest(pngBytes, "")); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := primary["assets"]; !ok {

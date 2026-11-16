@@ -145,7 +145,7 @@ func (r resolvedHops) credentialExit() int {
 // clients applies the one drop rule. startupLog reports dropped hops for the
 // server; call already reported unusable sources and keeps absent ones quiet.
 // Session moves still go to log in either entry point.
-func (r resolvedHops) clients(log, startupLog io.Writer) (*Client, Config, error) {
+func (r resolvedHops) clients(startupLog io.Writer) ([]*Client, Config, error) {
 	var usable []resolvedHop
 	for _, hop := range r.hops {
 		if hop.loaded.err == nil {
@@ -161,11 +161,11 @@ func (r resolvedHops) clients(log, startupLog io.Writer) (*Client, Config, error
 		return nil, r.config, err
 	}
 	cfg := usable[0].config
-	client := clientForHop(usable[0])
-	if len(usable) == 2 {
-		client.Fallback = clientForHop(usable[1])
-		client.Log = log
-	} else {
+	var clients []*Client
+	for _, hop := range usable {
+		clients = append(clients, clientForHop(hop))
+	}
+	if len(usable) == 1 {
 		cfg.Fallback = nil
 		if len(r.hops) == 2 {
 			if r.hops[0].loaded.err != nil {
@@ -175,7 +175,7 @@ func (r resolvedHops) clients(log, startupLog io.Writer) (*Client, Config, error
 			}
 		}
 	}
-	return client, cfg, nil
+	return clients, cfg, nil
 }
 
 func clientForHop(hop resolvedHop) *Client {
@@ -197,6 +197,6 @@ func newClient(cfg Config) (*Client, error) {
 	return clientForHop(hop), nil
 }
 
-func newClients(cfg Config, log io.Writer) (*Client, Config, error) {
-	return resolveConfiguredHops(cfg, os.LookupEnv).clients(log, log)
+func newClients(cfg Config, log io.Writer) (*chainRunner, Config, error) {
+	return startChain(resolveConfiguredHops(cfg, os.LookupEnv), log, log)
 }
