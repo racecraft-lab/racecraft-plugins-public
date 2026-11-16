@@ -10,4 +10,4 @@ still contain text.
 
 ```
 
-<!-- Optional: add a ## Test changes section naming removed/renamed test functions and paths with net assertion losses. -->
+<!-- Add a ## Test changes section for removals or net assertion losses. Put each removed/renamed test's name and file path on the same line; name each file with lost assertions. -->
