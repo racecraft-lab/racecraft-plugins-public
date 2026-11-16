@@ -5,12 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"syscall"
-	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
@@ -150,61 +148,6 @@ func buildCommit() string {
 	return "unknown"
 }
 
-// newClient builds the HTTP client for cfg. The credential is loaded here and
-// nowhere else, so there is exactly one place a key enters the process.
-//
-// Unlike the version this fork was taken from, the backend comes from
-// JEV_PROVIDER rather than from whichever API key happens to be set. Which
-// credentials are lying around in a shell should not decide where state is
-// sent, or which account pays for it. See docs/upstream-baseline.md.
-func newClient(cfg Config) (*Client, error) {
-	key, err := loadCredential(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &Client{
-		Provider:   applyOperator(cfg.Provider, cfg.AllowImages, cfg.LongContext),
-		Model:      cfg.Model,
-		APIKey:     key,
-		Timeout:    cfg.Timeout,
-		MaxRetries: cfg.MaxRetries,
-		HTTP:       newHTTPClient(),
-		Backoff:    time.Second,
-	}, nil
-}
-
-// newClients builds the primary client and, when the operator configured one,
-// its fallback. It returns the Config that describes what will actually serve,
-// so the server's instructions name the destination in force.
-//
-// A primary whose credential cannot be loaded, such as a missing key file,
-// starts on the fallback outright. A fallback whose credential cannot be
-// loaded is dropped with a line on log, and the primary serves alone. Only
-// when neither loads does the server refuse to start, naming both.
-func newClients(cfg Config, log io.Writer) (*Client, Config, error) {
-	primary, primaryErr := newClient(cfg)
-	if cfg.Fallback == nil {
-		return primary, cfg, primaryErr
-	}
-	fallbackCfg := cfg.fallbackConfig()
-	fallback, fallbackErr := newClient(fallbackCfg)
-	switch {
-	case primaryErr == nil && fallbackErr == nil:
-		primary.Fallback = fallback
-		primary.Log = log
-		return primary, cfg, nil
-	case primaryErr == nil:
-		fmt.Fprintf(log, "evaluate: the %s fallback is off: %v\n", fallbackCfg.Provider.Name, fallbackErr)
-		cfg.Fallback = nil
-		return primary, cfg, nil
-	case fallbackErr == nil:
-		fmt.Fprintf(log, "evaluate: %v; using the %s fallback\n", primaryErr, fallbackCfg.Provider.Name)
-		return fallback, fallbackCfg, nil
-	default:
-		return nil, cfg, fmt.Errorf("%w; the %s fallback cannot start either: %v", primaryErr, fallbackCfg.Provider.Name, fallbackErr)
-	}
-}
-
 // newServer registers the tools for cfg's backend against c. Split out from
 // serve so a test can drive the real registration without a transport or a
 // provider.
@@ -284,18 +227,17 @@ func newSetupServer() *mcp.Server {
 // all, serves the setup instructions instead of refusing to start. A source
 // that exists but is broken still refuses, naming the fix.
 func serve(ctx context.Context, pluginDefaults bool) error {
-	cfg, err := resolveCallConfig(os.LookupEnv, pluginDefaults)
+	resolved, err := resolveHops(os.LookupEnv, pluginDefaults)
 	if err != nil {
 		return err
 	}
 	if pluginDefaults {
-		primary, fallback := classifySources(cfg, os.LookupEnv)
-		if credentialExit(primary, fallback) == exitUnconfigured {
+		if resolved.credentialExit() == exitUnconfigured {
 			fmt.Fprintln(os.Stderr, "evaluate: no TypeSafe or OpenRouter credential is configured; serving setup instructions with no tools")
 			return newSetupServer().Run(ctx, &mcp.StdioTransport{})
 		}
 	}
-	c, cfg, err := newClients(cfg, os.Stderr)
+	c, cfg, err := resolved.clients(os.Stderr, os.Stderr)
 	if err != nil {
 		return err
 	}
