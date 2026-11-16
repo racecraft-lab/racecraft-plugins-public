@@ -35,7 +35,7 @@ fresh worktree holds only tracked files; before any docs command, run
 | typesafe-jev Go checks | `python3 scripts/check-go-module.py check` | `go` (yes, via `validate-plugins`) |
 | Generated-artifact drift; commit first, since any uncommitted change under its paths fails it | `python3 scripts/refresh-release-artifacts.py --check` | `artifact-consistency` (yes, via `validate-plugins`) |
 | PR title | `python3 scripts/check-pr-title.py '<title>'` (the one entry point for local and CI runs). Equivalent raw command, pinned to the script by `test-plain-ci-entry-points.py`: `TITLE='<title>' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json` | `validate-pr-title` (yes) |
-| Test-change disclosure | `BASE_REF='<base-ref>' HEAD_REF=HEAD PR_BODY='<body>' python3 scripts/check-test-changes.py` | `validate-test-changes` (yes; enable in branch protection) |
+| Test-change disclosure: removed tests, lost or changed assertions | `BASE_REF='<base-ref>' HEAD_REF=HEAD PR_BODY='<body>' python3 scripts/check-test-changes.py` | `validate-test-changes` (yes; enable in branch protection) |
 | Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' PR_LABELS_JSON='[]' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
 | Docs, reference mode: reference inputs changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
 | Docs, full mode: `docs-site/`, the artifact gallery, or a docs contract file changed (`scripts/classify-docs-validation.py`) | `pnpm --dir docs-site exec playwright install --with-deps chromium` once, then `pnpm --dir docs-site validate` | `validate-docs` (no) |
@@ -299,7 +299,8 @@ in step.
   ID, or test code that reads a `specs/<feature>/` path from disk at run time;
   a correctness bug in repository tooling or tests, such as a check that passes
   on nothing; a ripwire `--quality-delta` regression left in place (section
-  10), unless acked as a genuine false positive.
+  10), unless acked as a genuine false positive; a disclosed assertion change
+  that checks less than before, unless the PR body gives the reason.
 - **Minor:** style, naming, prose, and refactoring notes; add none on re-review.
 - **Skip:** generated reference pages and payloads, vendored upstream content,
   lockfiles, archived specs, and what CI enforces (only the `ruff.toml` rules F,
