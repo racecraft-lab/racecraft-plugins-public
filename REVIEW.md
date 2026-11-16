@@ -47,6 +47,19 @@ repository tooling or tests giving a wrong answer:
   ripwire calls it gating or not: one the author's receipt lists, the
   `ripwire-advisory` job summary shows, or a local run finds. Only a genuine
   false positive accepted with `--quality-ack` and a reason is exempt.
+- Shipped guidance that claims more than the code does. In a skill under
+  `typesafe-jev/plugin/shared-skills/` or `speckit-pro/skills/`, a tool description, or
+  server instructions, an absolute claim about runtime behavior ("never",
+  "always", "nothing is sent", "only when") must hold for every path the code
+  takes. Check it against the code and cite the test that pins it; a claim no
+  test pins, or one a code path contradicts, is Important. Agents act on these
+  words, so an overstatement becomes a wrong decision downstream.
+- A behavior choice the change settles that its spec, ticket, or ADR left
+  open, when the PR body does not name it as a decision for the owner. Typical
+  cases: how an error is classified, whether a failure moves a session or one
+  call, a default value, a retry or timeout rule. Ask for a "Decisions made
+  here" line in the PR body; the finding clears once the PR body names the
+  decision, whatever the owner later decides about it.
 
 Style, naming, prose, and refactoring suggestions are Nit at most.
 
