@@ -38,8 +38,8 @@ func unconfiguredSetupText(t *testing.T, chain string) string {
 	if code := resolved.credentialExit(); code != exitUnconfigured {
 		t.Fatalf("credentialExit = %d, want exitUnconfigured", code)
 	}
-	text := setupInstructions(resolved)
-	requireSetupText(t, text, true, "chmod 600", "Reconnect", missingCredentials(resolved))
+	missing, text := setupMessage(resolved)
+	requireSetupText(t, text, true, "chmod 600", "Reconnect", "no "+missing+" credential")
 	return text
 }
 

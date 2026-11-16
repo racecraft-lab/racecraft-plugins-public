@@ -226,26 +226,24 @@ func distinctNotes(specs []ProviderSpec, note func(ProviderSpec) string) string 
 	return out
 }
 
-// setupInstructions is what the plugin's server says, with no tools, when no
-// hop in the configured chain has a credential. It names that chain's
-// backends and their key files, not a fixed pair.
-func setupInstructions(r resolvedHops) string {
+// setupMessage is what the plugin's server says, with no tools, when no hop
+// in the configured chain has a credential. It names that chain's backends
+// (missing, also used in the stderr line) and their key files, not a fixed
+// pair.
+func setupMessage(r resolvedHops) (missing, instructions string) {
+	labels := make([]string, len(r.hops))
 	files := make([]string, len(r.hops))
 	for i, hop := range r.hops {
 		p := hop.config.Provider
+		labels[i] = p.Label
 		files[i] = indefiniteArticle(p.Label) + " " + p.Label + " key in ~/" + pluginKeyDirectory + "/" + p.Name + ".key"
 	}
-	return "The evaluate server has no " + missingCredentials(r) + " credential on this machine, so it offers no tools.\n" +
+	missing = strings.Join(labels, " or ")
+	return missing, "The evaluate server has no " + missing + " credential on this machine, so it offers no tools.\n" +
 		"To enable the evaluate tool:\n" +
 		"1. Put " + strings.Join(files, ", or ") + ", readable only by you (chmod 600).\n" +
 		"2. Reconnect this MCP server.\n" +
 		"Until then, make any judgment yourself in the ordinary way."
-}
-
-// missingCredentials names the chain's backends for the setup text and its
-// stderr line, so the two cannot disagree.
-func missingCredentials(r resolvedHops) string {
-	return r.config.chainProviders(func(spec ProviderSpec) string { return spec.Label }, " or ")
 }
 
 func indefiniteArticle(word string) string {
@@ -259,11 +257,11 @@ func indefiniteArticle(word string) string {
 // configured: connected, with no tools, and instructions that say how to set
 // Jev up. A user without a key then sees a server that explains itself
 // rather than one that failed to start.
-func newSetupServer(resolved resolvedHops) *mcp.Server {
+func newSetupServer(text string) *mcp.Server {
 	return mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
 		&mcp.ServerOptions{
-			Instructions: setupInstructions(resolved),
+			Instructions: text,
 			// Advertised, with an empty list, so a client that asks for tools
 			// gets none rather than an error.
 			Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}},
@@ -283,8 +281,9 @@ func serve(ctx context.Context, pluginDefaults bool) error {
 	chain, cfg, err := startChain(resolved, os.Stderr, os.Stderr)
 	if pluginDefaults {
 		if chain.credentialExit() == exitUnconfigured {
-			fmt.Fprintln(os.Stderr, "evaluate: no "+missingCredentials(resolved)+" credential is configured; serving setup instructions with no tools")
-			return newSetupServer(resolved).Run(ctx, &mcp.StdioTransport{})
+			missing, setup := setupMessage(resolved)
+			fmt.Fprintln(os.Stderr, "evaluate: no "+missing+" credential is configured; serving setup instructions with no tools")
+			return newSetupServer(setup).Run(ctx, &mcp.StdioTransport{})
 		}
 	}
 	if err != nil {
