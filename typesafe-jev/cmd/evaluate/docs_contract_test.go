@@ -19,10 +19,14 @@ func repoDoc(t *testing.T, path string) string {
 	return strings.Join(strings.Fields(string(data)), " ")
 }
 
-func requireDocText(t *testing.T, path, want string) {
+// requireDocText fails for each wanted passage the document lacks.
+func requireDocText(t *testing.T, path string, wants ...string) {
 	t.Helper()
-	if !strings.Contains(repoDoc(t, path), want) {
-		t.Errorf("%s does not contain %q", path, want)
+	doc := repoDoc(t, path)
+	for _, want := range wants {
+		if !strings.Contains(doc, want) {
+			t.Errorf("%s does not contain %q", path, want)
+		}
 	}
 }
 
