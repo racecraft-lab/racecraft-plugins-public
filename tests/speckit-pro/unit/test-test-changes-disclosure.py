@@ -143,7 +143,8 @@ class RemovalTests(GitFixture):
         self.assertEqual(
             "::error::Test changes require disclosure in a ## Test changes section.\n"
             "Missing disclosures (paste into the PR body):\n## Test changes\n"
-            "- Removed or renamed `test_before` (`tests/test_sample.py`).\n",
+            "- Removed or renamed `test_before` (`tests/test_sample.py`).\n"
+            "- Lost assertions: `tests/test_sample.py` (1 net assertion line lost) in `test_before` of `Sample`.\n",
             result.stderr,
         )
         self.expect(1, "## Test changes\ntest_after")
@@ -160,7 +161,8 @@ class MoveTests(GitFixture):
         output = self.expect(1)
         self.assertIn('`tests/test_a.py` (2 net assertion lines lost)', output)
         self.assertNotIn("Removed or renamed", output)
-        self.expect(0, "## Test changes\ntests/test_a.py")
+        self.expect(1, "## Test changes\ntests/test_a.py")
+        self.expect(0, "## Test changes\ntest_one tests/test_a.py")
 
     def test_same_directory_rename_preserves_every_assertion(self) -> None:
         source = PYTHON + '    assert 1 == 1\n'
@@ -267,7 +269,99 @@ t.Error("bad")
         self.assertEqual(2, output.count("net assertion line lost"))
         output = self.expect(1, "## Test changes\npkg/sample_test.go")
         self.assertIn("- Lost assertions: `tests/test_sample.py`", output)
-        self.expect(0, "## Test changes\npkg/sample_test.go tests/test_sample.py")
+        self.expect(1, "## Test changes\npkg/sample_test.go tests/test_sample.py")
+        self.expect(0, "## Test changes\nTestKept pkg/sample_test.go\ntest_kept tests/test_sample.py")
+
+
+def asserts(prefix: str, count: int) -> str:
+    return "".join(f"    assert {prefix}{index} == {index}\n" for index in range(count))
+
+
+class FunctionAccountingTests(GitFixture):
+    def test_rename_cannot_borrow_assertions_from_an_unrelated_new_file(self) -> None:
+        self.transition(
+            {"tests/test_a.py": "def test_a():\n" + asserts("x", 3)},
+            {
+                "tests/test_a.py": None, "tests/test_b.py": "def test_a():\n    pass\n",
+                "tests/test_c.py": "def test_c():\n" + asserts("y", 3),
+            },
+        )
+        output = self.expect(1, "## Test changes\ntests/test_a.py")
+        self.assertIn("- Lost assertions: `tests/test_a.py` (3 net assertion lines lost) in `test_a`.", output)
+        self.expect(0, "## Test changes\ntest_a tests/test_a.py")
+
+    def test_split_moves_a_function_with_its_assertions(self) -> None:
+        before = "def test_a():\n" + asserts("x", 2) + "def test_b():\n" + asserts("y", 2)
+        self.transition(
+            {"tests/test_a.py": before},
+            {"tests/test_a.py": "def test_a():\n" + asserts("x", 2), "tests/test_a2.py": "def test_b():\n" + asserts("y", 2)},
+        )
+        self.expect(0)
+
+    def test_function_moved_into_an_existing_file_keeps_its_assertions(self) -> None:
+        moved = "def test_one():\n" + asserts("x", 2)
+        self.transition(
+            {"tests/test_a.py": moved, "tests/test_b.py": PYTHON},
+            {"tests/test_a.py": None, "tests/test_b.py": PYTHON + moved},
+        )
+        self.expect(0)
+
+    def test_rewritten_assertions_with_the_same_count_need_disclosure(self) -> None:
+        python = 'def test_one(value):\n    assert value == "abc"\n    self.assertEqual(\n        1,\n        value,\n    )\n'
+        go = 'package sample\ntype fixture struct{}\nfunc (f *fixture) check(t *testing.T) {\n    t.Fatalf("want %d", 1)\n}\n'
+        self.transition(
+            {"tests/test_sample.py": python, "pkg/sample_test.go": go},
+            {
+                "tests/test_sample.py": python.replace('"abc"', '"abd"').replace("        1,", "        2,"),
+                "pkg/sample_test.go": go.replace("t.Fatalf", "t.Errorf"),
+            },
+        )
+        output = self.expect(1, "## Test changes\ntests/test_sample.py pkg/sample_test.go")
+        self.assertIn("- Changed assertions: `tests/test_sample.py` (2 assertion lines changed) in `test_one`.", output)
+        self.assertIn("- Changed assertions: `pkg/sample_test.go` (1 assertion line changed) in `check` of `fixture`.", output)
+        self.expect(0, "## Test changes\ntest_one tests/test_sample.py\ncheck pkg/sample_test.go")
+
+    def test_added_assertions_and_comment_edits_alone_pass(self) -> None:
+        before = "def test_one(value):\n    assert value  # first\n"
+        self.transition(
+            {"tests/test_sample.py": before},
+            {"tests/test_sample.py": before.replace("# first", "# renamed comment") + "    assert   value > 0\n"},
+        )
+        self.expect(0)
+
+    def test_function_moved_to_another_directory_needs_disclosure(self) -> None:
+        helper = "def check_value(value):\n    assert value > 0\n"
+        self.transition(
+            {"tests/test_a.py": PYTHON + helper},
+            {"tests/test_a.py": PYTHON + "    assert 1 == 1\n", "tests/nested/test_helpers.py": helper},
+        )
+        output = self.expect(1)
+        self.assertIn("- Lost assertions: `tests/test_a.py` (1 net assertion line lost) in `check_value`.", output)
+        self.expect(0, "## Test changes\ncheck_value tests/test_a.py")
+
+    def test_printed_disclosures_pasted_back_pass(self) -> None:
+        self.transition(
+            {
+                "tests/test_class.py": "import sys\nassert sys\nclass Sample:\n    def test_before(self):\n"
+                                       "        self.assertTrue(1)\n    def test_kept(self):\n        assert 1\n",
+                "pkg/sample_test.go": GO + 'type fixture struct{}\nfunc (f fixture) check(t *testing.T) {\n    t.Error("x")\n}\n',
+            },
+            {
+                "tests/test_class.py": "class Sample:\n    def test_after(self):\n        self.assertTrue(1)\n"
+                                       "    def test_kept(self):\n        assert 2\n",
+                "pkg/sample_test.go": 'package sample\ntype fixture struct{}\nfunc (f fixture) check(t *testing.T) {\n}\n',
+            },
+        )
+        output = self.expect(1)
+        for line in (
+            "- Lost assertions: `tests/test_class.py` (1 net assertion line lost) at module level.",
+            "- Lost assertions: `tests/test_class.py` (1 net assertion line lost) in `test_before` of `Sample`.",
+            "- Changed assertions: `tests/test_class.py` (1 assertion line changed) in `test_kept` of `Sample`.",
+            "- Lost assertions: `pkg/sample_test.go` (1 net assertion line lost) in `check` of `fixture`.",
+            "- Lost assertions: `pkg/sample_test.go` (1 net assertion line lost) in `TestKept`.",
+        ):
+            self.assertIn(line, output)
+        self.expect(0, "## Test changes\n" + output.split("## Test changes\n", 1)[1])
 
 
 class DeletedFileTests(GitFixture):

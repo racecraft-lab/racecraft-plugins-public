@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Require disclosure of removed tests and net assertion losses.
+"""Require disclosure of removed tests and of lost or changed assertions.
 
 Run from the repository root with BASE_REF, HEAD_REF (default HEAD), and PR_BODY.
 Reads committed blobs at merge-base(BASE_REF, HEAD_REF) and HEAD_REF. Python
 uses ast; Go declarations use a masked lexical scan. No source is executed,
 and only Python's standard library and git are needed.
 
-Assertion losses compare shared paths individually. Vanished paths consume
-assertion credit from appeared paths in the same directory, once each; any
-remaining loss is attributed to the old path in sorted order.
+Assertions are compared per function: a top-level function, a class method
+(`Class.method`), a Go receiver method (`Receiver.Method`), or a file's module
+scope. A function found at head in the same directory, in any file, is the same
+function. Each base assertion statement, compared without comments or
+whitespace, that the head function lacks is lost (the count fell) or changed,
+and needs a disclosure line naming the function and its base path.
 """
 
 from __future__ import annotations
@@ -53,6 +56,13 @@ class TestFile:
 
 
 EMPTY = TestFile((), {})
+
+
+@dataclass(frozen=True)
+class Disclosure:
+    tokens: tuple[str, ...]  # (path, name) for a function, (path,) for a module scope
+    description: str
+    kind: str  # "removed" test name, "vanished" function, or "changed" function present at head
 
 
 @dataclass(frozen=True)
@@ -319,56 +329,96 @@ def disclosure_section(body: str) -> str:
     return "\n".join(section)
 
 
-def assertion_count(file: TestFile) -> int:
-    return sum(map(len, file.assertions.values()))
+def scoped_assertions(files: dict[str, TestFile]) -> dict[tuple[str, str], dict[str, tuple[str, ...]]]:
+    """Key each function by (directory, function key); a module scope stays keyed by its own path."""
+    keyed: dict[tuple[str, str], dict[str, tuple[str, ...]]] = {}
+    for path, file in files.items():
+        for key, statements in file.assertions.items():
+            scope = path if key == MODULE else move_scope(path)
+            keyed.setdefault((scope, key), {})[path] = statements
+    return keyed
 
 
-def assertion_losses(before: dict[str, TestFile], after: dict[str, TestFile]) -> dict[str, int]:
-    losses = {
-        path: assertion_count(before[path]) - assertion_count(after[path])
-        for path in before.keys() & after.keys()
-    }
-    added: Counter[str] = Counter()
-    for path in after.keys() - before.keys():
-        added[move_scope(path)] += assertion_count(after[path])
-    for path in sorted(before.keys() - after.keys()):
-        scope = move_scope(path)
-        credit = min(assertion_count(before[path]), added[scope])
-        added[scope] -= credit
-        losses[path] = assertion_count(before[path]) - credit
-    return losses
+def paired_paths(old: set[str], new: set[str]) -> list[tuple[str, str | None]]:
+    """Pair each base path with a head path: the same path first, then moved copies in sorted order."""
+    moved_to = sorted(new - old)
+    moved_from = sorted(old - new)
+    return [(path, path) for path in sorted(old & new)] + [
+        (path, moved_to[index] if index < len(moved_to) else None) for index, path in enumerate(moved_from)
+    ]
 
 
-def disclosures(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[tuple[tuple[str, ...], str]]:
-    entries: list[tuple[tuple[str, ...], str]] = [
-        ((path, name), f"- Removed or renamed `{name}` (`{path}`).")
+def plural(count: int) -> str:
+    return "line" if count == 1 else "lines"
+
+
+def assertion_disclosure(path: str, key: str, old: tuple[str, ...], new: tuple[str, ...] | None) -> Disclosure | None:
+    head = new or ()
+    missing = sum((Counter(old) - Counter(head)).values())
+    if not missing:
+        return None
+    lost = max(0, len(old) - len(head))
+    counts = [f"{lost} net assertion {plural(lost)} lost"] if lost else []
+    if missing > lost:
+        counts.append(f"{missing - lost} assertion {plural(missing - lost)} changed")
+    owner, _, name = key.rpartition(".")
+    where = f"in `{name}`" + (f" of `{owner}`" if owner else "") if name else "at module level"
+    return Disclosure(
+        (path, name) if name else (path,),
+        f"- {'Lost' if lost else 'Changed'} assertions: `{path}` ({', '.join(counts)}) {where}.",
+        "vanished" if new is None else "changed",
+    )
+
+
+def assertion_disclosures(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[Disclosure]:
+    # A function found at head in the same directory, in any file, is the same
+    # function; every base assertion statement missing from it needs disclosure.
+    base, head = scoped_assertions(before), scoped_assertions(after)
+    found = []
+    for scope_key, olds in base.items():
+        news = head.get(scope_key, {})
+        for path, target in paired_paths(set(olds), set(news)):
+            entry = assertion_disclosure(path, scope_key[1], olds[path], None if target is None else news[target])
+            if entry is not None:
+                found.append(entry)
+    return sorted(found, key=lambda entry: (entry.tokens[0], entry.description))
+
+
+def disclosures(before: dict[str, TestFile], after: dict[str, TestFile]) -> list[Disclosure]:
+    removals = [
+        Disclosure((path, name), f"- Removed or renamed `{name}` (`{path}`).", "removed")
         for path, name in removed_tests(before, after)
     ]
-    for path, lost in sorted(assertion_losses(before, after).items()):
-        if lost > 0:
-            noun = "line" if lost == 1 else "lines"
-            entries.append(((path,), f"- Lost assertions: `{path}` ({lost} net assertion {noun} lost)."))
-    return entries
+    return removals + assertion_disclosures(before, after)
 
 
-def missing_disclosures(entries: list[tuple[tuple[str, ...], str]], section: str) -> list[str]:
-    missing = []
+def required_mentions(group: list[Disclosure]) -> int:
+    kinds = Counter(entry.kind for entry in group)
+    # A removed test and the assertions that left with it share one line.
+    return sum(kinds.values()) - min(kinds["removed"], kinds["vanished"])
+
+
+def missing_disclosures(entries: list[Disclosure], section: str) -> list[str]:
     patterns = {
         token: re.compile(rf"(?<![\w./-]){re.escape(token)}(?![\w./-])")
-        for tokens, _ in entries for token in tokens
+        for entry in entries for token in entry.tokens
     }
     lines = [
         Counter({token: len(pattern.findall(line)) for token, pattern in patterns.items()})
         for line in section.splitlines()
     ]
-    for tokens, description in entries:
-        for mentions in lines:
-            if all(mentions[token] for token in tokens):
-                if len(tokens) > 1:
-                    mentions[tokens[1]] -= 1
+    groups: dict[tuple[str, ...], list[Disclosure]] = {}
+    for entry in entries:
+        groups.setdefault(entry.tokens, []).append(entry)
+    missing = []
+    for tokens, group in groups.items():
+        for _ in range(required_mentions(group)):
+            mentions = next((line for line in lines if all(line[token] for token in tokens)), None)
+            if mentions is None:
+                missing.extend(entry.description for entry in group)
                 break
-        else:
-            missing.append(description)
+            if len(tokens) > 1:
+                mentions[tokens[1]] -= 1
     return missing
 
 
@@ -390,9 +440,9 @@ def main() -> int:
         print("Missing disclosures (paste into the PR body):\n## Test changes", file=sys.stderr)
         print("\n".join(missing), file=sys.stderr)
         return 1
-    print("Test changes: " + ("all changes disclosed." if entries else "no removals or assertion losses."))
-    for _, description in entries:
-        print(description)
+    print("Test changes: " + ("all changes disclosed." if entries else "no removed tests or lost or changed assertions."))
+    for entry in entries:
+        print(entry.description)
     return 0
 
 
