@@ -222,9 +222,21 @@ def disclosures(before: dict[str, TestFile], after: dict[str, TestFile]) -> list
 
 def missing_disclosures(entries: list[tuple[tuple[str, ...], str]], section: str) -> list[str]:
     missing = []
+    patterns = {
+        token: re.compile(rf"(?<![\w./-]){re.escape(token)}(?![\w./-])")
+        for tokens, _ in entries for token in tokens
+    }
+    lines = [
+        Counter({token: len(pattern.findall(line)) for token, pattern in patterns.items()})
+        for line in section.splitlines()
+    ]
     for tokens, description in entries:
-        patterns = [re.compile(rf"(?<![\w./-]){re.escape(token)}(?![\w./-])") for token in tokens]
-        if not any(all(pattern.search(line) for pattern in patterns) for line in section.splitlines()):
+        for mentions in lines:
+            if all(mentions[token] for token in tokens):
+                if len(tokens) > 1:
+                    mentions[tokens[1]] -= 1
+                break
+        else:
             missing.append(description)
     return missing
 

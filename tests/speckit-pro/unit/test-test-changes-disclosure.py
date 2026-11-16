@@ -101,6 +101,8 @@ class RemovalTests(GitFixture):
             with self.subTest(body=body):
                 output = self.expect(1, body)
                 self.assertIn('`test_kept` (`tests/nested/test_other.py`)', output)
+        output = self.expect(1, "## Test changes\ntest_kept tests/test_kept.py tests/nested/test_other.py")
+        self.assertEqual(1, output.count("- Removed or renamed `test_kept`"))
         self.expect(0, "## Test changes\ntest_kept tests/test_kept.py\ntest_kept tests/nested/test_other.py")
 
     def test_manifest_registered_files_at_either_ref_are_tests(self) -> None:
