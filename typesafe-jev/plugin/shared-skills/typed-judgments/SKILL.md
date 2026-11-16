@@ -222,8 +222,9 @@ format.
 questions, a long or unusual question id, a structured instruction, or a state
 over 65,536 tokens skips the Ollama backends with no Ollama call. The next
 backend later in the chain that can take it answers. When none is left, the
-tool fails locally with the reason, and nothing is sent or billed. The skip
-covers that call only; the session stays where it was.
+call stops without another request. It reports the reason when nothing was
+sent, or the earlier backend's error when one already failed on this call. The
+skip covers that call only; the session stays where it was.
 
 **A failure on the serving backend moves the session down.** When the backend
 the session is on refuses its credential, runs out of credit, throttles, fails

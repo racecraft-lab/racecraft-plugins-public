@@ -90,7 +90,8 @@ app). Clef has no `box`, takes plain-string instructions only, at most 64
 questions and 65,536 tokens, and sends no `confidence` on a noul. Its choice
 and score `confidence` measures entropy, so a threshold tuned for Jev does not
 carry over. A request Clef cannot take skips the Ollama hops with no Ollama
-call, and a later hop answers; when none is left, the tool fails locally. The
+call, and a later hop answers; when none is left, the call stops without
+another request. The
 `typed-judgments` skill has the full per-backend table.
 
 **Images, box, and long context.** Images and `box` stay off until the operator
