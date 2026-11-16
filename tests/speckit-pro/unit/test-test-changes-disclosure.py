@@ -144,6 +144,36 @@ class MoveTests(GitFixture):
 
 
 class AssertionTests(GitFixture):
+    def test_commented_assertions_are_losses_and_literals_do_not_count(self) -> None:
+        python = 'def test_gate():\n    assert check("bad") == 1\n'
+        go = 'package sample\nfunc TestGate(t *testing.T) {\n    t.Fatal("bad")\n}\n'
+        self.transition(
+            {"tests/test_gate.py": python, "pkg/gate_test.go": go},
+            {
+                "tests/test_gate.py": python.replace('    assert', '    # assert') + '    pass\n',
+                "pkg/gate_test.go": go.replace('    t.Fatal', '    // t.Fatal'),
+            },
+        )
+        output = self.expect(1)
+        self.assertIn('`tests/test_gate.py` (1 net assertion line lost)', output)
+        self.assertIn('`pkg/gate_test.go` (1 net assertion line lost)', output)
+        self.write("tests/test_gate.py", python + '''    # assert False
+    """assert False
+    self.assertEqual(1, 2)
+    """
+    text = 'pytest.raises(Error)'
+''')
+        self.write("pkg/gate_test.go", go + '''// t.Fatal("bad")
+/* require.Fail(t)
+assert.False(t) */
+var text = "t.Fatal("
+var raw = `
+t.Error("bad")
+`
+''')
+        self.commit()
+        self.expect(0)
+
     def test_assertion_losses_require_each_file_path_and_report_net_count(self) -> None:
         self.base({"pkg/sample_test.go": GO, "tests/test_sample.py": PYTHON})
         self.write("pkg/sample_test.go", GO.replace('t.Fatal("kept")', "_ = t"))

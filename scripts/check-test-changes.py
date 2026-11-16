@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import argparse
 import ast
+import io
 import os
 import re
 import subprocess
 import sys
+import tokenize
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -77,10 +79,22 @@ def python_names(source: bytes) -> tuple[str, ...]:
     return tuple(names)
 
 
+def mask_non_code(source: bytes, *, go: bool) -> str:
+    text = source.decode("utf-8")
+    if go:
+        return GO_LITERALS.sub(lambda match: re.sub(r"[^\n]", " ", match[0]), text)
+    tokens = tokenize.generate_tokens(io.StringIO(text).readline)
+    return tokenize.untokenize(
+        token._replace(string=re.sub(r"[^\n]", " ", token.string))
+        if token.type in (tokenize.COMMENT, tokenize.STRING) else token
+        for token in tokens
+    )
+
+
 def go_names(source: bytes) -> tuple[str, ...]:
     result = subprocess.run(["gofmt"], input=source, capture_output=True, check=False, shell=False)
     formatted = command_output(result, "gofmt").decode("utf-8")
-    masked = GO_LITERALS.sub(lambda match: re.sub(r"[^\n]", " ", match[0]), formatted)
+    masked = mask_non_code(formatted.encode("utf-8"), go=True)
     # gofmt on stdin accepts fragments; a tracked Go file must be a full file.
     if not re.match(r"\s*package\s+\w+", masked):
         raise ValueError("Go file has no package declaration")
@@ -106,7 +120,8 @@ def inventory(ref: str) -> dict[str, TestFile]:
         try:
             names = go_names(source) if path.endswith(".go") else python_names(source)
             pattern = GO_ASSERTION if path.endswith(".go") else PY_ASSERTION
-            count = sum(bool(pattern.search(line)) for line in source.decode("utf-8").splitlines())
+            masked = mask_non_code(source, go=path.endswith(".go"))
+            count = sum(bool(pattern.search(line)) for line in masked.splitlines())
         except (SyntaxError, UnicodeError, ValueError) as exc:
             raise ValueError(f"unparseable test file {path} at {ref}: {exc}") from exc
         files[path] = TestFile(names, count)
