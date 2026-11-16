@@ -16,6 +16,10 @@ _Avoid_: pre-answered interview, scaffold script
 The checklist run's account of the domain edits it applied. An interrupted run distinguishes a record known to be present, known to be absent or different, and one whose state could not be verified.
 _Avoid_: presumed absence
 
+**Backend chain**:
+The ordered list of backends the `evaluate` tool may ask for a decision. Each entry is a hop. A session starts on the first hop it can use and only ever moves down, never back: it moves when a hop cannot serve its account or cannot be reached, and it skips later hops that bill the same account, which would fail the same way.
+_Avoid_: fallback list, provider order, failover
+
 **Blocked-for-UAT**:
 Work a run cannot finish or verify and hands to human review with its reason and evidence, while independent safe work continues. Accepting a documented gap does not make that work complete. The runner keeps one entry per blocked task or gate in the run ledger; a dependency skip links to its roots and records no attempt of its own. If that task also owns an exhausted check, it retains its own attempt evidence alongside the dependency links.
 _Avoid_: completed with deferrals, failed run, waived completion
@@ -31,6 +35,10 @@ _Avoid_: test approval, fake approval
 **Canary receipt**:
 The evidence one canary run leaves for one host: the commit, host and plugin versions, the verdict for each variant, and the measures it was judged on. Only a receipt from a canary CI run, scheduled or on demand, can gate a release; a local dogfood receipt never does.
 _Avoid_: canary log, test report
+
+**Capability route**:
+Sending one request to a later hop in the backend chain because the current hop cannot take its shape (for example a question type or image format it lacks), before any call is made. It is not a failure, so the session does not move.
+_Avoid_: fallback, skip
 
 **Consensus**:
 A judgment reached with input from independent analysts.
