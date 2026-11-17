@@ -1,16 +1,20 @@
 # Running Jev through OpenRouter
 
-This server talks to one of two backends. Both take the same request shape:
-`model`, `state`, and typed `questions`. Neither is a chat-completions
-endpoint, and neither takes `messages`, `max_tokens`, or `stream`.
+This server uses a configured backend chain: TypeSafe and OpenRouter serve
+Jev, and Ollama serves Clef through `ollama-local` or `ollama`. Calls use
+`model`, `state`, and typed `questions`; see [provider-contracts.md](provider-contracts.md)
+for each backend's request shape and capabilities.
 
 | `JEV_PROVIDER` | Endpoint | Credential | Default model | Billed by |
 |---|---|---|---|---|
 | unset or `typesafe` | `https://api.typesafe.ai/v1/systemone` | `TYPESAFE_API_KEY` | `jev-latest` | TypeSafe |
 | `openrouter` | `https://openrouter.ai/api/alpha/decisions` | `OPENROUTER_API_KEY` | `~typesafe/jev-latest` | OpenRouter |
 
-The default is TypeSafe. Selection is always explicit: which keys happen to be
-present in the environment never decides where a request goes.
+A standalone binary defaults to TypeSafe; `--plugin-defaults` uses the built-in
+`typesafe,openrouter` chain. `JEV_CHAIN` or the per-user chain file overrides
+that chain; the legacy `JEV_PROVIDER` and `JEV_FALLBACK_PROVIDER` pair is also
+supported. Calls advance through usable hops in that order, subject to each
+backend's capabilities; see [provider-contracts.md](provider-contracts.md).
 
 `~typesafe/jev-latest` is an alias. The leading tilde is part of the model id,
 and an alias can resolve to a concrete model, so a successful response need not
@@ -39,15 +43,18 @@ a host that is not the configured endpoint.
 
 ## Credentials
 
-The server reads exactly one credential, once, at startup. Rotating a key means
+The server loads each configured hop's own credential once at startup;
+`ollama-local` uses the local daemon's authentication. Rotating a key means
 restarting the server, which for an MCP client means reconnecting it.
 
-**With `JEV_API_KEY_FILE`**, the server reads that file and nothing else. An
-unreadable or invalid file is fatal even when an environment key is present:
-quietly using a different credential would bill an account you did not choose.
+**With `JEV_API_KEY_FILE`**, the primary hop reads that file instead of its
+environment key. An unreadable or invalid file makes that hop unusable, even
+when its environment key is present; another usable hop can still serve.
 
-**Without it**, the server reads only the selected backend's own variable. An
-OpenRouter process never falls back to `TYPESAFE_API_KEY`, or the reverse.
+**Without it**, the hop uses its own discovered key file under
+`--plugin-defaults`, or its backend's own environment variable. Credentials
+are not shared between hops. See [provider-contracts.md](provider-contracts.md)
+for backend authentication details.
 
 ### Creating the key file
 
@@ -276,7 +283,7 @@ restart the affected sessions.
 
 To remove the binary, delete `~/.local/libexec/racecraft-jev/evaluate`. When
 upgrading instead, keep a copy of the working binary first: the installer
-refuses to replace an existing file unless `EVALUATE_FORCE=1`.
+refuses to replace an existing file unless passed `--force`.
 
 Delete or revoke the API key only when you mean to. Other tools may use it.
 

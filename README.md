@@ -32,7 +32,7 @@ plugin system.
 | Plugin | What it does | Best first step |
 |---|---|---|
 | [SpecKit Pro](./speckit-pro/README.md) | Adds Racecraft workflows around GitHub Spec Kit: coaching, scoping interviews, spec scaffolding, autopilot execution, status, and PR review resolution. | Read the [SpecKit Pro decision guide](./speckit-pro/README.md#should-i-install-speckit-pro). |
-| [TypeSafe Jev](./typesafe-jev/README.md) | Adds one MCP tool, `evaluate`, that asks TypeSafe's Jev model for typed judgments with probabilities, plus two skills for designing those questions. Its Go server binary installs separately, and an API key is optional. | Read the [typesafe-jev install guide](./docs-site/src/content/docs/install/typesafe-jev.md). |
+| [TypeSafe Jev](./typesafe-jev/README.md) | Adds one MCP tool, `evaluate`, that asks Jev through TypeSafe or OpenRouter, or Ollama (Clef), for noul, choice, and score judgments with probabilities (and box through Jev), plus two skills for designing those questions. Its Go server binary installs separately, and an API key is optional. | Read the [typesafe-jev install guide](./docs-site/src/content/docs/install/typesafe-jev.md). |
 
 ## Install The Marketplace
 

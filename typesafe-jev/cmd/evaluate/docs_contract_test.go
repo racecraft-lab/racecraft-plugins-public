@@ -39,3 +39,10 @@ func TestAgentsNamesUniversalRequestShapeOwner(t *testing.T) {
 	}
 	requireDocText(t, "AGENTS.md", "`validation.go` for universal request shape and `config.go` for backend specs and per-hop limits")
 }
+
+// The CLI names any chain hop, including chains longer than a provider pair.
+func TestCallHelpNamesBackendChain(t *testing.T) {
+	if !strings.Contains(newCallCmd().Long, "no credential source configured for a backend in the chain") {
+		t.Error("call help must describe exit 3 without assuming a primary/fallback pair")
+	}
+}
