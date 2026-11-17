@@ -260,6 +260,29 @@ t.Error("bad")
         self.commit()
         self.expect(0, BASE_REF="literal-base")
 
+    def test_every_assertion_spelling_counts(self) -> None:
+        python = "def test_one(x):\n    assert(False)\n    assert(x == 1)\n"
+        go = (
+            "package sample\nfunc TestOne(t *testing.T) {\n    t.Fail()\n    t.FailNow()\n    t.Fatal (1)\n}\n"
+            "func BenchmarkOne(b *testing.B) {\n    b.Fatal(1)\n}\nfunc helper(tb testing.TB) {\n    tb.Error(1)\n}\n"
+        )
+        self.transition(
+            {"tests/test_one.py": python, "pkg/one_test.go": go},
+            {
+                "tests/test_one.py": "def test_one(x):\n    pass\n",
+                "pkg/one_test.go": "package sample\nfunc TestOne(t *testing.T) {}\n"
+                                   "func BenchmarkOne(b *testing.B) {}\nfunc helper(tb testing.TB) {}\n",
+            },
+        )
+        output = self.expect(1)
+        for line in (
+            "`tests/test_one.py` (2 net assertion lines lost) in `test_one`",
+            "`pkg/one_test.go` (3 net assertion lines lost) in `TestOne`",
+            "`pkg/one_test.go` (1 net assertion line lost) in `BenchmarkOne`",
+            "`pkg/one_test.go` (1 net assertion line lost) in `helper`",
+        ):
+            self.assertIn(line, output)
+
     def test_assertion_losses_require_each_file_path_and_report_net_count(self) -> None:
         self.base({"pkg/sample_test.go": GO, "tests/test_sample.py": PYTHON})
         self.write("pkg/sample_test.go", GO.replace('t.Fatal("kept")', "_ = t"))
@@ -332,6 +355,20 @@ class AssertionChangeTests(GitFixture):
         self.assertIn("- Changed assertions: `tests/test_sample.py` (2 assertion lines changed) in `test_one`.", output)
         self.assertIn("- Changed assertions: `pkg/sample_test.go` (1 assertion line changed) in `check` of `fixture`.", output)
         self.expect(0, "## Test changes\ntest_one tests/test_sample.py\ncheck pkg/sample_test.go")
+
+    def test_whitespace_inside_string_literals_is_compared_exactly(self) -> None:
+        python = 'def test_one(value):\n    assert " " not in value\n'
+        go = 'package sample\nfunc TestOne(t *testing.T) {\n    t.Fatal("a\tb")\n}\n'
+        self.transition(
+            {"tests/test_sample.py": python, "pkg/sample_test.go": go},
+            {
+                "tests/test_sample.py": python.replace('" "', '"  "'),
+                "pkg/sample_test.go": go.replace("a\tb", "a b"),
+            },
+        )
+        output = self.expect(1)
+        self.assertIn("`tests/test_sample.py` (1 assertion line changed) in `test_one`", output)
+        self.assertIn("`pkg/sample_test.go` (1 assertion line changed) in `TestOne`", output)
 
     def test_added_assertions_and_comment_edits_alone_pass(self) -> None:
         before = "def test_one(value):\n    assert value  # first\n"

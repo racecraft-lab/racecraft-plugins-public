@@ -26,6 +26,7 @@ import subprocess
 import sys
 import tokenize
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -40,8 +41,12 @@ GO_TOKEN = re.compile(
 )
 GO_RECEIVER_TYPE = re.compile(r"(\w+)\s*(?:\[[^\]]*\])?\s*\Z")
 GO_TEST_NAME = re.compile(r"(?:(?:Test|Benchmark|Fuzz)(?![a-z])\w*|Example\w*)\Z")
-GO_ASSERTION = re.compile(r"\b(?:t\.(?:Fatalf?|Errorf?)\s*\(|(?:require|assert)\.)")
-PY_ASSERTION = re.compile(r"\bassert\s+|\bself\.assert\w*\s*\(|\bpytest\.raises\s*\(")
+# testing.T, B, F and TB failure calls on their conventional names, and testify packages.
+GO_ASSERTION = re.compile(
+    r"\b(?:t|b|f|tb)\s*\.\s*(?:Fatalf?|Errorf?|FailNow|Fail)\s*\(|\b(?:require|assert)\s*\."
+)
+# `assert` is a keyword, so any code occurrence of the bare word is an assert statement.
+PY_ASSERTION = re.compile(r"(?<![\w.])assert\b|\bself\s*\.\s*assert\w*\s*\(|\bpytest\s*\.\s*raises\s*\(")
 PY_STRING_OPENERS = {getattr(tokenize, name, None) for name in ("FSTRING_START", "TSTRING_START")} - {None}
 PY_STRING_CLOSERS = {getattr(tokenize, name, None) for name in ("FSTRING_END", "TSTRING_END")} - {None}
 # Assertion scope for code outside every function; module scopes never move between files.
@@ -116,18 +121,24 @@ def blank(text: str) -> str:
     return re.sub(r"[^\r\n]", " ", text)
 
 
-def blank_span(rows: list[list[str]], start: tuple[int, int], end: tuple[int, int]) -> None:
+def protect(text: str) -> str:
+    """Spell whitespace inside a literal as non-whitespace, so normalizing code whitespace keeps it exact."""
+    return re.sub(r"[^\S\r\n]", lambda match: f"\0{ord(match[0]):x}\0", text)
+
+
+def replace_span(
+    rows: list[list[str]], start: tuple[int, int], end: tuple[int, int], replace: Callable[[str], str],
+) -> None:
     for index in range(start[0] - 1, end[0]):
         row = rows[index]
         first = start[1] if index == start[0] - 1 else 0
         last = end[1] if index == end[0] - 1 else len(row)
         for column in range(first, min(last, len(row))):
-            if row[column] not in "\r\n":
-                row[column] = " "
+            row[column] = replace(row[column])
 
 
 def python_views(text: str) -> tuple[list[str], list[str]]:
-    """Return rows with comments and literals blanked, and rows with only comments blanked."""
+    """Return rows with comments and literals blanked, and rows with comments blanked and literals protected."""
     code = [list(row) for row in source_rows(text)]
     readable = [list(row) for row in source_rows(text)]
     opened: list[tuple[int, int]] = []
@@ -138,12 +149,14 @@ def python_views(text: str) -> tuple[list[str], list[str]]:
             # Blank the whole outermost f-string or t-string, interpolations included.
             start = opened.pop()
             if not opened:
-                blank_span(code, start, token.end)
+                replace_span(code, start, token.end, blank)
+                replace_span(readable, start, token.end, protect)
         elif token.type == tokenize.STRING and not opened:
-            blank_span(code, token.start, token.end)
+            replace_span(code, token.start, token.end, blank)
+            replace_span(readable, token.start, token.end, protect)
         if token.type == tokenize.COMMENT:
-            blank_span(code, token.start, token.end)
-            blank_span(readable, token.start, token.end)
+            replace_span(code, token.start, token.end, blank)
+            replace_span(readable, token.start, token.end, blank)
     return ["".join(row) for row in code], ["".join(row) for row in readable]
 
 
@@ -241,7 +254,7 @@ def parse_test_file(path: str, source: bytes) -> TestFile:
     if path.endswith(".go"):
         code = source_rows(GO_LITERALS.sub(lambda match: blank(match[0]), text))
         readable = source_rows(GO_LITERALS.sub(
-            lambda match: blank(match[0]) if match[0][:2] in ("//", "/*") else match[0], text,
+            lambda match: blank(match[0]) if match[0][:2] in ("//", "/*") else protect(match[0]), text,
         ))
         layout, pattern = go_layout("".join(code)), GO_ASSERTION
     else:
