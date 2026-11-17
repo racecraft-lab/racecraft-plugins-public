@@ -91,6 +91,10 @@ body. Set the title and the `release-note` fence with `gh pr edit`, then mark
 the PR ready. A draft skips every other PR Checks job, and `validate-plugins`
 passes anyway.
 
+Merge a stack of two or more PRs with `gh stack merge <pr> --yes`. A one-PR
+stack is not a stack on GitHub, so `gh stack merge` refuses it ("is not a stack
+number or a stacked pull request"); merge it with `gh pr merge <pr> --squash`.
+
 ## Ripwire Configuration
 
 - `.ripwire_arch_rules` states the intended layering and

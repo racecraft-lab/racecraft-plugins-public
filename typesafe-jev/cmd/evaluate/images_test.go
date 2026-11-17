@@ -580,6 +580,24 @@ func TestChoiceOptionNamedImageIsNotAMarker(t *testing.T) {
 	}
 }
 
+func TestImagePixelLimitDiagnostics(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		limits imageBounds
+		want   string
+	}{
+		{"upper bound only", providers["ollama"].ImageLimits, "images.door: the image is 16004000 pixels, over the 16000000 pixel limit"},
+		{"lower bound only", imageBounds{MinSide: noLimit, MaxSide: noLimit, MinPixels: 16_008_000, MaxPixels: noLimit}, "images.door: the image is 16004000 pixels, under the 16008000 pixel minimum"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkImageDimensions("images.door", 4000, 4001, tc.limits)
+			if err == nil || err.Error() != tc.want {
+				t.Fatalf("error=%v; want %s", err, tc.want)
+			}
+		})
+	}
+}
+
 func TestImageDimensionsArePerBackend(t *testing.T) {
 	// 256x307 meets OpenRouter's 256 side minimum and the shared pixel floor
 	// (78592), and misses TypeSafe's 280 side minimum.
@@ -879,10 +897,9 @@ func TestFallbackRebuildsTheOtherWireFormat(t *testing.T) {
 
 	primaryClient := testClient(withImages(providerAt("typesafe", primarySrv.URL)), primarySrv)
 	primaryClient.MaxRetries = 0
-	primaryClient.Fallback = testClient(withImages(providerAt("openrouter", fallbackSrv.URL)), fallbackSrv)
-	primaryClient.Log = &bytes.Buffer{}
+	chain := &chainRunner{hops: []*Client{primaryClient, testClient(withImages(providerAt("openrouter", fallbackSrv.URL)), fallbackSrv)}, log: &bytes.Buffer{}}
 
-	if _, err := runEvaluate(context.Background(), primaryClient, imageRequest(pngBytes, "")); err != nil {
+	if _, err := runEvaluate(context.Background(), chain, imageRequest(pngBytes, "")); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := primary["assets"]; !ok {

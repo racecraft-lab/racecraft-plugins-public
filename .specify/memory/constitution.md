@@ -1,19 +1,17 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 2.0.0 → 2.1.0
-  Bump rationale: MINOR. Principle II is expanded: dev and test tooling may
-    use pinned third-party Python packages under four conditions. Shipped
-    plugin code stays on the standard library, and nothing compliant under
-    2.0.0 becomes non-compliant, so this is not a MAJOR redefinition.
-  Modified principles:
-    - II. Cross-Platform Runtime & Script Safety (standard-library rule scoped
-      to shipped plugin code; conditional allowance for dev and test packages)
+  Version change: 2.1.0 → 2.1.1
+  Bump rationale: PATCH. Clarification: GitHub links a stack only at two
+    PRs, so `gh stack merge` refuses a one-PR stack. Such a PR merges with
+    `gh pr merge --squash`, which keeps the one-squash-commit-per-PR rule.
+    No principle changes.
+  Modified principles: None
   Added principles: None
   Added sections: None
   Removed sections: None
   Modified sections:
-    - Quality Gates (row for dev-only dependencies)
+    - Development Workflow (merge rule names the one-PR case)
   Templates requiring updates:
     - .specify/templates/plan-template.md — ✅ No update needed
       (Constitution Check section is dynamically populated from principles)
@@ -21,8 +19,8 @@
       (principle-agnostic template)
     - .specify/templates/tasks-template.md — ✅ No update needed
       (principle-agnostic template)
-  Dependent guidance updated in the same change: AGENTS.md, REVIEW.md,
-    tests/speckit-pro/AGENTS.md
+  Dependent guidance updated in the same change: AGENTS.md,
+    docs/agent-runbook.md, docs/agents/issue-tracker.md
   Follow-up TODOs: None
 -->
 
@@ -242,7 +240,8 @@ and untracked files)
   single PR
 - A stack merges with `gh stack merge <stack> --squash`, one squash commit per
   PR, so release-please lists each change; a single merge commit for a stack
-  collapses the release notes and is not used
+  collapses the release notes and is not used. GitHub links a stack only at
+  two PRs, so a one-PR stack merges with `gh pr merge <pr> --squash`
 - The `main` ruleset requires a PR with 1 approval, a code-owner review, and
   resolved review threads; the admin role is exempt
 - Branch protection requires `validate-plugins`, `validate-pr-title`,
@@ -276,4 +275,4 @@ MUST be corrected.
 in the plan's Complexity Tracking table with the violation, rationale, and why
 the simpler alternative was rejected.
 
-**Version**: 2.1.0 | **Ratified**: 2026-03-24 | **Last Amended**: 2026-09-26
+**Version**: 2.1.1 | **Ratified**: 2026-03-24 | **Last Amended**: 2026-11-16

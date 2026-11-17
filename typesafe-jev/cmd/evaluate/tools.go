@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -47,29 +48,26 @@ type evaluateIn struct {
 // both backends accept a string, an object, or an array. Exporting the narrow
 // shape now would hide a capability the backend has, which is the same failure
 // as advertising one it lacks, so one schema serves both.
-func registerTools(s *mcp.Server, _ Config, c *Client) {
-	add(s, evaluateTool(), func(ctx context.Context, in evaluateIn) ([]byte, error) {
-		return runEvaluate(ctx, c, in)
-	})
-}
-
-// runEvaluate validates, sends, and validates the reply. The schema the client
-// enforced is a convenience, not a boundary, so everything is checked again
-// here.
-func runEvaluate(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
-	if c.Fallback != nil {
-		return runWithFallback(ctx, c, in)
+func registerTools(s *mcp.Server, cfg Config, chain *chainRunner) {
+	var refreshMu sync.Mutex
+	refresh := func() {
+		// Serialize the serving-hop snapshot with publication. An older move
+		// callback must not overwrite a newer note after building its schema.
+		refreshMu.Lock()
+		defer refreshMu.Unlock()
+		tool := evaluateTool()
+		tool.Description += backendNote(cfg) + chain.backendNote() + " Serving hop: " + chain.servingHop().Provider.Name + "."
+		add(s, tool, func(ctx context.Context, in evaluateIn) ([]byte, error) {
+			return chain.evaluate(ctx, in)
+		})
 	}
-	return runOn(ctx, c, in)
+	chain.onMove = refresh
+	refresh()
 }
 
-// runOn is one evaluation on one backend.
+// runOn uses the chain's single-hop path for one evaluation on one backend.
 func runOn(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
-	p, err := prepare(c, in)
-	if err != nil {
-		return nil, err
-	}
-	return send(ctx, c, p)
+	return (&chainRunner{hops: []*Client{c}}).evaluate(ctx, in)
 }
 
 // preparedCall is one request that passed every local check for one backend,
@@ -83,27 +81,18 @@ type preparedCall struct {
 // prepare resolves the model, validates, and encodes. It makes no network
 // call, and every error it returns is a *requestInvalidError.
 func prepare(c *Client, in evaluateIn) (preparedCall, error) {
-	// Precedence: the tool call's model, then JEV_MODEL, then the backend
-	// default. c.Model already holds the resolved second and third of those.
-	//
-	// An explicit model passes through exactly as given. A "~typesafe/" prefix
-	// is neither added nor stripped: a mismatched id becomes a 404 the agent
-	// can read, which beats a silent rewrite to a model nobody asked for.
-	if in.Model == "" {
-		in.Model = c.Model
-	}
-	if err := validateRequest(c.Provider, in); err != nil {
+	shaped, err := shapeRequest(in)
+	if err != nil {
 		return preparedCall{}, &requestInvalidError{err}
 	}
-	body, headers, err := c.encode(in)
-	if err != nil {
-		return preparedCall{}, err
-	}
-	return preparedCall{in: in, body: body, headers: headers}, nil
+	return prepareForHop(c, shaped)
 }
 
-// send posts a prepared call and validates the reply.
-func send(ctx context.Context, c *Client, p preparedCall) ([]byte, error) {
+// send propagates preparation failures before posting and validating a reply.
+func send(ctx context.Context, c *Client, p preparedCall, preparationError error) ([]byte, error) {
+	if preparationError != nil {
+		return nil, preparationError
+	}
 	body, err := c.post(ctx, p.body, p.headers)
 	if err != nil {
 		return nil, err
@@ -120,14 +109,14 @@ func send(ctx context.Context, c *Client, p preparedCall) ([]byte, error) {
 func evaluateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name: "evaluate",
-		Description: "Jev is a fast structured-decision model: unstructured state in, typed answers " +
-			"(noul, choice, score, box) with calibrated confidence out; 70-500ms, schema-enforced. " +
+		Description: "Asks a structured-decision model (TypeSafe's Jev, or Cloudflare's Clef through Ollama): unstructured state in, " +
+			"typed answers (noul, choice, score, box) with confidence out; fast and schema-enforced. " +
 			"Use for classification, routing, scoring, extraction, branching, guardrails/judging, " +
 			"and map-reduce over large data — wherever hand-written logic is too brittle or latency matters. " +
 			"Not for prose, code, or free-form text: the answer space must be enumerable up front (max 255 options, score scales of 2 to 10). " +
 			"Images are named in the images map and referenced from state, instructions, or criteria; " +
 			"they are sent only when the operator set JEV_IMAGES=true, and the bytes leave the machine and are billed. " +
-			"Box locates one target in an image and needs Jev 1.14. " +
+			"Box locates one target in an image and needs Jev 1.14; Clef has no box, so a box question skips Ollama backends. " +
 			"Calling this sends the supplied state, images, and questions to an external provider and may incur charges; " +
 			"the read-only hint means it changes nothing locally, not that it is free or private.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},

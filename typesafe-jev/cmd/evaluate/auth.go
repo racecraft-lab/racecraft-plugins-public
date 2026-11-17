@@ -29,7 +29,7 @@ func (c credential) reveal() string { return string(c) }
 //
 // There is no fallback between the two, and no implicit one between backends:
 // a fallback backend exists only when the operator names it, and it loads its
-// own credential through this same function (see fallback.go). If the
+// own credential through this same function (see chain.go). If the
 // operator named a file, an unreadable file is fatal even when a usable
 // environment key is sitting right there: quietly using a different credential
 // would bill a different account than the one they configured.
@@ -37,19 +37,66 @@ func (c credential) reveal() string { return string(c) }
 // The key is read once. Rotating it means restarting the server, which for an
 // MCP client means reconnecting it.
 func loadCredential(cfg Config) (credential, error) {
+	loaded := loadCredentialSource(cfg, os.LookupEnv)
+	return loaded.key, loaded.err
+}
+
+// sourceStatus is the value-free state of one backend's credential source.
+type sourceStatus struct {
+	Provider string `json:"provider"`
+	// Source is explicit-file, default-file, environment, or none.
+	Source string `json:"source"`
+	// State is ok, absent (nothing configured), or unusable.
+	State string `json:"state"`
+	// reason names a path or variable, never the credential value.
+	reason string
+}
+
+// loadedCredential keeps the secret separate from its printable verdict. Both
+// the server and call use this loader, including file precedence and errors.
+type loadedCredential struct {
+	key    credential
+	status sourceStatus
+	err    error
+}
+
+func loadCredentialSource(cfg Config, look lookupFunc) loadedCredential {
+	loaded := loadedCredential{status: sourceStatus{Provider: cfg.Provider.Name}}
+	s := &loaded.status
+	if cfg.Provider.AuthKind == authNone {
+		s.Source, s.State = "none", "ok"
+		return loaded
+	}
 	if cfg.KeyFile != "" {
-		return readKeyFile(cfg.keyFileEnv(), cfg.KeyFile)
+		s.Source = "explicit-file"
+		if cfg.KeyFileDefaulted {
+			s.Source = "default-file"
+		}
+		loaded.key, loaded.err = readKeyFile(cfg.keyFileLabel(), cfg.KeyFile)
+		if loaded.err != nil {
+			s.State, s.reason = "unusable", loaded.err.Error()
+		} else {
+			s.State = "ok"
+		}
+		return loaded
 	}
-	raw, ok := os.LookupEnv(cfg.Provider.APIKeyEnv)
+	raw, ok := look(cfg.Provider.APIKeyEnv)
 	if !ok || raw == "" {
-		return "", fmt.Errorf("%s: %w; set %s, or point %s at a private key file",
-			cfg.Provider.Name, errNoCredential, cfg.Provider.APIKeyEnv, cfg.keyFileEnv())
+		s.Source, s.State = "none", "absent"
+		loaded.err = fmt.Errorf("%s: %w; set %s, or %s",
+			cfg.Provider.Name, errNoCredential, cfg.Provider.APIKeyEnv, cfg.keyFileHint())
+		return loaded
 	}
-	key, err := parseKey(raw)
+	s.Source = "environment"
+	var err error
+	loaded.key, err = parseKey(raw)
 	if err != nil {
-		return "", fmt.Errorf("%s: %s %w", cfg.Provider.Name, cfg.Provider.APIKeyEnv, err)
+		s.State, s.reason = "unusable", cfg.Provider.APIKeyEnv+" "+err.Error()
+		loaded.err = fmt.Errorf("%s: %s %w", cfg.Provider.Name, cfg.Provider.APIKeyEnv, err)
+	} else {
+		s.State = "ok"
 	}
-	return key, nil
+	return loaded
 }
 
 // readKeyFile reads a key from a private file. Every check is made against the
@@ -57,12 +104,7 @@ func loadCredential(cfg Config) (credential, error) {
 // read cannot slip past. envVar names the variable the path came from, such as
 // JEV_FALLBACK_API_KEY_FILE, so each diagnostic points at the setting to fix.
 func readKeyFile(envVar, path string) (credential, error) {
-	// O_NONBLOCK, because os.Open on a named pipe blocks until a writer
-	// appears, and it does so before any check below has run: the server would
-	// hang at startup with no message rather than refusing a file that is not
-	// a regular file. The flag changes nothing for a regular file, which is
-	// the only kind this accepts anyway.
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	f, info, err := openRegularFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return "", fmt.Errorf("%s %s does not exist", envVar, path)
@@ -70,17 +112,13 @@ func readKeyFile(envVar, path string) (credential, error) {
 		if errors.Is(err, os.ErrPermission) {
 			return "", fmt.Errorf("%s %s is not readable", envVar, path)
 		}
+		if errors.Is(err, errNotRegularFile) {
+			return "", fmt.Errorf("%s %s %w", envVar, path, err)
+		}
 		return "", fmt.Errorf("%s %s: %w", envVar, path, err)
 	}
 	defer f.Close()
 
-	info, err := f.Stat()
-	if err != nil {
-		return "", fmt.Errorf("%s %s: %w", envVar, path, err)
-	}
-	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("%s %s is not a regular file", envVar, path)
-	}
 	// Protecting a plaintext file is not encryption; it only keeps other
 	// local accounts from reading it. Windows does not carry these bits.
 	if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
@@ -113,6 +151,27 @@ func readKeyFile(envVar, path string) (credential, error) {
 		return "", fmt.Errorf("%s %s %w", envVar, path, err)
 	}
 	return key, nil
+}
+
+var errNotRegularFile = errors.New("is not a regular file")
+
+// openRegularFile checks the opened descriptor, never a path that can be
+// swapped. O_NONBLOCK lets a FIFO fail the regular-file check without waiting
+// for a writer. It has no effect on the regular files accepted here.
+func openRegularFile(path string) (*os.File, os.FileInfo, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+	info, err := f.Stat()
+	if err == nil && !info.Mode().IsRegular() {
+		err = errNotRegularFile
+	}
+	if err != nil {
+		f.Close()
+		return nil, nil, err
+	}
+	return f, info, nil
 }
 
 // The reasons a candidate key is rejected. They are package-level values built

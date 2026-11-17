@@ -35,6 +35,7 @@ fresh worktree holds only tracked files; before any docs command, run
 | typesafe-jev Go checks | `python3 scripts/check-go-module.py check` | `go` (yes, via `validate-plugins`) |
 | Generated-artifact drift; commit first, since any uncommitted change under its paths fails it | `python3 scripts/refresh-release-artifacts.py --check` | `artifact-consistency` (yes, via `validate-plugins`) |
 | PR title | `python3 scripts/check-pr-title.py '<title>'` (the one entry point for local and CI runs). Equivalent raw command, pinned to the script by `test-plain-ci-entry-points.py`: `TITLE='<title>' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json` | `validate-pr-title` (yes) |
+| Test-change disclosure: removed tests, lost or changed assertions | `BASE_REF='<base-ref>' HEAD_REF=HEAD PR_BODY='<body>' python3 scripts/check-test-changes.py` | `validate-test-changes` (yes; enable in branch protection) |
 | Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' PR_LABELS_JSON='[]' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
 | Docs, reference mode: reference inputs changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
 | Docs, full mode: `docs-site/`, the artifact gallery, or a docs contract file changed (`scripts/classify-docs-validation.py`) | `pnpm --dir docs-site exec playwright install --with-deps chromium` once, then `pnpm --dir docs-site validate` | `validate-docs` (no) |
@@ -76,7 +77,7 @@ relative to the root.
 
 | Layer | speckit-pro | typesafe-jev | Repository |
 | --- | --- | --- | --- |
-| Policy: decides | `speckit_pro_runner/` modules and `gates/` | `cmd/evaluate/` request, backend and update logic (`validation.go`, `config.go`, `fallback.go`, `update.go`) | release and check logic in `scripts/` |
+| Policy: decides | `speckit_pro_runner/` modules and `gates/` | `cmd/evaluate/` request, backend and update logic (`validation.go`, `config.go`, `resolver.go`, `chain.go`, `update.go`) | release and check logic in `scripts/` |
 | Contract: states a shape | `speckit_pro_runner/contracts/` schemas, plugin manifests | MCP tool schema in `cmd/evaluate/tools.go`, exit codes in `cmd/evaluate/call.go`, plugin manifests, `plugin/.mcp.json` | marketplace manifests, `release-please-config.json` |
 | Guidance: tells an agent what to do | `skills/`, `agents/`, `codex-agents/`, references, hook messages | `plugin/shared-skills/`, tool descriptions | `AGENTS.md`, `REVIEW.md`, `docs-site/` |
 | Glue: dispatches | `hooks/`, `codex-hooks.json`, `speckit_pro_runner/helpers/registry.py`, `scripts/` | `cmd/evaluate/main.go`, `plugin/scripts/` | `.github/workflows/`, dispatch scripts |
@@ -110,8 +111,8 @@ relative to the root.
    it has rules, and everything else calls it. Examples: in `speckit-pro`,
    `stop_policy.py` with `references/stop-policy.md`, `host_skills.py`,
    `formal/pins.py` and `canonical_json.py`; in `typesafe-jev`,
-   `validation.go` for the one request shape both backends take and
-   `config.go` for backend specs; repository-wide, `scripts/pinned_archive.py`
+   `validation.go` for universal request shape and `config.go` for backend
+   specs and per-hop limits; repository-wide, `scripts/pinned_archive.py`
    for pinned downloads. Consolidate a scattered domain before adding to it.
    Extend the owner; a new module needs a stated reason the owner cannot hold
    it. A function-level import that dodges a cycle, or a new
@@ -160,8 +161,10 @@ depend on either.
   (`--quality-delta=$(git merge-base origin/main HEAD)..HEAD`) and confirm its
   graph with a read. `ripwire . --arch=.ripwire_arch_rules` checks layering
   against `.ripwire_arch_baseline` (exit 2 means a new violation); never
-  re-baseline to hide a new edge. Config details and the advisory job:
-  `docs/agent-runbook.md`.
+  re-baseline to hide a new edge. When ripwire is installed, an empty
+  `--quality-delta` regression list for your range is part of done (section
+  10); the CI job is advisory only because CI may lack ripwire. Config
+  details and that job: `docs/agent-runbook.md`.
 - **Jev** (the `typesafe-jev` plugin's `evaluate` tool) gives advisory
   judgments only: its verdict never approves a destructive step, and each call
   bills a third party, so send no secrets or local paths.
@@ -259,8 +262,9 @@ mirrors section 11; `speckit-pro/codex-agents/*.toml` are generated from
   yet `validate-plugins` passes. One concern per PR.
 - Work with dependent parts is a stack: plan the layers, then `gh stack init`
   before writing code, one concern per layer, foundations at the bottom.
-  Unrelated work gets its own stack off `main`. Merge with
-  `gh stack merge <pr> --yes`, never `gh pr merge`.
+  Unrelated work gets its own stack off `main`. Merge a stack of two or more
+  PRs with `gh stack merge <pr> --yes`, never `gh pr merge`. GitHub links a
+  stack only at two PRs, so a one-PR stack merges with `gh pr merge --squash`.
 - Only `feat` and `fix` PRs fill the `release-note` fence, required unless
   labeled `release-note/skip`; any unlabeled fence is published.
 
@@ -271,6 +275,13 @@ mirrors section 11; `speckit-pro/codex-agents/*.toml` are generated from
   changed.
 - When Python changed, ruff and mypy pass locally too; `mypy-ratchet` is not
   required, so CI will not stop a regression.
+- When ripwire is installed, `ripwire . --quality-delta=<merge-base>..HEAD`
+  lists no regression for your range: every row is fixed in the change that
+  introduced it, gating or not (complexity, clones, verbosity, dead code).
+  "Advisory" or "pre-existing" is not a reason to leave one. Accept a row with
+  `--quality-ack="<reason>"` only when every remaining row is a genuine false
+  positive, such as dead code on a test function its runner calls; never ack a
+  real finding.
 - Every rule you relied on that was missing here is added, or the PR says why.
 
 ## 11. Code Review Rules
@@ -288,7 +299,13 @@ in step.
   untrusted PR content; a script or test filename coupled to a temporary spec
   ID, or test code that reads a `specs/<feature>/` path from disk at run time;
   a correctness bug in repository tooling or tests, such as a check that passes
-  on nothing.
+  on nothing; a ripwire `--quality-delta` regression left in place (section
+  10), unless acked as a genuine false positive; shipped guidance (skills,
+  tool descriptions, server instructions) whose absolute claim about runtime
+  behavior no test pins or a code path contradicts; a behavior choice the
+  spec, ticket, or ADR left open that the PR body does not name for the owner;
+  a disclosed assertion change that checks less than before, unless the PR
+  body gives the reason.
 - **Minor:** style, naming, prose, and refactoring notes; add none on re-review.
 - **Skip:** generated reference pages and payloads, vendored upstream content,
   lockfiles, archived specs, and what CI enforces (only the `ruff.toml` rules F,

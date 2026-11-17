@@ -66,7 +66,7 @@ func newMCPSetupCmd() *cobra.Command {
 			if !dryRun {
 				return fmt.Errorf("--dry-run=false is not supported: this command only ever prints configuration; run the printed commands yourself")
 			}
-			cfg, err := resolveConfig(os.LookupEnv)
+			cfg, err := resolveCallConfig(os.LookupEnv, false)
 			if err != nil {
 				return err
 			}
@@ -192,12 +192,18 @@ type envPair struct{ key, value string }
 // ~/.claude.json, a backup of it, and sometimes a dotfiles repository.
 func generatedEnv(cfg Config, keyFile string) []envPair {
 	env := []envPair{
-		{"JEV_PROVIDER", cfg.Provider.Name},
+		{"JEV_CHAIN", configuredChainNames(cfg)},
 		{"JEV_MODEL", cfg.Model},
 		{"JEV_REQUEST_TIMEOUT", cfg.Timeout.String()},
 	}
+	if cfg.HopTimeout > 0 && cfg.HopTimeout != defaultHopTimeout {
+		env = append(env, envPair{"JEV_HOP_TIMEOUT", cfg.HopTimeout.String()})
+	}
 	if cfg.MaxRetries != defaultMaxRetries {
 		env = append(env, envPair{"JEV_MAX_RETRIES", fmt.Sprint(cfg.MaxRetries)})
+	}
+	if cfg.Fallback != nil && cfg.Fallback.KeyFile != "" {
+		env = append(env, envPair{"JEV_FALLBACK_API_KEY_FILE", cfg.Fallback.KeyFile})
 	}
 	if keyFile != "" {
 		// The path, never the contents.
@@ -354,7 +360,7 @@ func runPiSetup() error {
 	fmt.Println("Run /reload in pi, or restart it, to load the evaluate extension.")
 	// Unlike the MCP clients, nothing is baked in: the extension reads the key
 	// from the shell pi runs in, so a missing one is a hint, not a failure.
-	if cfg, err := resolveConfig(os.LookupEnv); err != nil {
+	if cfg, err := resolveCallConfig(os.LookupEnv, false); err != nil {
 		fmt.Printf("\nNote: %v\n", err)
 	} else if _, err := loadCredential(cfg); err != nil {
 		fmt.Printf("\nNote: %s\n", piCredentialHint(cfg.KeyFile != "", err))

@@ -325,7 +325,7 @@ def refresh_runner_trust_metadata(repo_root: Path) -> list[str]:
     plugin_root = repo_root / "speckit-pro"
     package_dir = plugin_root / "speckit_pro_runner"
     sys.path.insert(0, str(plugin_root))
-    from speckit_pro_runner.runtime import runner_source_files
+    from speckit_pro_runner.path_utils import runner_source_files
 
     source_files = runner_source_files(package_dir)
     digests = {path.relative_to(plugin_root).as_posix(): sha256_file(path) for path in source_files}

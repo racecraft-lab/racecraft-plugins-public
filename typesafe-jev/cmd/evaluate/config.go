@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,31 +15,42 @@ import (
 type ProviderSpec struct {
 	// Name is the JEV_PROVIDER value that selects this backend.
 	Name string
+	// Label names the backend to a person, as in "a TypeSafe key".
+	Label string
 	// EndpointURL is the complete URL to POST to, not a base to append to.
 	EndpointURL string
 	// APIKeyEnv is the only environment variable this backend reads a key
 	// from. A backend never falls back to another backend's variable.
 	APIKeyEnv string
 	// DefaultModel applies when neither the tool call nor JEV_MODEL names one.
-	DefaultModel string
+	DefaultModel   string
+	AuthKind       authKind
+	BillingAccount string
+	// Daemon marks local proxy statuses that mean the cloud path is down.
+	Daemon               bool
+	WireFormat           imageWireFormat
+	QuestionTypes        []string
+	UnsupportedBoxModels []string
+	ImageTrust           imageTrust
+	// Headers and notes are backend capabilities, independent of wire format.
+	ImageHeader       string
+	LongContextHeader string
+	AnswerNote        string
+	LongContextNote   string
 	// Attribution is sent as fixed HTTP-Referer / X-OpenRouter-Title headers
 	// when set. It is a constant, never derived from local paths or content.
 	Attribution bool
-	// StructuredEntries reports whether the backend accepts a JSON object or
-	// array where an instruction or a description is expected, rather than a
-	// plain string.
-	//
-	// Both backends do. OpenRouter's Decisions schemas typed these fields as
-	// plain strings until it republished them; as of the 2026-09-20 fetch
-	// recorded in docs/provider-contracts.md they are anyOf string, object, or
-	// array, matching what TypeSafe documents. It stays a capability rather
-	// than an assumption so a re-narrowing is one field to flip, not a hunt
-	// through the validator.
-	StructuredEntries bool
+	// StructuredEntries lists the object and array kinds each entry position
+	// accepts. An absent position accepts neither; strings use the shared shape.
+	StructuredEntries map[entryPosition]entryKinds
 	// RetryStatuses are the HTTP statuses worth a second attempt on this
 	// backend. See docs/provider-contracts.md: this is fork policy, not a
 	// provider guarantee.
 	RetryStatuses []int
+	// Limits are the backend's request and image caps. LongContextTokens is
+	// the enlarged context budget when LongContextHeader is supported.
+	Limits            backendLimits
+	LongContextTokens int
 	// RequestTokens is the per-request context budget: state plus every
 	// question. QuestionTokens is state plus the single longest question.
 	// Image bytes are not part of either estimate.
@@ -56,6 +68,125 @@ type ProviderSpec struct {
 	LongContext bool
 }
 
+// Entry positions and kinds describe capabilities, independently of question
+// paths and validation. Backend rows own the permissions for each combination.
+type entryPosition int
+
+const (
+	entryInstructions entryPosition = iota
+	entryChoiceValue
+	entryScoreLevel
+	entryNoulDescription
+)
+
+type entryKinds uint8
+
+const (
+	entryObject entryKinds = 1 << iota
+	entryArray
+)
+
+// Both Jev hosts accept objects and arrays at every entry position, as recorded
+// in docs/provider-contracts.md. Each row gets its own copy, so changing one
+// row's table never changes another's.
+func jevStructuredEntries() map[entryPosition]entryKinds {
+	return map[entryPosition]entryKinds{
+		entryInstructions:    entryObject | entryArray,
+		entryChoiceValue:     entryObject | entryArray,
+		entryScoreLevel:      entryObject | entryArray,
+		entryNoulDescription: entryObject | entryArray,
+	}
+}
+
+// backendLimits holds backend-specific caps. -1 explicitly means no limit;
+// zero is always an incomplete row, never an implicit unlimited value.
+type backendLimits struct {
+	Questions       int
+	ChoiceMin       int
+	ChoiceMax       int
+	ScoreMin        int
+	ScoreMax        int
+	BodyBytes       int
+	Images          int
+	ImageBytes      int
+	TotalImageBytes int
+	ExpandedBytes   int
+	// QuestionIDLength caps an id that must also be ASCII letters, digits,
+	// "_", "." or "-"; noLimit means any id the request shape accepts.
+	QuestionIDLength int
+}
+
+const (
+	noLimit = -1
+	// Both publishers document 32 MiB bodies and 16 MiB decoded images
+	// (docs/provider-contracts.md, fetched 2026-10-17). Expanded size adds
+	// the image again per reference; locally counted file bytes are a floor
+	// because TypeSafe may enlarge an image during processing.
+	maxRequestBody     = 32 << 20
+	maxImageBytes      = 16 << 20
+	maxExpandedRequest = 32 << 20
+	// minScoreLevels is this fork's policy, stricter than either publisher.
+	// OpenRouter's schema sets minItems: 1, but a one-level scale gives the
+	// model nothing to place a value between.
+	minScoreLevels = 2
+	// maxScoreLevels is TypeSafe's published cap ("the API accepts up to 10",
+	// https://docs.typesafe.ai/api.md, 2026-10-17). OpenRouter's Decisions
+	// schema sets no maxItems. Both rows retain the historical cap in this
+	// behavior-preserving layer; ADR 0028 allows per-hop limits later.
+	maxScoreLevels = 10
+	// maxChoiceOptions is a published limit, not this fork's policy: the tool
+	// description states at most 255 options. Probed 2026-09-18 against the
+	// OpenRouter backend, 255 options answered correctly and 256 came back as
+	// an HTTP 400 naming no field.
+	maxChoiceOptions = 255
+	// TypeSafe's default context budgets (https://docs.typesafe.ai/models.md,
+	// 2026-10-17): 64k tokens for the whole request, and 32k for the state
+	// plus the single longest question. Exceeding either without the
+	// long-context header is a billed round trip that comes back as a bare
+	// HTTP 400, whose text blames the question types. With
+	// TypeSafe-Danger-Zone-Long-Context: true, both budgets are
+	// longContextTokens. OpenRouter's window is longContextTokens with no header.
+	typesafeRequestTokens  = 64_000
+	typesafeQuestionTokens = 32_000
+	longContextTokens      = 262_144
+	// Pixel bounds. Sides and totals are inclusive. TypeSafe's minimum side
+	// is 280; OpenRouter's is 256. The total-pixel range is the same on both
+	// (https://docs.typesafe.ai/images.md and OpenRouter's multimodal guide,
+	// both 2026-10-17).
+	imageSideMax      = 1568
+	imagePixelsMin    = 78_400
+	imagePixelsMax    = 2_458_624
+	typesafeSideMin   = 280
+	openrouterSideMin = 256
+)
+
+func overLimit(value, limit int) bool {
+	return limit != noLimit && value > limit
+}
+
+// imageReadLimits bounds the shared snapshot by the largest request any
+// registered backend can take. Individual refusals remain per-hop checks.
+func imageReadLimits() (file, total int) {
+	for _, spec := range providers {
+		file = unionLimit(file, spec.Limits.ImageBytes)
+		bound := noLimit
+		for _, limit := range []int{spec.Limits.TotalImageBytes, spec.Limits.ExpandedBytes, spec.Limits.BodyBytes} {
+			if limit != noLimit && (bound == noLimit || limit < bound) {
+				bound = limit
+			}
+		}
+		total = unionLimit(total, bound)
+	}
+	return file, total
+}
+
+func unionLimit(a, b int) int {
+	if a == noLimit || b == noLimit {
+		return noLimit
+	}
+	return max(a, b)
+}
+
 // imageBounds is one backend's inclusive pixel limits for a single image.
 type imageBounds struct {
 	MinSide   int
@@ -64,19 +195,53 @@ type imageBounds struct {
 	MaxPixels int
 }
 
+type authKind string
+
+const (
+	authBearer authKind = "bearer"
+	authNone   authKind = "none"
+)
+
+// Only images.go selects an encoding from this enum.
+type imageWireFormat int
+
+const (
+	wireTypeSafeAssets imageWireFormat = iota + 1
+	wireOpenRouterParts
+	wireOllamaImages
+)
+
+type imageTrust int
+
+const imageTrustOperatorOptIn imageTrust = 1
+
 // providers is the closed set of backends. Adding a URL here is the only way
 // to change where a request goes; there is deliberately no environment
 // variable that points the server at an arbitrary host.
 var providers = map[string]ProviderSpec{
+	"ollama":       ollamaCloudSpec(),
+	"ollama-local": ollamaLocalSpec(),
 	"typesafe": {
 		Name:        "typesafe",
+		Label:       "TypeSafe",
 		EndpointURL: "https://api.typesafe.ai/v1/systemone",
 		APIKeyEnv:   "TYPESAFE_API_KEY",
 		// jev-1.14.0 since 2026-10-14 (https://docs.typesafe.ai/models.md).
-		DefaultModel: "jev-latest",
+		DefaultModel:         "jev-latest",
+		AuthKind:             authBearer,
+		BillingAccount:       "typesafe",
+		WireFormat:           wireTypeSafeAssets,
+		QuestionTypes:        []string{typeNoul, typeChoice, typeScore, typeBox},
+		UnsupportedBoxModels: []string{"jev-1.13.0", "jev-1.13"},
+		ImageTrust:           imageTrustOperatorOptIn,
+		ImageHeader:          headerDangerImages,
+		LongContextHeader:    headerDangerLong,
+		LongContextNote:      "\nLong context is enabled for the TypeSafe backend: its budgets are 262144 tokens and each TypeSafe request sends the long-context header.",
 		// TypeSafe documents string, object, array, or null for every
 		// instruction and description field.
-		StructuredEntries: true,
+		StructuredEntries: jevStructuredEntries(),
+		Limits:            backendRequestLimits(),
+		LongContextTokens: longContextTokens,
 		// 529 is TypeSafe's overload status, which upstream already retried.
 		RetryStatuses: []int{429, 529},
 		// Defaults from https://docs.typesafe.ai/models.md (2026-10-17).
@@ -84,20 +249,31 @@ var providers = map[string]ProviderSpec{
 		RequestTokens:  typesafeRequestTokens,
 		QuestionTokens: typesafeQuestionTokens,
 		// https://docs.typesafe.ai/images.md (2026-10-17).
-		ImageLimits: imageBounds{
-			MinSide: typesafeSideMin, MaxSide: imageSideMax,
-			MinPixels: imagePixelsMin, MaxPixels: imagePixelsMax,
-		},
+		ImageLimits: backendImageLimits(typesafeSideMin),
 	},
 	"openrouter": {
 		Name:        "openrouter",
+		Label:       "OpenRouter",
 		EndpointURL: "https://openrouter.ai/api/alpha/decisions",
 		APIKeyEnv:   "OPENROUTER_API_KEY",
 		// Jev 1.14 (https://openrouter.ai/docs/guides/community/jev, 2026-10-17).
-		DefaultModel: "~typesafe/jev-latest",
-		Attribution:  true,
+		DefaultModel:         "~typesafe/jev-latest",
+		AuthKind:             authBearer,
+		BillingAccount:       "openrouter",
+		WireFormat:           wireOpenRouterParts,
+		QuestionTypes:        []string{typeNoul, typeChoice, typeScore, typeBox},
+		UnsupportedBoxModels: []string{"typesafe/jev-1.13", "~typesafe/jev-1.13", "typesafe/jev-1.13.0", "~typesafe/jev-1.13.0"},
+		ImageTrust:           imageTrustOperatorOptIn,
+		AnswerNote: "\nThis backend may omit confidence and probabilities from a choice or score" +
+			" answer, which the TypeSafe backend always sends. Treat an absent field as" +
+			" absent: do not substitute a default before branching on it." +
+			" A question it declines comes back as {\"type\":\"refusal\"} with no value, while the" +
+			" other questions still answer; treat a refusal as no judgment, never as a no.",
+		Attribution: true,
 		// Matches TypeSafe since OpenRouter republished the Decisions schemas.
-		StructuredEntries: true,
+		StructuredEntries: jevStructuredEntries(),
+		Limits:            backendRequestLimits(),
+		LongContextTokens: longContextTokens,
 		// All four are documented on the Decisions path and transient in
 		// kind: 429 rate limited, 503 unavailable, 524 an upstream timeout,
 		// and 529 overloaded. 524 and 529 were absent from the documented
@@ -112,15 +288,90 @@ var providers = map[string]ProviderSpec{
 		QuestionTokens: longContextTokens,
 		// Side minimum is 256, not TypeSafe's 280. Total pixels match TypeSafe.
 		// https://openrouter.ai/docs/guides/community/multimodal-decisions (2026-10-17).
-		ImageLimits: imageBounds{
-			MinSide: openrouterSideMin, MaxSide: imageSideMax,
-			MinPixels: imagePixelsMin, MaxPixels: imagePixelsMax,
-		},
+		ImageLimits: backendImageLimits(openrouterSideMin),
 	},
 }
 
+func ollamaLocalSpec() ProviderSpec {
+	spec := ollamaCloudSpec()
+	spec.Name = "ollama-local"
+	spec.Label = "Ollama app"
+	spec.EndpointURL = "http://localhost:11434/v1/systemone"
+	spec.DefaultModel = "clef:cloud"
+	spec.AuthKind = authNone
+	spec.APIKeyEnv = ""
+	spec.Daemon = true
+	return spec
+}
+
+func ollamaCloudSpec() ProviderSpec {
+	return ProviderSpec{
+		Name:           "ollama",
+		Label:          "Ollama Cloud",
+		EndpointURL:    "https://ollama.com/v1/systemone",
+		APIKeyEnv:      "OLLAMA_API_KEY",
+		DefaultModel:   "clef",
+		AuthKind:       authBearer,
+		BillingAccount: "ollama",
+		WireFormat:     wireOllamaImages,
+		QuestionTypes:  []string{typeNoul, typeChoice, typeScore},
+		ImageTrust:     imageTrustOperatorOptIn,
+		// Only choice objects (b08) and score objects (b09) were observed in
+		// the 2026-11-14 probes, beyond the published string schema. Arrays
+		// and noul objects were not probed; other structured positions route.
+		StructuredEntries: map[entryPosition]entryKinds{
+			entryChoiceValue: entryObject,
+			entryScoreLevel:  entryObject,
+		},
+		AnswerNote: "\nOllama serves Clef: noul answers omit confidence." +
+			" Choice and score confidence measures entropy, not calibrated correctness;" +
+			" thresholds tuned for Jev do not carry over. Clef takes no box questions and" +
+			" only plain-string instructions; a request it cannot take goes to the next" +
+			" backend in the chain that can, with no Ollama call. Images require JEV_IMAGES=true.",
+		// No automatic replay: Ollama does not document retries as safe,
+		// and a repeated inference may bill again. Endpoint 429 behavior
+		// and Retry-After remain unconfirmed in the research matrix.
+		RetryStatuses: []int{},
+		// Ollama System One schema and decision guide, fetched 2026-11-14.
+		Limits: backendLimits{
+			Questions: 64, ChoiceMin: 2, ChoiceMax: 255,
+			ScoreMin: 2, ScoreMax: 10, BodyBytes: 13 << 20,
+			Images: 4, ImageBytes: 4 << 20, TotalImageBytes: 8 << 20,
+			ExpandedBytes: noLimit, QuestionIDLength: 100,
+		},
+		LongContextTokens: noLimit,
+		RequestTokens:     65_536,
+		QuestionTokens:    65_536,
+		ImageLimits: imageBounds{
+			MinSide: noLimit, MaxSide: noLimit, MinPixels: noLimit, MaxPixels: 16_000_000,
+		},
+	}
+}
+
+// Both current rows share these caps; each gets its own value to keep copies
+// independently configurable by the operator and tests.
+func backendRequestLimits() backendLimits {
+	return backendLimits{
+		Questions: noLimit, ChoiceMin: 1, ChoiceMax: maxChoiceOptions,
+		ScoreMin: minScoreLevels, ScoreMax: maxScoreLevels,
+		BodyBytes: maxRequestBody, Images: noLimit, ImageBytes: maxImageBytes,
+		TotalImageBytes: noLimit, ExpandedBytes: maxExpandedRequest,
+		QuestionIDLength: noLimit,
+	}
+}
+
+func backendImageLimits(minSide int) imageBounds {
+	return imageBounds{
+		MinSide: minSide, MaxSide: imageSideMax,
+		MinPixels: imagePixelsMin, MaxPixels: imagePixelsMax,
+	}
+}
+
 const (
+	// defaultProvider serves when no setting names a backend.
+	defaultProvider   = "typesafe"
 	defaultTimeout    = 45 * time.Second
+	defaultHopTimeout = 10 * time.Second
 	maxTimeout        = 5 * time.Minute
 	defaultMaxRetries = 3
 	maxMaxRetries     = 5
@@ -132,6 +383,7 @@ type Config struct {
 	Provider   ProviderSpec
 	Model      string
 	Timeout    time.Duration
+	HopTimeout time.Duration
 	MaxRetries int
 	// KeyFile is an absolute path, or "" to use the provider's environment
 	// variable. The path is not a secret; the file's contents are.
@@ -143,10 +395,15 @@ type Config struct {
 	// empty for the primary, which reads JEV_API_KEY_FILE; fallbackConfig sets
 	// it to JEV_FALLBACK_API_KEY_FILE.
 	keyFileVar string
+	// defaultKeyOnly marks hops 3 and 4, which have no key-file variable: their
+	// key comes from the provider's environment variable or the default file.
+	defaultKeyOnly bool
 	// Fallback is the backend a call moves to when Provider refuses its
-	// credential or is unavailable, or nil. It is set only by the operator
-	// (JEV_FALLBACK_PROVIDER): which keys happen to exist never creates one.
+	// credential or is unavailable, or nil for a one-hop chain. Chain resolution
+	// sets it from configuration or the built-in order, never from available keys.
 	Fallback *FallbackConfig
+	// AdditionalHops continues the configured order after the legacy pair.
+	AdditionalHops []Config
 	// AllowImages is JEV_IMAGES. Box questions use the same opt-in: TypeSafe
 	// requires the images danger-zone header for either, and a box needs an image.
 	AllowImages bool
@@ -169,15 +426,23 @@ type FallbackConfig struct {
 // fallbackConfig is the Config a client for the fallback backend is built
 // from: its own provider, model default and key, and the primary's limits.
 func (c Config) fallbackConfig() Config {
-	return Config{
-		Provider:   c.Fallback.Provider,
-		Model:      c.Fallback.Provider.DefaultModel,
-		Timeout:    c.Timeout,
-		MaxRetries: c.MaxRetries,
-		KeyFile:    c.Fallback.KeyFile,
+	hop := c.laterHop(c.Fallback.Provider, c.Fallback.KeyFile, c.Fallback.KeyFileDefaulted)
+	hop.keyFileVar = pluginFallbackFileEnv
+	return hop
+}
 
-		KeyFileDefaulted: c.Fallback.KeyFileDefaulted,
-		keyFileVar:       pluginFallbackFileEnv,
+// laterHop builds a hop after the first from the shared request settings, so
+// every later hop inherits the same timeout, retries and operator opt-ins.
+func (c Config) laterHop(spec ProviderSpec, keyFile string, keyFileDefaulted bool) Config {
+	return Config{
+		Provider:   spec,
+		Model:      spec.DefaultModel,
+		Timeout:    c.Timeout,
+		HopTimeout: c.HopTimeout,
+		MaxRetries: c.MaxRetries,
+		KeyFile:    keyFile,
+
+		KeyFileDefaulted: keyFileDefaulted,
 		AllowImages:      c.AllowImages,
 		LongContext:      c.LongContext,
 	}
@@ -189,12 +454,37 @@ func (c Config) fallbackConfig() Config {
 // and would not change a budget it already sets to the long window.
 func applyOperator(spec ProviderSpec, allowImages, longContext bool) ProviderSpec {
 	spec.AllowImages = allowImages
-	if spec.Name == "typesafe" && longContext {
+	if spec.LongContextHeader != "" && longContext {
 		spec.LongContext = true
-		spec.RequestTokens = longContextTokens
-		spec.QuestionTokens = longContextTokens
+		spec.RequestTokens = spec.LongContextTokens
+		spec.QuestionTokens = spec.LongContextTokens
 	}
 	return spec
+}
+
+// Kept for the live model probe; the model exclusions have one home in the row.
+func knownBoxReject(provider, model string) bool {
+	return providers[provider].rejectsBoxModel(model)
+}
+
+func (spec ProviderSpec) rejectsBoxModel(model string) bool {
+	return slices.Contains(spec.UnsupportedBoxModels, model)
+}
+
+// keyFileLabel names where this Config's key file came from in diagnostics.
+func (c Config) keyFileLabel() string {
+	if c.defaultKeyOnly {
+		return "default key file"
+	}
+	return c.keyFileEnv()
+}
+
+// keyFileHint says how to supply a key file for this Config.
+func (c Config) keyFileHint() string {
+	if c.defaultKeyOnly {
+		return "put a private key file at ~/" + pluginKeyDirectory + "/" + c.Provider.Name + ".key (read under --plugin-defaults)"
+	}
+	return "point " + c.keyFileEnv() + " at a private key file"
 }
 
 // keyFileEnv names the variable that sets this Config's key file.
@@ -209,42 +499,6 @@ func (c Config) keyFileEnv() string {
 // distinction matters: an unset JEV_PROVIDER selects the default, while one
 // explicitly set to blank is a mistake worth reporting.
 type lookupFunc func(string) (string, bool)
-
-// resolveConfig builds the server's configuration from the environment. It is
-// pure apart from the injected lookup, so tests never depend on the developer's
-// shell.
-func resolveConfig(look lookupFunc) (Config, error) {
-	var cfg Config
-
-	spec, err := resolveProvider(look)
-	if err != nil {
-		return cfg, err
-	}
-	cfg.Provider = spec
-
-	if cfg.Model, err = resolveModel(look, spec); err != nil {
-		return cfg, err
-	}
-	if cfg.Timeout, err = resolveTimeout(look); err != nil {
-		return cfg, err
-	}
-	if cfg.MaxRetries, err = resolveMaxRetries(look); err != nil {
-		return cfg, err
-	}
-	if cfg.KeyFile, err = resolveKeyFile(look); err != nil {
-		return cfg, err
-	}
-	if cfg.Fallback, err = resolveFallback(look, spec); err != nil {
-		return cfg, err
-	}
-	if cfg.AllowImages, err = resolveOptIn(look, "JEV_IMAGES"); err != nil {
-		return cfg, err
-	}
-	if cfg.LongContext, err = resolveOptIn(look, "JEV_LONG_CONTEXT"); err != nil {
-		return cfg, err
-	}
-	return cfg, nil
-}
 
 // resolveOptIn reads a feature flag. Unset leaves it off. An explicit false is
 // off, an explicit true is on, and any other value is a configuration error:
@@ -273,7 +527,7 @@ func resolveOptIn(look lookupFunc, name string) (bool, error) {
 func resolveProvider(look lookupFunc) (ProviderSpec, error) {
 	raw, set := look("JEV_PROVIDER")
 	if !set {
-		return providers["typesafe"], nil
+		return providers[defaultProvider], nil
 	}
 	name := strings.TrimSpace(raw)
 	if name == "" {
@@ -312,41 +566,86 @@ func resolveModel(look lookupFunc, spec ProviderSpec) (string, error) {
 	return raw, nil
 }
 
-func resolveTimeout(look lookupFunc) (time.Duration, error) {
-	raw, set := look("JEV_REQUEST_TIMEOUT")
+// numericSetting owns optional numeric setting parsing and bounds; diagnostics
+// stay with the setting that supplies the parser and accepted range.
+type numericSetting[T ~int | ~int64] struct {
+	name                       string
+	fallback, minimum, ceiling T
+	parse                      func(string) (T, error)
+	invalid                    func(string) error
+	outOfRange                 func(string, T) error
+}
+
+func resolveSetting[T ~int | ~int64](look lookupFunc, setting numericSetting[T]) (T, error) {
+	raw, set := look(setting.name)
 	if !set || raw == "" {
-		return defaultTimeout, nil
+		return setting.fallback, nil
 	}
-	d, err := time.ParseDuration(strings.TrimSpace(raw))
+	var zero T
+	value, err := setting.parse(strings.TrimSpace(raw))
 	if err != nil {
-		return 0, fmt.Errorf("JEV_REQUEST_TIMEOUT=%q is not a duration such as 45s or 2m", raw)
+		return zero, setting.invalid(raw)
+	}
+	if value < setting.minimum || value > setting.ceiling {
+		return zero, setting.outOfRange(raw, value)
+	}
+	return value, nil
+}
+
+// durationSetting owns optional duration parsing and bounds. Both deadline
+// settings use the same walk while retaining their established diagnostics.
+type durationSetting struct {
+	name              string
+	fallback, ceiling time.Duration
+}
+
+func (s durationSetting) resolve(look lookupFunc) (time.Duration, error) {
+	return resolveSetting(look, numericSetting[time.Duration]{
+		name: s.name, fallback: s.fallback, minimum: 1, ceiling: s.ceiling,
+		parse: time.ParseDuration, invalid: s.invalid, outOfRange: s.outOfRange,
+	})
+}
+
+func (s durationSetting) invalid(raw string) error {
+	example := "45s or 2m"
+	if s.name == "JEV_HOP_TIMEOUT" {
+		example = "10s"
+	}
+	return fmt.Errorf("%s=%q is not a duration such as %s", s.name, raw, example)
+}
+
+func (s durationSetting) outOfRange(raw string, d time.Duration) error {
+	if s.name == "JEV_HOP_TIMEOUT" {
+		if d <= 0 {
+			return fmt.Errorf("JEV_HOP_TIMEOUT must be positive")
+		}
+		return fmt.Errorf("JEV_HOP_TIMEOUT=%s exceeds JEV_REQUEST_TIMEOUT=%s", d, s.ceiling)
 	}
 	if d <= 0 {
-		return 0, fmt.Errorf("JEV_REQUEST_TIMEOUT=%q must be positive", raw)
+		return fmt.Errorf("JEV_REQUEST_TIMEOUT=%q must be positive", raw)
 	}
-	if d > maxTimeout {
-		return 0, fmt.Errorf("JEV_REQUEST_TIMEOUT=%q is above the %s ceiling", raw, maxTimeout)
-	}
-	return d, nil
+	return fmt.Errorf("JEV_REQUEST_TIMEOUT=%q is above the %s ceiling", raw, s.ceiling)
+}
+
+var requestTimeoutSetting = durationSetting{"JEV_REQUEST_TIMEOUT", defaultTimeout, maxTimeout}
+
+func resolveTimeout(look lookupFunc) (time.Duration, error) {
+	return requestTimeoutSetting.resolve(look)
+}
+
+func resolveHopTimeout(look lookupFunc, requestTimeout time.Duration) (time.Duration, error) {
+	return (durationSetting{"JEV_HOP_TIMEOUT", min(defaultHopTimeout, requestTimeout), requestTimeout}).resolve(look)
 }
 
 func resolveMaxRetries(look lookupFunc) (int, error) {
-	raw, set := look("JEV_MAX_RETRIES")
-	if !set || raw == "" {
-		return defaultMaxRetries, nil
-	}
-	n, err := strconv.Atoi(strings.TrimSpace(raw))
-	if err != nil {
-		return 0, fmt.Errorf("JEV_MAX_RETRIES=%q is not a whole number", raw)
-	}
-	if n < 0 || n > maxMaxRetries {
-		return 0, fmt.Errorf("JEV_MAX_RETRIES=%q is outside the accepted range 0-%d", raw, maxMaxRetries)
-	}
-	return n, nil
-}
-
-func resolveKeyFile(look lookupFunc) (string, error) {
-	return resolveKeyFileVar(look, "JEV_API_KEY_FILE")
+	return resolveSetting(look, numericSetting[int]{
+		name: "JEV_MAX_RETRIES", fallback: defaultMaxRetries, minimum: 0, ceiling: maxMaxRetries,
+		parse:   strconv.Atoi,
+		invalid: func(raw string) error { return fmt.Errorf("JEV_MAX_RETRIES=%q is not a whole number", raw) },
+		outOfRange: func(raw string, _ int) error {
+			return fmt.Errorf("JEV_MAX_RETRIES=%q is outside the accepted range 0-%d", raw, maxMaxRetries)
+		},
+	})
 }
 
 func resolveKeyFileVar(look lookupFunc, name string) (string, error) {
@@ -370,7 +669,7 @@ func resolveKeyFileVar(look lookupFunc, name string) (string, error) {
 // resolveFallback reads the opt-in second backend. Unset means none, which is
 // exactly the behaviour before fallback existed. A fallback key file with no
 // fallback provider is a mistake worth reporting, not a hint to guess one.
-func resolveFallback(look lookupFunc, primary ProviderSpec) (*FallbackConfig, error) {
+func resolveFallback(look lookupFunc, primary ProviderSpec, home string) (*FallbackConfig, error) {
 	raw, set := look("JEV_FALLBACK_PROVIDER")
 	if !set || raw == "" {
 		if file, _ := look("JEV_FALLBACK_API_KEY_FILE"); file != "" {
@@ -386,11 +685,11 @@ func resolveFallback(look lookupFunc, primary ProviderSpec) (*FallbackConfig, er
 	if spec.Name == primary.Name {
 		return nil, fmt.Errorf("JEV_FALLBACK_PROVIDER=%q is the primary backend; a fallback must be the other one", name)
 	}
-	keyFile, err := resolveKeyFileVar(look, "JEV_FALLBACK_API_KEY_FILE")
+	keyFile, defaulted, err := resolveHopKeyFile(look, pluginFallbackFileEnv, spec.Name, home)
 	if err != nil {
 		return nil, err
 	}
-	return &FallbackConfig{Provider: spec, KeyFile: keyFile}, nil
+	return &FallbackConfig{Provider: spec, KeyFile: keyFile, KeyFileDefaulted: defaulted}, nil
 }
 
 // credentialSource names where the key will be read from, for a diagnostic
@@ -400,4 +699,28 @@ func (c Config) credentialSource() string {
 		return "file " + c.KeyFile
 	}
 	return "environment " + c.Provider.APIKeyEnv
+}
+
+// parseChain rejects configuration mistakes before any credential is loaded.
+func parseChain(raw, source string) ([]string, error) {
+	names := strings.Split(raw, ",")
+	if len(names) > 4 {
+		return nil, fmt.Errorf("%s allows at most four hops", source)
+	}
+	seen := map[string]bool{}
+	for i, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return nil, fmt.Errorf("%s contains an empty hop", source)
+		}
+		if _, ok := providers[name]; !ok {
+			return nil, fmt.Errorf("%s contains unknown provider %q; use one of %s", source, name, providerNames())
+		}
+		if seen[name] {
+			return nil, fmt.Errorf("%s repeats provider %q", source, name)
+		}
+		seen[name], names[i] = true, name
+	}
+
+	return names, nil
 }

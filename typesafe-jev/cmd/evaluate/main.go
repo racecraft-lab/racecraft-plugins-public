@@ -5,12 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"strings"
 	"syscall"
-	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
@@ -25,8 +24,8 @@ func init() {
 	}
 }
 
-const instructions = `The evaluate tool runs Jev, a TypeSafe System One model that returns typed judgments and probabilities, not generated text.
-- Question types: noul (probability a yes/no condition holds), choice (one option from a criteria map), score (probability-weighted position on 2 to 10 ordered criteria levels), box (the four edges of one target in an image; needs Jev 1.14 and an image, and takes no criteria).
+const instructions = `The evaluate tool asks a decision model for typed judgments and probabilities, not generated text: TypeSafe's Jev, or Cloudflare's Clef through Ollama, whichever backend in the chain below serves the call.
+- Question types: noul (probability a yes/no condition holds), choice (one option from a criteria map), score (probability-weighted position on 2 to 10 ordered criteria levels), box (the four edges of one target in an image; needs Jev 1.14 and an image, and takes no criteria; Clef has no box).
 - Images go in the images map under a name you choose. Reference that name as a whole string value, or as {"image":"name"}, inside state, instructions, or criteria. The server builds the provider's wire format. Images and box are off until the operator sets JEV_IMAGES=true; when on, the bytes leave the machine and are billed.
 - Ask one narrow judgment per question. Question ids are NOT sent to the model, so instructions must carry the full meaning.
 - Put everything the judgment needs in state; prefer a JSON object with named fields, and reference nested fields with backticked paths like ` + "`ticket.messages[0].text`" + `.
@@ -150,70 +149,15 @@ func buildCommit() string {
 	return "unknown"
 }
 
-// newClient builds the HTTP client for cfg. The credential is loaded here and
-// nowhere else, so there is exactly one place a key enters the process.
-//
-// Unlike the version this fork was taken from, the backend comes from
-// JEV_PROVIDER rather than from whichever API key happens to be set. Which
-// credentials are lying around in a shell should not decide where state is
-// sent, or which account pays for it. See docs/upstream-baseline.md.
-func newClient(cfg Config) (*Client, error) {
-	key, err := loadCredential(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &Client{
-		Provider:   applyOperator(cfg.Provider, cfg.AllowImages, cfg.LongContext),
-		Model:      cfg.Model,
-		APIKey:     key,
-		Timeout:    cfg.Timeout,
-		MaxRetries: cfg.MaxRetries,
-		HTTP:       newHTTPClient(),
-		Backoff:    time.Second,
-	}, nil
-}
-
-// newClients builds the primary client and, when the operator configured one,
-// its fallback. It returns the Config that describes what will actually serve,
-// so the server's instructions name the destination in force.
-//
-// A primary whose credential cannot be loaded, such as a missing key file,
-// starts on the fallback outright. A fallback whose credential cannot be
-// loaded is dropped with a line on log, and the primary serves alone. Only
-// when neither loads does the server refuse to start, naming both.
-func newClients(cfg Config, log io.Writer) (*Client, Config, error) {
-	primary, primaryErr := newClient(cfg)
-	if cfg.Fallback == nil {
-		return primary, cfg, primaryErr
-	}
-	fallbackCfg := cfg.fallbackConfig()
-	fallback, fallbackErr := newClient(fallbackCfg)
-	switch {
-	case primaryErr == nil && fallbackErr == nil:
-		primary.Fallback = fallback
-		primary.Log = log
-		return primary, cfg, nil
-	case primaryErr == nil:
-		fmt.Fprintf(log, "evaluate: the %s fallback is off: %v\n", fallbackCfg.Provider.Name, fallbackErr)
-		cfg.Fallback = nil
-		return primary, cfg, nil
-	case fallbackErr == nil:
-		fmt.Fprintf(log, "evaluate: %v; using the %s fallback\n", primaryErr, fallbackCfg.Provider.Name)
-		return fallback, fallbackCfg, nil
-	default:
-		return nil, cfg, fmt.Errorf("%w; the %s fallback cannot start either: %v", primaryErr, fallbackCfg.Provider.Name, fallbackErr)
-	}
-}
-
 // newServer registers the tools for cfg's backend against c. Split out from
 // serve so a test can drive the real registration without a transport or a
 // provider.
-func newServer(cfg Config, c *Client) *mcp.Server {
+func newServer(cfg Config, chain *chainRunner) *mcp.Server {
 	s := mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
-		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg)},
+		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg) + chain.backendNote()},
 	)
-	registerTools(s, cfg, c)
+	registerTools(s, cfg, chain)
 	return s
 }
 
@@ -229,49 +173,95 @@ func newServer(cfg Config, c *Client) *mcp.Server {
 // provider declines. An agent that branches on a number which is simply
 // absent misreads the answer, so the note says so up front.
 func backendNote(cfg Config) string {
-	note := "\nBackend: " + cfg.Provider.Name + ". Calling this tool sends the state and questions" +
-		" you pass to that provider, which bills for the call."
-	if cfg.Fallback != nil {
-		note = "\nBackend: " + cfg.Provider.Name + ", with " + cfg.Fallback.Provider.Name + " as fallback." +
-			" Calling this tool sends the state and questions you pass to " + cfg.Provider.Name +
-			", or to " + cfg.Fallback.Provider.Name + " when " + cfg.Provider.Name + " refuses its credential" +
-			" or is unavailable; the provider that answers bills for the call."
+	var specs []ProviderSpec
+	for _, hop := range cfg.chainConfigs() {
+		specs = append(specs, hop.Provider)
 	}
-	if cfg.Provider.Name == "openrouter" || (cfg.Fallback != nil && cfg.Fallback.Provider.Name == "openrouter") {
-		note += "\nThis backend may omit confidence and probabilities from a choice or score" +
-			" answer, which the TypeSafe backend always sends. Treat an absent field as" +
-			" absent: do not substitute a default before branching on it." +
-			" A question it declines comes back as {\"type\":\"refusal\"} with no value, while the" +
-			" other questions still answer; treat a refusal as no judgment, never as a no."
-	}
+	note := trustSentence(specs)
+	note += distinctNotes(specs, func(spec ProviderSpec) string { return spec.AnswerNote })
 	if cfg.AllowImages {
 		note += "\nImages and box questions are enabled. Image bytes are sent to the provider and billed."
 	} else {
 		note += "\nImages and box questions are disabled until the operator sets JEV_IMAGES=true."
 	}
-	if cfg.LongContext && (cfg.Provider.Name == "typesafe" || (cfg.Fallback != nil && cfg.Fallback.Provider.Name == "typesafe")) {
-		note += "\nLong context is enabled for the TypeSafe backend: its budgets are 262144 tokens and each TypeSafe request sends the long-context header."
+	if cfg.LongContext {
+		note += distinctNotes(specs, func(spec ProviderSpec) string { return spec.LongContextNote })
 	}
 	return note
 }
 
-// setupInstructions is what the plugin's server says, with no tools, when no
-// credential source is configured at all.
-const setupInstructions = `Jev has no TypeSafe or OpenRouter credential on this machine, so this server offers no tools.
-To enable the evaluate tool:
-1. Put a TypeSafe key in ~/.config/racecraft-jev/typesafe.key, or an OpenRouter key in ~/.config/racecraft-jev/openrouter.key, readable only by you (chmod 600).
-2. Reconnect this MCP server.
-Until then, make any judgment yourself in the ordinary way.`
+// trustSentence names every loaded hop in order and when state reaches each.
+func trustSentence(specs []ProviderSpec) string {
+	first := specs[0].Name
+	switch len(specs) {
+	case 1:
+		return "\nBackend: " + first + ". Calling this tool sends the state and questions" +
+			" you pass to that provider, which bills for the call."
+	case 2:
+		return "\nBackend: " + first + ", with " + specs[1].Name + " as fallback." +
+			" Calling this tool sends the state and questions you pass to " + first +
+			", or to " + specs[1].Name + " when " + first + " refuses its credential" +
+			", is unavailable, or cannot take the request; the provider that answers bills for the call."
+	}
+	names := make([]string, len(specs))
+	for i, spec := range specs {
+		names[i] = spec.Name
+	}
+	return "\nBackend: " + strings.Join(names, ", then ") + "." +
+		" Calling this tool sends the state and questions you pass to " + first +
+		", or to the next backend in that order when the one before refuses its credential" +
+		", is unavailable, or cannot take the request; the provider that answers bills for the call."
+}
+
+// distinctNotes appends each hop's note once, in chain order.
+func distinctNotes(specs []ProviderSpec, note func(ProviderSpec) string) string {
+	var out string
+	seen := map[string]bool{}
+	for _, spec := range specs {
+		if text := note(spec); !seen[text] {
+			seen[text] = true
+			out += text
+		}
+	}
+	return out
+}
+
+// setupMessage is what the plugin's server says, with no tools, when no hop
+// in the configured chain has a credential. It names that chain's backends
+// (missing, also used in the stderr line) and their key files, not a fixed
+// pair.
+func setupMessage(r resolvedHops) (missing, instructions string) {
+	labels := make([]string, len(r.hops))
+	files := make([]string, len(r.hops))
+	for i, hop := range r.hops {
+		p := hop.config.Provider
+		labels[i] = p.Label
+		files[i] = indefiniteArticle(p.Label) + " " + p.Label + " key in ~/" + pluginKeyDirectory + "/" + p.Name + ".key"
+	}
+	missing = strings.Join(labels, " or ")
+	return missing, "The evaluate server has no " + missing + " credential on this machine, so it offers no tools.\n" +
+		"To enable the evaluate tool:\n" +
+		"1. Put " + strings.Join(files, ", or ") + ", readable only by you (chmod 600).\n" +
+		"2. Reconnect this MCP server.\n" +
+		"Until then, make any judgment yourself in the ordinary way."
+}
+
+func indefiniteArticle(word string) string {
+	if word != "" && strings.ContainsRune("AEIOU", rune(word[0])) {
+		return "an"
+	}
+	return "a"
+}
 
 // newSetupServer is the server `mcp --plugin-defaults` runs when nothing is
 // configured: connected, with no tools, and instructions that say how to set
 // Jev up. A user without a key then sees a server that explains itself
 // rather than one that failed to start.
-func newSetupServer() *mcp.Server {
+func newSetupServer(text string) *mcp.Server {
 	return mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
 		&mcp.ServerOptions{
-			Instructions: setupInstructions,
+			Instructions: text,
 			// Advertised, with an empty list, so a client that asks for tools
 			// gets none rather than an error.
 			Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}},
@@ -284,22 +274,22 @@ func newSetupServer() *mcp.Server {
 // all, serves the setup instructions instead of refusing to start. A source
 // that exists but is broken still refuses, naming the fix.
 func serve(ctx context.Context, pluginDefaults bool) error {
-	cfg, err := resolveCallConfig(os.LookupEnv, pluginDefaults)
+	resolved, err := resolveHops(os.LookupEnv, pluginDefaults)
 	if err != nil {
 		return err
 	}
+	chain, cfg, err := startChain(resolved, os.Stderr, os.Stderr)
 	if pluginDefaults {
-		primary, fallback := classifySources(cfg, os.LookupEnv)
-		if credentialExit(primary, fallback) == exitUnconfigured {
-			fmt.Fprintln(os.Stderr, "evaluate: no TypeSafe or OpenRouter credential is configured; serving setup instructions with no tools")
-			return newSetupServer().Run(ctx, &mcp.StdioTransport{})
+		if chain.credentialExit() == exitUnconfigured {
+			missing, setup := setupMessage(resolved)
+			fmt.Fprintln(os.Stderr, "evaluate: no "+missing+" credential is configured; serving setup instructions with no tools")
+			return newSetupServer(setup).Run(ctx, &mcp.StdioTransport{})
 		}
 	}
-	c, cfg, err := newClients(cfg, os.Stderr)
 	if err != nil {
 		return err
 	}
 	// Nothing is printed here: stdout carries the MCP protocol, and a startup
 	// banner on it is a protocol error.
-	return newServer(cfg, c).Run(ctx, &mcp.StdioTransport{})
+	return newServer(cfg, chain).Run(ctx, &mcp.StdioTransport{})
 }

@@ -13,6 +13,8 @@ import (
 // Evaluate encodes and posts without validating, for tests about the encoder
 // and the transport. The server always goes through prepare and send.
 func (c *Client) Evaluate(ctx context.Context, in evaluateIn) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
 	body, headers, err := c.encode(in)
 	if err == nil {
 		body, err = c.post(ctx, body, headers)

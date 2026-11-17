@@ -1,4 +1,4 @@
-# PR Metadata — validates the PR title and the release-note block.
+# PR Metadata — validates the PR title, release note, and test disclosures.
 #
 # PR-event checks read title, body, labels and draft state. Manual runs fetch
 # them from the live PR and authenticate its repository, branch and SHA before
@@ -10,7 +10,7 @@
 # created or updated with GITHUB_TOKEN, because those pull_request events are
 # suppressed by GitHub's recursive workflow guard.
 #
-# No concurrency group: both jobs finish in seconds, and cancelling a same-SHA
+# No concurrency group: cancelling a same-SHA
 # run could leave a cancelled context beside the newer successful one.
 #
 # Security notes:
@@ -95,3 +95,40 @@ jobs:
           PR_LABELS_JSON: ${{ github.event_name == 'workflow_dispatch' && toJSON(fromJSON(steps.metadata.outputs.metadata).labels) || toJSON(github.event.pull_request.labels.*.name) }}
           PR_DRAFT: ${{ github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).draft || github.event.pull_request.draft || false }}
         run: python3 scripts/compose-release-notes.py --validate-pr
+
+  # Stable PR context; configure validate-test-changes as required in branch protection.
+  validate-test-changes:
+    name: ${{ github.event_name == 'workflow_dispatch' && 'manual-validate-test-changes' || 'validate-test-changes' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    permissions: {contents: read, pull-requests: read}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Authenticate manual PR metadata
+        id: metadata
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_INCLUDE_BASE_REF: 'true'
+        run: python3 scripts/pr_metadata.py
+
+      - name: Validate test changes
+        if: github.event_name != 'workflow_dispatch' || fromJSON(steps.metadata.outputs.metadata).draft == false
+        env:
+          BASE_REF: ${{ github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).base_ref || github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).body || github.event.pull_request.body }}
+        run: python3 scripts/check-test-changes.py

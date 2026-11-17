@@ -43,6 +43,28 @@ repository tooling or tests giving a wrong answer:
 - A correctness bug in repository tooling or tests, for example a check that
   passes on nothing: an empty glob, a skipped branch, or a fixture that never
   reaches the code under test.
+- A disclosed assertion change that checks less than before, unless the PR
+  body gives the reason: looser matching, a dropped value or field check, a
+  narrower case, or a weaker comparison. `validate-test-changes` requires a
+  `## Test changes` line naming each function whose assertions changed, with
+  its base path; whether the new assertion is weaker is the reviewer's call.
+- A ripwire `--quality-delta` regression the change leaves in place, whether
+  ripwire calls it gating or not: one the author's receipt lists, the
+  `ripwire-advisory` job summary shows, or a local run finds. Only a genuine
+  false positive accepted with `--quality-ack` and a reason is exempt.
+- Shipped guidance that claims more than the code does. In a skill under
+  `typesafe-jev/plugin/shared-skills/` or `speckit-pro/skills/`, a tool description, or
+  server instructions, an absolute claim about runtime behavior ("never",
+  "always", "nothing is sent", "only when") must hold for every path the code
+  takes. Check it against the code and cite the test that pins it; a claim no
+  test pins, or one a code path contradicts, is Important. Agents act on these
+  words, so an overstatement becomes a wrong decision downstream.
+- A behavior choice the change settles that its spec, ticket, or ADR left
+  open, when the PR body does not name it as a decision for the owner. Typical
+  cases: how an error is classified, whether a failure moves a session or one
+  call, a default value, a retry or timeout rule. Ask for a "Decisions made
+  here" line in the PR body; the finding clears once the PR body names the
+  decision, whatever the owner later decides about it.
 
 Style, naming, prose, and refactoring suggestions are Nit at most.
 

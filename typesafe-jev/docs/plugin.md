@@ -139,22 +139,61 @@ additions rather than editing around the old copy.
 
 ```json
 "env": {
-  "JEV_PROVIDER": "typesafe",
-  "JEV_MODEL": "jev-latest",
-  "JEV_FALLBACK_PROVIDER": "openrouter",
   "JEV_REQUEST_TIMEOUT": "45s"
 }
 ```
 
-The plugin names both backends explicitly: TypeSafe first, and OpenRouter as the
-fallback it opts in to with `JEV_FALLBACK_PROVIDER`. Nothing infers a backend
-from which keys happen to be set. A call moves to OpenRouter only when TypeSafe
-refuses its credential (401, 402, 403), is not found (404), throttles (429),
-fails (5xx) or cannot be reached. The session then stays on OpenRouter, and the
-switch is one line on stderr. A request TypeSafe rejected by shape never moves.
-Both backends share the one 45s budget, so the client's 75s abort still fits.
-To pin one backend, set `JEV_PROVIDER` and remove `JEV_FALLBACK_PROVIDER` in the
-client's own configuration for this server.
+The manifests leave backend and model selection to the binary, so they do not
+mask the operator's chain file. Resolution order is:
+
+1. `JEV_CHAIN`, a comma-separated list such as `openrouter,typesafe`.
+2. The legacy `JEV_PROVIDER` / `JEV_FALLBACK_PROVIDER` pair. A provider alone
+   selects one hop. An empty `JEV_FALLBACK_PROVIDER` is unset. Combining a
+   configured legacy provider with `JEV_CHAIN` fails.
+3. The comma-separated file `~/.config/racecraft-jev/chain`.
+4. The built-in `typesafe,openrouter` under `--plugin-defaults`, which the
+   plugin's launcher always passes. Without that flag, the built-in is
+   `typesafe` alone. Both modes use `jev-latest` on TypeSafe.
+
+A chain accepts at most four distinct registered providers, with no empty
+entries. The registered providers are `typesafe`, `openrouter`, `ollama`
+(Ollama Cloud) and `ollama-local` (the signed-in local daemon); both Ollama
+routes are opt-in through the chain. A missing chain file uses the built-in
+order; an unreadable or
+invalid file fails startup. Environment configuration wins without reading the
+file. `evaluate call --plugin-defaults` and the MCP server resolve identically.
+If the home directory is empty or relative, no chain file is read; the mode's
+built-in chain applies unless environment configuration overrides it.
+The chain file and `JEV_CHAIN` override the built-in chain in both modes, with
+the same precedence. A bare binary uses a second backend only when the
+operator names a chain; the plugin's launcher opts into TypeSafe then OpenRouter.
+`evaluate setup mcp` prints client configuration using `JEV_CHAIN`.
+
+Hop 1 keeps `JEV_API_KEY_FILE`; hop 2 keeps `JEV_FALLBACK_API_KEY_FILE`. With
+`--plugin-defaults`, every hop also discovers
+`~/.config/racecraft-jev/<provider>.key`, before its provider's environment key.
+`--check` reports exit 4 on any unusable credential. The server instead drops
+that hop with one log line and starts if any hop has a usable credential.
+Setting `JEV_FALLBACK_API_KEY_FILE` without a configured second hop fails startup.
+`JEV_MODEL` and the tool's `model` argument apply only to configured hop 1,
+even if that hop is dropped. Every later hop uses its provider's default.
+
+A failure with 401, 402, 403, 404, 429, 5xx or an unreachable destination moves
+the session down one hop after that hop's retries. It never moves back until a
+restart. Each hop enforces its own row's limits. A request one hop cannot take
+goes to the first later hop that can, before any network call, and the session
+stays where it is. A failure and a route compose: when the session's hop fails
+and the next hop cannot take this request, the session still moves and the call
+routes on (FB-08). An account failure (401, 402, 403, 429 or 5xx) also skips
+every later hop that bills the same account: when `ollama-local` fails that
+way, the call does not try `ollama` next. A daemon 502 or 503 is the exception:
+it means the daemon could not reach the cloud, so `ollama` is still tried (see
+[provider-contracts.md](provider-contracts.md)). Each hop's
+attempts stop at `JEV_HOP_TIMEOUT` (10s by default), and the last hop that can
+take the request gets the time left; a hop deadline routes only that call on
+(see [provider-contracts.md](provider-contracts.md)). The backend note lists the loaded order and updates the tool description with the
+serving hop after a move. Clients receive a tool-list change notification.
+All hops share the one 45s budget, so the client's 75s abort still fits.
 
 The Codex entry also sets `tool_timeout_sec: 75`, above the 45s request budget,
 so the client does not give up while the server is still inside the time it was

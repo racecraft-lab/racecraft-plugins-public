@@ -26,7 +26,7 @@ sys.path.insert(0, str(PLUGIN_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
-from speckit_pro_runner import envelope, runtime  # noqa: E402
+from speckit_pro_runner import envelope, path_utils, runtime  # noqa: E402
 from speckit_pro_runner.gates import payloads, release, runner_invocation  # noqa: E402
 
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
@@ -128,7 +128,7 @@ def preflight_with(
     with (
         mock.patch.object(runtime.platform, "python_version", return_value=python_version),
         mock.patch.object(runtime.shutil, "which", return_value=specify_path),
-        mock.patch.object(runtime, "detect_plugin_root", return_value=plugin_root),
+        mock.patch.object(path_utils, "detect_plugin_root", return_value=plugin_root),
         mock.patch.object(runtime, "metadata_report", return_value={"verification_status": metadata_status}),
     ):
         return runtime.preflight("test-preflight", {})
@@ -551,7 +551,7 @@ class RunnerFoundationTests(unittest.TestCase):
             (plugin_root / ".codex-plugin").mkdir()
             (plugin_root / ".codex-plugin" / "plugin.json").write_text("{}", encoding="utf-8")
             (package_dir / "__init__.py").write_text("", encoding="utf-8")
-            (package_dir / runtime.MANIFEST_NAME).write_text(
+            (package_dir / path_utils.MANIFEST_NAME).write_text(
                 json.dumps(
                     {
                         "runner_files": [
@@ -643,7 +643,7 @@ class RunnerTrustRosterTests(unittest.TestCase):
         recorded = {record["path"]["value"] for record in report["runner_files"]}
         for name in RUNTIME_LOADED_JSON:
             self.assertIn(f"speckit_pro_runner/{name}", recorded)
-        self.assertNotIn(f"speckit_pro_runner/{runtime.MANIFEST_NAME}", recorded)
+        self.assertNotIn(f"speckit_pro_runner/{path_utils.MANIFEST_NAME}", recorded)
 
     def test_payload_gate_flags_stale_runtime_json(self) -> None:
         self.assertEqual(
@@ -664,7 +664,7 @@ class RunnerManifestPluginVersionTests(unittest.TestCase):
             root = Path(tmp)
             package_dir = copy_runner(root)
             self.write_plugin_manifest_version(root, "9.9.9")
-            manifest_path = package_dir / runtime.MANIFEST_NAME
+            manifest_path = package_dir / path_utils.MANIFEST_NAME
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["plugin_version"] = "1.0.0"
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -684,7 +684,7 @@ class RunnerManifestPluginVersionTests(unittest.TestCase):
                     (root / "speckit-pro" / ".codex-plugin" / "plugin.json").unlink()
                 else:
                     self.write_plugin_manifest_version(root, version)
-                manifest_path = package_dir / runtime.MANIFEST_NAME
+                manifest_path = package_dir / path_utils.MANIFEST_NAME
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                 manifest["plugin_version"] = "1.0.0"
                 manifest["runner_files"] = []
@@ -731,6 +731,13 @@ class RunnerLayeringTests(unittest.TestCase):
                     if node.module.split(".")[0] in {"helpers", "gates"}:
                         offenders.append(f"{path.name}:{node.lineno}: from .{node.module}")
         self.assertEqual(offenders, [])
+
+    def test_path_primitives_live_in_core_without_entry_reexports(self) -> None:
+        self.assertTrue({"detect_plugin_root", "runner_source_files"}.isdisjoint(vars(runtime)))
+        self.assertEqual(
+            {path_utils.detect_plugin_root.__module__, path_utils.runner_source_files.__module__},
+            {path_utils.__name__},
+        )
 
     def test_helper_modules_reexport_the_shared_primitives_they_used_to_define(self) -> None:
         for module_name in self.SHARED_MODULES:

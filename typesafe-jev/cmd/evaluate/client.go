@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -11,18 +12,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 )
 
 // maxBody caps response size so an oversized reply cannot exhaust memory.
 const maxBody = 16 << 20
-
-// maxRequestBody caps the serialized request. Both publishers document a 32 MiB
-// body (TypeSafe's request rules and OpenRouter's Jev image limits, fetched
-// 2026-10-17). The previous 16 MiB cap rejected a single image that the
-// backends accept: base64 makes a 16 MiB file about 22 MiB of JSON.
-const maxRequestBody = 32 << 20
 
 const (
 	attributionURL   = "https://github.com/racecraft-lab/racecraft-plugins-public"
@@ -43,23 +37,15 @@ type Client struct {
 	APIKey credential
 
 	HTTP *http.Client
-	// Timeout bounds the whole evaluation: every attempt plus every wait
-	// between them, not each attempt separately.
+	// Timeout is the whole evaluation budget, enforced by the chain runner.
+	// post spends only the deadline supplied in its call context.
 	Timeout time.Duration
+	// HopTimeout limits a non-final hop within the runner's request deadline.
+	HopTimeout time.Duration
 	// MaxRetries is the number of *additional* attempts, so 0 means one.
 	MaxRetries int
 	// Backoff is the first retry delay; it doubles each attempt.
 	Backoff time.Duration
-
-	// Fallback is the operator's opt-in second backend (JEV_FALLBACK_PROVIDER),
-	// or nil. See fallback.go.
-	Fallback *Client
-	// Log receives the one line written when calls switch to Fallback. It is
-	// stderr in production: stdout carries the MCP protocol.
-	Log io.Writer
-	// switched is set once and never cleared, so one session never alternates
-	// between backends.
-	switched atomic.Bool
 }
 
 // newHTTPClient returns the transport used for provider calls.
@@ -76,35 +62,32 @@ func newHTTPClient() *http.Client {
 }
 
 // encode builds this backend's wire body and headers. It trusts the request:
-// prepare validates before it encodes. Every error is a
-// *requestInvalidError: a bad image or a body over the cap never leaves the
-// machine, and call maps that type to exit 2.
+// callers validate before encoding. Ordered hop checks and lazy image reads
+// compose in prepareForHop; this compatibility entry point still wraps local
+// errors as requestInvalidError, which call maps to exit 2.
 func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
 	body, headers, err := encodeRequest(c.Provider, in)
+	if err == nil {
+		err = checkBodySize(c.Provider, body)
+	}
 	if err != nil {
 		return nil, nil, &requestInvalidError{err}
-	}
-	if len(body) > maxRequestBody {
-		return nil, nil, &requestInvalidError{fmt.Errorf("%s: request is %d bytes, over the %d byte limit; send less state, fewer questions, or fewer or smaller images",
-			c.Provider.Name, len(body), maxRequestBody)}
 	}
 	return body, headers, nil
 }
 
-// post sends one encoded body with this backend's retry policy, inside a
-// single c.Timeout budget.
+// post spends the caller's hop deadline on attempts and retry waits. The
+// chain runner owns deadlines so their provenance stays available to classify.
 func (c *Client) post(ctx context.Context, body []byte, headers map[string]string) ([]byte, error) {
-	// One deadline for the whole evaluation. Retry waits are spent from the
-	// same budget, so a caller's timeout means what it says.
-	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
-	defer cancel()
 	deadline, _ := ctx.Deadline()
+	budget := time.Until(deadline)
 
 	delay := c.Backoff
+	var retryFailure error
 	for attempt := 0; ; attempt++ {
 		b, status, header, err := c.attempt(ctx, body, headers)
 		if err != nil {
-			return nil, err
+			return nil, retryDeadlineError(ctx.Err(), retryFailure, err)
 		}
 		if status/100 == 2 {
 			return b, nil
@@ -115,19 +98,29 @@ func (c *Client) post(ctx context.Context, body []byte, headers map[string]strin
 		if !slices.Contains(c.Provider.RetryStatuses, status) || attempt >= c.MaxRetries {
 			return nil, c.statusError(status, b)
 		}
+		retryFailure = c.statusError(status, b)
 
 		wait := backoffFor(delay, header, time.Now())
 		// Stop rather than sleep past the deadline and then make one more
 		// doomed attempt on the way out.
 		if remaining := time.Until(deadline); wait >= remaining {
 			return nil, &statusErr{Status: status, text: fmt.Sprintf("%s: HTTP %d; the next retry would not fit in the %s budget; retry later",
-				c.Provider.Name, status, c.Timeout)}
+				c.Provider.Name, status, budget)}
 		}
 		if err := sleep(ctx, wait); err != nil {
-			return nil, err
+			return nil, retryDeadlineError(err, retryFailure, err)
 		}
 		delay *= 2
 	}
+}
+
+// retryDeadlineError retains a backend status when its retry runs out of time.
+// Cancellation and other failures keep their original error.
+func retryDeadlineError(deadlineErr, retryFailure, failure error) error {
+	if retryFailure != nil && errors.Is(deadlineErr, context.DeadlineExceeded) {
+		return retryFailure
+	}
+	return failure
 }
 
 // sleep waits for d, or returns early if the call is cancelled.
@@ -201,7 +194,9 @@ func (c *Client) attempt(ctx context.Context, body []byte, extra map[string]stri
 	if err != nil {
 		return nil, 0, "", err
 	}
-	r.Header.Set("Authorization", "Bearer "+c.APIKey.reveal())
+	if c.Provider.AuthKind != authNone {
+		r.Header.Set("Authorization", "Bearer "+c.APIKey.reveal())
+	}
 	r.Header.Set("Content-Type", "application/json")
 	for key, value := range extra {
 		// Only the headers encodeRequest decided this backend may send.
