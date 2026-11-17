@@ -447,6 +447,29 @@ class PythonSyntaxTreeTests(GitFixture):
             ),
         })
 
+    def test_source_is_decoded_the_way_python_decodes_it(self) -> None:
+        sources = {
+            "tests/test_bom.py": b"\xef\xbb\xbfdef test_one():\n    assert True\n",
+            "tests/test_cookie.py": b"# -*- coding: latin-1 -*-\ndef test_one():\n    assert '\xe9'\n",
+            "tests/test_crlf.py": b"def test_one():\r\n    assert \'\'\'a\r\nb\'\'\'\r\n",
+        }
+        for path, source in sources.items():
+            (self.repo / path).write_bytes(source)
+        self.base({})
+        for path, source in sources.items():
+            (self.repo / path).write_bytes(source.replace(b"\r\n", b"\n") + b"# comment\n")
+        self.commit()
+        self.expect(0)
+        # The decoded literal is what is compared, so a changed byte in it is a changed assertion.
+        cookie = "tests/test_cookie.py"
+        (self.repo / cookie).write_bytes(sources[cookie].replace(b"\xe9", b"\xe8"))
+        self.commit()
+        self.assertIn(f"`{cookie}` (1 assertion line changed) in `test_one`", self.expect(1))
+        # Bytes that are not in the declared encoding do not compile, so they still fail closed.
+        (self.repo / cookie).write_bytes(sources[cookie].replace(b"latin-1", b"utf-8"))
+        self.commit()
+        self.assertIn(f"unparseable test file {cookie} at {self.git('rev-parse', 'HEAD')}", self.expect(1))
+
     def test_code_too_deep_to_read_fails_closed_naming_the_file_and_ref(self) -> None:
         self.transition(
             {self.PATH: PYTHON},
@@ -531,6 +554,13 @@ class GoCallSpellingTests(GitFixture):
             # Parentheses that hold arguments or guard an operator are part of the call.
             "TestParensKept": ("t.Error((a + b) * c, f(x))", "t.Error(a + b * c, f(x))", "1 assertion line changed"),
         })
+
+    def test_byte_order_mark_and_line_endings_are_not_assertion_changes(self) -> None:
+        source = "package sample\nfunc TestOne(t *testing.T) {\n    t.Fatal(`a\nb`)\n}\n"
+        self.base({self.PATH: source})
+        (self.repo / self.PATH).write_bytes(b"\xef\xbb\xbf" + source.replace("\n", "\r\n").encode("utf-8"))
+        self.commit()
+        self.expect(0)
 
 
 class DeletedFileTests(GitFixture):

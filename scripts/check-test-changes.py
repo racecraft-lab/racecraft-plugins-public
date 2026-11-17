@@ -320,11 +320,12 @@ def python_scope(node: ast.AST, key: str, in_function: bool) -> str:
     return f"{key}.{node.name}" if key else node.name
 
 
-def read_python(text: str) -> TestFile:
+def read_python(source: bytes) -> TestFile:
     names: list[str] = []
     assertions: dict[str, list[str]] = {MODULE: []}
     # An explicit stack, so deeply nested code cannot exhaust the interpreter's recursion limit here.
-    pending: list[tuple[ast.AST, str, bool]] = [(ast.parse(text), MODULE, False)]
+    # Bytes, so Python decodes them itself: a byte order mark or an encoding declaration is honored.
+    pending: list[tuple[ast.AST, str, bool]] = [(ast.parse(source), MODULE, False)]
     while pending:
         parent, key, in_function = pending.pop()
         for node in ast.iter_child_nodes(parent):
@@ -368,9 +369,9 @@ def inventory(ref: str, registered: set[str]) -> dict[str, TestFile]:
         if not is_test_file(path, registered):
             continue
         source = command(["show", f"{ref}:{path}"])
-        read = read_go if path.endswith(".go") else read_python
         try:
-            files[path] = read(source.decode("utf-8"))
+            # Go source is UTF-8, and a leading byte order mark is not part of it.
+            files[path] = read_go(source.decode("utf-8-sig")) if path.endswith(".go") else read_python(source)
         except (SyntaxError, UnicodeError, ValueError, RecursionError) as exc:
             raise ValueError(f"unparseable test file {path} at {ref}: {exc}") from exc
     return files
