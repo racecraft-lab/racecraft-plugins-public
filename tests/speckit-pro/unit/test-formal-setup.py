@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import io
 import json
@@ -29,6 +30,7 @@ from speckit_pro_runner.helpers.read_only import json_schema_failures
 
 SCRIPTS = "skills/speckit-coach/scripts"
 setup = load_script("formal_setup", PLUGIN / SCRIPTS / "setup-formal-tools.py")
+java_trust = load_script("java_trust", ROOT / "scripts/check-java-trust.py")
 CACHE: Path | None = None
 SCHEMA_PATH = PLUGIN / "speckit_pro_runner/contracts/formal-methods.schema.json"
 EXAMPLES = PLUGIN / "skills/speckit-coach/examples/formal"
@@ -248,13 +250,44 @@ class NativeSetupTests(unittest.TestCase):
                     shutil.copyfile(PLUGIN / "skills/speckit-coach/examples/formal/counter/Counter.tla", root / "formal/counter/Counter.tla")
 
 
+class JavaTrustTests(unittest.TestCase):
+    def test_inventory_hashes_der_independently_of_alias(self) -> None:
+        certificate = base64.b64encode(b"certificate bytes").decode("ascii")
+        listing = ("Your keystore contains 1 entry\nAlias name: arbitrary vendor alias\n"
+                   "Entry type: trustedCertEntry\n-----BEGIN CERTIFICATE-----\n"
+                   + certificate + "\n-----END CERTIFICATE-----\n")
+        self.assertEqual({"arbitrary vendor alias": hashlib.sha256(b"certificate bytes").hexdigest()},
+                         java_trust.parse_inventory(listing))
+        for malformed in (listing.replace("1 entry", "2 entries"),
+                          listing.replace("trustedCertEntry", "PrivateKeyEntry"),
+                          listing + "-----BEGIN CERTIFICATE-----\n"):
+            with self.subTest(malformed=malformed), self.assertRaises(ValueError):
+                java_trust.parse_inventory(malformed)
+
+    def test_postcondition_rejects_noop_deletion_and_unrelated_changes(self) -> None:
+        blocked = next(iter(java_trust.BLOCKED_SHA256))
+        before = {"unrelated": "safe", "arbitrary alias": blocked}
+        java_trust.require_preserved_roots(before, {"unrelated": "safe"})
+        for after in (before, {}, {"unrelated": "changed"}, {"renamed": "safe"}):
+            with self.subTest(after=after), self.assertRaises(ValueError):
+                java_trust.require_preserved_roots(before, after)
+
+    def test_workflow_hardens_selected_java_before_installing_tools(self) -> None:
+        workflow = (ROOT / ".github/workflows/formal-qualification.yml").read_text()
+        guard = workflow.index("run: python3 scripts/check-java-trust.py --remove-blocked")
+        self.assertLess(workflow.index("uses: actions/setup-java@"), guard)
+        self.assertLess(guard, workflow.index("- name: Install explicitly selected pinned tools"))
+        self.assertIn("- 'scripts/check-java-trust.py'", workflow)
+        self.assertIn("force-download: true", workflow)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--native-setup", action="store_true", help="Authorize isolated pinned tool installation and real checks from source and installed payloads")
     parser.add_argument("--download-cache", type=Path)
     args = parser.parse_args()
     CACHE = args.download_cache
-    suite = unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (SetupTests, PinAndExampleTests)])
+    suite = unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (SetupTests, PinAndExampleTests, JavaTrustTests)])
     if args.native_setup:
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(NativeSetupTests))
     raise SystemExit(run_counted(suite, label="test-formal-setup"))
