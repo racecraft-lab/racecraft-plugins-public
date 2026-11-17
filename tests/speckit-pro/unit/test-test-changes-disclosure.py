@@ -424,41 +424,27 @@ class AssertionSpellingTests(GitFixture):
 class PythonSyntaxTreeTests(GitFixture):
     PATH = "tests/test_sample.py"
 
-    def test_multi_line_string_literals_are_compared_whole(self) -> None:
-        before = (
-            'def test_tail(value):\n    assert """a\nb""" not in value\n'
-            'def test_blank_lines(value):\n    assert ("""\n\n""" not in value)\n'
-        )
-        after = before.replace('b"""', 'bc"""').replace('"""\n\n"""', '"""\n\n\n"""')
-        self.transition({self.PATH: before}, {self.PATH: after})
-        output = self.expect(1)
-        for name in ("test_tail", "test_blank_lines"):
-            self.assertIn(f"`{self.PATH}` (1 assertion line changed) in `{name}`", output)
-
-    def test_assertion_call_split_across_lines_counts(self) -> None:
-        before = (
-            "import unittest\nclass TestChecks(unittest.TestCase):\n    def test_one(self):\n"
-            "        (self\n            .assertEqual(1, 1))\n"
-        )
-        self.transition({self.PATH: before}, {self.PATH: before.split("        (self")[0] + "        pass\n"})
-        self.assertIn(f"`{self.PATH}` (1 net assertion line lost) in `test_one` of `TestChecks`", self.expect(1))
-
-    def test_unittest_and_pytest_fail_calls_count(self) -> None:
-        # A fixture helper whose name only starts with `fail` is not an assertion.
-        before = 'def test_one(self):\n    self.fail("first")\n    pytest.fail("second")\n    self.failing_write()\n'
-        self.transition({self.PATH: before}, {self.PATH: "def test_one(self):\n    pass\n"})
-        self.assertIn(f"`{self.PATH}` (2 net assertion lines lost) in `test_one`", self.expect(1))
-
-    def test_each_assertion_on_a_shared_line_counts(self) -> None:
-        before = "def test_one(x):\n    assert x; assert x > 1\n"
-        self.transition({self.PATH: before}, {self.PATH: before.replace("; assert x > 1", "")})
-        self.assertIn(f"`{self.PATH}` (1 net assertion line lost) in `test_one`", self.expect(1))
-
-    def test_reformatted_assertions_pass(self) -> None:
-        before = 'def test_one(self, x):\n    assert(x == "a")\n    self.assertEqual(1, x)\n'
-        after = "def test_one(self, x):\n    assert x == 'a'  # same check\n    self.assertEqual(\n        1,\n        x,\n    )\n"
-        self.transition({self.PATH: before}, {self.PATH: after})
-        self.expect(0)
+    def test_assertions_are_read_as_whole_statements(self) -> None:
+        self.expect_function_changes(self.PATH, "", "def {name}(self, value):\n    {body}\n", {
+            "test_string_tail": (
+                'assert """a\nb""" not in value', 'assert """a\nbc""" not in value', "1 assertion line changed",
+            ),
+            "test_string_newlines": (
+                'assert ("""\n\n""" not in value)', 'assert ("""\n\n\n""" not in value)', "1 assertion line changed",
+            ),
+            "test_split_selector": ("(self\n        .assertEqual(1, 1))", "pass", "1 net assertion line lost"),
+            # A fixture helper whose name only starts with `fail` is not an assertion.
+            "test_fail_calls": (
+                'self.fail("first")\n    pytest.fail("second")\n    self.failing_write()', "pass",
+                "2 net assertion lines lost",
+            ),
+            "test_shared_line": ("assert value; assert value > 1", "assert value", "1 net assertion line lost"),
+            "test_reformatted": (
+                'assert(value == "a")\n    self.assertEqual(1, value)',
+                "assert value == 'a'  # same check\n    self.assertEqual(\n        1,\n        value,\n    )",
+                None,
+            ),
+        })
 
     def test_code_too_deep_to_read_fails_closed_naming_the_file_and_ref(self) -> None:
         self.transition(
