@@ -419,7 +419,7 @@ def missing_disclosures(entries: list[Disclosure], section: str) -> list[str]:
     groups: dict[tuple[str, ...], list[Disclosure]] = {}
     for entry in entries:
         groups.setdefault(entry.tokens, []).append(entry)
-    missing = []
+    missing: list[str] = []
     for tokens, group in groups.items():
         for _ in range(required_mentions(group)):
             mentions = next((line for line in lines if all(line[token] for token in tokens)), None)
