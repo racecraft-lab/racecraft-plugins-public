@@ -16,6 +16,14 @@ exact, and comments and layout are ignored. Each base assertion that the head
 function lacks is lost (the count fell) or changed, and needs a disclosure line
 naming the function and its base path.
 
+A Python assertion is an assert statement, or a call to one of these: a
+unittest check named `assert` plus a capital letter (`assertEqual`) on any
+object, a unittest.mock check (`assert_called_once_with`, `assert_not_awaited`
+and the rest of that fixed list) on any object, any `assert` name on `self`,
+`self.fail`, `self.failureException`, `pytest.raises` or `pytest.fail`. Another
+`assert_` name on another object (`helpers.assert_dispatched_to`) is a helper
+and is not counted.
+
 A Go assertion is a failure call on a test value named t, b, f or tb, or a
 testify `require.` or `assert.` call. Redundant parentheses, a pointer
 indirection and a method expression are read as the same call: `(t).Error(1)`,
@@ -62,6 +70,13 @@ GO_TESTING_TYPES = frozenset({"T", "B", "F", "TB"})
 GO_FAILURE_CALLS = frozenset({"Fatal", "Fatalf", "Error", "Errorf", "FailNow", "Fail"})
 GO_TESTIFY = frozenset({"require", "assert"})
 PY_FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
+# A unittest check by its camel-case name, and the unittest.mock checks, whatever object they are called on.
+PY_UNITTEST_CHECK = re.compile(r"assert[A-Z]\w*")
+PY_MOCK_CHECKS = frozenset({
+    "assert_called", "assert_called_once", "assert_called_with", "assert_called_once_with", "assert_any_call",
+    "assert_has_calls", "assert_not_called", "assert_awaited", "assert_awaited_once", "assert_awaited_with",
+    "assert_awaited_once_with", "assert_any_await", "assert_has_awaits", "assert_not_awaited",
+})
 # Assertion scope for code outside every function; module scopes never move between files.
 MODULE = ""
 
@@ -299,18 +314,20 @@ def read_go(text: str) -> TestFile:
 
 
 def is_python_assertion(node: ast.AST) -> bool:
-    """An assert statement, a unittest call on `self`, or `pytest.raises` or `pytest.fail`."""
+    """An assert statement, a unittest or mock check on any object, or one of the `self` and `pytest` calls below."""
     if isinstance(node, ast.Assert):
         return True
     if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
         return False
     receiver, method = node.func.value, node.func.attr
-    if not isinstance(receiver, ast.Name):
-        return False
-    if receiver.id == "pytest":
+    if PY_UNITTEST_CHECK.fullmatch(method) or method in PY_MOCK_CHECKS:
+        return True
+    owner = receiver.id if isinstance(receiver, ast.Name) else None
+    if owner == "pytest":
         return method in ("raises", "fail")
-    # Exact fail names: a `fail` prefix also matches fixture helpers such as `self.failing_write()`.
-    return receiver.id == "self" and (method.startswith("assert") or method in ("fail", "failureException"))
+    # On `self`, any `assert` name is a check, such as a test class's own `assert_` helper. Elsewhere such a
+    # name can be a plain helper. Exact fail names: a `fail` prefix also matches `self.failing_write()`.
+    return owner == "self" and (method.startswith("assert") or method in ("fail", "failureException"))
 
 
 def python_scope(node: ast.AST, key: str, in_function: bool) -> str:

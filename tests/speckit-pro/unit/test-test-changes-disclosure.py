@@ -80,7 +80,7 @@ class GitFixture(unittest.TestCase):
 
     def expect_function_changes(
         self, path: str, header: str, function: str, cases: dict[str, tuple[str, str, str | None]],
-    ) -> None:
+    ) -> str:
         """Commit one function per case, its body at base then at head, and expect each case's disclosure or none."""
         before, after = (
             header + "".join(function.format(name=name, body=case[side]) for name, case in cases.items())
@@ -94,6 +94,7 @@ class GitFixture(unittest.TestCase):
                     self.assertNotIn(f"`{name}`", output)
                 else:
                     self.assertIn(f"`{path}` ({needed}) in `{name}`", output)
+        return output
 
 
 class UnchangedTests(GitFixture):
@@ -478,6 +479,52 @@ class PythonSyntaxTreeTests(GitFixture):
         output = self.expect(1, "## Test changes\ntest_kept " + self.PATH)
         self.assertIn(f"unparseable test file {self.PATH} at {self.git('rev-parse', 'HEAD')}", output)
         self.assertNotIn("Traceback", output)
+
+
+class PythonReceiverTests(GitFixture):
+    PATH = "tests/test_sample.py"
+    MOCK_CHECKS = (
+        "assert_called", "assert_called_once", "assert_called_with", "assert_called_once_with", "assert_any_call",
+        "assert_has_calls", "assert_not_called", "assert_awaited", "assert_awaited_once", "assert_awaited_with",
+        "assert_awaited_once_with", "assert_any_await", "assert_has_awaits", "assert_not_awaited",
+    )
+
+    def test_unittest_and_mock_checks_count_on_any_receiver(self) -> None:
+        output = self.expect_function_changes(self.PATH, "", "def {name}(self, case, mocks, value):\n    {body}\n", {
+            "test_alias_removed": ("case.assertEqual(1, value)", "pass", "1 net assertion line lost"),
+            "test_chained_argument": (
+                "self.subtest_case.assertIn(1, value)", "self.subtest_case.assertIn(2, value)", "1 assertion line changed",
+            ),
+            "test_subscript_argument": (
+                "mocks[0].assert_called_once_with(1)", "mocks[0].assert_called_once_with(2)", "1 assertion line changed",
+            ),
+            "test_call_result_removed": ("make(value).assert_not_called()", "pass", "1 net assertion line lost"),
+            "test_duplicates": (
+                "case.assertTrue(value)\n    case.assertTrue(value)\n    mocks.assert_any_call()\n    mocks.assert_any_call()",
+                "case.assertTrue(value)\n    mocks.assert_any_call()",
+                "2 net assertion lines lost",
+            ),
+            "test_every_mock_check": (
+                "\n    ".join(f"mocks.{check}()" for check in self.MOCK_CHECKS), "pass",
+                f"{len(self.MOCK_CHECKS)} net assertion lines lost",
+            ),
+            # A call on `self` matches both the old rule and the new one, and still counts once.
+            "test_self_counts_once": ("self.assertEqual(1, value)", "pass", "1 net assertion line lost"),
+            "test_reformatted": (
+                "case.assertEqual(1, value)\n    mocks[0].assert_called_once_with(1, key=2)",
+                "case.assertEqual(\n        1,\n        value,\n    )\n"
+                "    (mocks[0]\n        .assert_called_once_with(1, key=2))  # same checks",
+                None,
+            ),
+            # Other `assert_` names are helpers, not assertions, unless they are called on `self`.
+            "test_helpers": (
+                "helpers.assert_dispatched_to(value)\n    fixture_runner.assert_dispatch_fixture(value)\n"
+                "    case.assert_equal(1, value)\n    case.assertion(value)",
+                "pass",
+                None,
+            ),
+        })
+        self.expect(0, "## Test changes\n" + output.split("## Test changes\n", 1)[1])
 
 
 class GoTokenStreamTests(GitFixture):
