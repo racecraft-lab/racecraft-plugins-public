@@ -249,25 +249,33 @@ def statement_end(code: list[str], row: int, column: int) -> int:
         segment = code[row]
 
 
-def parse_test_file(path: str, source: bytes) -> TestFile:
-    text = source.decode("utf-8")
-    if path.endswith(".go"):
-        code = source_rows(GO_LITERALS.sub(lambda match: blank(match[0]), text))
-        readable = source_rows(GO_LITERALS.sub(
-            lambda match: blank(match[0]) if match[0][:2] in ("//", "/*") else protect(match[0]), text,
-        ))
-        layout, pattern = go_layout("".join(code)), GO_ASSERTION
-    else:
-        text = text.replace("\r\n", "\n").replace("\r", "\n")
-        tree = ast.parse(text)
-        code, readable = python_views(text)
-        layout, pattern = python_layout(tree, len(code)), PY_ASSERTION
+def line_assertions(code: list[str], readable: list[str], layout: Layout, pattern: re.Pattern[str]) -> TestFile:
     assertions: dict[str, list[str]] = {key: [] for key in layout.keys | {MODULE}}
     for row, line in enumerate(code):
         if match := pattern.search(line):
             last = statement_end(code, row, match.start())
             assertions[layout.owners[row]].append(" ".join(" ".join(readable[row:last + 1]).split()))
     return TestFile(layout.names, {key: tuple(lines) for key, lines in assertions.items()})
+
+
+def read_go(text: str) -> TestFile:
+    code = source_rows(GO_LITERALS.sub(lambda match: blank(match[0]), text))
+    readable = source_rows(GO_LITERALS.sub(
+        lambda match: blank(match[0]) if match[0][:2] in ("//", "/*") else protect(match[0]), text,
+    ))
+    return line_assertions(code, readable, go_layout("".join(code)), GO_ASSERTION)
+
+
+def read_python(text: str) -> TestFile:
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    tree = ast.parse(text)
+    code, readable = python_views(text)
+    return line_assertions(code, readable, python_layout(tree, len(code)), PY_ASSERTION)
+
+
+def parse_test_file(path: str, source: bytes) -> TestFile:
+    text = source.decode("utf-8")
+    return read_go(text) if path.endswith(".go") else read_python(text)
 
 
 def registered_tests(ref: str) -> set[str]:
