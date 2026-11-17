@@ -18,7 +18,7 @@ import (
 const (
 	exitAnswered         = 0 // answered, and the response passed validation
 	exitRequestInvalid   = 2 // the request was rejected locally, before any network call
-	exitUnconfigured     = 3 // no credential source is configured for a backend in the chain
+	exitUnconfigured     = 3 // no credential source is configured for any backend in the chain
 	exitCredentialBroken = 4 // a credential source is configured but cannot be used
 	exitProviderFailed   = 5 // provider or transport error, or timeout, after the client's own retries
 	exitResponseInvalid  = 6 // the provider answered, but the answer failed validation
@@ -79,7 +79,7 @@ stderr: a diagnostic that never carries a key, the request, or image bytes
 Exit codes:
   0  answered, and the response passed validation
   2  request rejected locally (shape, option or score cap, context budget, or an image the backend would refuse)
-  3  no credential source configured for a backend in the chain
+  3  no credential source configured for any backend in the chain
   4  a credential source is configured but unusable
   5  provider or transport error, or timeout
   6  the response failed validation

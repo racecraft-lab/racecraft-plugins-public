@@ -219,7 +219,7 @@ JSON: where it comes from (`explicit-file`, `default-file`, `environment`, or
 |---|---|
 | 0 | Answered, and the response passed validation |
 | 2 | Request rejected locally: its shape, an image the backend would refuse, the option or score cap, or the context budget |
-| 3 | No credential source configured for a backend in the chain |
+| 3 | No credential source configured for any backend in the chain |
 | 4 | A credential source is configured but unusable, including an explicit key-file path whose file is absent, or the configuration itself is invalid |
 | 5 | Provider or transport error, or timeout, after the client's own retries |
 | 6 | The response failed validation |

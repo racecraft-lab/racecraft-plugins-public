@@ -124,9 +124,11 @@ This is the intended trade. Implicit routing means the destination of a request
 ### A backend does not fall back to the other backend's credential
 
 An OpenRouter process reads only the OpenRouter credential, and a TypeSafe
-process only the TypeSafe one. There is no implicit cross-provider fallback in
-either direction. An operator can name one with `JEV_FALLBACK_PROVIDER`, and the
-fallback then reads its own credential, never the primary's.
+process only the TypeSafe one. No backend borrows another backend's credential,
+in either direction. A chain of backends comes from `JEV_CHAIN`, the legacy
+`JEV_FALLBACK_PROVIDER` pair, a per-user chain file, or, under
+`--plugin-defaults`, the built-in `typesafe,openrouter` chain. Each hop in it
+reads its own credential, never another hop's.
 
 ### `setup mcp` no longer edits client configuration
 
