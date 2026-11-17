@@ -481,6 +481,16 @@ class GoTokenStreamTests(GitFixture):
             ),
         })
 
+    def test_receiver_methods_are_keyed_by_type_through_type_parameters_and_parentheses(self) -> None:
+        before = (
+            "package sample\nfunc (s *Stack[T]) check(t *testing.T) {\n    t.Error(1)\n}\n"
+            "func ((*fixture)) check(t *testing.T) {\n    t.Error(2)\n}\n"
+        )
+        self.transition({self.PATH: before}, {self.PATH: before.replace("    t.Error(1)\n", "").replace("(2)", "(3)")})
+        output = self.expect(1)
+        self.assertIn(f"`{self.PATH}` (1 net assertion line lost) in `check` of `Stack`", output)
+        self.assertIn(f"`{self.PATH}` (1 assertion line changed) in `check` of `fixture`", output)
+
     def test_unreadable_go_fails_closed_naming_the_file_and_ref(self) -> None:
         self.base({self.PATH: GO})
         for source in ('var text = "open\n', "/* open\n", "var text = 'x\n", "var value = 1 ? 2\n"):
