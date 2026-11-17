@@ -1,4 +1,4 @@
-"""Path helpers shared by runner gate modules."""
+"""Path helpers shared by runner modules."""
 
 from __future__ import annotations
 
@@ -7,6 +7,31 @@ import os
 import shutil
 import sys
 from pathlib import Path
+
+
+MANIFEST_NAME = "speckit-pro-runner.manifest.json"
+
+
+def detect_plugin_root() -> Path | None:
+    for candidate in [Path(__file__).resolve().parent, *Path(__file__).resolve().parents]:
+        if (candidate / ".claude-plugin" / "plugin.json").is_file() or (candidate / ".codex-plugin" / "plugin.json").is_file():
+            return candidate
+    return None
+
+
+def runner_source_files(package_dir: Path) -> list[Path]:
+    """List every runner file the trust manifest covers.
+
+    This is the one roster: the refresh script and the payload gates call it.
+    It holds all Python modules and every JSON file the runner loads at run
+    time, except the manifest itself.
+    """
+    return sorted(
+        path
+        for pattern in ("*.py", "*.json")
+        for path in package_dir.rglob(pattern)
+        if "__pycache__" not in path.parts and path.is_file() and path.name != MANIFEST_NAME
+    )
 
 
 def find_repo_root(start: Path) -> Path | None:
