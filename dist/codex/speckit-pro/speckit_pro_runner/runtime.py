@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from . import path_utils
 from . import (
     CONTRACT_VERSION,
     PYTHON_MINIMUM,
@@ -23,7 +24,6 @@ from .envelope import answer_response, diagnostic, response
 from .path_utils import parse_version_tuple, sha256_file
 from .helpers.harm_halt import apply_refusal as harm_halt_refusal
 
-MANIFEST_NAME = "speckit-pro-runner.manifest.json"
 CHECKSUM_NAME = "speckit-pro-runner.sha256"
 
 
@@ -140,7 +140,7 @@ def preflight(request_id: str | None, _inputs: dict[str, Any]) -> dict[str, Any]
 
 
 def build_report(*, check_metadata: bool) -> dict[str, Any]:
-    plugin_root = detect_plugin_root()
+    plugin_root = path_utils.detect_plugin_root()
     package_dir = Path(__file__).resolve().parent
 
     python_version = platform.python_version()
@@ -185,13 +185,6 @@ def build_report(*, check_metadata: bool) -> dict[str, Any]:
     }
 
 
-def detect_plugin_root() -> Path | None:
-    for candidate in [Path(__file__).resolve().parent, *Path(__file__).resolve().parents]:
-        if (candidate / ".claude-plugin" / "plugin.json").is_file() or (candidate / ".codex-plugin" / "plugin.json").is_file():
-            return candidate
-    return None
-
-
 def runtime_context(plugin_root: Path | None) -> str:
     if plugin_root is not None and installed_payload_root(plugin_root):
         return "installed_payload"
@@ -220,12 +213,12 @@ def plugin_relative(plugin_root: Path | None, path: Path) -> str:
 
 
 def path_report(plugin_root: Path | None, package_dir: Path) -> dict[str, dict[str, str]]:
-    manifest = package_dir / MANIFEST_NAME
+    manifest = package_dir / path_utils.MANIFEST_NAME
     checksum = package_dir / CHECKSUM_NAME
     return {
         "plugin_root": typed_path("plugin_relative", "." if plugin_root else "", "speckit-pro/"),
         "runner_package": typed_path("plugin_relative", plugin_relative(plugin_root, package_dir), "speckit_pro_runner/"),
-        "manifest_file": typed_path("plugin_relative", plugin_relative(plugin_root, manifest), f"speckit_pro_runner/{MANIFEST_NAME}"),
+        "manifest_file": typed_path("plugin_relative", plugin_relative(plugin_root, manifest), f"speckit_pro_runner/{path_utils.MANIFEST_NAME}"),
         "checksum_file": typed_path("plugin_relative", plugin_relative(plugin_root, checksum), f"speckit_pro_runner/{CHECKSUM_NAME}"),
     }
 
@@ -236,11 +229,11 @@ def metadata_report(
     *,
     check_metadata: bool,
 ) -> dict[str, Any]:
-    manifest_path = package_dir / MANIFEST_NAME
+    manifest_path = package_dir / path_utils.MANIFEST_NAME
     checksum_path = package_dir / CHECKSUM_NAME
     base = {
         "verification_status": "not_checked",
-        "manifest": typed_path("plugin_relative", plugin_relative(plugin_root, manifest_path), f"speckit_pro_runner/{MANIFEST_NAME}"),
+        "manifest": typed_path("plugin_relative", plugin_relative(plugin_root, manifest_path), f"speckit_pro_runner/{path_utils.MANIFEST_NAME}"),
         "checksum": typed_path("plugin_relative", plugin_relative(plugin_root, checksum_path), f"speckit_pro_runner/{CHECKSUM_NAME}"),
         "runner_files": [],
     }
@@ -257,7 +250,7 @@ def metadata_report(
         base["verification_status"] = "incomplete_metadata"
         return base
 
-    source_files = runner_source_files(package_dir)
+    source_files = path_utils.runner_source_files(package_dir)
     expected_values = {plugin_relative(plugin_root, path): sha256_file(path) for path in source_files}
     manifest_records = manifest.get("runner_files")
     if not isinstance(manifest_records, list):
@@ -292,21 +285,6 @@ def metadata_report(
         for path, digest in sorted(expected_values.items())
     ]
     return base
-
-
-def runner_source_files(package_dir: Path) -> list[Path]:
-    """List every runner file the trust manifest covers.
-
-    This is the one roster: the refresh script and the payload gates call it.
-    It holds all Python modules and every JSON file the runner loads at run
-    time, except the manifest itself.
-    """
-    return sorted(
-        path
-        for pattern in ("*.py", "*.json")
-        for path in package_dir.rglob(pattern)
-        if "__pycache__" not in path.parts and path.is_file() and path.name != MANIFEST_NAME
-    )
 
 
 def parse_checksum_file(path: Path) -> dict[str, str]:
