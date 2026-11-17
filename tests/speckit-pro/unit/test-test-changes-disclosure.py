@@ -582,7 +582,8 @@ func Testhelper(t *testing.T) {}
             git = shutil.which("git")
             self.assertIsNotNone(git)
             (Path(directory) / "git").symlink_to(str(git))
-            path = directory + os.pathsep + os.pathsep.join(("/usr/bin", "/bin"))
+            # Only git: CI runners keep go in /usr/bin, so no system directory may join this PATH.
+            path = directory
             self.assertIsNone(shutil.which("go", path=path))
             self.assertIsNone(shutil.which("gofmt", path=path))
             self.expect(0, PATH=path)
