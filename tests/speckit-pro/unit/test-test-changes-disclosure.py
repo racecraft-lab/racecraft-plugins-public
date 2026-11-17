@@ -77,6 +77,23 @@ class GitFixture(unittest.TestCase):
         self.assertIn("Test changes", output)
         return output
 
+    def expect_function_changes(
+        self, path: str, header: str, function: str, cases: dict[str, tuple[str, str, str | None]],
+    ) -> None:
+        """Commit one function per case, its body at base then at head, and expect each case's disclosure or none."""
+        before, after = (
+            header + "".join(function.format(name=name, body=case[side]) for name, case in cases.items())
+            for side in (0, 1)
+        )
+        self.transition({path: before}, {path: after})
+        output = self.expect(1)
+        for name, (_, _, needed) in cases.items():
+            with self.subTest(name=name):
+                if needed is None:
+                    self.assertNotIn(f"`{name}`", output)
+                else:
+                    self.assertIn(f"`{path}` ({needed}) in `{name}`", output)
+
 
 class UnchangedTests(GitFixture):
     def test_no_test_changes_and_empty_test_inventory_pass(self) -> None:
@@ -451,6 +468,42 @@ class PythonSyntaxTreeTests(GitFixture):
         output = self.expect(1, "## Test changes\ntest_kept " + self.PATH)
         self.assertIn(f"unparseable test file {self.PATH} at {self.git('rev-parse', 'HEAD')}", output)
         self.assertNotIn("Traceback", output)
+
+
+class GoTokenStreamTests(GitFixture):
+    PATH = "pkg/sample_test.go"
+
+    def test_assertions_are_read_as_whole_calls(self) -> None:
+        function = "func {name}(t *testing.T) {{\n    {body}\n}}\n"
+        self.expect_function_changes(self.PATH, "package sample\n", function, {
+            "TestSplitSelector": (
+                't.\n    Error("bad")\n    require.\n        NoError(t, nil)', "", "2 net assertion lines lost",
+            ),
+            "TestRawString": (
+                "t.Fatal(`a\n\nb`)\n    t.Error(`c\nd`)", "t.Fatal(`a\nb`)\n    t.Error(`c\nde`)", "2 assertion lines changed",
+            ),
+            "TestSharedLine": (
+                'if testing.Short() { t.Error("a") } else { t.Error("b") }',
+                'if testing.Short() { t.Error("a") } else {}',
+                "1 net assertion line lost",
+            ),
+            "TestChainedCall": ("assert.New(t).Equal(1, 1)", "assert.New(t).Equal(1, 2)", "1 assertion line changed"),
+            "TestReformatted": (
+                't.Fatalf("want %d, got %d", 1, 2)',
+                't.Fatalf( // values\n        "want %d, got %d",\n        1, 2,\n    )',
+                None,
+            ),
+        })
+
+    def test_unreadable_go_fails_closed_naming_the_file_and_ref(self) -> None:
+        self.base({self.PATH: GO})
+        for source in ('var text = "open\n', "/* open\n", "var text = 'x\n", "var value = 1 ? 2\n"):
+            with self.subTest(source=source):
+                self.write(self.PATH, GO + source)
+                self.commit()
+                output = self.expect(1, "## Test changes\nTestKept " + self.PATH)
+                self.assertIn(f"unparseable test file {self.PATH} at {self.git('rev-parse', 'HEAD')}", output)
+                self.assertNotIn("Traceback", output)
 
 
 class DeletedFileTests(GitFixture):

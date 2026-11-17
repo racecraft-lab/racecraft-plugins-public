@@ -3,22 +3,24 @@
 
 Run from the repository root with BASE_REF, HEAD_REF (default HEAD), and PR_BODY.
 Reads committed blobs at merge-base(BASE_REF, HEAD_REF) and HEAD_REF. Python
-uses ast; Go declarations use a masked lexical scan. No source is executed,
-and only Python's standard library and git are needed.
+is read as a syntax tree (ast) and Go as a token stream from a small lexer
+here. No source is executed, and only Python's standard library and git are
+needed. A file that cannot be read at either ref fails the check.
 
 Assertions are compared per function: a top-level function, a class method
 (`Class.method`), a Go receiver method (`Receiver.Method`), or a file's module
 scope. A function found at head in the same directory, in any file, is the same
-function. Each base assertion statement, compared without comments or
-whitespace, that the head function lacks is lost (the count fell) or changed,
-and needs a disclosure line naming the function and its base path.
+function. An assertion is one assert statement or one assertion call, however
+many lines it spans. It is compared by its code alone: literal contents are
+exact, and comments and layout are ignored. Each base assertion that the head
+function lacks is lost (the count fell) or changed, and needs a disclosure line
+naming the function and its base path.
 """
 
 from __future__ import annotations
 
 import argparse
 import ast
-import io
 import json
 import os
 import re
@@ -31,18 +33,25 @@ from pathlib import Path, PurePosixPath
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from release_note_policy import FenceOpening, is_closing_fence, opening_fence  # noqa: E402
 
-GO_LITERALS = re.compile(r'//[^\n]*|/\*.*?\*/|`[^`]*`|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', re.S)
-# A depth-0 match opens a scope: a receiver method, a function, or a var/const/type/import block.
-GO_TOKEN = re.compile(
-    r"\bfunc\s*\(([^(){}]*)\)\s*(\w+)\s*\(|\bfunc\s+(\w+)\s*[(\[]"
-    r"|\b(?:var|const|type|import)\b|[()[\]{}]"
+GO_KEYWORDS = frozenset(
+    "break case chan const continue default defer else fallthrough for func go goto if import interface map "
+    "package range return select struct switch type var".split()
 )
-GO_RECEIVER_TYPE = re.compile(r"(\w+)\s*(?:\[[^\]]*\])?\s*\Z")
+# One Go lexeme: skipped whitespace or a comment, or a token. An unterminated comment or literal matches nothing.
+GO_LEXEME = re.compile(
+    r"(?P<skip>\s+|//[^\n]*|/\*.*?\*/)|(?P<token>"
+    r"`[^`]*`|\"(?:\\[^\n]|[^\"\\\n])*\"|'(?:\\[^\n]|[^'\\\n])+'"  # raw string, string, rune
+    r"|0[xX][0-9a-fA-F_]*(?:\.[0-9a-fA-F_]*)?(?:[pP][-+]?[0-9_]+)?i?|0[bBoO][0-9_]+i?"
+    r"|(?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9][0-9_]*)(?:[eE][-+]?[0-9_]+)?i?"
+    r"|[^\W\d]\w*"  # a name or keyword
+    r"|<<=|>>=|&\^=|\.\.\.|&&|\|\||<-|\+\+|--|<<|>>|&\^|[-+*%&|^<>=!:]=|/(?!\*)=?|[-+*%&|^<>=!~()\[\]{},;.:])",
+    re.S,
+)
 GO_TEST_NAME = re.compile(r"(?:(?:Test|Benchmark|Fuzz)(?![a-z])\w*|Example\w*)\Z")
-# testing.T, B, F and TB failure calls on their conventional names, and testify packages.
-GO_ASSERTION = re.compile(
-    r"\b(?:t|b|f|tb)\s*\.\s*(?:Fatalf?|Errorf?|FailNow|Fail)\s*\(|\b(?:require|assert)\s*\."
-)
+# Failure calls on the conventional testing.T, B, F and TB names, and the testify packages.
+GO_TESTING_NAMES = frozenset({"t", "b", "f", "tb"})
+GO_FAILURE_CALLS = frozenset({"Fatal", "Fatalf", "Error", "Errorf", "FailNow", "Fail"})
+GO_TESTIFY = frozenset({"require", "assert"})
 PY_FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
 # Assertion scope for code outside every function; module scopes never move between files.
 MODULE = ""
@@ -51,7 +60,7 @@ MODULE = ""
 @dataclass(frozen=True)
 class TestFile:
     names: tuple[str, ...]
-    # Function key (`name`, `Class.method`, `Receiver.Method`, or MODULE) -> normalized assertion statements.
+    # Function key (`name`, `Class.method`, `Receiver.Method`, or MODULE) -> each assertion in canonical form.
     assertions: dict[str, tuple[str, ...]]
 
 
@@ -63,13 +72,6 @@ class Disclosure:
     tokens: tuple[str, ...]  # (path, name) for a function, (path,) for a module scope
     description: str
     kind: str  # "removed" test name, "vanished" function, or "changed" function present at head
-
-
-@dataclass(frozen=True)
-class Layout:
-    names: tuple[str, ...]
-    owners: list[str]
-    keys: frozenset[str]
 
 
 def command(arguments: list[str]) -> bytes:
@@ -108,91 +110,117 @@ def is_test_file(path: str, registered: set[str]) -> bool:
     )
 
 
-def source_rows(text: str) -> list[str]:
-    return io.StringIO(text).readlines()
+def go_tokens(text: str) -> list[str]:
+    """Go tokens in source order, without comments. A literal keeps its quotes, so it never equals a name."""
+    tokens = []
+    position = 0
+    while position < len(text):
+        lexeme = GO_LEXEME.match(text, position)
+        if lexeme is None:
+            raise ValueError(f"Go file has an unreadable token on line {text.count(chr(10), 0, position) + 1}")
+        if lexeme["token"]:
+            tokens.append(lexeme["token"])
+        position = lexeme.end()
+    return tokens
 
 
-def blank(text: str) -> str:
-    return re.sub(r"[^\r\n]", " ", text)
-
-
-def protect(text: str) -> str:
-    """Spell whitespace inside a literal as non-whitespace, so normalizing code whitespace keeps it exact."""
-    return re.sub(r"[^\S\r\n]", lambda match: f"\0{ord(match[0]):x}\0", text)
-
-
-def go_scope(token: re.Match[str]) -> str | None:
-    if token[3]:
-        return token[3]
-    if token[2]:
-        receiver = GO_RECEIVER_TYPE.search(token[1].strip())
-        if receiver is None:
-            raise ValueError(f"Go method {token[2]} has an unreadable receiver")
-        return f"{receiver[1]}.{token[2]}"
-    return MODULE if token[0][-1].isalpha() else None
-
-
-def go_top_level_tokens(masked: str) -> list[re.Match[str]]:
-    """GO_TOKEN matches outside every bracket; unbalanced brackets fail."""
-    found = []
-    stack: list[str] = []
+def go_closers(tokens: list[str]) -> dict[int, int]:
+    """Index of each opening delimiter -> index of its closing delimiter; unbalanced delimiters fail."""
     pairs = {")": "(", "]": "[", "}": "{"}
-    for token in GO_TOKEN.finditer(masked):
-        if not stack:
-            found.append(token)
-        delimiter = token[0][-1]
-        if delimiter in "([{":
-            stack.append(delimiter)
-        elif delimiter in pairs and (not stack or stack.pop() != pairs[delimiter]):
-            raise ValueError("Go file has mismatched delimiters")
-    if stack:
+    closers = {}
+    opened: list[int] = []
+    for index, token in enumerate(tokens):
+        if token in pairs.values():
+            opened.append(index)
+        elif token in pairs:
+            if not opened or tokens[opened[-1]] != pairs[token]:
+                raise ValueError("Go file has mismatched delimiters")
+            closers[opened.pop()] = index
+    if opened:
         raise ValueError("Go file has unclosed delimiters")
-    return found
+    return closers
 
 
-def go_layout(masked: str) -> Layout:
-    if not re.match(r"\s*package\s+\w+", masked):
-        raise ValueError("Go file has no package declaration")
-    names = []
-    starts: list[tuple[int, str]] = []
-    for token in go_top_level_tokens(masked):
-        scope = go_scope(token)
+def is_go_name(token: str) -> bool:
+    return (token[:1] == "_" or token[:1].isalpha()) and token not in GO_KEYWORDS
+
+
+def go_receiver_type(receiver: list[str], method: str) -> str:
+    """The receiver's type name: the last name before any type parameters, closing punctuation aside."""
+    typed = receiver[:receiver.index("[")] if "[" in receiver else receiver
+    named = [token for token in typed if token not in (")", ",")]
+    if not named or not is_go_name(named[-1]):
+        raise ValueError(f"Go method {method} has an unreadable receiver")
+    return named[-1]
+
+
+def go_scope(tokens: list[str], index: int, closers: dict[int, int]) -> str | None:
+    """The scope a top-level token opens: a receiver method, a function, or a var/const/type/import block."""
+    if tokens[index] in ("var", "const", "type", "import"):
+        return MODULE
+    if tokens[index] != "func":
+        return None
+    has_receiver = tokens[index + 1:index + 2] == ["("]
+    start = closers[index + 1] + 1 if has_receiver else index + 1
+    name, opener = (tokens[start:start + 2] + ["", ""])[:2]
+    # A method takes `(` after its name; a function may take `[` for type parameters instead.
+    openers = ("(",) if has_receiver else ("(", "[")
+    if not is_go_name(name) or opener not in openers:
+        return None
+    return f"{go_receiver_type(tokens[index + 2:start - 1], name)}.{name}" if has_receiver else name
+
+
+def go_scopes(tokens: list[str], closers: dict[int, int]) -> dict[int, str]:
+    """Index of each scope-opening token outside every delimiter -> its scope."""
+    scopes = {}
+    index = 0
+    while index < len(tokens):
+        scope = go_scope(tokens, index, closers)
         if scope is not None:
-            starts.append((masked.count("\n", 0, token.start()), scope))
-            if token[3] and token[0][-1] == "(" and GO_TEST_NAME.fullmatch(token[3]):
-                names.append(token[3])
-    owners = [MODULE] * len(source_rows(masked))
-    for row, scope in starts:
-        owners[row:] = [scope] * (len(owners) - row)
-    return Layout(tuple(names), owners, frozenset(scope for _, scope in starts))
+            scopes[index] = scope
+        index = closers.get(index, index) + 1
+    return scopes
 
 
-def statement_end(code: list[str], row: int, column: int) -> int:
-    """Last row of the statement starting at (row, column): brackets still open, or a backslash, continue it."""
-    depth, segment = 0, code[row][column:]
-    while True:
-        depth += sum(map(segment.count, "([{")) - sum(map(segment.count, ")]}"))
-        if (depth <= 0 and not segment.rstrip().endswith("\\")) or row + 1 == len(code):
-            return row
-        row += 1
-        segment = code[row]
+def go_assertion_end(tokens: list[str], index: int, closers: dict[int, int]) -> int | None:
+    """Index past the assertion that starts at `index`, or None when no assertion starts there."""
+    receiver, dot, method, opener = (tokens[index:index + 4] + [""] * 3)[:4]
+    is_failure_call = receiver in GO_TESTING_NAMES and method in GO_FAILURE_CALLS and opener == "("
+    if dot != "." or not (is_failure_call or receiver in GO_TESTIFY):
+        return None
+    end = index + 3
+    # Take the call and every chained selector, index or call, as in `assert.New(t).Equal(1, 2)`.
+    while tokens[end:end + 1] in (["("], ["["], ["."]):
+        end = end + 2 if tokens[end] == "." else closers[end] + 1
+    return end
 
 
-def line_assertions(code: list[str], readable: list[str], layout: Layout, pattern: re.Pattern[str]) -> TestFile:
-    assertions: dict[str, list[str]] = {key: [] for key in layout.keys | {MODULE}}
-    for row, line in enumerate(code):
-        if match := pattern.search(line):
-            last = statement_end(code, row, match.start())
-            assertions[layout.owners[row]].append(" ".join(" ".join(readable[row:last + 1]).split()))
-    return TestFile(layout.names, {key: tuple(lines) for key, lines in assertions.items()})
+def go_statement(tokens: list[str]) -> str:
+    """Tokens joined by spaces: literal contents exact, layout absent, no comma before a closing delimiter."""
+    following = tokens[1:] + [""]
+    return " ".join(
+        token for token, after in zip(tokens, following, strict=True) if not (token == "," and after in (")", "]", "}"))
+    )
 
 
 def read_go(text: str) -> TestFile:
-    code = source_rows(GO_LITERALS.sub(lambda match: blank(match[0]), text))
-    readable = source_rows(GO_LITERALS.sub(
-        lambda match: blank(match[0]) if match[0][:2] in ("//", "/*") else protect(match[0]), text,
-    ))
-    return line_assertions(code, readable, go_layout("".join(code)), GO_ASSERTION)
+    tokens = go_tokens(text)
+    if tokens[:1] != ["package"] or not is_go_name("".join(tokens[1:2])):
+        raise ValueError("Go file has no package declaration")
+    closers = go_closers(tokens)
+    scopes = go_scopes(tokens, closers)
+    names = tuple(
+        scope for index, scope in scopes.items()
+        if tokens[index + 1:index + 3] == [scope, "("] and GO_TEST_NAME.fullmatch(scope)
+    )
+    assertions: dict[str, list[str]] = {scope: [] for scope in (MODULE, *scopes.values())}
+    scope = MODULE
+    for index in range(len(tokens)):
+        scope = scopes.get(index, scope)
+        end = go_assertion_end(tokens, index, closers)
+        if end is not None:
+            assertions[scope].append(go_statement(tokens[index:end]))
+    return TestFile(names, {key: tuple(found) for key, found in assertions.items()})
 
 
 def is_python_assertion(node: ast.AST) -> bool:
