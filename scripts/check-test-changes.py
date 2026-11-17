@@ -15,12 +15,20 @@ many lines it spans. It is compared by its code alone: literal contents are
 exact, and comments and layout are ignored. Each base assertion that the head
 function lacks is lost (the count fell) or changed, and needs a disclosure line
 naming the function and its base path.
+
+A Go assertion is a failure call on a test value named t, b, f or tb, or a
+testify `require.` or `assert.` call. Redundant parentheses, a pointer
+indirection and a method expression are read as the same call: `(t).Error(1)`,
+`(t.Error)(1)`, `(*t).Error(1)` and `(*testing.T).Error(t, 1)`. A call reached
+another way (another name, a conversion, a type assertion, a stored method
+value) is not counted.
 """
 
 from __future__ import annotations
 
 import argparse
 import ast
+import itertools
 import json
 import os
 import re
@@ -50,6 +58,7 @@ GO_LEXEME = re.compile(
 GO_TEST_NAME = re.compile(r"(?:(?:Test|Benchmark|Fuzz)(?![a-z])\w*|Example\w*)\Z")
 # Failure calls on the conventional testing.T, B, F and TB names, and the testify packages.
 GO_TESTING_NAMES = frozenset({"t", "b", "f", "tb"})
+GO_TESTING_TYPES = frozenset({"T", "B", "F", "TB"})
 GO_FAILURE_CALLS = frozenset({"Fatal", "Fatalf", "Error", "Errorf", "FailNow", "Fail"})
 GO_TESTIFY = frozenset({"require", "assert"})
 PY_FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
@@ -110,18 +119,83 @@ def is_test_file(path: str, registered: set[str]) -> bool:
     )
 
 
+def is_go_name(token: str) -> bool:
+    return (token[:1] == "_" or token[:1].isalpha()) and token not in GO_KEYWORDS
+
+
+def go_ends_statement(token: str) -> bool:
+    """Go's rule for a line's last token: a name, a literal, one of four keywords or a closer ends the statement."""
+    if token in GO_KEYWORDS:
+        return token in ("break", "continue", "fallthrough", "return")
+    is_number = token[0].isdigit() or (token[0] == "." and token[1:2].isdigit())
+    return token in ("++", "--", ")", "]", "}") or token[0] in "\"'`" or is_number or is_go_name(token)
+
+
 def go_tokens(text: str) -> list[str]:
-    """Go tokens in source order, without comments. A literal keeps its quotes, so it never equals a name."""
-    tokens = []
+    """Go tokens in source order: comments dropped, and a `;` added where Go ends a statement at a line break.
+
+    A literal keeps its quotes, so it never equals a name. A raw string drops its carriage returns, as in Go.
+    """
+    tokens: list[str] = []
     position = 0
     while position < len(text):
         lexeme = GO_LEXEME.match(text, position)
         if lexeme is None:
             raise ValueError(f"Go file has an unreadable token on line {text.count(chr(10), 0, position) + 1}")
-        if lexeme["token"]:
-            tokens.append(lexeme["token"])
+        token = lexeme["token"]
+        if token:
+            tokens.append(token.replace("\r", "") if token[0] == "`" else token)
+        elif "\n" in lexeme[0] and tokens and go_ends_statement(tokens[-1]):
+            tokens.append(";")
         position = lexeme.end()
+    if tokens and go_ends_statement(tokens[-1]):
+        tokens.append(";")
     return tokens
+
+
+def go_chain(tokens: list[str]) -> list[str] | None:
+    """The `name.name` chain of an operand that is only names, dots and leading `*`; None for anything else."""
+    chain = list(itertools.dropwhile(lambda token: token == "*", tokens))
+    is_chain = len(chain) % 2 == 1 and all(map(is_go_name, chain[::2])) and all(dot == "." for dot in chain[1::2])
+    return chain if is_chain else None
+
+
+def go_groups_after(before: str) -> bool:
+    """Whether a `(` after `before` groups an expression, not call arguments, a type assertion or a signature."""
+    return not (before in (")", "]", "}", ".", "func") or is_go_name(before))
+
+
+def go_unwrapped(content: list[str], before: str, after: list[str]) -> list[str] | None:
+    """What `(content)` reads as without its parentheses, or None when it needs them."""
+    chain = go_chain(content)
+    if chain is None or not go_groups_after(before):
+        return None
+    selects = after[:1] == ["."] and is_go_name("".join(after[1:2]))
+    # A bare chain needs no parentheses anywhere; `(*x)` needs none before a selected name.
+    return chain if content == chain or selects else None
+
+
+def go_plain(tokens: list[str], closers: dict[int, int], start: int, stop: int) -> list[str]:
+    """The tokens from `start` to `stop` without redundant parentheses, so one call has one spelling.
+
+    `(t).Error(1)`, `(t.Error)(1)`, `((t)).Error(1)` and `(*t).Error(1)` all read as `t.Error(1)`: a selector
+    reaches through a pointer, so the `*` is redundant there too. Only a pair that groups one operand goes.
+    """
+    plain: list[str] = []
+    index = start
+    while index < stop:
+        if tokens[index] != "(":
+            plain.append(tokens[index])
+            index += 1
+            continue
+        first, last = index + 1, closers[index]
+        while tokens[first:first + 1] == ["("] and closers[first] == last - 1:
+            first, last = first + 1, last - 1  # `((x))` is `(x)`
+        content = go_plain(tokens, closers, first, last)
+        index = closers[index] + 1
+        operand = go_unwrapped(content, plain[-1] if plain else "", tokens[index:index + 2])
+        plain += ["(", *content, ")"] if operand is None else operand
+    return plain
 
 
 def go_closers(tokens: list[str]) -> dict[int, int]:
@@ -139,10 +213,6 @@ def go_closers(tokens: list[str]) -> dict[int, int]:
     if opened:
         raise ValueError("Go file has unclosed delimiters")
     return closers
-
-
-def is_go_name(token: str) -> bool:
-    return (token[:1] == "_" or token[:1].isalpha()) and token not in GO_KEYWORDS
 
 
 def go_receiver_type(receiver: list[str], method: str) -> str:
@@ -185,7 +255,10 @@ def go_scopes(tokens: list[str], closers: dict[int, int]) -> dict[int, str]:
 def go_assertion_end(tokens: list[str], index: int, closers: dict[int, int]) -> int | None:
     """Index past the assertion that starts at `index`, or None when no assertion starts there."""
     receiver, dot, method, opener = (tokens[index:index + 4] + [""] * 3)[:4]
-    is_failure_call = receiver in GO_TESTING_NAMES and method in GO_FAILURE_CALLS and opener == "("
+    # `testing.T.Error(t, 1)`, a method expression, is another spelling of `t.Error(1)`.
+    is_method_expression = receiver in GO_TESTING_TYPES and tokens[max(index - 2, 0):index] == ["testing", "."]
+    on_test = receiver in GO_TESTING_NAMES or is_method_expression
+    is_failure_call = on_test and method in GO_FAILURE_CALLS and opener == "("
     if dot != "." or not (is_failure_call or receiver in GO_TESTIFY):
         return None
     end = index + 3
@@ -196,15 +269,17 @@ def go_assertion_end(tokens: list[str], index: int, closers: dict[int, int]) -> 
 
 
 def go_statement(tokens: list[str]) -> str:
-    """Tokens joined by spaces: literal contents exact, layout absent, no comma before a closing delimiter."""
+    """Tokens joined by spaces: literal contents exact, layout absent, no `,` or `;` before a closing delimiter."""
     following = tokens[1:] + [""]
     return " ".join(
-        token for token, after in zip(tokens, following, strict=True) if not (token == "," and after in (")", "]", "}"))
+        token for token, after in zip(tokens, following, strict=True)
+        if not (token in (",", ";") and after in (")", "]", "}"))
     )
 
 
 def read_go(text: str) -> TestFile:
-    tokens = go_tokens(text)
+    spelled = go_tokens(text)
+    tokens = go_plain(spelled, go_closers(spelled), 0, len(spelled))
     if tokens[:1] != ["package"] or not is_go_name("".join(tokens[1:2])):
         raise ValueError("Go file has no package declaration")
     closers = go_closers(tokens)

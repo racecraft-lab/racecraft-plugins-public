@@ -23,6 +23,7 @@ from isolated_child import run_python  # noqa: E402
 from script_loader import load_script  # noqa: E402
 
 GO = 'package sample\nimport "testing"\nfunc TestKept(t *testing.T) { t.Fatal("kept") }\n'
+GO_FUNCTION = "func {name}(t *testing.T) {{\n    {body}\n}}\n"
 PYTHON = 'def test_kept():\n    assert True\n'
 
 
@@ -460,8 +461,7 @@ class GoTokenStreamTests(GitFixture):
     PATH = "pkg/sample_test.go"
 
     def test_assertions_are_read_as_whole_calls(self) -> None:
-        function = "func {name}(t *testing.T) {{\n    {body}\n}}\n"
-        self.expect_function_changes(self.PATH, "package sample\n", function, {
+        self.expect_function_changes(self.PATH, "package sample\n", GO_FUNCTION, {
             "TestSplitSelector": (
                 't.\n    Error("bad")\n    require.\n        NoError(t, nil)', "", "2 net assertion lines lost",
             ),
@@ -477,6 +477,13 @@ class GoTokenStreamTests(GitFixture):
             "TestReformatted": (
                 't.Fatalf("want %d, got %d", 1, 2)',
                 't.Fatalf( // values\n        "want %d, got %d",\n        1, 2,\n    )',
+                None,
+            ),
+            # A line break ends a statement, so the next one is not part of the assertion.
+            "TestNextStatement": ('t.Error("a")\n    (*p).n = 1', 't.Error("a")\n    (*q).n = 1', None),
+            "TestReflowedClosure": (
+                "assert.Eventually(t, func() bool { poll(); return true })",
+                "assert.Eventually(t, func() bool {\n        poll()\n        return true\n    })",
                 None,
             ),
         })
@@ -500,6 +507,30 @@ class GoTokenStreamTests(GitFixture):
                 output = self.expect(1, "## Test changes\nTestKept " + self.PATH)
                 self.assertIn(f"unparseable test file {self.PATH} at {self.git('rev-parse', 'HEAD')}", output)
                 self.assertNotIn("Traceback", output)
+
+
+class GoCallSpellingTests(GitFixture):
+    PATH = "pkg/sample_test.go"
+
+    def test_parentheses_pointers_and_method_expressions_spell_the_same_call(self) -> None:
+        self.expect_function_changes(self.PATH, "package sample\n", GO_FUNCTION, {
+            "TestParenReceiver": (
+                '(t).Error("a")\n    ((t)).Error("b")\n    (*t).Error("c")\n    ((*t)).Error("d")', "",
+                "4 net assertion lines lost",
+            ),
+            "TestParenSelector": (
+                '(t.Error)("a")\n    ((t).Error)("b")\n    (require.Equal)(t, 1, 2)', "(require.Equal)(t, 1, 1)",
+                "2 net assertion lines lost, 1 assertion line changed",
+            ),
+            "TestMethodExpression": (
+                '(*testing.T).Error(t, "a")\n    testing.TB.Fatal(t, "b")', "", "2 net assertion lines lost",
+            ),
+            "TestParensAdded": (
+                't.Error("a")\n    require.Equal(t, 1, 2)', '(t).Error("a")\n    (require.Equal)(t, 1, 2)', None,
+            ),
+            # Parentheses that hold arguments or guard an operator are part of the call.
+            "TestParensKept": ("t.Error((a + b) * c, f(x))", "t.Error(a + b * c, f(x))", "1 assertion line changed"),
+        })
 
 
 class DeletedFileTests(GitFixture):
