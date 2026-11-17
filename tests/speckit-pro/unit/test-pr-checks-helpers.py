@@ -820,7 +820,7 @@ class GoModuleHelperTests(unittest.TestCase):
             ["scripts/changed_files.py"], [".github/workflows/pr-checks.yml"],
         ):
             with self.subTest(changed=changed):
-                self.assertTrue(GO_MODULE.go_module_changed(changed))
+                self.assertTrue(MATRIX.ci_selection.go_module_changed(changed))
 
     def test_other_changes_skip_go(self) -> None:
         for changed in (
@@ -829,33 +829,17 @@ class GoModuleHelperTests(unittest.TestCase):
             ["typesafe-jev-notes.md", "docs/typesafe-jev/guide.md"],
         ):
             with self.subTest(changed=changed):
-                self.assertFalse(GO_MODULE.go_module_changed(changed))
+                self.assertFalse(MATRIX.ci_selection.go_module_changed(changed))
 
-    def test_detect_appends_run_go(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            output_path = Path(temporary_directory) / "github-output"
-            output_path.write_text("existing=value\n", encoding="utf-8")
-            with (
-                mock.patch.object(
-                    GO_MODULE, "changed_files_for_base", return_value=("typesafe-jev/go.sum",)
-                ),
-                mock.patch.dict(os.environ, {"BASE_REF": "main", "GITHUB_OUTPUT": str(output_path)}),
-                contextlib.redirect_stdout(io.StringIO()),
-            ):
-                return_code = GO_MODULE.main(["detect"])
-            content = output_path.read_text(encoding="utf-8")
-        self.assertEqual(0, return_code)
-        self.assertEqual("existing=value\nrun_go=true\n", content)
-
-    def test_missing_base_ref_fails(self) -> None:
-        stderr = io.StringIO()
+    def test_retired_detect_mode_is_rejected_without_selection_or_tools(self) -> None:
         with (
-            mock.patch.dict(os.environ, {"BASE_REF": "", "GITHUB_OUTPUT": ""}),
-            contextlib.redirect_stderr(stderr),
+            mock.patch.object(GO_MODULE.subprocess, "run") as run,
+            contextlib.redirect_stderr(io.StringIO()) as stderr,
+            contextlib.redirect_stdout(io.StringIO()),
         ):
-            return_code = GO_MODULE.main(["detect"])
-        self.assertEqual(1, return_code)
-        self.assertEqual("::error::Go module check failed: BASE_REF is not set\n", stderr.getvalue())
+            self.assertEqual(1, GO_MODULE.main(["detect"]))
+        run.assert_not_called()
+        self.assertIn("usage: check-go-module.py check", stderr.getvalue())
 
     def test_unknown_mode_fails(self) -> None:
         for argv in ([], ["lint"], ["check", "extra"]):
@@ -864,7 +848,7 @@ class GoModuleHelperTests(unittest.TestCase):
                 with contextlib.redirect_stderr(stderr):
                     return_code = GO_MODULE.main(argv)
                 self.assertEqual(1, return_code)
-                self.assertIn("usage: check-go-module.py detect|check", stderr.getvalue())
+                self.assertIn("usage: check-go-module.py check", stderr.getvalue())
 
     def test_failed_go_tool_raises_with_its_argv(self) -> None:
         completed = subprocess.CompletedProcess(["go", "vet", "./..."], 1, stdout="", stderr="vet: boom\n")

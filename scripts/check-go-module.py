@@ -7,8 +7,6 @@ and no shell.
 
 Modes:
 
-  detect  Append run_go=true or run_go=false to GITHUB_OUTPUT, from the files
-          changed against origin/$BASE_REF.
   check   Verify module checksums, check formatting, vet, test, test with the
           race detector, and cross-compile every release target.
 """
@@ -23,10 +21,6 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import changed_files as _changed_files  # noqa: E402
-from ci_selection import go_module_changed  # noqa: E402
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_DIR = "typesafe-jev"
 RELEASE_TARGETS = (
@@ -39,28 +33,6 @@ RELEASE_TARGETS = (
 
 class GoModuleCheckError(RuntimeError):
     """Raised when a Go module check cannot run or does not pass."""
-
-
-def changed_files_for_base(base_ref: str, *, repo_root: Path = REPO_ROOT) -> tuple[str, ...]:
-    return _changed_files.changed_files_for_base(base_ref, repo_root=repo_root, error=GoModuleCheckError)
-
-
-def append_github_output(output_path: Path, fields: Mapping[str, str]) -> None:
-    try:
-        with output_path.open("a", encoding="utf-8", newline="\n") as output:
-            for key, value in fields.items():
-                output.write(f"{key}={value}\n")
-    except OSError as error:
-        raise GoModuleCheckError(f"unable to append GITHUB_OUTPUT: {error}") from error
-
-
-def detect() -> None:
-    run_go = go_module_changed(changed_files_for_base(os.environ.get("BASE_REF", "")))
-    output_value = os.environ.get("GITHUB_OUTPUT", "")
-    if not output_value:
-        raise GoModuleCheckError("GITHUB_OUTPUT is not set")
-    print(f"Go module checks needed: {'true' if run_go else 'false'}")
-    append_github_output(Path(output_value), {"run_go": "true" if run_go else "false"})
 
 
 def finish(argv: Sequence[str], completed: subprocess.CompletedProcess[str]) -> str:
@@ -138,10 +110,10 @@ def check() -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    modes = {"detect": detect, "check": check}
+    modes = {"check": check}
     try:
         if len(args) != 1 or args[0] not in modes:
-            raise GoModuleCheckError("usage: check-go-module.py detect|check")
+            raise GoModuleCheckError("usage: check-go-module.py check")
         modes[args[0]]()
     except GoModuleCheckError as error:
         print(f"::error::Go module check failed: {error}", file=sys.stderr)
