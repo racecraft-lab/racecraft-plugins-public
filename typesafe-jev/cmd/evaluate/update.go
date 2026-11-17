@@ -56,6 +56,9 @@ const (
 
 var updateClient = &http.Client{Timeout: updateTimeout}
 
+// updateExecutable locates the running binary. Tests point it at a temp file.
+var updateExecutable = os.Executable
+
 // httpGet fetches url with the command's context and a bounded client, and
 // rejects non-200 responses so no caller parses an error page as data.
 func httpGet(ctx context.Context, url string) (*http.Response, error) {
@@ -90,7 +93,7 @@ func download(ctx context.Context, url string, limit int64) ([]byte, error) {
 
 // runUpdate replaces the running binary with the newest typesafe-jev release.
 func runUpdate(ctx context.Context) error {
-	exe, err := os.Executable()
+	exe, err := updateExecutable()
 	if err == nil {
 		// Depending on the OS, exe can be the symlink the binary was started
 		// through; renaming over it would replace the link, not the binary.
