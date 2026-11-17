@@ -287,8 +287,38 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
         self.assertIn(f'argv = ["{BUILD.SMOKE_BINARY}"]', source)
 
 
+class TypesafeJevInstallerTests(unittest.TestCase):
+    def test_installer_hint_names_key_files_and_keyless_ollama_app(self) -> None:
+        archive = BUILD.archive_bytes(b"binary", b"licence")
+        asset = BUILD.asset_name("linux", "amd64")
+        sums = BUILD.sums_text({asset: archive}).encode("utf-8")
+        output = io.StringIO()
+        with (
+            tempfile.TemporaryDirectory() as scratch,
+            unittest.mock.patch.object(INSTALLER, "target", return_value=("linux", "amd64")),
+            unittest.mock.patch.object(INSTALLER, "fetch", side_effect=[sums, archive]),
+            contextlib.redirect_stdout(output),
+        ):
+            destination = Path(scratch) / "evaluate"
+            self.assertEqual(0, INSTALLER.main(["--version", "0.9.0", "--dest", str(destination)]))
+            self.assertEqual(b"binary", destination.read_bytes())
+        hint = output.getvalue().splitlines()[-1]
+        self.assertEqual(
+            "Next: put any keys your chain needs in ~/.config/racecraft-jev/ "
+            "(typesafe.key, openrouter.key, or ollama.key; chmod 600). "
+            "The signed-in Ollama app (ollama-local) needs no key file. "
+            "Then reconnect the jev MCP server.",
+            hint,
+        )
+        self.assertNotIn("ollama-local.key", output.getvalue())
+        self.assertIn("The signed-in Ollama app (ollama-local) needs no key file.", hint)
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(TypesafeJevReleaseBuildTests)
+    return unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (TypesafeJevReleaseBuildTests, TypesafeJevInstallerTests)
+    )
 
 
 def main() -> int:

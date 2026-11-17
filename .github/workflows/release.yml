@@ -83,7 +83,7 @@ jobs:
         if: steps.release_prs.outputs.found == 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
         with:
-          node-version: 22
+          node-version: '22.23.4'
           # This job holds write permissions; never restore a dependency cache.
           package-manager-cache: false
 
@@ -132,7 +132,7 @@ jobs:
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
         with:
-          node-version: 22
+          node-version: '22.23.4'
           # This job holds write permissions; never restore a dependency cache.
           package-manager-cache: false
 
@@ -311,6 +311,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
+          # Override older go.mod floors when recovering an existing release tag.
+          go-version: '1.27.3'
           go-version-file: typesafe-jev/go.mod
           cache-dependency-path: typesafe-jev/go.sum
 
