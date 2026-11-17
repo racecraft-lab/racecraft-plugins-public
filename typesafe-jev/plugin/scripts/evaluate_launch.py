@@ -32,7 +32,7 @@ import os
 import shlex
 import sys
 
-from install_evaluate import KEY_SETUP_HINT, plugin_version
+from install_evaluate import InstallError, KEY_SETUP_HINT, plugin_version
 
 INSTALLER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "install_evaluate.py")
 SETUP_TEXT = (
@@ -141,7 +141,11 @@ def main() -> int:
         return serve_unconfigured(f"the evaluate binary is not installed at {binary}")
     # exec, not a child process: the client signals this process directly, and
     # an extra process in between would swallow the termination it sends.
-    os.environ["EVALUATE_PLUGIN_VERSION"] = plugin_version()
+    try:
+        os.environ["EVALUATE_PLUGIN_VERSION"] = plugin_version()
+    except InstallError:
+        # Version warnings must never prevent an installed binary from running.
+        os.environ.pop("EVALUATE_PLUGIN_VERSION", None)
     sys.stderr.flush()
     os.execv(binary, [binary, "mcp", "--plugin-defaults"])
     return 1  # unreachable: execv replaces this process or raises
