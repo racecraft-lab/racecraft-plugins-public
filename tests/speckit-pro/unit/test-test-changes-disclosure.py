@@ -390,7 +390,6 @@ class AssertionSpellingTests(GitFixture):
         ):
             self.assertIn(line, output)
 
-
     def test_whitespace_inside_string_literals_is_compared_exactly(self) -> None:
         cases = {
             "tests/test_sample.py": ("test_one", 'def test_one(value):\n    assert " " not in value\n', '" "', '"  "'),
