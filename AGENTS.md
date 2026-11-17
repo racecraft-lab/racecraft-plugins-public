@@ -262,8 +262,9 @@ mirrors section 11; `speckit-pro/codex-agents/*.toml` are generated from
   yet `validate-plugins` passes. One concern per PR.
 - Work with dependent parts is a stack: plan the layers, then `gh stack init`
   before writing code, one concern per layer, foundations at the bottom.
-  Unrelated work gets its own stack off `main`. Merge with
-  `gh stack merge <pr> --yes`, never `gh pr merge`.
+  Unrelated work gets its own stack off `main`. Merge a stack of two or more
+  PRs with `gh stack merge <pr> --yes`, never `gh pr merge`. GitHub links a
+  stack only at two PRs, so a one-PR stack merges with `gh pr merge --squash`.
 - Only `feat` and `fix` PRs fill the `release-note` fence, required unless
   labeled `release-note/skip`; any unlabeled fence is published.
 
@@ -299,8 +300,12 @@ in step.
   ID, or test code that reads a `specs/<feature>/` path from disk at run time;
   a correctness bug in repository tooling or tests, such as a check that passes
   on nothing; a ripwire `--quality-delta` regression left in place (section
-  10), unless acked as a genuine false positive; a disclosed assertion change
-  that checks less than before, unless the PR body gives the reason.
+  10), unless acked as a genuine false positive; shipped guidance (skills,
+  tool descriptions, server instructions) whose absolute claim about runtime
+  behavior no test pins or a code path contradicts; a behavior choice the
+  spec, ticket, or ADR left open that the PR body does not name for the owner;
+  a disclosed assertion change that checks less than before, unless the PR
+  body gives the reason.
 - **Minor:** style, naming, prose, and refactoring notes; add none on re-review.
 - **Skip:** generated reference pages and payloads, vendored upstream content,
   lockfiles, archived specs, and what CI enforces (only the `ruff.toml` rules F,
