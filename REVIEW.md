@@ -45,9 +45,9 @@ repository tooling or tests giving a wrong answer:
   reaches the code under test.
 - A disclosed assertion change that checks less than before, unless the PR
   body gives the reason: looser matching, a dropped value or field check, a
-  narrower case, or a weaker comparison. `validate-test-changes` requires the
-  `## Test changes` line for every changed assertion; whether the new
-  assertion is weaker is the reviewer's call.
+  narrower case, or a weaker comparison. `validate-test-changes` requires a
+  `## Test changes` line naming each function whose assertions changed, with
+  its base path; whether the new assertion is weaker is the reviewer's call.
 - A ripwire `--quality-delta` regression the change leaves in place, whether
   ripwire calls it gating or not: one the author's receipt lists, the
   `ripwire-advisory` job summary shows, or a local run finds. Only a genuine
