@@ -21,10 +21,15 @@ var testImpl = &mcp.Implementation{Name: "evaluate-test", Version: "test"}
 // transports, so a test drives the shipped tool rather than a stand-in.
 func connect(t *testing.T, cfg Config, c any) *mcp.ClientSession {
 	t.Helper()
+	return connectServer(t, newServer(cfg, testChain(c)))
+}
+
+func connectServer(t *testing.T, server *mcp.Server) *mcp.ClientSession {
+	t.Helper()
 	ctx := context.Background()
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
-	serverSession, err := newServer(cfg, testChain(c)).Connect(ctx, serverTransport, nil)
+	serverSession, err := server.Connect(ctx, serverTransport, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -390,52 +395,46 @@ func TestServerPluginVersionWarning(t *testing.T) {
 			cfg, c := backendFor(t, "typesafe", mockBackend(t, noulReply))
 			for _, setup := range []bool{false, true} {
 				t.Run(fmt.Sprint(setup), func(t *testing.T) {
-					stderr, err := os.CreateTemp(t.TempDir(), "stderr")
-					if err != nil {
-						t.Fatal(err)
-					}
-					defer stderr.Close()
-					previous := os.Stderr
-					os.Stderr = stderr
-					defer func() { os.Stderr = previous }()
-					var server *mcp.Server
-					base, toolCount := instructions+backendNote(cfg)+testChain(c).backendNote(), 1
-					if setup {
-						base, toolCount = "setup instructions", 0
-						server = newSetupServer(base)
-					} else {
-						server = newServer(cfg, testChain(c))
-					}
-					ctx := context.Background()
-					st, ct := mcp.NewInMemoryTransports()
-					ss, err := server.Connect(ctx, st, nil)
-					if err != nil {
-						t.Fatal(err)
-					}
-					defer ss.Close()
-					cs, err := mcp.NewClient(testImpl, nil).Connect(ctx, ct, nil)
-					if err != nil {
-						t.Fatal(err)
-					}
-					defer cs.Close()
-					want, wantStderr := base, ""
-					if tc.warning != "" {
-						want += "\n" + tc.warning
-						wantStderr = tc.warning + "\n"
-					}
-					if got := cs.InitializeResult().Instructions; got != want {
-						t.Errorf("instructions = %q, want %q", got, want)
-					}
-					gotStderr, err := os.ReadFile(stderr.Name())
-					if err != nil || string(gotStderr) != wantStderr {
-						t.Errorf("stderr = %q, %v; want %q", gotStderr, err, wantStderr)
-					}
-					tools, err := cs.ListTools(ctx, nil)
-					if err != nil || len(tools.Tools) != toolCount {
-						t.Fatalf("tools = %+v, %v; want %d", tools, err, toolCount)
-					}
+					checkPluginVersionWarning(t, cfg, c, setup, tc.warning)
 				})
 			}
 		})
+	}
+}
+
+func checkPluginVersionWarning(t *testing.T, cfg Config, c *Client, setup bool, warning string) {
+	t.Helper()
+	stderr, err := os.CreateTemp(t.TempDir(), "stderr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stderr.Close()
+	previous := os.Stderr
+	os.Stderr = stderr
+	defer func() { os.Stderr = previous }()
+	var server *mcp.Server
+	base, toolCount := instructions+backendNote(cfg)+testChain(c).backendNote(), 1
+	if setup {
+		base, toolCount = "setup instructions", 0
+		server = newSetupServer(base)
+	} else {
+		server = newServer(cfg, testChain(c))
+	}
+	cs := connectServer(t, server)
+	want, wantStderr := base, ""
+	if warning != "" {
+		want += "\n" + warning
+		wantStderr = warning + "\n"
+	}
+	if got := cs.InitializeResult().Instructions; got != want {
+		t.Errorf("instructions = %q, want %q", got, want)
+	}
+	gotStderr, err := os.ReadFile(stderr.Name())
+	if err != nil || string(gotStderr) != wantStderr {
+		t.Errorf("stderr = %q, %v; want %q", gotStderr, err, wantStderr)
+	}
+	tools, err := cs.ListTools(context.Background(), nil)
+	if err != nil || len(tools.Tools) != toolCount {
+		t.Fatalf("tools = %+v, %v; want %d", tools, err, toolCount)
 	}
 }
