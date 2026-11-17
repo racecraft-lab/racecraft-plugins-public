@@ -29,7 +29,7 @@ from ..execution_control import is_implementation_notes
 from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
 from .. import quality_gates
 from ..json_schema import json_schema_failures
-from ..runtime import detect_plugin_root
+from ..path_utils import detect_plugin_root
 from .. import reviewability_preset, spec_kit_pin
 from ..spec_identity import normalize_spec_identity
 from ..strict_input import unique_object
