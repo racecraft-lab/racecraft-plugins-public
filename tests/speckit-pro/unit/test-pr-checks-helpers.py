@@ -628,6 +628,14 @@ class MatrixDispatchTests(unittest.TestCase):
 
 
 class RepositoryDispatchTests(unittest.TestCase):
+    def test_dispatchers_share_the_ci_environment_owner(self) -> None:
+        suite = load_script("run_ci_suite_environment", "run-ci-suite.py")
+        self.assertIs(suite.build_environment, MATRIX.build_environment)
+        base = {"KEEP_ME": "yes", "SPECKIT_SKIP_TOOLCHAIN_CHECK": "old"}
+        environment = MATRIX.build_environment(base)
+        self.assertEqual("1", environment["SPECKIT_SKIP_TOOLCHAIN_CHECK"])
+        self.assertEqual("old", base["SPECKIT_SKIP_TOOLCHAIN_CHECK"])
+
     def test_repository_dispatch_runs_each_policy_check_and_the_live_safety_gate(self) -> None:
         run = mock.Mock(return_value=subprocess.CompletedProcess([], 0))
         with mock.patch.object(MATRIX.subprocess, "run", run), contextlib.redirect_stdout(io.StringIO()):

@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import changed_files as _changed_files  # noqa: E402
 import ci_selection  # noqa: E402
+from ci_environment import build_environment  # noqa: E402
 from process_status import shell_compatible_status  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -35,11 +36,7 @@ def append_plugin_matrix(output_path: Path, changed_files: Sequence[str] | None 
 
 def run_repository_checks() -> int:
     """Run the policy's fixed checks with the same clean Git identity as CI."""
-    environment = {
-        **os.environ,
-        "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null",
-        "GIT_CONFIG_NOSYSTEM": "1", "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
-    }
+    environment = build_environment(os.environ)
     for path in ci_selection.REPOSITORY_CHECKS:
         print(f"Repository check: {path}", flush=True)
         completed = subprocess.run(
