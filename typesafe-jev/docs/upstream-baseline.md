@@ -121,7 +121,7 @@ credential. The error text tells them to set `JEV_PROVIDER=openrouter`.
 This is the intended trade. Implicit routing means the destination of a request
 — and the account billed for it — depends on unrelated environment state.
 
-### A backend never falls back to the other backend's credential
+### A backend does not fall back to the other backend's credential
 
 An OpenRouter process reads only the OpenRouter credential, and a TypeSafe
 process only the TypeSafe one. There is no implicit cross-provider fallback in
