@@ -89,6 +89,7 @@
         { "path": "tests/speckit-pro/unit/test-autopilot-stop-wording.py", "label": "test-autopilot-stop-wording" },
         { "path": "tests/speckit-pro/unit/test-batched-task-results.py", "label": "test-batched-task-results" },
         { "path": "tests/speckit-pro/unit/test-check-toolchain.py", "label": "test-check-toolchain" },
+        { "path": "tests/speckit-pro/unit/test-test-changes-disclosure.py", "label": "test-test-changes-disclosure" },
         { "path": "tests/speckit-pro/unit/test-checklist-edits.py", "label": "test-checklist-edits" },
         { "path": "tests/speckit-pro/unit/test-claude-hooks.py", "label": "test-claude-hooks" },
         { "path": "tests/speckit-pro/unit/test-cli-probe-path-trust.py", "label": "test-cli-probe-path-trust" },

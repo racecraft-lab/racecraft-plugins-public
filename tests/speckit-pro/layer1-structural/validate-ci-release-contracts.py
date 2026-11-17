@@ -1099,10 +1099,10 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             compose_body_function = _python_function_block(composer_content, 'compose_release_body')
             self.assertTrue(_contains_all(validation_function + compose_body_function, ('extracted = extract_release_note(body)', 'if not sanitize_release_note(extracted):', 'return False, "release-note fence is empty after sanitization"', 'note = sanitize_release_note(extracted)', 'if extracted is not None and not note:', 'release-note block is empty after sanitization', 'if note is not None and not skipped:')))
         with self.subTest(msg='composer defends enclosing release-note fence boundaries'):
-            opening_function = _python_function_block(policy_content, '_opening_fence')
-            closing_function = _python_function_block(policy_content, '_is_closing_fence')
+            opening_function = _python_function_block(policy_content, 'opening_fence')
+            closing_function = _python_function_block(policy_content, 'is_closing_fence')
             extraction_function = _python_function_block(policy_content, 'extract_release_note')
-            self.assertTrue(_contains_all(opening_function + closing_function + extraction_function, ('FENCE_RE.fullmatch(rest)', '_strip_quote_prefix(line, opening.quote_depth)', 're.escape(opening.character)', 'opening.length', '_is_closing_fence(candidate, opening)', 'if opening.info == "release-note":', 'An unclosed enclosing fence owns the remainder of the document', 'index = close_index + 1', 'malformed or len(matches) != 1')))
+            self.assertTrue(_contains_all(opening_function + closing_function + extraction_function, ('FENCE_RE.fullmatch(rest)', '_strip_quote_prefix(line, opening.quote_depth)', 're.escape(opening.character)', 'opening.length', 'is_closing_fence(candidate, opening)', 'if opening.info == "release-note":', 'An unclosed enclosing fence owns the remainder of the document', 'index = close_index + 1', 'malformed or len(matches) != 1')))
         with self.subTest(msg='capture owns Compare and PR reads while compose does not refetch'):
             request_methods = re.findall('client\\.request_json\\(\\s*"(?P<method>GET|PATCH|POST|PUT|DELETE)"', composer_content)
             self.assertEqual(['GET', 'GET', 'GET', 'GET', 'PATCH'], request_methods)

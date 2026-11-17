@@ -46,7 +46,13 @@ def manual_pr_metadata(environment: Mapping[str, str], *, fetch: Fetch) -> dict[
     for actual, expected, field in bindings:
         if actual != expected:
             raise ValueError(f"live {field} does not match the manual dispatch")
-    return validated_metadata(pr)
+    metadata = validated_metadata(pr)
+    if environment.get("PR_INCLUDE_BASE_REF") == "true":
+        base_ref = pr["base"]["ref"]
+        if not isinstance(base_ref, str) or not base_ref:
+            raise ValueError("invalid live PR base ref")
+        metadata["base_ref"] = f"refs/remotes/origin/{base_ref}"
+    return metadata
 
 
 def validated_metadata(pr: Mapping[str, Any]) -> dict[str, Any]:
