@@ -109,6 +109,7 @@ func (r *chainRunner) servingHop() *Client { return r.hops[r.current.Load()] }
 // chainWalk keeps a routed call's failures separate from the session's moves.
 type chainWalk struct {
 	err, networkErr error
+	localReasons    []string
 	sessionHop      int
 	skipped         uint32
 }
@@ -123,9 +124,12 @@ func (w *chainWalk) localFailure(hop *Client, local error) bool {
 		w.err = reported
 		return true
 	}
-	if w.networkErr != nil || w.err == nil {
+	w.localReasons = append(w.localReasons, fmt.Sprintf("%s: %v", hop.Provider.Name, local))
+	if w.networkErr != nil || len(w.localReasons) == 1 {
 		w.err = reported
+		return false
 	}
+	w.err = &requestInvalidError{fmt.Errorf("no backend can take this request: %s", strings.Join(w.localReasons, "; "))}
 	return false
 }
 
