@@ -22,9 +22,6 @@ def go_module_changed(changed_files: Iterable[str]) -> bool:
     return False
 
 
-# Only this exact external page is dedicated to the plugin. Shared docs and
-# generated references can affect speckit-pro and deliberately run the full suite.
-TYPESAFE_DOCS = frozenset({"docs-site/src/content/docs/install/typesafe-jev.md"})
 REPOSITORY_GATE_REQUEST = (
     "tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/repo-bash-confinement.json"
 )
@@ -47,7 +44,7 @@ def typesafe_only_path(path: str) -> bool:
     """Accept canonical relative file paths in the explicit reduced-suite set."""
     if not path or path != PurePosixPath(path).as_posix() or ".." in path.split("/"):
         return False
-    return path.startswith("typesafe-jev/") or path in TYPESAFE_DOCS
+    return path.startswith("typesafe-jev/")
 
 
 def select_checks(changed_files: Sequence[str] | None) -> dict[str, str]:

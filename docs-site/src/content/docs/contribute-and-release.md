@@ -240,12 +240,13 @@ test suite. The Release workflow dispatches it alongside `PR Checks`.
 Current behavior to account for in review:
 
 - `scripts/ci_selection.py` owns changed-path selection. Changes confined to
-  `typesafe-jev/` and its exact installation page
-  (`docs-site/src/content/docs/install/typesafe-jev.md`) run repository checks
+  `typesafe-jev/` run repository checks
   in `detect` and Go checks on Linux and macOS. The full `test (speckit-pro)`
   job is skipped; its required sentinel accepts that result after `detect`
-  succeeds. Every other path, mixed changes, or empty/unreadable changed-file
-  evidence selects the full suite. Rename detection includes both paths.
+  succeeds. Every other path, including all `docs-site/` paths, mixed changes,
+  or empty/unreadable changed-file evidence selects the full suite. The full
+  suite's runtime guard reads docs pages, including the typesafe-jev install
+  page. Rename detection includes both paths.
 - The reduced checks preserve privacy, typesafe metadata and version contracts,
   marketplace consistency, instruction-file hygiene, docs layout and cited
   test paths, installer tests, and the live repository script-safety gate.
@@ -254,7 +255,7 @@ Current behavior to account for in review:
   The unit-layout guard requires the marker for direct repository-root Git,
   walk/rglob, and docs-tree enumerations. Static detection cannot follow every
   imported helper or dynamically constructed path; the three cross-tree
-  regressions also have mutation tests through the reduced dispatcher.
+  regressions also have mutation tests through the repository-check dispatcher.
   YAML only dispatches policy outputs.
 - `artifact-consistency` runs `scripts/refresh-release-artifacts.py`, stages the
   result, and fails when generated payloads or marketplace registries drift

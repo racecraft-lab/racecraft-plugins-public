@@ -649,7 +649,7 @@ class RepositoryManifestTests(unittest.TestCase):
 
 
 class ReducedSuiteMutationTests(unittest.TestCase):
-    def test_reduced_dispatch_catches_cross_tree_mutations(self) -> None:
+    def test_repository_dispatch_catches_cross_tree_mutations(self) -> None:
         cases = (
             ("unit/test-unit-layout.py", "UnitLayoutTests",
              "test_tracked_authored_script_files_are_behavior_named",
@@ -695,7 +695,10 @@ class ReducedSuiteMutationTests(unittest.TestCase):
                     return subprocess.CompletedProcess(argv, int(not result.wasSuccessful()))
 
                 selected = MATRIX.ci_selection.select_checks([changed])
-                self.assertEqual("true", selected["repository_checks"])
+                # Docs now select the full suite; retain the direct guard mutation proof.
+                docs_change = changed.startswith("docs-site/")
+                self.assertEqual(str(not docs_change).lower(), selected["repository_checks"])
+                self.assertEqual('["speckit-pro"]' if docs_change else '[]', selected["plugins"])
                 with mock.patch.object(MATRIX.subprocess, "run", side_effect=run_guard), contextlib.redirect_stdout(io.StringIO()):
                     self.assertEqual(1, MATRIX.run_repository_checks())
                 self.assertEqual(1, len(results), "the reduced path omitted the guard")
@@ -769,8 +772,6 @@ class CiSelectionTests(unittest.TestCase):
         for files in (
             ["typesafe-jev/cmd/evaluate/chain.go"],
             ["typesafe-jev/plugin/shared-skills/typed-judgments/SKILL.md"],
-            ["docs-site/src/content/docs/install/typesafe-jev.md"],
-            ["typesafe-jev/go.mod", "docs-site/src/content/docs/install/typesafe-jev.md"],
         ):
             with self.subTest(files=files):
                 self.assertEqual(
@@ -779,6 +780,18 @@ class CiSelectionTests(unittest.TestCase):
                 )
                 self.assertIn("skipped", RESULTS.check_workflow_results(
                     "success", "skipped", "success", "success"))
+
+    def test_docs_site_changes_select_full_suite(self) -> None:
+        for path in (
+            "docs-site/src/content/docs/install/typesafe-jev.md",
+            "docs-site/src/content/docs/reference/tests.md",
+            "docs-site/package.json",
+        ):
+            for files in ([path], ["typesafe-jev/go.mod", path]):
+                with self.subTest(files=files):
+                    selected = self.selection(files)
+                    self.assertEqual('["speckit-pro"]', selected["plugins"])
+                    self.assertEqual("false", selected["repository_checks"])
 
     def test_unknown_mixed_and_selection_inputs_run_full_suite(self) -> None:
         for path in (
@@ -809,6 +822,16 @@ class CiSelectionTests(unittest.TestCase):
             {"plugins": '["speckit-pro"]', "repository_checks": "false", "run_go": "false"},
             self.selection(["speckit-pro/README.md"]),
         )
+
+
+class ChangedFilesHelperTests(unittest.TestCase):
+    def test_empty_base_ref_fails_before_running_git(self) -> None:
+        import changed_files
+
+        with mock.patch.object(changed_files.subprocess, "run") as run:
+            with self.assertRaisesRegex(ValueError, "^BASE_REF is not set$"):
+                changed_files.changed_files_for_base("", repo_root=REPO_ROOT, error=ValueError)
+        run.assert_not_called()
 
 
 class GoModuleHelperTests(unittest.TestCase):
@@ -899,6 +922,7 @@ def build_suite() -> unittest.TestSuite:
         ReducedSuiteMutationTests,
         RepositoryDispatchTests,
         RenameSelectionTests,
+        ChangedFilesHelperTests,
         GoModuleHelperTests,
     ):
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(test_case))
