@@ -35,9 +35,9 @@ def append_plugin_matrix(output_path: Path, changed_files: Sequence[str] | None 
 
 
 def run_repository_checks() -> int:
-    """Run the policy's fixed checks with the same clean Git identity as CI."""
+    """Run the suite's marked checks with the same clean Git identity as CI."""
     environment = build_environment(os.environ)
-    for path in ci_selection.REPOSITORY_CHECKS:
+    for path in ci_selection.repository_checks():
         print(f"Repository check: {path}", flush=True)
         completed = subprocess.run(
             [sys.executable, path], cwd=REPO_ROOT, env=environment, check=False, shell=False,
@@ -71,7 +71,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"::warning::{error}; selecting the full suite and Go")
             changed_files = None
         encoded = append_plugin_matrix(Path(output_value), changed_files)
-    except (PluginMatrixError, OSError) as error:
+    except (PluginMatrixError, OSError, ValueError) as error:
         print(f"::error::{error}", file=sys.stderr)
         return 1
     print(f"Python-gated plugin matrix: {encoded}")

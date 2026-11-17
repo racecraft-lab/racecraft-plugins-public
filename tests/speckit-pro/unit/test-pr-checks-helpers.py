@@ -627,7 +627,7 @@ class MatrixDispatchTests(unittest.TestCase):
                 )
 
 
-class RepositoryDispatchTests(unittest.TestCase):
+class CiEnvironmentTests(unittest.TestCase):
     def test_dispatchers_share_the_ci_environment_owner(self) -> None:
         suite = load_script("run_ci_suite_environment", "run-ci-suite.py")
         self.assertIs(suite.build_environment, MATRIX.build_environment)
@@ -636,12 +636,80 @@ class RepositoryDispatchTests(unittest.TestCase):
         self.assertEqual("1", environment["SPECKIT_SKIP_TOOLCHAIN_CHECK"])
         self.assertEqual("old", base["SPECKIT_SKIP_TOOLCHAIN_CHECK"])
 
+
+class RepositoryManifestTests(unittest.TestCase):
+    def test_repository_checks_are_selected_from_manifest_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            manifest = Path(temporary) / "suite.json"
+            manifest.write_text(json.dumps({"layers": [{"scripts": [
+                {"path": "new-check.py", "typesafe_jev_only": True},
+                {"path": "full-only.py"},
+            ]}]}), encoding="utf-8")
+            self.assertEqual(("new-check.py",), MATRIX.ci_selection.repository_checks(manifest))
+
+
+class ReducedSuiteMutationTests(unittest.TestCase):
+    def test_reduced_dispatch_catches_cross_tree_mutations(self) -> None:
+        cases = (
+            ("unit/test-unit-layout.py", "UnitLayoutTests",
+             "test_tracked_authored_script_files_are_behavior_named",
+             "typesafe-jev/plugin/scripts/probe-art-003.py", "", "art-003"),
+            ("layer1-structural/test-structural-regressions.py", "RetiredPayloadBuilderTests",
+             "test_the_standalone_builder_is_deleted_and_unreferenced",
+             "typesafe-jev/README.md", "build-plugin-" + "payloads", "README.md"),
+            ("layer1-structural/validate-skill-contracts.py", "CodexSkillMentionTests",
+             "test_codex_skill_mentions_include_the_plugin_namespace",
+             "docs-site/src/content/docs/install/typesafe-jev.md",
+             "$" + "speckit-scaffold-spec", "speckit-scaffold-spec"),
+        )
+        for script, class_name, method, changed, content, diagnostic in cases:
+            with self.subTest(script=script), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                path = root / changed
+                path.parent.mkdir(parents=True)
+                path.write_text(content, encoding="utf-8")
+                (root / "scripts").mkdir()
+                (root / "specs/art-003-fixture").mkdir(parents=True)
+                (root / "README.md").touch()
+                (root / "speckit-pro").mkdir()
+                (root / "speckit-pro/README.md").touch()
+                for command in (["init", "-q"], ["add", "."]):
+                    subprocess.run(["git", *command], cwd=root, check=True, capture_output=True)
+                guard_path = "tests/speckit-pro/" + script
+                guard = load_module_from_path("reduced_mutation_guard", REPO_ROOT / guard_path)
+                results = []
+                real_run = subprocess.run
+
+                def run_guard(argv, **kwargs):
+                    if argv[0] == "git":
+                        return real_run(argv, **kwargs)
+                    if argv != [sys.executable, guard_path]:
+                        return subprocess.CompletedProcess(argv, 0)
+                    with (
+                        mock.patch.object(guard, "REPO_ROOT", root),
+                        mock.patch.object(guard, "__file__", str(root / guard_path)),
+                    ):
+                        result = unittest.TestResult()
+                        getattr(guard, class_name)(method).run(result)
+                    results.append(result)
+                    return subprocess.CompletedProcess(argv, int(not result.wasSuccessful()))
+
+                selected = MATRIX.ci_selection.select_checks([changed])
+                self.assertEqual("true", selected["repository_checks"])
+                with mock.patch.object(MATRIX.subprocess, "run", side_effect=run_guard), contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(1, MATRIX.run_repository_checks())
+                self.assertEqual(1, len(results), "the reduced path omitted the guard")
+                self.assertEqual([], results[0].errors)
+                self.assertIn(diagnostic, str(results[0].failures))
+
+
+class RepositoryDispatchTests(unittest.TestCase):
     def test_repository_dispatch_runs_each_policy_check_and_the_live_safety_gate(self) -> None:
         run = mock.Mock(return_value=subprocess.CompletedProcess([], 0))
         with mock.patch.object(MATRIX.subprocess, "run", run), contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(0, MATRIX.main(["--repository-checks"]))
         calls = [(call.args[0], call.kwargs) for call in run.call_args_list]
-        checks = MATRIX.ci_selection.REPOSITORY_CHECKS
+        checks = MATRIX.ci_selection.repository_checks()
         self.assertEqual([[sys.executable, path] for path in checks], [c[0] for c in calls[:-1]])
         self.assertEqual([sys.executable, "-m", "speckit_pro_runner"], calls[-1][0])
         self.assertEqual("repo-bash-confinement", json.loads(calls[-1][1]["input"])["operation"])
@@ -842,6 +910,9 @@ def build_suite() -> unittest.TestSuite:
         PluginMatrixHelperTests,
         CiSelectionTests,
         MatrixDispatchTests,
+        CiEnvironmentTests,
+        RepositoryManifestTests,
+        ReducedSuiteMutationTests,
         RepositoryDispatchTests,
         RenameSelectionTests,
         GoModuleHelperTests,

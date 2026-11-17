@@ -249,7 +249,13 @@ Current behavior to account for in review:
 - The reduced checks preserve privacy, typesafe metadata and version contracts,
   marketplace consistency, instruction-file hygiene, docs layout and cited
   test paths, installer tests, and the live repository script-safety gate.
-  The policy lists their executable paths; YAML only dispatches its outputs.
+  Suite entries declare reduced-run membership with `typesafe_jev_only: true`
+  in `tests/speckit-pro/suite-manifest.json`; the policy reads those markers.
+  The unit-layout guard requires the marker for direct repository-root Git,
+  walk/rglob, and docs-tree enumerations. Static detection cannot follow every
+  imported helper or dynamically constructed path; the three cross-tree
+  regressions also have mutation tests through the reduced dispatcher.
+  YAML only dispatches policy outputs.
 - `artifact-consistency` runs `scripts/refresh-release-artifacts.py`, stages the
   result, and fails when generated payloads or marketplace registries drift
   from source.

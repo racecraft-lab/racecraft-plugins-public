@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Sequence
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 MODULE_DIR = "typesafe-jev"
 # A change to the module, to this wrapper, or to the workflow that runs it can
@@ -25,18 +25,22 @@ def go_module_changed(changed_files: Iterable[str]) -> bool:
 # Only this exact external page is dedicated to the plugin. Shared docs and
 # generated references can affect speckit-pro and deliberately run the full suite.
 TYPESAFE_DOCS = frozenset({"docs-site/src/content/docs/install/typesafe-jev.md"})
-REPOSITORY_CHECKS = (
-    "tests/speckit-pro/unit/test-privacy-scan.py",
-    "tests/speckit-pro/layer1-structural/validate-typesafe-jev-metadata.py",
-    "tests/speckit-pro/layer1-structural/validate-plugin-metadata.py",
-    "tests/speckit-pro/layer1-structural/validate-instruction-files.py",
-    "tests/speckit-pro/layer1-structural/validate-docs-layout.py",
-    "tests/speckit-pro/layer1-structural/validate-doc-test-layer-paths.py",
-    "tests/speckit-pro/unit/test-typesafe-jev-release-build.py",
-)
 REPOSITORY_GATE_REQUEST = (
     "tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/repo-bash-confinement.json"
 )
+
+
+def repository_checks(manifest_path: Path | None = None) -> tuple[str, ...]:
+    """Read reduced-run membership from the suite's declared script markers."""
+    path = manifest_path or Path(__file__).resolve().parents[1] / "tests/speckit-pro/suite-manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    checks = tuple(
+        script["path"] for layer in manifest["layers"] for script in layer["scripts"]
+        if script.get("typesafe_jev_only") is True
+    )
+    if not checks:
+        raise ValueError("suite manifest declares no typesafe-jev-only repository checks")
+    return checks
 
 
 def typesafe_only_path(path: str) -> bool:
