@@ -15,8 +15,7 @@ from .. import RUNNER_VERSION, reviewability_preset
 from ..envelope import diagnostic, is_diagnostic, response
 from ..host_skills import emit_host_files, render_host_skills
 from ..install_inventory import read_install_inventory
-from ..path_utils import find_repo_root, is_relative_to, sha256_file, sha256_text
-from ..runtime import runner_source_files
+from ..path_utils import find_repo_root, is_relative_to, runner_source_files, sha256_file, sha256_text
 from ..trusted_io import create_tree_directory, open_tree_parent, trusted_tree_snapshot, write_tree_snapshot
 from .gate_response import gate_base_data
 
