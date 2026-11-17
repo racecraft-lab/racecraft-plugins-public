@@ -32,6 +32,12 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+KEY_SETUP_HINT = (
+    "any keys your chain needs in ~/.config/racecraft-jev/ "
+    "(typesafe.key, openrouter.key, or ollama.key; chmod 600). "
+    "The signed-in Ollama app (ollama-local) needs no key file."
+)
+
 REPOSITORY = "racecraft-lab/racecraft-plugins-public"
 RELEASES = f"https://github.com/{REPOSITORY}/releases/download"
 TAG_PREFIX = "typesafe-jev-v"
@@ -191,8 +197,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(f"Installed {destination}")
     print(
-        "Next: put a TypeSafe or OpenRouter key in ~/.config/racecraft-jev/typesafe.key "
-        "or openrouter.key (chmod 600), then reconnect the jev MCP server."
+        f"Next: put {KEY_SETUP_HINT} "
+        "Then reconnect the jev MCP server."
     )
     return 0
 
