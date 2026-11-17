@@ -304,7 +304,7 @@ class TypesafeJevInstallerTests(unittest.TestCase):
             self.assertEqual(0, INSTALLER.main(["--version", "0.9.0", "--dest", str(destination)]))
             self.assertEqual(b"binary", destination.read_bytes())
         self.assertEqual(
-            "Next: put the key for each backend in your chain in ~/.config/racecraft-jev/ "
+            "Next: put any keys your chain needs in ~/.config/racecraft-jev/ "
             "(typesafe.key, openrouter.key, ollama.key, or ollama-local.key; chmod 600), "
             "then reconnect the jev MCP server.",
             output.getvalue().splitlines()[-1],
