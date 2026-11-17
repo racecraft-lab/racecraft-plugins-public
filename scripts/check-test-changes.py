@@ -24,9 +24,7 @@ import os
 import re
 import subprocess
 import sys
-import tokenize
 from collections import Counter
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -45,10 +43,7 @@ GO_TEST_NAME = re.compile(r"(?:(?:Test|Benchmark|Fuzz)(?![a-z])\w*|Example\w*)\Z
 GO_ASSERTION = re.compile(
     r"\b(?:t|b|f|tb)\s*\.\s*(?:Fatalf?|Errorf?|FailNow|Fail)\s*\(|\b(?:require|assert)\s*\."
 )
-# `assert` is a keyword, so any code occurrence of the bare word is an assert statement.
-PY_ASSERTION = re.compile(r"(?<![\w.])assert\b|\bself\s*\.\s*assert\w*\s*\(|\bpytest\s*\.\s*raises\s*\(")
-PY_STRING_OPENERS = {getattr(tokenize, name, None) for name in ("FSTRING_START", "TSTRING_START")} - {None}
-PY_STRING_CLOSERS = {getattr(tokenize, name, None) for name in ("FSTRING_END", "TSTRING_END")} - {None}
+PY_FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
 # Assertion scope for code outside every function; module scopes never move between files.
 MODULE = ""
 
@@ -126,72 +121,6 @@ def protect(text: str) -> str:
     return re.sub(r"[^\S\r\n]", lambda match: f"\0{ord(match[0]):x}\0", text)
 
 
-def replace_span(
-    rows: list[list[str]], start: tuple[int, int], end: tuple[int, int], replace: Callable[[str], str],
-) -> None:
-    for index in range(start[0] - 1, end[0]):
-        row = rows[index]
-        first = start[1] if index == start[0] - 1 else 0
-        last = end[1] if index == end[0] - 1 else len(row)
-        for column in range(first, min(last, len(row))):
-            row[column] = replace(row[column])
-
-
-def python_views(text: str) -> tuple[list[str], list[str]]:
-    """Return rows with comments and literals blanked, and rows with comments blanked and literals protected."""
-    code = [list(row) for row in source_rows(text)]
-    readable = [list(row) for row in source_rows(text)]
-    opened: list[tuple[int, int]] = []
-    for token in tokenize.generate_tokens(io.StringIO(text).readline):
-        if token.type in PY_STRING_OPENERS:
-            opened.append(token.start)
-        elif token.type in PY_STRING_CLOSERS:
-            # Blank the whole outermost f-string or t-string, interpolations included.
-            start = opened.pop()
-            if not opened:
-                replace_span(code, start, token.end, blank)
-                replace_span(readable, start, token.end, protect)
-        elif token.type == tokenize.STRING and not opened:
-            replace_span(code, token.start, token.end, blank)
-            replace_span(readable, token.start, token.end, protect)
-        if token.type == tokenize.COMMENT:
-            replace_span(code, token.start, token.end, blank)
-            replace_span(readable, token.start, token.end, blank)
-    return ["".join(row) for row in code], ["".join(row) for row in readable]
-
-
-def python_functions(tree: ast.Module) -> list[tuple[str, int, int, bool]]:
-    """Functions and classes outside every function, as (key, first row, last row, is_function), outer first."""
-    found: list[tuple[str, int, int, bool]] = []
-
-    def walk(nodes: list[ast.AST], prefix: str) -> None:
-        for node in nodes:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                key = prefix + node.name
-                first = min([decorator.lineno for decorator in node.decorator_list] + [node.lineno])
-                is_function = not isinstance(node, ast.ClassDef)
-                found.append((key, first, node.end_lineno or node.lineno, is_function))
-                if not is_function:
-                    walk(list(node.body), key + ".")
-            else:
-                walk(list(ast.iter_child_nodes(node)), prefix)
-
-    walk(list(tree.body), "")
-    return found
-
-
-def python_layout(tree: ast.Module, rows: int) -> Layout:
-    functions = python_functions(tree)
-    owners = [MODULE] * rows
-    for key, first, last, _ in functions:
-        owners[first - 1:last] = [key] * (last - first + 1)
-    names = tuple(
-        key.rsplit(".", 1)[-1] for key, _, _, is_function in functions
-        if is_function and key.rsplit(".", 1)[-1].startswith("test_")
-    )
-    return Layout(names, owners, frozenset(key for key, *_ in functions))
-
-
 def go_scope(token: re.Match[str]) -> str | None:
     if token[3]:
         return token[3]
@@ -266,11 +195,41 @@ def read_go(text: str) -> TestFile:
     return line_assertions(code, readable, go_layout("".join(code)), GO_ASSERTION)
 
 
+def is_python_assertion(node: ast.AST) -> bool:
+    """An assert statement, a unittest call on `self`, or `pytest.raises` or `pytest.fail`."""
+    if isinstance(node, ast.Assert):
+        return True
+    if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+        return False
+    receiver, method = node.func.value, node.func.attr
+    if not isinstance(receiver, ast.Name):
+        return False
+    if receiver.id == "pytest":
+        return method in ("raises", "fail")
+    # Exact fail names: a `fail` prefix also matches fixture helpers such as `self.failing_write()`.
+    return receiver.id == "self" and (method.startswith("assert") or method in ("fail", "failureException"))
+
+
 def read_python(text: str) -> TestFile:
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    tree = ast.parse(text)
-    code, readable = python_views(text)
-    return line_assertions(code, readable, python_layout(tree, len(code)), PY_ASSERTION)
+    names: list[str] = []
+    assertions: dict[str, list[str]] = {MODULE: []}
+    # An explicit stack, so deeply nested code cannot exhaust the interpreter's recursion limit here.
+    pending: list[tuple[ast.AST, str, bool]] = [(ast.parse(text), MODULE, False)]
+    while pending:
+        parent, key, in_function = pending.pop()
+        for node in ast.iter_child_nodes(parent):
+            scope = key
+            if not in_function and isinstance(node, (*PY_FUNCTIONS, ast.ClassDef)):
+                # A function or class outside every function opens a scope; code inside a function stays in it.
+                scope = f"{key}.{node.name}" if key else node.name
+                assertions.setdefault(scope, [])
+                if isinstance(node, PY_FUNCTIONS) and node.name.startswith("test_"):
+                    names.append(node.name)
+            elif is_python_assertion(node):
+                # The dump holds the code alone: literal values exact, formatting and comments absent.
+                assertions[key].append(ast.dump(node))
+            pending.append((node, scope, in_function or isinstance(node, PY_FUNCTIONS)))
+    return TestFile(tuple(names), {key: tuple(found) for key, found in assertions.items()})
 
 
 def parse_test_file(path: str, source: bytes) -> TestFile:
@@ -309,7 +268,7 @@ def inventory(ref: str, registered: set[str]) -> dict[str, TestFile]:
         source = command(["show", f"{ref}:{path}"])
         try:
             files[path] = parse_test_file(path, source)
-        except (SyntaxError, UnicodeError, ValueError, tokenize.TokenError) as exc:
+        except (SyntaxError, UnicodeError, ValueError, RecursionError) as exc:
             raise ValueError(f"unparseable test file {path} at {ref}: {exc}") from exc
     return files
 
