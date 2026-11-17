@@ -19,20 +19,16 @@ import os
 import subprocess
 import sys
 import tempfile
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import changed_files as _changed_files  # noqa: E402
+from ci_selection import go_module_changed  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_DIR = "typesafe-jev"
-# A change to the module, to this wrapper, or to the workflow that runs it can
-# change the Go result, so each one runs the Go job.
-TRIGGER_PATHS = frozenset(
-    {"scripts/check-go-module.py", "scripts/changed_files.py", ".github/workflows/pr-checks.yml"}
-)
 RELEASE_TARGETS = (
     ("darwin", "amd64"),
     ("darwin", "arm64"),
@@ -43,13 +39,6 @@ RELEASE_TARGETS = (
 
 class GoModuleCheckError(RuntimeError):
     """Raised when a Go module check cannot run or does not pass."""
-
-
-def go_module_changed(changed_files: Iterable[str]) -> bool:
-    for file_path in changed_files:
-        if file_path.startswith(f"{MODULE_DIR}/") or file_path in TRIGGER_PATHS:
-            return True
-    return False
 
 
 def changed_files_for_base(base_ref: str, *, repo_root: Path = REPO_ROOT) -> tuple[str, ...]:
