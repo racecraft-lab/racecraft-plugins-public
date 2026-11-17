@@ -369,6 +369,13 @@ func TestLauncherQuotesTheInstallerPath(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
+	installer, err := os.ReadFile(filepath.Join(repoRoot(t), "plugin", "scripts", "install_evaluate.py"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "install_evaluate.py"), installer, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	launcher := filepath.Join(dir, "evaluate_launch.py")
 	if err := os.WriteFile(launcher, src, 0o600); err != nil {
 		t.Fatal(err)
@@ -744,5 +751,37 @@ func TestJudgmentSkillRoutesToLiveDocs(t *testing.T) {
 	// so rather than inventing a version-dependent detail.
 	if !strings.Contains(skill, "If the docs cannot be fetched") {
 		t.Error("SKILL.md does not say what to do when the docs are unreachable")
+	}
+}
+
+func TestLauncherExportsPluginVersionAndPreservesExec(t *testing.T) {
+	const script = `
+import json
+import os
+from pathlib import Path
+import sys
+from unittest.mock import patch
+
+sys.path.insert(0, sys.argv[1])
+import evaluate_launch
+
+manifest = Path(sys.argv[1]).parent / ".claude-plugin" / "plugin.json"
+expected = json.loads(manifest.read_text())["version"]
+with patch.dict(os.environ, {"EVALUATE_PLUGIN_VERSION": "stale", "EVALUATE_BIN": "/fixture/evaluate"}):
+    before = dict(os.environ)
+    with patch.object(evaluate_launch, "is_executable", return_value=True), patch.object(os, "execv", side_effect=SystemExit(0)) as execv:
+        try:
+            evaluate_launch.main()
+        except SystemExit as result:
+            assert result.code == 0
+        else:
+            raise AssertionError("launcher did not exec")
+        execv.assert_called_once_with("/fixture/evaluate", ["/fixture/evaluate", "mcp", "--plugin-defaults"])
+    assert dict(os.environ) == {**before, "EVALUATE_PLUGIN_VERSION": expected}
+`
+	cmd := exec.Command(pythonPath(t), "-c", script, filepath.Join(repoRoot(t), "plugin", "scripts"))
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + t.TempDir()}
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("launcher exec contract: %v\n%s", err, output)
 	}
 }

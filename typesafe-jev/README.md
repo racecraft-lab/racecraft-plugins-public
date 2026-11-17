@@ -83,7 +83,17 @@ The installer is a Python script in the plugin, at `plugin/scripts/install_evalu
 python3 plugin/scripts/install_evaluate.py
 ```
 
-It downloads the release tagged `typesafe-jev-v<version>` for this machine, checks it against that release's `SHA256SUMS.txt`, and installs it to `~/.local/libexec/racecraft-jev/evaluate`. By default it installs the plugin's own version, so the binary matches the launcher; `--version 0.9.0` picks another, and `--force` replaces an existing binary. It never asks GitHub for the "latest" release, because this repository releases more than one component. The path is deliberately **not** on your `PATH`, so it cannot collide with an upstream `evaluate` you may already have. Point clients at that absolute path. Building from source works too, into the same directory:
+It downloads the release tagged `typesafe-jev-v<version>` for this machine, checks it against that release's `SHA256SUMS.txt`, and installs it to `~/.local/libexec/racecraft-jev/evaluate`. By default it installs the plugin's own version, so the binary matches the launcher; `--version 0.9.0` picks another, and `--force` replaces an existing binary. It never asks GitHub for the "latest" release, because this repository releases more than one component. The path is deliberately **not** on your `PATH`, so it cannot collide with an upstream `evaluate` you may already have. Point clients at that absolute path. A plugin update also needs the matching binary. After updating the plugin, run its installer again from this directory (or use the installer in the updated plugin):
+
+```sh
+python3 plugin/scripts/install_evaluate.py --force
+```
+
+The server warns in its client instructions and on stderr when the plugin version differs from the binary's, including when the binary is a dev build. Binaries from before this release cannot warn; update them with the command above.
+
+Start every live check or release smoke test with `evaluate version` (use `~/.local/libexec/racecraft-jev/evaluate version` for the default install) and confirm it equals the version in `plugin/.claude-plugin/plugin.json` before proceeding.
+
+Building from source works too, into the same directory:
 
 ```sh
 go build -trimpath -o ~/.local/libexec/racecraft-jev/evaluate ./cmd/evaluate

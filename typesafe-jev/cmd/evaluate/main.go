@@ -155,7 +155,7 @@ func buildCommit() string {
 func newServer(cfg Config, chain *chainRunner) *mcp.Server {
 	s := mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
-		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg) + chain.backendNote()},
+		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg) + chain.backendNote() + pluginVersionNote()},
 	)
 	registerTools(s, cfg, chain)
 	return s
@@ -261,7 +261,7 @@ func newSetupServer(text string) *mcp.Server {
 	return mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
 		&mcp.ServerOptions{
-			Instructions: text,
+			Instructions: text + pluginVersionNote(),
 			// Advertised, with an empty list, so a client that asks for tools
 			// gets none rather than an error.
 			Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}},

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -366,6 +367,74 @@ func TestServerInstructionsNameTheBackend(t *testing.T) {
 			// Upstream's question-design guidance must survive either way.
 			if !strings.Contains(got, "A noul near 0.5 means uncertain") {
 				t.Errorf("base guidance lost:\n%s", got)
+			}
+		})
+	}
+}
+
+func TestServerPluginVersionWarning(t *testing.T) {
+	original := version
+	t.Cleanup(func() { version = original })
+	for _, tc := range []struct {
+		name, binary, plugin, warning string
+	}{
+		{"mismatch", "0.9.2", "0.11.0", "Warning: evaluate binary version 0.9.2 differs from plugin version 0.11.0; rerun the plugin's installer: python3 scripts/install_evaluate.py --force (from the plugin directory)."},
+		{"equal", "0.11.0", "0.11.0", ""},
+		{"unset", "0.9.2", "", ""},
+		{"dev", "dev", "0.11.0", "Warning: evaluate binary version dev is a dev build; plugin version is 0.11.0; rerun the plugin's installer: python3 scripts/install_evaluate.py --force (from the plugin directory)."},
+		{"standalone dev", "dev", "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			version = tc.binary
+			t.Setenv("EVALUATE_PLUGIN_VERSION", tc.plugin)
+			cfg, c := backendFor(t, "typesafe", mockBackend(t, noulReply))
+			for _, setup := range []bool{false, true} {
+				t.Run(fmt.Sprint(setup), func(t *testing.T) {
+					stderr, err := os.CreateTemp(t.TempDir(), "stderr")
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer stderr.Close()
+					previous := os.Stderr
+					os.Stderr = stderr
+					defer func() { os.Stderr = previous }()
+					var server *mcp.Server
+					base, toolCount := instructions+backendNote(cfg)+testChain(c).backendNote(), 1
+					if setup {
+						base, toolCount = "setup instructions", 0
+						server = newSetupServer(base)
+					} else {
+						server = newServer(cfg, testChain(c))
+					}
+					ctx := context.Background()
+					st, ct := mcp.NewInMemoryTransports()
+					ss, err := server.Connect(ctx, st, nil)
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer ss.Close()
+					cs, err := mcp.NewClient(testImpl, nil).Connect(ctx, ct, nil)
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer cs.Close()
+					want, wantStderr := base, ""
+					if tc.warning != "" {
+						want += "\n" + tc.warning
+						wantStderr = tc.warning + "\n"
+					}
+					if got := cs.InitializeResult().Instructions; got != want {
+						t.Errorf("instructions = %q, want %q", got, want)
+					}
+					gotStderr, err := os.ReadFile(stderr.Name())
+					if err != nil || string(gotStderr) != wantStderr {
+						t.Errorf("stderr = %q, %v; want %q", gotStderr, err, wantStderr)
+					}
+					tools, err := cs.ListTools(ctx, nil)
+					if err != nil || len(tools.Tools) != toolCount {
+						t.Fatalf("tools = %+v, %v; want %d", tools, err, toolCount)
+					}
+				})
 			}
 		})
 	}
