@@ -192,8 +192,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Installed {destination}")
     print(
         "Next: put any keys your chain needs in ~/.config/racecraft-jev/ "
-        "(typesafe.key, openrouter.key, ollama.key, or ollama-local.key; chmod 600), "
-        "then reconnect the jev MCP server."
+        "(typesafe.key, openrouter.key, or ollama.key; chmod 600). "
+        "The signed-in Ollama app (ollama-local) needs no key file. "
+        "Then reconnect the jev MCP server."
     )
     return 0
 
