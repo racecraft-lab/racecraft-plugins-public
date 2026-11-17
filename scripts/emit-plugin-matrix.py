@@ -1,43 +1,80 @@
 #!/usr/bin/env python3
-"""Emit the static Python-gated plugin matrix for PR Checks."""
+"""Dispatch the changed-path policy and repository checks for PR Checks."""
 
 from __future__ import annotations
 
-import json
+import argparse
+import subprocess
 import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
 
 
-PLUGINS = ("speckit-pro",)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import changed_files as _changed_files  # noqa: E402
+import ci_selection  # noqa: E402
+from process_status import shell_compatible_status  # noqa: E402
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class PluginMatrixError(RuntimeError):
     """Raised when the plugin matrix cannot be emitted."""
 
 
-def append_plugin_matrix(output_path: Path) -> str:
-    encoded = json.dumps(list(PLUGINS), separators=(",", ":"))
+def append_plugin_matrix(output_path: Path, changed_files: Sequence[str] | None = None) -> str:
+    fields = ci_selection.select_checks(changed_files)
     try:
         with output_path.open("a", encoding="utf-8", newline="\n") as output:
-            output.write(f"plugins={encoded}\n")
+            output.writelines(f"{name}={value}\n" for name, value in fields.items())
     except OSError as error:
         raise PluginMatrixError(f"unable to append GITHUB_OUTPUT: {error}") from error
-    return encoded
+    return fields["plugins"]
+
+
+def run_repository_checks() -> int:
+    """Run the policy's fixed checks with the same clean Git identity as CI."""
+    environment = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_CONFIG_NOSYSTEM": "1", "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
+    }
+    for path in ci_selection.REPOSITORY_CHECKS:
+        print(f"Repository check: {path}", flush=True)
+        completed = subprocess.run(
+            [sys.executable, path], cwd=REPO_ROOT, env=environment, check=False, shell=False,
+        )
+        if completed.returncode:
+            return shell_compatible_status(completed.returncode)
+    request = (REPO_ROOT / ci_selection.REPOSITORY_GATE_REQUEST).read_bytes()
+    completed = subprocess.run(
+        [sys.executable, "-m", "speckit_pro_runner"], input=request,
+        cwd=REPO_ROOT, env=environment, check=False, shell=False,
+    )
+    return shell_compatible_status(completed.returncode)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    if argv:
-        print("::error::emit-plugin-matrix.py does not accept arguments", file=sys.stderr)
-        return 1
-    output_value = os.environ.get("GITHUB_OUTPUT", "")
-    if not output_value:
-        print("::error::GITHUB_OUTPUT is not set", file=sys.stderr)
-        return 1
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repository-checks", action="store_true")
+    args = parser.parse_args(argv)
     try:
-        encoded = append_plugin_matrix(Path(output_value))
-    except PluginMatrixError as error:
+        if args.repository_checks:
+            return run_repository_checks()
+        output_value = os.environ.get("GITHUB_OUTPUT", "")
+        if not output_value:
+            raise PluginMatrixError("GITHUB_OUTPUT is not set")
+        try:
+            changed_files = _changed_files.changed_files_for_base(
+                os.environ.get("BASE_REF", ""), repo_root=REPO_ROOT, error=PluginMatrixError,
+                include_rename_sources=True,
+            )
+        except (PluginMatrixError, UnicodeError) as error:
+            print(f"::warning::{error}; selecting the full suite and Go")
+            changed_files = None
+        encoded = append_plugin_matrix(Path(output_value), changed_files)
+    except (PluginMatrixError, OSError) as error:
         print(f"::error::{error}", file=sys.stderr)
         return 1
     print(f"Python-gated plugin matrix: {encoded}")

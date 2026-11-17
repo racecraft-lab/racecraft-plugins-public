@@ -6,8 +6,8 @@
 # Release automation can also dispatch the same checks for release-please PRs
 # created or updated with GITHUB_TOKEN, because those pull_request events are
 # suppressed by GitHub's recursive workflow guard.
-# Plugin validation routes through Python runner gates. Changed-file
-# selective plugin matrices are deferred until the active Python gate owns them.
+# scripts/ci_selection.py owns changed-path selection. The workflow dispatches
+# its emitted matrix and repository-check flag without classifying paths.
 #
 # Security notes:
 # - BASE_REF is passed via env vars, never directly interpolated
@@ -56,7 +56,7 @@ jobs:
       contents: read
     outputs:
       plugins: ${{ steps.changed.outputs.plugins }}
-      go: ${{ steps.go_changes.outputs.run_go }}
+      go: ${{ steps.changed.outputs.run_go }}
 
     steps:
       - name: Checkout repository
@@ -67,13 +67,19 @@ jobs:
 
       - name: Emit Python-gated plugin matrix
         id: changed
-        run: python3 scripts/emit-plugin-matrix.py
-
-      - name: Detect Go module changes
-        id: go_changes
         env:
           BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
-        run: python3 scripts/check-go-module.py detect
+        run: python3 scripts/emit-plugin-matrix.py
+
+      - name: Set up Python 3.11 for repository checks
+        if: steps.changed.outputs.repository_checks == 'true'
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Run repository checks
+        if: steps.changed.outputs.repository_checks == 'true'
+        run: python3 scripts/emit-plugin-matrix.py --repository-checks
 
   # ───────────────────────────────────────────────────────────────────
   # Job 2: Run Python-dispatched plugin gates
@@ -110,10 +116,7 @@ jobs:
           PLUGIN: ${{ matrix.plugin }}
         run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json
 
-      # scripts/run-ci-suite.py sets the suite environment for the child
-      # process only: it skips the toolchain check and runs with no ambient Git
-      # identity, so the privacy scan tests the intended condition on a hosted
-      # runner. Its exit status, including 128+N for a signal, is the job's.
+      # The wrapper owns toolchain selection, clean Git identity, and exit status.
       - name: Run test suite
         run: python3 scripts/run-ci-suite.py
 
@@ -309,11 +312,8 @@ jobs:
         run: python3 scripts/run-python-lint.py run mypy
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 8: Go module checks for typesafe-jev. Go is the plugin-owned
-  #         toolchain there; the run body stays a Python dispatch. Runs
-  #         only when the module, its wrapper, or this workflow changed.
-  #         macOS is not redundant with Linux: the key-file permission
-  #         checks are filesystem behaviour.
+  # Job 8: Go checks selected by Python policy. Both platforms are needed:
+  #         key-file permission checks exercise filesystem behaviour.
   # ───────────────────────────────────────────────────────────────────
   go:
     name: "go (${{ matrix.os }})"
