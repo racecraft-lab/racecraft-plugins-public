@@ -238,6 +238,13 @@ def is_python_assertion(node: ast.AST) -> bool:
     return receiver.id == "self" and (method.startswith("assert") or method in ("fail", "failureException"))
 
 
+def python_scope(node: ast.AST, key: str, in_function: bool) -> str:
+    """The scope that owns `node`: a function or class outside every function opens its own under `key`."""
+    if in_function or not isinstance(node, (*PY_FUNCTIONS, ast.ClassDef)):
+        return key
+    return f"{key}.{node.name}" if key else node.name
+
+
 def read_python(text: str) -> TestFile:
     names: list[str] = []
     assertions: dict[str, list[str]] = {MODULE: []}
@@ -246,23 +253,15 @@ def read_python(text: str) -> TestFile:
     while pending:
         parent, key, in_function = pending.pop()
         for node in ast.iter_child_nodes(parent):
-            scope = key
-            if not in_function and isinstance(node, (*PY_FUNCTIONS, ast.ClassDef)):
-                # A function or class outside every function opens a scope; code inside a function stays in it.
-                scope = f"{key}.{node.name}" if key else node.name
-                assertions.setdefault(scope, [])
-                if isinstance(node, PY_FUNCTIONS) and node.name.startswith("test_"):
-                    names.append(node.name)
-            elif is_python_assertion(node):
+            scope = python_scope(node, key, in_function)
+            found = assertions.setdefault(scope, [])
+            if is_python_assertion(node):
                 # The dump holds the code alone: literal values exact, formatting and comments absent.
-                assertions[key].append(ast.dump(node))
+                found.append(ast.dump(node))
+            if scope != key and isinstance(node, PY_FUNCTIONS) and node.name.startswith("test_"):
+                names.append(node.name)
             pending.append((node, scope, in_function or isinstance(node, PY_FUNCTIONS)))
     return TestFile(tuple(names), {key: tuple(found) for key, found in assertions.items()})
-
-
-def parse_test_file(path: str, source: bytes) -> TestFile:
-    text = source.decode("utf-8")
-    return read_go(text) if path.endswith(".go") else read_python(text)
 
 
 def registered_tests(ref: str) -> set[str]:
@@ -294,8 +293,9 @@ def inventory(ref: str, registered: set[str]) -> dict[str, TestFile]:
         if not is_test_file(path, registered):
             continue
         source = command(["show", f"{ref}:{path}"])
+        read = read_go if path.endswith(".go") else read_python
         try:
-            files[path] = parse_test_file(path, source)
+            files[path] = read(source.decode("utf-8"))
         except (SyntaxError, UnicodeError, ValueError, RecursionError) as exc:
             raise ValueError(f"unparseable test file {path} at {ref}: {exc}") from exc
     return files
