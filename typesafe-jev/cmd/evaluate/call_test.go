@@ -238,7 +238,7 @@ func TestCallExitCodes(t *testing.T) {
 			name:  "nothing configured",
 			setup: func(t *testing.T, home string) {},
 			stdin: validRequest, want: exitUnconfigured,
-			wantStderr: "no credential is configured",
+			wantStderr: "evaluate: typesafe: no credential; set TYPESAFE_API_KEY, or point JEV_API_KEY_FILE at a private key file\nevaluate: create ~/.config/racecraft-jev/typesafe.key (mode 600)\nevaluate: openrouter: no credential; set OPENROUTER_API_KEY, or point JEV_FALLBACK_API_KEY_FILE at a private key file\nevaluate: create ~/.config/racecraft-jev/openrouter.key (mode 600)\n",
 		},
 		{
 			name: "an explicit key file that does not exist",
@@ -498,6 +498,11 @@ func TestCallWithoutPluginDefaultsIgnoresTheDefaultPath(t *testing.T) {
 	got := runCallForTest(t, callOptions{check: true}, "")
 	if got.code != exitUnconfigured {
 		t.Fatalf("exit = %d, want %d", got.code, exitUnconfigured)
+	}
+	want := "evaluate: typesafe: no credential; set TYPESAFE_API_KEY, or point JEV_API_KEY_FILE at a private key file\n" +
+		"evaluate: openrouter: no credential; set OPENROUTER_API_KEY, or point JEV_FALLBACK_API_KEY_FILE at a private key file\n"
+	if got.stderr != want {
+		t.Errorf("stderr = %q, want %q", got.stderr, want)
 	}
 }
 

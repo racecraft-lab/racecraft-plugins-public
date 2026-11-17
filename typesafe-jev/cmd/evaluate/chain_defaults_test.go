@@ -145,10 +145,12 @@ func checkRuntimeOrphanFallbackKeyFile(t *testing.T, plugin bool, source string)
 	})
 	t.Cleanup(func() { http.DefaultTransport = old })
 	keyFile := writeKeyFile(t, fixtureKey, 0600)
+	wantDiagnostic := "set without JEV_FALLBACK_PROVIDER"
 	t.Setenv("TYPESAFE_API_KEY", fixtureKey)
 	t.Setenv("JEV_FALLBACK_API_KEY_FILE", keyFile)
 	env := []string{"HOME=" + home, asBinaryEnv + "=1", "TYPESAFE_API_KEY=" + fixtureKey, "JEV_FALLBACK_API_KEY_FILE=" + keyFile}
 	if source == "env" {
+		wantDiagnostic = "JEV_FALLBACK_API_KEY_FILE needs a second hop in JEV_CHAIN"
 		t.Setenv("JEV_CHAIN", "typesafe")
 		env = append(env, "JEV_CHAIN=typesafe")
 	} else if source == "file" {
@@ -156,7 +158,7 @@ func checkRuntimeOrphanFallbackKeyFile(t *testing.T, plugin bool, source string)
 	}
 	for _, check := range []bool{false, true} {
 		got := runCallForTest(t, callOptions{check: check, pluginDefaults: plugin}, validRequest)
-		if got.code != 4 || got.stdout != "" || !strings.Contains(got.stderr, "set without JEV_FALLBACK_PROVIDER") {
+		if got.code != 4 || got.stdout != "" || !strings.Contains(got.stderr, wantDiagnostic) {
 			t.Errorf("call check=%t: %+v; want exit 4 and orphan fallback diagnostic", check, got)
 		}
 	}
@@ -171,7 +173,7 @@ func checkRuntimeOrphanFallbackKeyFile(t *testing.T, plugin bool, source string)
 	cmd.Env = env
 	var stdout, stderr strings.Builder
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	if err := cmd.Run(); err == nil || stdout.Len() != 0 || !strings.Contains(stderr.String(), "set without JEV_FALLBACK_PROVIDER") {
+	if err := cmd.Run(); err == nil || stdout.Len() != 0 || !strings.Contains(stderr.String(), wantDiagnostic) {
 		t.Errorf("server error=%v stdout=%q stderr=%q; want orphan fallback startup failure", err, stdout.String(), stderr.String())
 	}
 }
