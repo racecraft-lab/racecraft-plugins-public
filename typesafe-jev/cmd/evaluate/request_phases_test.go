@@ -324,7 +324,7 @@ func checkRequestPrecedence(t *testing.T, tc requestRejectionCase, primary strin
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := precedenceRouteDiagnostic(tc.name, fallback, tc.want(primary))
+	want := precedenceRouteDiagnostic(tc, primary, other, fallback)
 	result := runCallForTest(t, callOptions{retarget: retargetTo(p, f)}, string(input))
 	if result.code != 2 || result.stdout != "" || result.stderr != "evaluate: "+want+"\n" {
 		t.Errorf("call = %+v; want exit 2 and %q", result, want)
@@ -348,8 +348,13 @@ func checkRequestPrecedence(t *testing.T, tc requestRejectionCase, primary strin
 	}
 }
 
-func precedenceRouteDiagnostic(name string, fallback bool, want string) string {
-	switch name {
+func precedenceRouteDiagnostic(tc requestRejectionCase, primary, other string, fallback bool) string {
+	want := tc.want(primary)
+	switch tc.name {
+	case "context before malformed image", "dimensions before unreadable", "dimensions before malformed", "expanded budget before unreadable", "body budget before unreadable":
+		if fallback {
+			want = fmt.Sprintf("no backend can take this request: %s: %s; %s: %s", primary, want, other, tc.want(other))
+		}
 	case "box before no image":
 		want = "a box question needs an image in the request"
 	case "box before unreferenced image":
