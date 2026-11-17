@@ -191,8 +191,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(f"Installed {destination}")
     print(
-        "Next: put a TypeSafe or OpenRouter key in ~/.config/racecraft-jev/typesafe.key "
-        "or openrouter.key (chmod 600), then reconnect the jev MCP server."
+        "Next: put the key for each backend in your chain in ~/.config/racecraft-jev/ "
+        "(typesafe.key, openrouter.key, ollama.key, or ollama-local.key; chmod 600), "
+        "then reconnect the jev MCP server."
     )
     return 0
 

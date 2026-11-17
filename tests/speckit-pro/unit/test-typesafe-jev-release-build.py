@@ -287,8 +287,35 @@ class TypesafeJevReleaseBuildTests(unittest.TestCase):
         self.assertIn(f'argv = ["{BUILD.SMOKE_BINARY}"]', source)
 
 
+class TypesafeJevInstallerTests(unittest.TestCase):
+    def test_installer_hint_names_all_supported_key_files(self) -> None:
+        archive = BUILD.archive_bytes(b"binary", b"licence")
+        asset = BUILD.asset_name("linux", "amd64")
+        sums = BUILD.sums_text({asset: archive}).encode("utf-8")
+        output = io.StringIO()
+        with (
+            tempfile.TemporaryDirectory() as scratch,
+            unittest.mock.patch.dict(INSTALLER.os.environ, {"JEV_CHAIN": "ollama-local,ollama"}),
+            unittest.mock.patch.object(INSTALLER, "target", return_value=("linux", "amd64")),
+            unittest.mock.patch.object(INSTALLER, "fetch", side_effect=[sums, archive]),
+            contextlib.redirect_stdout(output),
+        ):
+            destination = Path(scratch) / "evaluate"
+            self.assertEqual(0, INSTALLER.main(["--version", "0.9.0", "--dest", str(destination)]))
+            self.assertEqual(b"binary", destination.read_bytes())
+        self.assertEqual(
+            "Next: put the key for each backend in your chain in ~/.config/racecraft-jev/ "
+            "(typesafe.key, openrouter.key, ollama.key, or ollama-local.key; chmod 600), "
+            "then reconnect the jev MCP server.",
+            output.getvalue().splitlines()[-1],
+        )
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(TypesafeJevReleaseBuildTests)
+    return unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (TypesafeJevReleaseBuildTests, TypesafeJevInstallerTests)
+    )
 
 
 def main() -> int:
