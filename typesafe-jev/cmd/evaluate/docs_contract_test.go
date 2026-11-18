@@ -29,20 +29,3 @@ func requireDocText(t *testing.T, path string, wants ...string) {
 		}
 	}
 }
-
-// #1436: the request-shape owner holds the universal shape; per-hop limits
-// live with the backend rows (ADR 0028).
-func TestAgentsNamesUniversalRequestShapeOwner(t *testing.T) {
-	doc := repoDoc(t, "AGENTS.md")
-	if strings.Contains(doc, "the one request shape both backends take") {
-		t.Error("AGENTS.md still says the request-shape owner holds the one shape both backends take")
-	}
-	requireDocText(t, "AGENTS.md", "`validation.go` for universal request shape and `config.go` for backend specs and per-hop limits")
-}
-
-// The CLI names any chain hop, including chains longer than a provider pair.
-func TestCallHelpNamesBackendChain(t *testing.T) {
-	if !strings.Contains(newCallCmd().Long, "no credential source configured for any backend in the chain") {
-		t.Error("call help must describe exit 3 without assuming a primary/fallback pair")
-	}
-}

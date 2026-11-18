@@ -11,14 +11,16 @@ import argparse
 import os
 import subprocess
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
+from ci_environment import build_environment  # noqa: E402
 from process_status import shell_compatible_status  # noqa: E402
 from speckit_pro_runner.suite_checkout_lock import (  # noqa: E402
     REFUSED_STATUS,
@@ -31,20 +33,6 @@ REQUEST_FILE = (
     REPO_ROOT
     / "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-ci-suite.json"
 )
-
-
-def build_environment(base: Mapping[str, str]) -> dict[str, str]:
-    environment = dict(base)
-    environment.update(
-        {
-            "SPECKIT_SKIP_TOOLCHAIN_CHECK": "1",
-            "GIT_CONFIG_GLOBAL": "/dev/null",
-            "GIT_CONFIG_SYSTEM": "/dev/null",
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "PYTHONPATH": str(PLUGIN_ROOT),
-        }
-    )
-    return environment
 
 
 def main(argv: Sequence[str] | None = None) -> int:

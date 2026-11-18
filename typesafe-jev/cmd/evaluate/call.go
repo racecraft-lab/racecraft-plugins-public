@@ -136,8 +136,7 @@ func runCall(ctx context.Context, opts callOptions, stdin io.Reader, stdout, std
 	code := chain.credentialExit()
 	resolved.reportUnusable(stderr)
 	if code == exitUnconfigured {
-		fmt.Fprintf(stderr, "evaluate: no credential is configured; create ~/%s/%s.key (mode 600) or set %s\n",
-			pluginKeyDirectory, cfg.Provider.Name, cfg.Provider.APIKeyEnv)
+		resolved.reportAbsent(stderr, opts.pluginDefaults)
 	}
 
 	if opts.check {

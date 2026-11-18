@@ -2,6 +2,8 @@ module github.com/racecraft-lab/racecraft-plugins-public/typesafe-jev
 
 go 1.27.3
 
+toolchain go1.27.4
+
 require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/spf13/cobra v1.10.2

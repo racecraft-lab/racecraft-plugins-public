@@ -85,6 +85,9 @@ func resolveHopConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	if fallbackFile, _ := look("JEV_FALLBACK_API_KEY_FILE"); chainSet && len(names) < 2 && fallbackFile != "" {
+		return Config{}, fmt.Errorf("JEV_FALLBACK_API_KEY_FILE needs a second hop in JEV_CHAIN")
+	}
 	pair := func(key string) (string, bool) {
 		switch key {
 		case "JEV_PROVIDER":
@@ -252,6 +255,17 @@ func (r resolvedHops) reportUnusable(out io.Writer) {
 		s := hop.loaded.status
 		if s.State == "unusable" {
 			fmt.Fprintf(out, "evaluate: %s credential (%s) is unusable: %s\n", s.Provider, s.Source, s.reason)
+		}
+	}
+}
+
+// reportAbsent explains each hop when no credential is configured.
+func (r resolvedHops) reportAbsent(out io.Writer, pluginDefaults bool) {
+	for _, hop := range r.hops {
+		fmt.Fprintln(out, "evaluate:", hop.loaded.err)
+		if pluginDefaults {
+			fmt.Fprintf(out, "evaluate: create ~/%s/%s.key (mode 600)\n",
+				pluginKeyDirectory, hop.config.Provider.Name)
 		}
 	}
 }
