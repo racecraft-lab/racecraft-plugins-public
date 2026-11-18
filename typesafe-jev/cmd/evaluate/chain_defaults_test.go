@@ -208,9 +208,9 @@ func checkRuntimeChainPrecedence(t *testing.T, plugin bool, source string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantNote := "Backend chain: " + wantPrimary
+	wantNote := "Backend: " + wantPrimary
 	if wantFallback != "" {
-		wantNote += " -> " + wantFallback
+		wantNote += ", with " + wantFallback + " as fallback"
 	}
 	wantNote += "."
 	if len(tools.Tools) != 1 || !strings.Contains(tools.Tools[0].Description, wantNote) {

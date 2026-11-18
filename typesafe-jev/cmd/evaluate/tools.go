@@ -56,7 +56,7 @@ func registerTools(s *mcp.Server, cfg Config, chain *chainRunner) {
 		refreshMu.Lock()
 		defer refreshMu.Unlock()
 		tool := evaluateTool()
-		tool.Description += backendNote(cfg) + chain.backendNote() + " Serving hop: " + chain.servingHop().Provider.Name + "."
+		tool.Description += backendNote(cfg) + " Serving hop: " + chain.servingHop().Provider.Name + "."
 		add(s, tool, func(ctx context.Context, in evaluateIn) ([]byte, error) {
 			return chain.evaluate(ctx, in)
 		})

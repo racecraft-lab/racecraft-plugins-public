@@ -33,7 +33,7 @@ func TestLoadedChainNotesDropUnusableMiddleHop(t *testing.T) {
 		"instructions": session.InitializeResult().Instructions,
 		"tool":         listed.Tools[0].Description,
 	} {
-		if !strings.Contains(note, "Backend chain: typesafe -> ollama.") || strings.Contains(note, "openrouter") {
+		if !strings.Contains(note, "Backend: typesafe, with ollama as fallback.") || strings.Contains(note, "openrouter") {
 			t.Errorf("%s names an unloaded hop: %s", surface, note)
 		}
 	}
@@ -91,5 +91,42 @@ func checkConcurrentServingNote(t *testing.T, resolved resolvedHops) {
 	}
 	if note := listed.Tools[0].Description; !strings.Contains(note, "Serving hop: ollama.") {
 		t.Fatalf("tool note went stale after concurrent moves: %s", note)
+	}
+}
+
+func TestBackendChainIsListedOnce(t *testing.T) {
+	for _, tc := range []struct {
+		names []string
+		want  string
+	}{
+		{[]string{"typesafe"}, "Backend: typesafe."},
+		{[]string{"typesafe", "openrouter"}, "Backend: typesafe, with openrouter as fallback."},
+		{[]string{"openrouter", "typesafe", "ollama-local", "ollama"}, "Backend: openrouter, then typesafe, then ollama-local, then ollama."},
+	} {
+		names := tc.names
+		t.Run(strings.Join(names, ","), func(t *testing.T) {
+			configs := make([]Config, len(names))
+			chain := &chainRunner{}
+			for i, name := range names {
+				spec := providers[name]
+				configs[i] = Config{Provider: spec}
+				chain.hops = append(chain.hops, &Client{Provider: spec})
+			}
+			cfg := configs[0]
+			cfg.AdditionalHops = configs[1:]
+			session := connect(t, cfg, chain)
+			listed, err := session.ListTools(context.Background(), nil)
+			if err != nil || len(listed.Tools) != 1 {
+				t.Fatalf("tools=%v error=%v", listed, err)
+			}
+			for surface, note := range map[string]string{
+				"instructions": session.InitializeResult().Instructions,
+				"tool":         listed.Tools[0].Description,
+			} {
+				if strings.Count(note, "Backend:") != 1 || strings.Contains(note, "Backend chain:") || !strings.Contains(note, tc.want) {
+					t.Errorf("%s must contain %q exactly once and no duplicate chain line", surface, tc.want)
+				}
+			}
+		})
 	}
 }
