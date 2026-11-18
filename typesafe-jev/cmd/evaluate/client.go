@@ -25,7 +25,7 @@ const (
 
 // Client calls a Jev evaluation endpoint: the TypeSafe API directly, or
 // OpenRouter's Decisions router. The JSON body is the same until a request
-// carries images; encodeRequest then builds each backend's own wire format.
+// carries images; prepareForHop then builds each backend's own wire format.
 type Client struct {
 	// Provider carries the endpoint, the retry policy, and the backend name
 	// that appears in errors. It is fixed for the life of the process: a tool
@@ -184,7 +184,7 @@ func (c *Client) attempt(ctx context.Context, body []byte, extra map[string]stri
 	}
 	r.Header.Set("Content-Type", "application/json")
 	for key, value := range extra {
-		// Only the headers encodeRequest decided this backend may send.
+		// Only the headers prepareForHop decided this backend may send.
 		r.Header.Set(key, value)
 	}
 	if c.Provider.Attribution {

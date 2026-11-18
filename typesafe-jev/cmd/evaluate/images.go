@@ -397,7 +397,7 @@ func imageTrees(in evaluateIn) (any, map[string]any, error) {
 		return nil, nil, err
 	}
 	if rawQuestions == nil {
-		// A nil map marshals as null. validateRequest refuses it; here it
+		// A nil map marshals as null. shapeRequest refuses it; here it
 		// simply has no sites to walk.
 		return state, map[string]any{}, nil
 	}
