@@ -9,8 +9,9 @@ the binary is installed once, separately.
 When the binary is installed, the launcher replaces itself with
 `evaluate mcp --plugin-defaults`. That server reads the plugin's key-file
 defaults and, when no credential source is configured at all, serves setup
-instructions with no tools instead of refusing to start. A credential that is
-configured but broken still refuses, and names the fix.
+instructions with no tools instead of refusing to start. It drops any hop whose
+credential cannot load with a line on stderr, and serves the next usable hop.
+It refuses only when no hop loads.
 
 When the binary is missing, or on Windows, where no release build ships yet,
 the launcher itself serves a minimal stand-in with no tools whose instructions

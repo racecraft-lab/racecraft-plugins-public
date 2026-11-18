@@ -271,8 +271,9 @@ func newSetupServer(text string) *mcp.Server {
 
 // serve runs the MCP server over stdio. With pluginDefaults it also applies
 // the plugin's key-file defaults and, when no credential source exists at
-// all, serves the setup instructions instead of refusing to start. A source
-// that exists but is broken still refuses, naming the fix.
+// all, serves the setup instructions instead of refusing to start. It drops
+// any hop whose credential cannot load with a line on stderr, and serves the
+// next usable hop. It refuses only when no hop loads.
 func serve(ctx context.Context, pluginDefaults bool) error {
 	resolved, err := resolveHops(os.LookupEnv, pluginDefaults)
 	if err != nil {

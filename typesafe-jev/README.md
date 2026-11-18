@@ -105,7 +105,7 @@ Each release from 0.9.2 on also carries `provenance.sigstore.json`, a signed SLS
 gh attestation verify evaluate-darwin-arm64.tar.gz --bundle provenance.sigstore.json --repo racecraft-lab/racecraft-plugins-public
 ```
 
-`evaluate update` later moves an installed release to the newest `typesafe-jev-v*` release, and ignores every other component's releases.
+For standalone installs, `evaluate update` later moves an installed release to the newest `typesafe-jev-v*` release, and ignores every other component's releases. Plugin users rerun the plugin installer with `--force` so the binary matches the plugin.
 
 **2. Choose a backend.** Selection is explicit. Which API keys happen to be set never decides where your state is sent or which account is billed.
 
@@ -229,15 +229,16 @@ JSON: where it comes from (`explicit-file`, `default-file`, `environment`, or
 |---|---|
 | 0 | Answered, and the response passed validation |
 | 2 | Request rejected locally: its shape, an image the backend would refuse, the option or score cap, or the context budget |
-| 3 | No credential source configured for the primary or the fallback |
+| 3 | No credential source configured for any backend in the chain |
 | 4 | A credential source is configured but unusable, including an explicit key-file path whose file is absent, or the configuration itself is invalid |
 | 5 | Provider or transport error, or timeout, after the client's own retries |
 | 6 | The response failed validation |
 
-A broken source is exit 4 even when the other backend's key works: a key file
+A broken source is exit 4 even when another hop's key works: a key file
 you set up is never passed over silently. The MCP server is more forgiving in
-that one case. It drops the broken fallback with a line on stderr and serves
-the primary.
+that case. It drops any hop whose credential cannot load, including the primary,
+with a line on stderr and serves the next usable hop. It refuses only when no
+hop loads.
 
 ### Settings
 
