@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -232,5 +234,132 @@ func TestComponentVersion(t *testing.T) {
 		if _, ok := componentVersion(tag); ok != want {
 			t.Errorf("componentVersion(%q) ok = %v, want %v", tag, ok, want)
 		}
+	}
+}
+
+// prepareUpdate points the real updater at local release fixtures and a temp
+// executable, restoring the package seams after each non-parallel test.
+func prepareUpdate(t *testing.T, assets map[string][]byte) string {
+	t.Helper()
+	const tag = "typesafe-jev-v0.9.0"
+	downloads := newFakeReleaseDownloads(t, tag, assets)
+	release := githubRelease{TagName: tag}
+	for name := range assets {
+		release.Assets = append(release.Assets, githubAsset{
+			Name: name, BrowserDownloadURL: downloads.URL + "/" + tag + "/" + name,
+		})
+	}
+	withReleasesAPI(t, fakeReleasesAPI(t, []githubRelease{release}), 100)
+	dest := filepath.Join(t.TempDir(), "evaluate")
+	if err := os.WriteFile(dest, []byte("old binary"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	oldExecutable, oldVersion := updateExecutable, version
+	updateExecutable = func() (string, error) { return dest, nil }
+	version = "0.8.0"
+	t.Cleanup(func() { updateExecutable, version = oldExecutable, oldVersion })
+	return dest
+}
+
+func assertUpdateTarget(t *testing.T, dest, want string) {
+	t.Helper()
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != want {
+		t.Errorf("target bytes = %q, want %q", got, want)
+	}
+	entries, err := os.ReadDir(filepath.Dir(dest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != filepath.Base(dest) {
+		t.Errorf("staged files left beside target: %v", entries)
+	}
+}
+
+// Like INS-02, a tampered but valid archive must fail verification before it
+// can replace the executable, and staging must leave nothing behind.
+func TestRunUpdateRefusesAChecksumMismatch(t *testing.T) {
+	archive := releaseArchive(t, "release binary")
+	dest := prepareUpdate(t, map[string][]byte{
+		assetName():      releaseArchive(t, "something else"),
+		"SHA256SUMS.txt": sumsFor(assetName(), archive),
+	})
+	if err := runUpdate(context.Background()); err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
+		t.Errorf("want checksum mismatch, got %v", err)
+	}
+	assertUpdateTarget(t, dest, "old binary")
+}
+
+func TestRunUpdateRefusesMissingReleaseFiles(t *testing.T) {
+	archive := releaseArchive(t, "release binary")
+	for _, tc := range []struct {
+		name, missing, wantError string
+	}{
+		{"missing archive asset", assetName(), "asset "},
+		{"missing checksums asset", "SHA256SUMS.txt", "asset "},
+		{"missing checksum entry", "", "no checksum found"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assets := map[string][]byte{
+				assetName():      archive,
+				"SHA256SUMS.txt": sumsFor(assetName(), archive),
+			}
+			if tc.missing == "" {
+				assets["SHA256SUMS.txt"] = sumsFor("another-asset.tar.gz", archive)
+			} else {
+				delete(assets, tc.missing)
+			}
+			dest := prepareUpdate(t, assets)
+			if err := runUpdate(context.Background()); err == nil || !strings.Contains(err.Error(), tc.wantError) {
+				t.Errorf("want %q error, got %v", tc.wantError, err)
+			}
+			assertUpdateTarget(t, dest, "old binary")
+		})
+	}
+}
+
+func TestRunUpdateReplacesWithVerifiedBinary(t *testing.T) {
+	archive := releaseArchive(t, "release binary")
+	dest := prepareUpdate(t, map[string][]byte{
+		assetName():      archive,
+		"SHA256SUMS.txt": sumsFor(assetName(), archive),
+	})
+	if err := runUpdate(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	assertUpdateTarget(t, dest, "release binary")
+	info, err := os.Stat(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Errorf("updated binary mode = %v, want 0755", info.Mode())
+	}
+}
+
+func TestFetchExpectedChecksum(t *testing.T) {
+	const tag = "typesafe-jev-v0.9.0"
+	hash := strings.Repeat("a", 64)
+	for _, tc := range []struct {
+		name, line, want string
+	}{
+		{"valid line", hash + "  " + assetName() + "\n", hash},
+		{"missing hash", assetName() + "\n", ""},
+		{"extra field", hash + "  " + assetName() + "  unexpected\n", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := newFakeReleaseDownloads(t, tag, map[string][]byte{"SHA256SUMS.txt": []byte(tc.line)})
+			got, err := fetchExpectedChecksum(context.Background(), srv.URL+"/"+tag+"/SHA256SUMS.txt", assetName())
+			if tc.want == "" {
+				if err == nil || !strings.Contains(err.Error(), "no checksum found") {
+					t.Errorf("want malformed checksum line rejected, got %q, %v", got, err)
+				}
+			} else if err != nil || got != tc.want {
+				t.Errorf("checksum = %q, %v; want %q", got, err, tc.want)
+			}
+		})
 	}
 }

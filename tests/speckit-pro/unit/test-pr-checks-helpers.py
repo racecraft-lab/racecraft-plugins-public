@@ -598,9 +598,240 @@ class PluginMatrixHelperTests(unittest.TestCase):
             content = output_path.read_text(encoding="utf-8")
         self.assertEqual('["speckit-pro"]', encoded)
         self.assertEqual(
-            'existing=value\nplugins=["speckit-pro"]\n',
+            'existing=value\nplugins=["speckit-pro"]\nrepository_checks=false\nrun_go=true\n',
             content,
         )
+
+
+class MatrixDispatchTests(unittest.TestCase):
+    def test_emitter_routes_changed_files_and_falls_back_on_detection_errors(self) -> None:
+        for evidence, plugins, reduced, go in (
+            (("typesafe-jev/cmd/evaluate/chain.go",), "[]", "true", "true"),
+            (("speckit-pro/README.md",), '["speckit-pro"]', "false", "false"),
+            ((), '["speckit-pro"]', "false", "true"),
+            (MATRIX.PluginMatrixError("unreadable diff"), '["speckit-pro"]', "false", "true"),
+            (UnicodeDecodeError("utf-8", b"x", 0, 1, "invalid"), '["speckit-pro"]', "false", "true"),
+        ):
+            with self.subTest(evidence=evidence), tempfile.TemporaryDirectory() as temporary:
+                output = Path(temporary) / "output"
+                options = {"side_effect": evidence} if isinstance(evidence, Exception) else {"return_value": evidence}
+                with (
+                    mock.patch.object(MATRIX._changed_files, "changed_files_for_base", **options),
+                    mock.patch.dict(os.environ, {"BASE_REF": "main", "GITHUB_OUTPUT": str(output)}),
+                    contextlib.redirect_stdout(io.StringIO()),
+                ):
+                    self.assertEqual(0, MATRIX.main([]))
+                self.assertEqual(
+                    f"plugins={plugins}\nrepository_checks={reduced}\nrun_go={go}\n",
+                    output.read_text(encoding="utf-8"),
+                )
+
+
+class CiEnvironmentTests(unittest.TestCase):
+    def test_dispatchers_share_the_ci_environment_owner(self) -> None:
+        suite = load_script("run_ci_suite_environment", "run-ci-suite.py")
+        self.assertIs(suite.build_environment, MATRIX.build_environment)
+        base = {"KEEP_ME": "yes", "SPECKIT_SKIP_TOOLCHAIN_CHECK": "old"}
+        environment = MATRIX.build_environment(base)
+        self.assertEqual("1", environment["SPECKIT_SKIP_TOOLCHAIN_CHECK"])
+        self.assertEqual("old", base["SPECKIT_SKIP_TOOLCHAIN_CHECK"])
+
+
+class RepositoryManifestTests(unittest.TestCase):
+    def test_repository_checks_are_selected_from_manifest_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            manifest = Path(temporary) / "suite.json"
+            manifest.write_text(json.dumps({"layers": [{"scripts": [
+                {"path": "new-check.py", "typesafe_jev_only": True},
+                {"path": "full-only.py"},
+            ]}]}), encoding="utf-8")
+            self.assertEqual(("new-check.py",), MATRIX.ci_selection.repository_checks(manifest))
+
+
+class ReducedSuiteMutationTests(unittest.TestCase):
+    def test_repository_dispatch_catches_cross_tree_mutations(self) -> None:
+        cases = (
+            ("unit/test-unit-layout.py", "UnitLayoutTests",
+             "test_tracked_authored_script_files_are_behavior_named",
+             "typesafe-jev/plugin/scripts/probe-art-003.py", "", "art-003"),
+            ("layer1-structural/test-structural-regressions.py", "RetiredPayloadBuilderTests",
+             "test_the_standalone_builder_is_deleted_and_unreferenced",
+             "typesafe-jev/README.md", "build-plugin-" + "payloads", "README.md"),
+            ("layer1-structural/validate-skill-contracts.py", "CodexSkillMentionTests",
+             "test_codex_skill_mentions_include_the_plugin_namespace",
+             "docs-site/src/content/docs/install/typesafe-jev.md",
+             "$" + "speckit-scaffold-spec", "speckit-scaffold-spec"),
+        )
+        for script, class_name, method, changed, content, diagnostic in cases:
+            with self.subTest(script=script), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                path = root / changed
+                path.parent.mkdir(parents=True)
+                path.write_text(content, encoding="utf-8")
+                (root / "scripts").mkdir()
+                (root / "specs/art-003-fixture").mkdir(parents=True)
+                (root / "README.md").touch()
+                (root / "speckit-pro").mkdir()
+                (root / "speckit-pro/README.md").touch()
+                for command in (["init", "-q"], ["add", "."]):
+                    subprocess.run(["git", *command], cwd=root, check=True, capture_output=True)
+                guard_path = "tests/speckit-pro/" + script
+                guard = load_module_from_path("reduced_mutation_guard", REPO_ROOT / guard_path)
+                results = []
+                real_run = subprocess.run
+
+                def run_guard(argv, **kwargs):
+                    if argv[0] == "git":
+                        return real_run(argv, **kwargs)
+                    if argv != [sys.executable, guard_path]:
+                        return subprocess.CompletedProcess(argv, 0)
+                    with (
+                        mock.patch.object(guard, "REPO_ROOT", root),
+                        mock.patch.object(guard, "__file__", str(root / guard_path)),
+                    ):
+                        result = unittest.TestResult()
+                        getattr(guard, class_name)(method).run(result)
+                    results.append(result)
+                    return subprocess.CompletedProcess(argv, int(not result.wasSuccessful()))
+
+                selected = MATRIX.ci_selection.select_checks([changed])
+                # Docs now select the full suite; retain the direct guard mutation proof.
+                docs_change = changed.startswith("docs-site/")
+                self.assertEqual(str(not docs_change).lower(), selected["repository_checks"])
+                self.assertEqual('["speckit-pro"]' if docs_change else '[]', selected["plugins"])
+                with mock.patch.object(MATRIX.subprocess, "run", side_effect=run_guard), contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(1, MATRIX.run_repository_checks())
+                self.assertEqual(1, len(results), "the reduced path omitted the guard")
+                self.assertEqual([], results[0].errors)
+                self.assertIn(diagnostic, str(results[0].failures))
+
+
+class RepositoryDispatchTests(unittest.TestCase):
+    def test_repository_dispatch_runs_each_policy_check_and_the_live_safety_gate(self) -> None:
+        run = mock.Mock(return_value=subprocess.CompletedProcess([], 0))
+        with mock.patch.object(MATRIX.subprocess, "run", run), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(0, MATRIX.main(["--repository-checks"]))
+        calls = [(call.args[0], call.kwargs) for call in run.call_args_list]
+        checks = MATRIX.ci_selection.repository_checks()
+        self.assertEqual([[sys.executable, path] for path in checks], [c[0] for c in calls[:-1]])
+        self.assertEqual([sys.executable, "-m", "speckit_pro_runner"], calls[-1][0])
+        self.assertEqual("repo-bash-confinement", json.loads(calls[-1][1]["input"])["operation"])
+        for _command, kwargs in calls:
+            self.assertFalse(kwargs["shell"])
+            self.assertEqual(REPO_ROOT, kwargs["cwd"])
+            self.assertEqual("/dev/null", kwargs["env"]["GIT_CONFIG_GLOBAL"])
+
+    def test_repository_dispatch_propagates_failures_and_missing_tools(self) -> None:
+        for returncode, expected in ((1, 1), (-15, 143)):
+            with (
+                self.subTest(returncode=returncode),
+                mock.patch.object(MATRIX.subprocess, "run", return_value=subprocess.CompletedProcess([], returncode)) as run,
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(expected, MATRIX.main(["--repository-checks"]))
+                self.assertEqual(1, run.call_count)
+        with (
+            mock.patch.object(MATRIX.subprocess, "run", side_effect=OSError("missing interpreter")),
+            contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()),
+        ):
+            self.assertEqual(1, MATRIX.main(["--repository-checks"]))
+
+
+class RenameSelectionTests(unittest.TestCase):
+    def test_renames_outside_the_allow_set_cannot_hide_the_source_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            env = {**os.environ, "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null",
+                   "GIT_CONFIG_NOSYSTEM": "1", "GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "test" + "@" + "example.invalid",
+                   "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "test" + "@" + "example.invalid"}
+            (root / "shared.txt").write_text("shared source\n", encoding="utf-8")
+            (root / "typesafe-jev").mkdir()
+            commands = (
+                ["init", "-q", "-b", "main"], ["add", "."], ["commit", "-qm", "base"],
+                ["update-ref", "refs/remotes/origin/main", "HEAD"],
+                ["mv", "shared.txt", "typesafe-jev/moved.txt"], ["commit", "-qm", "move"],
+            )
+            for command in commands:
+                subprocess.run(["git", *command], cwd=root, env=env, check=True, capture_output=True)
+            output = root / "output"
+            with (
+                mock.patch.object(MATRIX, "REPO_ROOT", root),
+                mock.patch.dict(os.environ, {"BASE_REF": "main", "GITHUB_OUTPUT": str(output)}),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(0, MATRIX.main([]))
+            self.assertIn('plugins=["speckit-pro"]', output.read_text(encoding="utf-8"))
+
+
+class CiSelectionTests(unittest.TestCase):
+    def selection(self, files):
+        from ci_selection import select_checks
+        return select_checks(files)
+
+    def test_typesafe_only_paths_select_repository_checks_and_both_go_jobs(self) -> None:
+        for files in (
+            ["typesafe-jev/cmd/evaluate/chain.go"],
+            ["typesafe-jev/plugin/shared-skills/typed-judgments/SKILL.md"],
+        ):
+            with self.subTest(files=files):
+                self.assertEqual(
+                    {"plugins": "[]", "repository_checks": "true", "run_go": "true"},
+                    self.selection(files),
+                )
+                self.assertIn("skipped", RESULTS.check_workflow_results(
+                    "success", "skipped", "success", "success"))
+
+    def test_docs_site_changes_select_full_suite(self) -> None:
+        for path in (
+            "docs-site/src/content/docs/install/typesafe-jev.md",
+            "docs-site/src/content/docs/reference/tests.md",
+            "docs-site/package.json",
+        ):
+            for files in ([path], ["typesafe-jev/go.mod", path]):
+                with self.subTest(files=files):
+                    selected = self.selection(files)
+                    self.assertEqual('["speckit-pro"]', selected["plugins"])
+                    self.assertEqual("false", selected["repository_checks"])
+
+    def test_unknown_mixed_and_selection_inputs_run_full_suite(self) -> None:
+        for path in (
+            "speckit-pro/README.md", "tests/speckit-pro/suite-manifest.json",
+            "scripts/ci_selection.py", "scripts/emit-plugin-matrix.py",
+            ".github/workflows/pr-checks.yml", "README.md", "unknown/file.go",
+            "docs-site/src/content/docs/install/other.md", ".agents/plugins/marketplace.json",
+            "typesafe-jev-extra/chain.go", "typesafe-jev/../scripts/policy.py",
+            "/typesafe-jev/chain.go", "typesafe-jev//chain.go", "typesafe-jev/./chain.go",
+            "typesafe-jev/", "typesafe-jev", "",
+        ):
+            with self.subTest(path=path):
+                selected = self.selection(["typesafe-jev/cmd/evaluate/chain.go", path])
+                self.assertEqual('["speckit-pro"]', selected["plugins"])
+                self.assertEqual("false", selected["repository_checks"])
+                self.assertEqual("true", selected["run_go"])
+
+    def test_missing_and_empty_lists_fail_closed_to_all_checks(self) -> None:
+        for files in (None, [], [""], ["   "]):
+            with self.subTest(files=files):
+                self.assertEqual(
+                    {"plugins": '["speckit-pro"]', "repository_checks": "false", "run_go": "true"},
+                    self.selection(files),
+                )
+
+    def test_speckit_only_paths_keep_existing_go_selection(self) -> None:
+        self.assertEqual(
+            {"plugins": '["speckit-pro"]', "repository_checks": "false", "run_go": "false"},
+            self.selection(["speckit-pro/README.md"]),
+        )
+
+
+class ChangedFilesHelperTests(unittest.TestCase):
+    def test_empty_base_ref_fails_before_running_git(self) -> None:
+        import changed_files
+
+        with mock.patch.object(changed_files.subprocess, "run") as run:
+            with self.assertRaisesRegex(ValueError, "^BASE_REF is not set$"):
+                changed_files.changed_files_for_base("", repo_root=REPO_ROOT, error=ValueError)
+        run.assert_not_called()
 
 
 class GoModuleHelperTests(unittest.TestCase):
@@ -612,7 +843,7 @@ class GoModuleHelperTests(unittest.TestCase):
             ["scripts/changed_files.py"], [".github/workflows/pr-checks.yml"],
         ):
             with self.subTest(changed=changed):
-                self.assertTrue(GO_MODULE.go_module_changed(changed))
+                self.assertTrue(MATRIX.ci_selection.go_module_changed(changed))
 
     def test_other_changes_skip_go(self) -> None:
         for changed in (
@@ -621,33 +852,17 @@ class GoModuleHelperTests(unittest.TestCase):
             ["typesafe-jev-notes.md", "docs/typesafe-jev/guide.md"],
         ):
             with self.subTest(changed=changed):
-                self.assertFalse(GO_MODULE.go_module_changed(changed))
+                self.assertFalse(MATRIX.ci_selection.go_module_changed(changed))
 
-    def test_detect_appends_run_go(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            output_path = Path(temporary_directory) / "github-output"
-            output_path.write_text("existing=value\n", encoding="utf-8")
-            with (
-                mock.patch.object(
-                    GO_MODULE, "changed_files_for_base", return_value=("typesafe-jev/go.sum",)
-                ),
-                mock.patch.dict(os.environ, {"BASE_REF": "main", "GITHUB_OUTPUT": str(output_path)}),
-                contextlib.redirect_stdout(io.StringIO()),
-            ):
-                return_code = GO_MODULE.main(["detect"])
-            content = output_path.read_text(encoding="utf-8")
-        self.assertEqual(0, return_code)
-        self.assertEqual("existing=value\nrun_go=true\n", content)
-
-    def test_missing_base_ref_fails(self) -> None:
-        stderr = io.StringIO()
+    def test_retired_detect_mode_is_rejected_without_selection_or_tools(self) -> None:
         with (
-            mock.patch.dict(os.environ, {"BASE_REF": "", "GITHUB_OUTPUT": ""}),
-            contextlib.redirect_stderr(stderr),
+            mock.patch.object(GO_MODULE.subprocess, "run") as run,
+            contextlib.redirect_stderr(io.StringIO()) as stderr,
+            contextlib.redirect_stdout(io.StringIO()),
         ):
-            return_code = GO_MODULE.main(["detect"])
-        self.assertEqual(1, return_code)
-        self.assertEqual("::error::Go module check failed: BASE_REF is not set\n", stderr.getvalue())
+            self.assertEqual(1, GO_MODULE.main(["detect"]))
+        run.assert_not_called()
+        self.assertIn("usage: check-go-module.py check", stderr.getvalue())
 
     def test_unknown_mode_fails(self) -> None:
         for argv in ([], ["lint"], ["check", "extra"]):
@@ -656,7 +871,7 @@ class GoModuleHelperTests(unittest.TestCase):
                 with contextlib.redirect_stderr(stderr):
                     return_code = GO_MODULE.main(argv)
                 self.assertEqual(1, return_code)
-                self.assertIn("usage: check-go-module.py detect|check", stderr.getvalue())
+                self.assertIn("usage: check-go-module.py check", stderr.getvalue())
 
     def test_failed_go_tool_raises_with_its_argv(self) -> None:
         completed = subprocess.CompletedProcess(["go", "vet", "./..."], 1, stdout="", stderr="vet: boom\n")
@@ -700,6 +915,14 @@ def build_suite() -> unittest.TestSuite:
         SupersededRunLookupTests,
         SupersededVerdictTests,
         PluginMatrixHelperTests,
+        CiSelectionTests,
+        MatrixDispatchTests,
+        CiEnvironmentTests,
+        RepositoryManifestTests,
+        ReducedSuiteMutationTests,
+        RepositoryDispatchTests,
+        RenameSelectionTests,
+        ChangedFilesHelperTests,
         GoModuleHelperTests,
     ):
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(test_case))
