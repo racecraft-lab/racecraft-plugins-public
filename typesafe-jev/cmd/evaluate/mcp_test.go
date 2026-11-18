@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,10 +21,15 @@ var testImpl = &mcp.Implementation{Name: "evaluate-test", Version: "test"}
 // transports, so a test drives the shipped tool rather than a stand-in.
 func connect(t *testing.T, cfg Config, c any) *mcp.ClientSession {
 	t.Helper()
+	return connectServer(t, newServer(cfg, testChain(c)))
+}
+
+func connectServer(t *testing.T, server *mcp.Server) *mcp.ClientSession {
+	t.Helper()
 	ctx := context.Background()
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
-	serverSession, err := newServer(cfg, testChain(c)).Connect(ctx, serverTransport, nil)
+	serverSession, err := server.Connect(ctx, serverTransport, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,5 +374,67 @@ func TestServerInstructionsNameTheBackend(t *testing.T) {
 				t.Errorf("base guidance lost:\n%s", got)
 			}
 		})
+	}
+}
+
+func TestServerPluginVersionWarning(t *testing.T) {
+	original := version
+	t.Cleanup(func() { version = original })
+	for _, tc := range []struct {
+		name, binary, plugin, warning string
+	}{
+		{"mismatch", "0.9.2", "0.11.0", "Warning: evaluate binary version 0.9.2 differs from plugin version 0.11.0; rerun the plugin's installer: python3 scripts/install_evaluate.py --force (from the plugin directory)."},
+		{"equal", "0.11.0", "0.11.0", ""},
+		{"unset", "0.9.2", "", ""},
+		{"dev", "dev", "0.11.0", "Warning: evaluate binary version dev is a dev build; plugin version is 0.11.0; rerun the plugin's installer: python3 scripts/install_evaluate.py --force (from the plugin directory)."},
+		{"standalone dev", "dev", "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			version = tc.binary
+			t.Setenv("EVALUATE_PLUGIN_VERSION", tc.plugin)
+			cfg, c := backendFor(t, "typesafe", mockBackend(t, noulReply))
+			for _, setup := range []bool{false, true} {
+				t.Run(fmt.Sprint(setup), func(t *testing.T) {
+					checkPluginVersionWarning(t, cfg, c, setup, tc.warning)
+				})
+			}
+		})
+	}
+}
+
+func checkPluginVersionWarning(t *testing.T, cfg Config, c *Client, setup bool, warning string) {
+	t.Helper()
+	stderr, err := os.CreateTemp(t.TempDir(), "stderr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stderr.Close()
+	previous := os.Stderr
+	os.Stderr = stderr
+	defer func() { os.Stderr = previous }()
+	var server *mcp.Server
+	base, toolCount := instructions+backendNote(cfg)+testChain(c).backendNote(), 1
+	if setup {
+		base, toolCount = "setup instructions", 0
+		server = newSetupServer(base)
+	} else {
+		server = newServer(cfg, testChain(c))
+	}
+	cs := connectServer(t, server)
+	want, wantStderr := base, ""
+	if warning != "" {
+		want += "\n" + warning
+		wantStderr = warning + "\n"
+	}
+	if got := cs.InitializeResult().Instructions; got != want {
+		t.Errorf("instructions = %q, want %q", got, want)
+	}
+	gotStderr, err := os.ReadFile(stderr.Name())
+	if err != nil || string(gotStderr) != wantStderr {
+		t.Errorf("stderr = %q, %v; want %q", gotStderr, err, wantStderr)
+	}
+	tools, err := cs.ListTools(context.Background(), nil)
+	if err != nil || len(tools.Tools) != toolCount {
+		t.Fatalf("tools = %+v, %v; want %d", tools, err, toolCount)
 	}
 }

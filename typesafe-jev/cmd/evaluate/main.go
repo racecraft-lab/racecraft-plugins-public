@@ -155,7 +155,7 @@ func buildCommit() string {
 func newServer(cfg Config, chain *chainRunner) *mcp.Server {
 	s := mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
-		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg)},
+		&mcp.ServerOptions{Instructions: instructions + backendNote(cfg) + pluginVersionNote()},
 	)
 	registerTools(s, cfg, chain)
 	return s
@@ -261,7 +261,7 @@ func newSetupServer(text string) *mcp.Server {
 	return mcp.NewServer(
 		&mcp.Implementation{Name: "evaluate", Version: version},
 		&mcp.ServerOptions{
-			Instructions: text,
+			Instructions: text + pluginVersionNote(),
 			// Advertised, with an empty list, so a client that asks for tools
 			// gets none rather than an error.
 			Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}},
@@ -271,8 +271,9 @@ func newSetupServer(text string) *mcp.Server {
 
 // serve runs the MCP server over stdio. With pluginDefaults it also applies
 // the plugin's key-file defaults and, when no credential source exists at
-// all, serves the setup instructions instead of refusing to start. A source
-// that exists but is broken still refuses, naming the fix.
+// all, serves the setup instructions instead of refusing to start. It drops
+// any hop whose credential cannot load with a line on stderr, and serves the
+// next usable hop. It refuses only when no hop loads.
 func serve(ctx context.Context, pluginDefaults bool) error {
 	resolved, err := resolveHops(os.LookupEnv, pluginDefaults)
 	if err != nil {

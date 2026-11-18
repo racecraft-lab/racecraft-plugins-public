@@ -9,8 +9,9 @@ the binary is installed once, separately.
 When the binary is installed, the launcher replaces itself with
 `evaluate mcp --plugin-defaults`. That server reads the plugin's key-file
 defaults and, when no credential source is configured at all, serves setup
-instructions with no tools instead of refusing to start. A credential that is
-configured but broken still refuses, and names the fix.
+instructions with no tools instead of refusing to start. It drops any hop whose
+credential cannot load with a line on stderr, and serves the next usable hop.
+It refuses only when no hop loads.
 
 When the binary is missing, or on Windows, where no release build ships yet,
 the launcher itself serves a minimal stand-in with no tools whose instructions
@@ -32,14 +33,14 @@ import os
 import shlex
 import sys
 
-KEY_DIRECTORY = os.path.join("~", ".config", "racecraft-jev")
+from install_evaluate import InstallError, KEY_SETUP_HINT, plugin_version
+
 INSTALLER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "install_evaluate.py")
 SETUP_TEXT = (
     "Jev is not set up on this machine, so this server offers no tools.\n"
     "To enable the evaluate tool:\n"
     f"1. Install the evaluate binary that matches this plugin: python3 {shlex.quote(INSTALLER)}\n"
-    f"2. Put a TypeSafe key in {KEY_DIRECTORY}/typesafe.key, or an OpenRouter key in "
-    f"{KEY_DIRECTORY}/openrouter.key, readable only by you (chmod 600).\n"
+    f"2. Put {KEY_SETUP_HINT}\n"
     "3. Reconnect this MCP server.\n"
     "Until then, make any judgment yourself in the ordinary way."
 )
@@ -141,6 +142,11 @@ def main() -> int:
         return serve_unconfigured(f"the evaluate binary is not installed at {binary}")
     # exec, not a child process: the client signals this process directly, and
     # an extra process in between would swallow the termination it sends.
+    try:
+        os.environ["EVALUATE_PLUGIN_VERSION"] = plugin_version()
+    except InstallError:
+        # Version warnings must never prevent an installed binary from running.
+        os.environ.pop("EVALUATE_PLUGIN_VERSION", None)
     sys.stderr.flush()
     os.execv(binary, [binary, "mcp", "--plugin-defaults"])
     return 1  # unreachable: execv replaces this process or raises
