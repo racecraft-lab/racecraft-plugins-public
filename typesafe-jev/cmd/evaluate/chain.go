@@ -236,7 +236,7 @@ func (r *chainRunner) sendHop(ctx context.Context, i int, shaped shapedCall, p p
 	if time.Until(deadline) > limit && r.hasLaterHop(i, shaped, skipped) {
 		hopCtx, cancelHop = context.WithTimeout(ctx, limit)
 	}
-	body, failure := send(hopCtx, r.hops[i], p, nil)
+	body, failure := send(hopCtx, r.hops[i], p)
 	hopErr := hopCtx.Err()
 	cancelHop()
 	if requestErr := ctx.Err(); requestErr != nil {

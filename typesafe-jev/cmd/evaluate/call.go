@@ -120,7 +120,7 @@ type checkReport struct {
 // runCall is `evaluate call`. It returns the exit code, and writes the
 // provider's JSON to stdout only on success.
 func runCall(ctx context.Context, opts callOptions, stdin io.Reader, stdout, stderr io.Writer) int {
-	cfg, err := resolveCallConfig(os.LookupEnv, opts.pluginDefaults)
+	cfg, err := resolveHopConfig(os.LookupEnv, opts.pluginDefaults)
 	if err != nil {
 		// An unknown backend or a relative key path is a configuration that
 		// was set and cannot be used, which is what exit 4 means.

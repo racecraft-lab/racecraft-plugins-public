@@ -65,11 +65,6 @@ func registerTools(s *mcp.Server, cfg Config, chain *chainRunner) {
 	refresh()
 }
 
-// runOn uses the chain's single-hop path for one evaluation on one backend.
-func runOn(ctx context.Context, c *Client, in evaluateIn) ([]byte, error) {
-	return (&chainRunner{hops: []*Client{c}}).evaluate(ctx, in)
-}
-
 // preparedCall is one request that passed every local check for one backend,
 // encoded for it.
 type preparedCall struct {
@@ -78,21 +73,8 @@ type preparedCall struct {
 	headers map[string]string
 }
 
-// prepare resolves the model, validates, and encodes. It makes no network
-// call, and every error it returns is a *requestInvalidError.
-func prepare(c *Client, in evaluateIn) (preparedCall, error) {
-	shaped, err := shapeRequest(in)
-	if err != nil {
-		return preparedCall{}, &requestInvalidError{err}
-	}
-	return prepareForHop(c, shaped)
-}
-
-// send propagates preparation failures before posting and validating a reply.
-func send(ctx context.Context, c *Client, p preparedCall, preparationError error) ([]byte, error) {
-	if preparationError != nil {
-		return nil, preparationError
-	}
+// send posts a prepared request and validates the reply.
+func send(ctx context.Context, c *Client, p preparedCall) ([]byte, error) {
 	body, err := c.post(ctx, p.body, p.headers)
 	if err != nil {
 		return nil, err

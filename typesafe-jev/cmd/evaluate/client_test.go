@@ -388,3 +388,16 @@ func itoa(n int) string {
 	}
 	return string(b)
 }
+
+// encode isolates the production image encoder and body-size check for transport
+// tests, which intentionally do not validate response or request shape.
+func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
+	body, headers, err := encodeRequest(c.Provider, in)
+	if err == nil {
+		err = checkBodySize(c.Provider, body)
+	}
+	if err != nil {
+		return nil, nil, &requestInvalidError{err}
+	}
+	return body, headers, nil
+}

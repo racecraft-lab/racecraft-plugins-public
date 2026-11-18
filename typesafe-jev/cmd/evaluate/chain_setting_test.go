@@ -312,7 +312,7 @@ func TestPluginLeavesChainSelectionToRuntime(t *testing.T) {
 func TestSetupGeneratesChainInsteadOfLegacyPair(t *testing.T) {
 	home := isolateCallEnv(t)
 	writeChainSetting(t, home, "openrouter,typesafe")
-	cfg, err := resolveCallConfig(os.LookupEnv, false)
+	cfg, err := resolveHopConfig(os.LookupEnv, false)
 	if err != nil {
 		t.Fatal(err)
 	}

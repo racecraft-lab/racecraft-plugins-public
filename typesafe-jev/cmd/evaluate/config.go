@@ -11,7 +11,7 @@ import (
 )
 
 // ProviderSpec is the non-secret description of an evaluation backend. The
-// credential itself never lives here: see credentials.go.
+// credential itself never lives here: see auth.go.
 type ProviderSpec struct {
 	// Name is the JEV_PROVIDER value that selects this backend.
 	Name string
@@ -462,11 +462,6 @@ func applyOperator(spec ProviderSpec, allowImages, longContext bool) ProviderSpe
 	return spec
 }
 
-// Kept for the live model probe; the model exclusions have one home in the row.
-func knownBoxReject(provider, model string) bool {
-	return providers[provider].rejectsBoxModel(model)
-}
-
 func (spec ProviderSpec) rejectsBoxModel(model string) bool {
 	return slices.Contains(spec.UnsupportedBoxModels, model)
 }
@@ -690,15 +685,6 @@ func resolveFallback(look lookupFunc, primary ProviderSpec, home string) (*Fallb
 		return nil, err
 	}
 	return &FallbackConfig{Provider: spec, KeyFile: keyFile, KeyFileDefaulted: defaulted}, nil
-}
-
-// credentialSource names where the key will be read from, for a diagnostic
-// that must not print the key itself.
-func (c Config) credentialSource() string {
-	if c.KeyFile != "" {
-		return "file " + c.KeyFile
-	}
-	return "environment " + c.Provider.APIKeyEnv
 }
 
 // parseChain rejects configuration mistakes before any credential is loaded.

@@ -61,21 +61,6 @@ func newHTTPClient() *http.Client {
 	}
 }
 
-// encode builds this backend's wire body and headers. It trusts the request:
-// callers validate before encoding. Ordered hop checks and lazy image reads
-// compose in prepareForHop; this compatibility entry point still wraps local
-// errors as requestInvalidError, which call maps to exit 2.
-func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
-	body, headers, err := encodeRequest(c.Provider, in)
-	if err == nil {
-		err = checkBodySize(c.Provider, body)
-	}
-	if err != nil {
-		return nil, nil, &requestInvalidError{err}
-	}
-	return body, headers, nil
-}
-
 // post spends the caller's hop deadline on attempts and retry waits. The
 // chain runner owns deadlines so their provenance stays available to classify.
 func (c *Client) post(ctx context.Context, body []byte, headers map[string]string) ([]byte, error) {

@@ -456,3 +456,28 @@ func TestKeyFileRejectsANamedPipe(t *testing.T) {
 		t.Fatal("loadCredential blocked on the named pipe instead of refusing it")
 	}
 }
+
+// resolveConfig keeps legacy-default fixtures on the production legacy resolver.
+// It does not load credentials or opt into plugin defaults.
+func resolveConfig(look lookupFunc) (Config, error) {
+	return resolveLegacyConfig(look, false)
+}
+
+// newClient builds a single test hop through the production credential loader
+// and client constructor, without starting a configured fallback.
+func newClient(cfg Config) (*Client, error) {
+	hop := resolvedHop{config: cfg, loaded: loadCredentialSource(cfg, os.LookupEnv)}
+	if hop.loaded.err != nil {
+		return nil, hop.loaded.err
+	}
+	return clientForHop(hop), nil
+}
+
+// credentialSource names where the key will be read from, for a diagnostic
+// that must not print the key itself.
+func (c Config) credentialSource() string {
+	if c.KeyFile != "" {
+		return "file " + c.KeyFile
+	}
+	return "environment " + c.Provider.APIKeyEnv
+}
