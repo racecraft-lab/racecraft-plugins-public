@@ -413,7 +413,7 @@ func checkPluginVersionWarning(t *testing.T, cfg Config, c *Client, setup bool, 
 	os.Stderr = stderr
 	defer func() { os.Stderr = previous }()
 	var server *mcp.Server
-	base, toolCount := instructions+backendNote(cfg)+testChain(c).backendNote(), 1
+	base, toolCount := instructions+backendNote(cfg), 1
 	if setup {
 		base, toolCount = "setup instructions", 0
 		server = newSetupServer(base)
