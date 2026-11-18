@@ -27,9 +27,9 @@ func (c credential) reveal() string { return string(c) }
 // when one is configured and otherwise from that backend's own environment
 // variable.
 //
-// There is no fallback between the two, and no implicit one between backends:
-// a fallback backend exists only when the operator names it, and it loads its
-// own credential through this same function (see chain.go). If the
+// There is no fallback between the two credential sources. Each hop in
+// JEV_CHAIN, the legacy provider pair, or the built-in typesafe,openrouter
+// chain enabled by --plugin-defaults loads its own credential (see resolver.go). If the
 // operator named a file, an unreadable file is fatal even when a usable
 // environment key is sitting right there: quietly using a different credential
 // would bill a different account than the one they configured.

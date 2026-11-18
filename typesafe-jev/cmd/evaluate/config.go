@@ -20,7 +20,7 @@ type ProviderSpec struct {
 	// EndpointURL is the complete URL to POST to, not a base to append to.
 	EndpointURL string
 	// APIKeyEnv is the only environment variable this backend reads a key
-	// from. A backend never falls back to another backend's variable.
+	// from. A backend does not fall back to another backend's variable.
 	APIKeyEnv string
 	// DefaultModel applies when neither the tool call nor JEV_MODEL names one.
 	DefaultModel   string

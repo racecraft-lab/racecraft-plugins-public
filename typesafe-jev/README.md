@@ -83,7 +83,17 @@ The installer is a Python script in the plugin, at `plugin/scripts/install_evalu
 python3 plugin/scripts/install_evaluate.py
 ```
 
-It downloads the release tagged `typesafe-jev-v<version>` for this machine, checks it against that release's `SHA256SUMS.txt`, and installs it to `~/.local/libexec/racecraft-jev/evaluate`. By default it installs the plugin's own version, so the binary matches the launcher; `--version 0.9.0` picks another, and `--force` replaces an existing binary. It never asks GitHub for the "latest" release, because this repository releases more than one component. The path is deliberately **not** on your `PATH`, so it cannot collide with an upstream `evaluate` you may already have. Point clients at that absolute path. Building from source works too, into the same directory:
+It downloads the release tagged `typesafe-jev-v<version>` for this machine, checks it against that release's `SHA256SUMS.txt`, and installs it to `~/.local/libexec/racecraft-jev/evaluate`. By default it installs the plugin's own version, so the binary matches the launcher; `--version 0.9.0` picks another, and `--force` replaces an existing binary. It never asks GitHub for the "latest" release, because this repository releases more than one component. The path is deliberately **not** on your `PATH`, so it cannot collide with an upstream `evaluate` you may already have. Point clients at that absolute path. A plugin update also needs the matching binary. After updating the plugin, run its installer again from this directory (or use the installer in the updated plugin):
+
+```sh
+python3 plugin/scripts/install_evaluate.py --force
+```
+
+The server warns in its client instructions and on stderr when the plugin version differs from the binary's, including when the binary is a dev build. Binaries from before this release cannot warn; update them with the command above.
+
+Start every live check or release smoke test with `evaluate version` (use `~/.local/libexec/racecraft-jev/evaluate version` for the default install) and confirm it equals the version in `plugin/.claude-plugin/plugin.json` before proceeding.
+
+Building from source works too, into the same directory:
 
 ```sh
 go build -trimpath -o ~/.local/libexec/racecraft-jev/evaluate ./cmd/evaluate
@@ -95,7 +105,7 @@ Each release from 0.9.2 on also carries `provenance.sigstore.json`, a signed SLS
 gh attestation verify evaluate-darwin-arm64.tar.gz --bundle provenance.sigstore.json --repo racecraft-lab/racecraft-plugins-public
 ```
 
-`evaluate update` later moves an installed release to the newest `typesafe-jev-v*` release, and ignores every other component's releases.
+For standalone installs, `evaluate update` later moves an installed release to the newest `typesafe-jev-v*` release, and ignores every other component's releases. Plugin users rerun the plugin installer with `--force` so the binary matches the plugin.
 
 **2. Choose a backend.** Selection is explicit. Which API keys happen to be set never decides where your state is sent or which account is billed.
 
@@ -219,15 +229,16 @@ JSON: where it comes from (`explicit-file`, `default-file`, `environment`, or
 |---|---|
 | 0 | Answered, and the response passed validation |
 | 2 | Request rejected locally: its shape, an image the backend would refuse, the option or score cap, or the context budget |
-| 3 | No credential source configured for the primary or the fallback |
+| 3 | No credential source configured for any backend in the chain |
 | 4 | A credential source is configured but unusable, including an explicit key-file path whose file is absent, or the configuration itself is invalid |
 | 5 | Provider or transport error, or timeout, after the client's own retries |
 | 6 | The response failed validation |
 
-A broken source is exit 4 even when the other backend's key works: a key file
+A broken source is exit 4 even when another hop's key works: a key file
 you set up is never passed over silently. The MCP server is more forgiving in
-that one case. It drops the broken fallback with a line on stderr and serves
-the primary.
+that case. It drops any hop whose credential cannot load, including the primary,
+with a line on stderr and serves the next usable hop. It refuses only when no
+hop loads.
 
 ### Settings
 

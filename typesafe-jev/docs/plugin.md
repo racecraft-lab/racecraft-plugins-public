@@ -45,11 +45,12 @@ a connected server that explains itself rather than a failed one. Either way,
 one line on stderr says so. Stdout carries only protocol frames, because a
 human-readable line there is a frame the MCP client cannot parse.
 
-The launcher never reads a key and starts no other process. A credential that
-is configured but broken, such as a key file other users can read, is not
-hidden behind the stand-in: the server refuses it and names the fix.
-`evaluate call --check --plugin-defaults` gives the same verdict without
-starting a server, as an exit code: 0 ready, 3 nothing configured, 4 broken.
+The launcher never reads a key and starts no other process. The server drops
+any hop whose credential cannot load, such as a key file other users can read,
+with a line on stderr, and serves the next usable hop. It refuses only when no
+hop loads. `evaluate call --check --plugin-defaults` is stricter: without
+starting a server, it exits 0 ready, 3 nothing configured, or 4 broken, even
+when another hop can load.
 
 Windows has no release build yet, so on Windows the launcher always serves the
 stand-in.

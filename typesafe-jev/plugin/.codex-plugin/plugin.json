@@ -1,7 +1,7 @@
 {
   "name": "typesafe-jev",
   "version": "0.11.0",
-  "description": "Ask Jev for typed judgments with calibrated probabilities instead of parsing prose, through TypeSafe directly or OpenRouter's Decisions API, with the backend chosen explicitly.",
+  "description": "Ask for typed judgments with probabilities instead of parsing prose, through TypeSafe or OpenRouter (Jev: noul, choice, score, box) or Ollama (Clef: noul, choice, score), with the backend chain configured explicitly.",
   "author": {
     "name": "Racecraft Lab",
     "url": "https://github.com/racecraft-lab"
@@ -22,7 +22,7 @@
   "interface": {
     "displayName": "TypeSafe Jev",
     "shortDescription": "Typed judgments with probabilities, not parsed prose",
-    "longDescription": "Adds one MCP tool, evaluate, that sends state and typed questions to TypeSafe's Jev model and returns noul, choice, and score answers with calibrated probabilities. The backend is TypeSafe directly or OpenRouter's Decisions API, selected explicitly rather than by whichever API key happens to be set. Ships TypeSafe's agent skill, adapted so the tool is used for in-session judgments and the SDK guidance stays for building an application.",
+    "longDescription": "Adds one MCP tool, evaluate, that sends state and typed questions to Jev through TypeSafe or OpenRouter, or to Ollama (Clef), and returns noul, choice, and score answers with probabilities; Jev also supports box. The backend chain is configured explicitly rather than by whichever API key happens to be set. Ships TypeSafe's agent skill, adapted so the tool is used for in-session judgments and the SDK guidance stays for building an application.",
     "developerName": "Racecraft Lab",
     "category": "Developer Tools",
     "capabilities": [
