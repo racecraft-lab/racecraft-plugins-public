@@ -236,7 +236,7 @@ func (r *chainRunner) sendHop(ctx context.Context, i int, shaped shapedCall, p p
 	if time.Until(deadline) > limit && r.hasLaterHop(i, shaped, skipped) {
 		hopCtx, cancelHop = context.WithTimeout(ctx, limit)
 	}
-	body, failure := send(hopCtx, r.hops[i], p, nil)
+	body, failure := send(hopCtx, r.hops[i], p)
 	hopErr := hopCtx.Err()
 	cancelHop()
 	if requestErr := ctx.Err(); requestErr != nil {
@@ -315,13 +315,4 @@ func (r *chainRunner) onTheFallback(err error) error {
 	}
 	return &requestInvalidError{fmt.Errorf("this session is on the %s fallback since %s failed; %w",
 		r.hops[serving].Provider.Name, strings.Join(failed, " and "), local.err)}
-}
-
-// backendNote reports the fixed loaded order for MCP.
-func (r *chainRunner) backendNote() string {
-	names := make([]string, len(r.hops))
-	for i, hop := range r.hops {
-		names[i] = hop.Provider.Name
-	}
-	return "\nBackend chain: " + strings.Join(names, " -> ") + "."
 }

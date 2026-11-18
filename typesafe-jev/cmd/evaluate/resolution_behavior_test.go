@@ -162,7 +162,7 @@ func checkResolutionCLI(t *testing.T, role string, expected sourceStatus, callCo
 
 func checkResolutionServer(t *testing.T, state string, wantExit int, callCount *int) *strings.Builder {
 	t.Helper()
-	cfg, err := resolveCallConfig(os.LookupEnv, true)
+	cfg, err := resolveHopConfig(os.LookupEnv, true)
 	if err != nil {
 		t.Fatal(err)
 	}

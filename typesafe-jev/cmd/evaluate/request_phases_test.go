@@ -456,3 +456,13 @@ func writeImageFixture(t *testing.T, path string, data []byte) {
 		t.Fatal(err)
 	}
 }
+
+// prepare resolves the model, validates, and encodes. It makes no network
+// call, and every error it returns is a *requestInvalidError.
+func prepare(c *Client, in evaluateIn) (preparedCall, error) {
+	shaped, err := shapeRequest(in)
+	if err != nil {
+		return preparedCall{}, &requestInvalidError{err}
+	}
+	return prepareForHop(c, shaped)
+}

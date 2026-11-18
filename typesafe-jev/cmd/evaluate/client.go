@@ -25,7 +25,7 @@ const (
 
 // Client calls a Jev evaluation endpoint: the TypeSafe API directly, or
 // OpenRouter's Decisions router. The JSON body is the same until a request
-// carries images; encodeRequest then builds each backend's own wire format.
+// carries images; prepareForHop then builds each backend's own wire format.
 type Client struct {
 	// Provider carries the endpoint, the retry policy, and the backend name
 	// that appears in errors. It is fixed for the life of the process: a tool
@@ -59,21 +59,6 @@ func newHTTPClient() *http.Client {
 			return fmt.Errorf("refusing redirect to %s: an authenticated request is never forwarded to another host", req.URL.Host)
 		},
 	}
-}
-
-// encode builds this backend's wire body and headers. It trusts the request:
-// callers validate before encoding. Ordered hop checks and lazy image reads
-// compose in prepareForHop; this compatibility entry point still wraps local
-// errors as requestInvalidError, which call maps to exit 2.
-func (c *Client) encode(in evaluateIn) ([]byte, map[string]string, error) {
-	body, headers, err := encodeRequest(c.Provider, in)
-	if err == nil {
-		err = checkBodySize(c.Provider, body)
-	}
-	if err != nil {
-		return nil, nil, &requestInvalidError{err}
-	}
-	return body, headers, nil
 }
 
 // post spends the caller's hop deadline on attempts and retry waits. The
@@ -199,7 +184,7 @@ func (c *Client) attempt(ctx context.Context, body []byte, extra map[string]stri
 	}
 	r.Header.Set("Content-Type", "application/json")
 	for key, value := range extra {
-		// Only the headers encodeRequest decided this backend may send.
+		// Only the headers prepareForHop decided this backend may send.
 		r.Header.Set(key, value)
 	}
 	if c.Provider.Attribution {

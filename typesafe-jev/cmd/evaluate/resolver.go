@@ -54,16 +54,6 @@ func resolveConfiguredHops(cfg Config, look lookupFunc) resolvedHops {
 	return r
 }
 
-// resolveConfig retains the legacy pair entry point used by single-backend
-// callers. Runtime and setup use resolveHopConfig for chain precedence.
-func resolveConfig(look lookupFunc) (Config, error) {
-	return resolveLegacyConfig(look, false)
-}
-
-func resolveCallConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
-	return resolveHopConfig(look, pluginDefaults)
-}
-
 // resolveHopConfig uses the same precedence for setup, call and the server.
 // Legacy settings are resolved unchanged, including their existing diagnostics.
 func resolveHopConfig(look lookupFunc, pluginDefaults bool) (Config, error) {
@@ -349,20 +339,6 @@ func clientForHop(hop resolvedHop) *Client {
 		Model:    cfg.Model, APIKey: hop.loaded.key, Timeout: cfg.Timeout, HopTimeout: cfg.HopTimeout,
 		MaxRetries: cfg.MaxRetries, HTTP: newHTTPClient(), Backoff: time.Second,
 	}
-}
-
-// Constructor adapters retain the existing single-backend and configured-pair
-// entry points; credential loading and selection stay in their owners.
-func newClient(cfg Config) (*Client, error) {
-	hop := resolvedHop{config: cfg, loaded: loadCredentialSource(cfg, os.LookupEnv)}
-	if hop.loaded.err != nil {
-		return nil, hop.loaded.err
-	}
-	return clientForHop(hop), nil
-}
-
-func newClients(cfg Config, log io.Writer) (*chainRunner, Config, error) {
-	return startChain(resolveConfiguredHops(cfg, os.LookupEnv), log, log)
 }
 
 // configuredChainNames serializes setup's resolved order, including later hops.

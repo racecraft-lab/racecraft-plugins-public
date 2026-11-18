@@ -44,12 +44,6 @@ const (
 	bytesPerToken = 4
 )
 
-// validateRequest checks the universal shape before this hop's capabilities.
-// Shape failures name fields, never private request values.
-func validateRequest(spec ProviderSpec, in evaluateIn) error {
-	return requestChecks(in).validate(spec, in)
-}
-
 // These types describe the rule that refused a call, independently of when
 // its result is reported. Internal errors belong to neither class.
 type requestShapeError struct{ err error }
@@ -448,12 +442,6 @@ func criteriaOf[T map[string]any | []any](rule criteriaRule, path string, criter
 		return zero, fmt.Errorf("%s.criteria %s %d %s, over the %d the backend accepts", path, rule.verb, len(v), rule.unit, rule.most)
 	}
 	return v, nil
-}
-
-// validateChoiceCriteria requires a non-empty option map. Option names are the
-// answer space, so they are preserved exactly.
-func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error {
-	return criteriaChecks[map[string]any](choiceRule, path, criteria).validate(spec, evaluateIn{})
 }
 
 // criteriaChecks caches shape results before per-hop bounds, then visits entries

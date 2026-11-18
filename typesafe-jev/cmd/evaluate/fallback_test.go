@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -348,4 +350,9 @@ func TestLocalRefusalAfterTheSwitchNamesTheFallback(t *testing.T) {
 	if primary.calls.Load() != 0 || fallback.calls.Load() != 0 {
 		t.Fatalf("calls primary %d, fallback %d", primary.calls.Load(), fallback.calls.Load())
 	}
+}
+
+// newClients starts test fixtures through the production configured-hop loader.
+func newClients(cfg Config, log io.Writer) (*chainRunner, Config, error) {
+	return startChain(resolveConfiguredHops(cfg, os.LookupEnv), log, log)
 }

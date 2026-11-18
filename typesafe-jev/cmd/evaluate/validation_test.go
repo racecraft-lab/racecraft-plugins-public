@@ -629,3 +629,19 @@ func TestContextBudgetPerBackend(t *testing.T) {
 		}
 	})
 }
+
+// validateRequest checks the universal shape before this hop's capabilities.
+// Shape failures name fields, never private request values.
+func validateRequest(spec ProviderSpec, in evaluateIn) error {
+	shaped, err := shapeRequest(in)
+	if err != nil {
+		return err
+	}
+	return shaped.checks.validate(spec, in)
+}
+
+// validateChoiceCriteria requires a non-empty option map. Option names are the
+// answer space, so they are preserved exactly.
+func validateChoiceCriteria(spec ProviderSpec, path string, criteria any) error {
+	return criteriaChecks[map[string]any](choiceRule, path, criteria).validate(spec, evaluateIn{})
+}

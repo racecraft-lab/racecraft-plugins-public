@@ -517,7 +517,7 @@ func TestServerStillServesPastABrokenFallback(t *testing.T) {
 	writeDefaultKey(t, home, "typesafe", fixtureKey, 0o600)
 	writeDefaultKey(t, home, "openrouter", fixtureKey, 0o644)
 
-	cfg, err := resolveCallConfig(os.LookupEnv, true)
+	cfg, err := resolveHopConfig(os.LookupEnv, true)
 	if err != nil {
 		t.Fatal(err)
 	}

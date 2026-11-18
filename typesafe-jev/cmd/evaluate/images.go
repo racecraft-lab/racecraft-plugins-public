@@ -53,21 +53,6 @@ type preparedImage struct {
 	readError     error
 }
 
-// encodeRequest builds the body and the extra headers for one backend. It
-// trusts a request validateRequest has passed. Image reads and decoding are
-// cached lazily, after the ordered request checks and each earlier image's
-// hop limits pass; a refused prefix never opens a later source.
-// A request with no images is marshalled as it always was, so the bytes on
-// the wire do not change for existing callers. Headers are still applied:
-// long context is a property of the process, not of the payload.
-func encodeRequest(spec ProviderSpec, in evaluateIn) ([]byte, map[string]string, error) {
-	images := shapedImages{read: readOneImage}
-	if err := images.prepare(spec, in); err != nil {
-		return nil, nil, err
-	}
-	return encodeLoadedRequest(spec, in, images.loaded)
-}
-
 // encodeLoadedRequest never opens an image source. Each hop builds its own
 // wire representation from the shared snapshot, without rereading sources.
 func encodeLoadedRequest(spec ProviderSpec, in evaluateIn, loaded map[string]preparedImage) ([]byte, map[string]string, error) {
@@ -228,7 +213,7 @@ func requireImageOptIn(allowed bool) error {
 }
 
 func requireBackendImages(spec ProviderSpec) error {
-	return requireImageOptIn(spec.AllowImages && spec.ImageTrust == imageTrustOperatorOptIn)
+	return requireImageOptIn(spec.AllowImages)
 }
 
 func validateImageEntries(images map[string]imageSource) error {
@@ -412,7 +397,7 @@ func imageTrees(in evaluateIn) (any, map[string]any, error) {
 		return nil, nil, err
 	}
 	if rawQuestions == nil {
-		// A nil map marshals as null. validateRequest refuses it; here it
+		// A nil map marshals as null. shapeRequest refuses it; here it
 		// simply has no sites to walk.
 		return state, map[string]any{}, nil
 	}

@@ -251,7 +251,7 @@ func TestLiveImagesAndBox(t *testing.T) {
 		"present": {Type: typeNoul, Instructions: "Does the image contain a solid colored region?"},
 	}
 	model := c.Model
-	if knownBoxReject(cfg.Provider.Name, model) {
+	if cfg.Provider.rejectsBoxModel(model) {
 		t.Logf("skipping box: model %s is Jev 1.13", model)
 	} else {
 		questions["region"] = question{Type: typeBox, Instructions: "the colored region of the image"}

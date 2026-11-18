@@ -210,12 +210,12 @@ func TestChainInstructionsStayFixedWhileToolNoteUpdatesAfterMove(t *testing.T) {
 		{Provider: providers["typesafe"], Model: "jev-latest", Timeout: time.Second, HTTP: &http.Client{Transport: transport}},
 		{Provider: providers["openrouter"], Model: "~typesafe/jev-latest", Timeout: time.Second, HTTP: &http.Client{Transport: transport}},
 	}}
-	session := connect(t, Config{Provider: providers["typesafe"]}, chain)
+	session := connect(t, Config{Provider: providers["typesafe"], Fallback: &FallbackConfig{Provider: providers["openrouter"]}}, chain)
 	initialInstructions := session.InitializeResult().Instructions
 	check := func(serving string) {
 		t.Helper()
 		got := session.InitializeResult().Instructions
-		if got != initialInstructions || !strings.Contains(got, "Backend chain: typesafe -> openrouter.") {
+		if got != initialInstructions || !strings.Contains(got, "Backend: typesafe, with openrouter as fallback.") {
 			t.Errorf("instructions must keep the fixed hop order: %q", got)
 		}
 		if strings.Contains(got, "Serving hop:") {
@@ -225,7 +225,7 @@ func TestChainInstructionsStayFixedWhileToolNoteUpdatesAfterMove(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(listed.Tools) != 1 || !strings.Contains(listed.Tools[0].Description, "Backend chain: typesafe -> openrouter") || !strings.Contains(listed.Tools[0].Description, "Serving hop: "+serving) {
+		if len(listed.Tools) != 1 || !strings.Contains(listed.Tools[0].Description, "Backend: typesafe, with openrouter as fallback.") || !strings.Contains(listed.Tools[0].Description, "Serving hop: "+serving) {
 			t.Fatalf("backend note missing serving %s: %+v", serving, listed.Tools)
 		}
 	}
@@ -312,7 +312,7 @@ func TestPluginLeavesChainSelectionToRuntime(t *testing.T) {
 func TestSetupGeneratesChainInsteadOfLegacyPair(t *testing.T) {
 	home := isolateCallEnv(t)
 	writeChainSetting(t, home, "openrouter,typesafe")
-	cfg, err := resolveCallConfig(os.LookupEnv, false)
+	cfg, err := resolveHopConfig(os.LookupEnv, false)
 	if err != nil {
 		t.Fatal(err)
 	}

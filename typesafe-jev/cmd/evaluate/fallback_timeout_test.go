@@ -70,7 +70,7 @@ func TestDialTimeoutMovesSessionToFallback(t *testing.T) {
 	}}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	_, err := runOn(ctx, c, simpleIn())
+	_, err := (&chainRunner{hops: []*Client{c}}).evaluate(ctx, simpleIn())
 	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
 		t.Fatalf("want a dial deadline error with a live call context, got error %v, context %v", err, ctx.Err())
 	}

@@ -66,7 +66,7 @@ func newMCPSetupCmd() *cobra.Command {
 			if !dryRun {
 				return fmt.Errorf("--dry-run=false is not supported: this command only ever prints configuration; run the printed commands yourself")
 			}
-			cfg, err := resolveCallConfig(os.LookupEnv, false)
+			cfg, err := resolveHopConfig(os.LookupEnv, false)
 			if err != nil {
 				return err
 			}
@@ -360,7 +360,7 @@ func runPiSetup() error {
 	fmt.Println("Run /reload in pi, or restart it, to load the evaluate extension.")
 	// Unlike the MCP clients, nothing is baked in: the extension reads the key
 	// from the shell pi runs in, so a missing one is a hint, not a failure.
-	if cfg, err := resolveCallConfig(os.LookupEnv, false); err != nil {
+	if cfg, err := resolveHopConfig(os.LookupEnv, false); err != nil {
 		fmt.Printf("\nNote: %v\n", err)
 	} else if _, err := loadCredential(cfg); err != nil {
 		fmt.Printf("\nNote: %s\n", piCredentialHint(cfg.KeyFile != "", err))

@@ -456,3 +456,52 @@ func TestKeyFileRejectsANamedPipe(t *testing.T) {
 		t.Fatal("loadCredential blocked on the named pipe instead of refusing it")
 	}
 }
+
+// resolveConfig keeps legacy-default fixtures on the production legacy resolver.
+// It does not load credentials or opt into plugin defaults.
+func resolveConfig(look lookupFunc) (Config, error) {
+	return resolveLegacyConfig(look, false)
+}
+
+// newClient builds a single test hop through the production credential loader
+// and client constructor, without starting a configured fallback.
+func newClient(cfg Config) (*Client, error) {
+	hop := resolvedHop{config: cfg, loaded: loadCredentialSource(cfg, os.LookupEnv)}
+	if hop.loaded.err != nil {
+		return nil, hop.loaded.err
+	}
+	return clientForHop(hop), nil
+}
+
+// credentialSource names where the key will be read from, for a diagnostic
+// that must not print the key itself.
+func (c Config) credentialSource() string {
+	if c.KeyFile != "" {
+		return "file " + c.KeyFile
+	}
+	return "environment " + c.Provider.APIKeyEnv
+}
+
+func TestDurationSettingDiagnostics(t *testing.T) {
+	for _, tc := range []struct {
+		setting, raw, want string
+	}{
+		{"JEV_REQUEST_TIMEOUT", "soon", `JEV_REQUEST_TIMEOUT="soon" is not a duration such as 45s or 2m`},
+		{"JEV_REQUEST_TIMEOUT", " ", `JEV_REQUEST_TIMEOUT=" " is not a duration such as 45s or 2m`},
+		{"JEV_REQUEST_TIMEOUT", "0", `JEV_REQUEST_TIMEOUT="0" must be positive`},
+		{"JEV_REQUEST_TIMEOUT", "-1s", `JEV_REQUEST_TIMEOUT="-1s" must be positive`},
+		{"JEV_REQUEST_TIMEOUT", " 6m ", `JEV_REQUEST_TIMEOUT=" 6m " is above the 5m0s ceiling`},
+		{"JEV_HOP_TIMEOUT", "soon", `JEV_HOP_TIMEOUT="soon" is not a duration such as 10s`},
+		{"JEV_HOP_TIMEOUT", " ", `JEV_HOP_TIMEOUT=" " is not a duration such as 10s`},
+		{"JEV_HOP_TIMEOUT", "0", "JEV_HOP_TIMEOUT must be positive"},
+		{"JEV_HOP_TIMEOUT", "-1s", "JEV_HOP_TIMEOUT must be positive"},
+		{"JEV_HOP_TIMEOUT", " 46s ", "JEV_HOP_TIMEOUT=46s exceeds JEV_REQUEST_TIMEOUT=45s"},
+	} {
+		t.Run(tc.setting+"/"+tc.raw, func(t *testing.T) {
+			_, err := resolveLegacyConfig(envLookup(map[string]string{tc.setting: tc.raw}), false)
+			if err == nil || err.Error() != tc.want {
+				t.Fatalf("error = %v; want %q", err, tc.want)
+			}
+		})
+	}
+}
