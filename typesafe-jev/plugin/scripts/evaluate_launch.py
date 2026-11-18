@@ -32,14 +32,14 @@ import os
 import shlex
 import sys
 
-KEY_DIRECTORY = os.path.join("~", ".config", "racecraft-jev")
+from install_evaluate import InstallError, KEY_SETUP_HINT, plugin_version
+
 INSTALLER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "install_evaluate.py")
 SETUP_TEXT = (
     "Jev is not set up on this machine, so this server offers no tools.\n"
     "To enable the evaluate tool:\n"
     f"1. Install the evaluate binary that matches this plugin: python3 {shlex.quote(INSTALLER)}\n"
-    f"2. Put a TypeSafe key in {KEY_DIRECTORY}/typesafe.key, or an OpenRouter key in "
-    f"{KEY_DIRECTORY}/openrouter.key, readable only by you (chmod 600).\n"
+    f"2. Put {KEY_SETUP_HINT}\n"
     "3. Reconnect this MCP server.\n"
     "Until then, make any judgment yourself in the ordinary way."
 )
@@ -141,6 +141,11 @@ def main() -> int:
         return serve_unconfigured(f"the evaluate binary is not installed at {binary}")
     # exec, not a child process: the client signals this process directly, and
     # an extra process in between would swallow the termination it sends.
+    try:
+        os.environ["EVALUATE_PLUGIN_VERSION"] = plugin_version()
+    except InstallError:
+        # Version warnings must never prevent an installed binary from running.
+        os.environ.pop("EVALUATE_PLUGIN_VERSION", None)
     sys.stderr.flush()
     os.execv(binary, [binary, "mcp", "--plugin-defaults"])
     return 1  # unreachable: execv replaces this process or raises
