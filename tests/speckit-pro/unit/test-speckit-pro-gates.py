@@ -185,6 +185,12 @@ def failing_command(label: str, exit_code: int = 1) -> dict[str, Any]:
     }
 
 
+def assert_suite_script_shape(case: unittest.TestCase, script: dict[str, object]) -> None:
+    """Suite entries allow one optional, boolean coverage marker."""
+    case.assertEqual(set(script) - {"typesafe_jev_only"}, {"path", "label"})
+    case.assertIs(script.get("typesafe_jev_only", True), True)
+
+
 class GateFoundationTests(unittest.TestCase):
     maxDiff = None
 
@@ -2479,7 +2485,7 @@ class GateFoundationTests(unittest.TestCase):
         for layer in layers:
             for script in layer["scripts"]:
                 with self.subTest(path=script["path"]):
-                    self.assertEqual(set(script), {"path", "label"})
+                    assert_suite_script_shape(self, script)
                     self.assertTrue((REPO_ROOT / script["path"]).is_file(), script["path"])
 
         self.assertEqual([layer["id"] for layer in layers if layer["dispatch"] == "shell-legacy-transitional"], [])

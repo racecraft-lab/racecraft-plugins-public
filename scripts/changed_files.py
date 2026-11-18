@@ -11,13 +11,17 @@ def changed_files_for_base(
     *,
     repo_root: Path,
     error: type[Exception],
+    include_rename_sources: bool = False,
 ) -> tuple[str, ...]:
     """Files changed between ``origin/<base_ref>`` and HEAD; failures raise ``error``."""
     if not base_ref:
         raise error("BASE_REF is not set")
+    command = ["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"]
+    if include_rename_sources:
+        command.insert(3, "--no-renames")
     try:
         completed = subprocess.run(
-            ["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"],
+            command,
             cwd=repo_root,
             text=True,
             capture_output=True,

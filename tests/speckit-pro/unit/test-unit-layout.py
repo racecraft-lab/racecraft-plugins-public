@@ -346,6 +346,52 @@ class UnitLayoutTests(unittest.TestCase):
             )
 
 
+def enumerates_repository_path(node: ast.Call) -> bool:
+    if not isinstance(node.func, ast.Attribute) or node.func.attr not in {"walk", "rglob"}:
+        return False
+    target = node.args[0] if node.func.attr == "walk" and node.args else node.func.value
+    expression = ast.unparse(target)
+    return expression == "REPO_ROOT" or ("REPO_ROOT" in expression and "docs-site" in expression)
+
+
+def enumerates_repository_index(node: ast.Call) -> bool:
+    if not any(k.arg == "cwd" and ast.unparse(k.value) == "REPO_ROOT" for k in node.keywords):
+        return False
+    for argument in node.args:
+        if isinstance(argument, (ast.List, ast.Tuple)):
+            words = [item.value for item in argument.elts if isinstance(item, ast.Constant)]
+            if "git" in words and "ls-files" in words and "--" not in words:
+                return True
+    return False
+
+
+def scans_repository_tree(source: str) -> bool:
+    """Recognize direct tree enumerations; fixture-scoped walks do not qualify."""
+    calls = (node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Call))
+    return any(enumerates_repository_path(node) or enumerates_repository_index(node) for node in calls)
+
+
+class ReducedSuiteCoverageTests(unittest.TestCase):
+    def test_repository_tree_scans_require_the_reduced_suite_marker(self) -> None:
+        manifest = json.loads((TEST_ROOT / "suite-manifest.json").read_text(encoding="utf-8"))
+        for layer in manifest["layers"]:
+            for script in layer["scripts"]:
+                path = REPO_ROOT / script["path"]
+                if path.suffix == ".py" and scans_repository_tree(path.read_text(encoding="utf-8")):
+                    with self.subTest(script=script["path"]):
+                        self.assertIs(script.get("typesafe_jev_only"), True)
+
+    def test_scan_detection_covers_git_root_walks_and_docs_tree(self) -> None:
+        for source in (
+            'subprocess.run(["git", "ls-files", "--stage", "-z"], cwd=REPO_ROOT)',
+            'os.walk(REPO_ROOT)', 'REPO_ROOT.rglob("*")',
+            '(REPO_ROOT / "docs-site/src").rglob("*")',
+        ):
+            with self.subTest(source=source):
+                self.assertTrue(scans_repository_tree(source))
+        self.assertFalse(scans_repository_tree('fixture.rglob("*")'))
+
+
 class UnitRosterTests(unittest.TestCase):
     def test_every_unit_test_script_is_registered_in_the_unit_layer(self) -> None:
         manifest = json.loads(
@@ -463,6 +509,6 @@ class UnitSuiteCompletenessTests(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite(
         unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (UnitLayoutTests, UnitRosterTests, ScriptLoaderTests, UnitSuiteCompletenessTests)
+        for case in (UnitLayoutTests, ReducedSuiteCoverageTests, UnitRosterTests, ScriptLoaderTests, UnitSuiteCompletenessTests)
     )
     raise SystemExit(run_counted(suite, label="test-unit-layout"))
