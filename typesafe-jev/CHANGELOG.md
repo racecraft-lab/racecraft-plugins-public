@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.11.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.11.0...typesafe-jev-v0.11.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **typesafe-jev:** list the backend chain once and remove code only tests used ([#1475](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1475)) ([c8d034d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c8d034da2fc4e950d8a97c6c43af928e292bb6c6))
+* **typesafe-jev:** make setup diagnostics point at a fix that works ([#1471](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1471)) ([1242e00](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1242e00b356143b7bc780bfd3e04b21124a50375))
+* **typesafe-jev:** name every backend's reason when no backend can take a request ([#1466](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1466)) ([dd7c584](https://github.com/racecraft-lab/racecraft-plugins-public/commit/dd7c584d67c7fbeec1b964acf43252c30d07853e))
+* **typesafe-jev:** warn when the evaluate binary does not match the plugin ([#1469](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1469)) ([55a2831](https://github.com/racecraft-lab/racecraft-plugins-public/commit/55a283184e70e535cf863edf461897e24a4e24a1))
+
 ## [0.11.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.10.0...typesafe-jev-v0.11.0) (2026-11-16)
 
 
