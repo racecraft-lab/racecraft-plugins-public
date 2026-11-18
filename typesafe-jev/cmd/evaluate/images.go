@@ -213,7 +213,7 @@ func requireImageOptIn(allowed bool) error {
 }
 
 func requireBackendImages(spec ProviderSpec) error {
-	return requireImageOptIn(spec.AllowImages && spec.ImageTrust == imageTrustOperatorOptIn)
+	return requireImageOptIn(spec.AllowImages)
 }
 
 func validateImageEntries(images map[string]imageSource) error {

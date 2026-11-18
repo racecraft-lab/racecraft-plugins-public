@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -31,7 +30,6 @@ type ProviderSpec struct {
 	WireFormat           imageWireFormat
 	QuestionTypes        []string
 	UnsupportedBoxModels []string
-	ImageTrust           imageTrust
 	// Headers and notes are backend capabilities, independent of wire format.
 	ImageHeader       string
 	LongContextHeader string
@@ -211,10 +209,6 @@ const (
 	wireOllamaImages
 )
 
-type imageTrust int
-
-const imageTrustOperatorOptIn imageTrust = 1
-
 // providers is the closed set of backends. Adding a URL here is the only way
 // to change where a request goes; there is deliberately no environment
 // variable that points the server at an arbitrary host.
@@ -233,7 +227,6 @@ var providers = map[string]ProviderSpec{
 		WireFormat:           wireTypeSafeAssets,
 		QuestionTypes:        []string{typeNoul, typeChoice, typeScore, typeBox},
 		UnsupportedBoxModels: []string{"jev-1.13.0", "jev-1.13"},
-		ImageTrust:           imageTrustOperatorOptIn,
 		ImageHeader:          headerDangerImages,
 		LongContextHeader:    headerDangerLong,
 		LongContextNote:      "\nLong context is enabled for the TypeSafe backend: its budgets are 262144 tokens and each TypeSafe request sends the long-context header.",
@@ -263,7 +256,6 @@ var providers = map[string]ProviderSpec{
 		WireFormat:           wireOpenRouterParts,
 		QuestionTypes:        []string{typeNoul, typeChoice, typeScore, typeBox},
 		UnsupportedBoxModels: []string{"typesafe/jev-1.13", "~typesafe/jev-1.13", "typesafe/jev-1.13.0", "~typesafe/jev-1.13.0"},
-		ImageTrust:           imageTrustOperatorOptIn,
 		AnswerNote: "\nThis backend may omit confidence and probabilities from a choice or score" +
 			" answer, which the TypeSafe backend always sends. Treat an absent field as" +
 			" absent: do not substitute a default before branching on it." +
@@ -315,7 +307,6 @@ func ollamaCloudSpec() ProviderSpec {
 		BillingAccount: "ollama",
 		WireFormat:     wireOllamaImages,
 		QuestionTypes:  []string{typeNoul, typeChoice, typeScore},
-		ImageTrust:     imageTrustOperatorOptIn,
 		// Only choice objects (b08) and score objects (b09) were observed in
 		// the 2026-11-14 probes, beyond the published string schema. Arrays
 		// and noul objects were not probed; other structured positions route.
@@ -538,12 +529,7 @@ func resolveProvider(look lookupFunc) (ProviderSpec, error) {
 }
 
 func providerNames() string {
-	names := make([]string, 0, len(providers))
-	for n := range providers {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	return strings.Join(names, ", ")
+	return strings.Join(sortedKeys(providers), ", ")
 }
 
 // resolveModel applies JEV_MODEL. A tool call's own model argument outranks
@@ -587,60 +573,51 @@ func resolveSetting[T ~int | ~int64](look lookupFunc, setting numericSetting[T])
 	return value, nil
 }
 
-// durationSetting owns optional duration parsing and bounds. Both deadline
-// settings use the same walk while retaining their established diagnostics.
-type durationSetting struct {
-	name              string
-	fallback, ceiling time.Duration
-}
-
-func (s durationSetting) resolve(look lookupFunc) (time.Duration, error) {
-	return resolveSetting(look, numericSetting[time.Duration]{
-		name: s.name, fallback: s.fallback, minimum: 1, ceiling: s.ceiling,
-		parse: time.ParseDuration, invalid: s.invalid, outOfRange: s.outOfRange,
-	})
-}
-
-func (s durationSetting) invalid(raw string) error {
-	example := "45s or 2m"
-	if s.name == "JEV_HOP_TIMEOUT" {
-		example = "10s"
-	}
-	return fmt.Errorf("%s=%q is not a duration such as %s", s.name, raw, example)
-}
-
-func (s durationSetting) outOfRange(raw string, d time.Duration) error {
-	if s.name == "JEV_HOP_TIMEOUT" {
+var requestTimeoutSetting = numericSetting[time.Duration]{
+	name: "JEV_REQUEST_TIMEOUT", fallback: defaultTimeout, minimum: 1, ceiling: maxTimeout,
+	parse: time.ParseDuration,
+	invalid: func(raw string) error {
+		return fmt.Errorf("JEV_REQUEST_TIMEOUT=%q is not a duration such as 45s or 2m", raw)
+	},
+	outOfRange: func(raw string, d time.Duration) error {
 		if d <= 0 {
-			return fmt.Errorf("JEV_HOP_TIMEOUT must be positive")
+			return fmt.Errorf("JEV_REQUEST_TIMEOUT=%q must be positive", raw)
 		}
-		return fmt.Errorf("JEV_HOP_TIMEOUT=%s exceeds JEV_REQUEST_TIMEOUT=%s", d, s.ceiling)
-	}
-	if d <= 0 {
-		return fmt.Errorf("JEV_REQUEST_TIMEOUT=%q must be positive", raw)
-	}
-	return fmt.Errorf("JEV_REQUEST_TIMEOUT=%q is above the %s ceiling", raw, s.ceiling)
+		return fmt.Errorf("JEV_REQUEST_TIMEOUT=%q is above the %s ceiling", raw, maxTimeout)
+	},
 }
-
-var requestTimeoutSetting = durationSetting{"JEV_REQUEST_TIMEOUT", defaultTimeout, maxTimeout}
 
 func resolveTimeout(look lookupFunc) (time.Duration, error) {
-	return requestTimeoutSetting.resolve(look)
+	return resolveSetting(look, requestTimeoutSetting)
 }
 
 func resolveHopTimeout(look lookupFunc, requestTimeout time.Duration) (time.Duration, error) {
-	return (durationSetting{"JEV_HOP_TIMEOUT", min(defaultHopTimeout, requestTimeout), requestTimeout}).resolve(look)
+	return resolveSetting(look, numericSetting[time.Duration]{
+		name: "JEV_HOP_TIMEOUT", fallback: min(defaultHopTimeout, requestTimeout), minimum: 1, ceiling: requestTimeout,
+		parse: time.ParseDuration,
+		invalid: func(raw string) error {
+			return fmt.Errorf("JEV_HOP_TIMEOUT=%q is not a duration such as 10s", raw)
+		},
+		outOfRange: func(_ string, d time.Duration) error {
+			if d <= 0 {
+				return fmt.Errorf("JEV_HOP_TIMEOUT must be positive")
+			}
+			return fmt.Errorf("JEV_HOP_TIMEOUT=%s exceeds JEV_REQUEST_TIMEOUT=%s", d, requestTimeout)
+		},
+	})
+}
+
+var maxRetriesSetting = numericSetting[int]{
+	name: "JEV_MAX_RETRIES", fallback: defaultMaxRetries, minimum: 0, ceiling: maxMaxRetries,
+	parse:   strconv.Atoi,
+	invalid: func(raw string) error { return fmt.Errorf("JEV_MAX_RETRIES=%q is not a whole number", raw) },
+	outOfRange: func(raw string, _ int) error {
+		return fmt.Errorf("JEV_MAX_RETRIES=%q is outside the accepted range 0-%d", raw, maxMaxRetries)
+	},
 }
 
 func resolveMaxRetries(look lookupFunc) (int, error) {
-	return resolveSetting(look, numericSetting[int]{
-		name: "JEV_MAX_RETRIES", fallback: defaultMaxRetries, minimum: 0, ceiling: maxMaxRetries,
-		parse:   strconv.Atoi,
-		invalid: func(raw string) error { return fmt.Errorf("JEV_MAX_RETRIES=%q is not a whole number", raw) },
-		outOfRange: func(raw string, _ int) error {
-			return fmt.Errorf("JEV_MAX_RETRIES=%q is outside the accepted range 0-%d", raw, maxMaxRetries)
-		},
-	})
+	return resolveSetting(look, maxRetriesSetting)
 }
 
 func resolveKeyFileVar(look lookupFunc, name string) (string, error) {

@@ -52,7 +52,7 @@ func capabilitySession(t *testing.T, specs []ProviderSpec, statuses []int) (*mcp
 }
 
 func TestCapabilityRouteChecksEachRowsLimits(t *testing.T) {
-	for _, limit := range []string{"questions", "choice minimum", "question type", "request context", "question context", "body", "image count", "image bytes", "total image bytes", "image dimensions", "image opt-in", "image trust"} {
+	for _, limit := range []string{"questions", "choice minimum", "question type", "request context", "question context", "body", "image count", "image bytes", "total image bytes", "image dimensions", "image opt-in", "image opt-in with long context"} {
 		t.Run(limit, func(t *testing.T) {
 			first, second := withImages(typesafeSpec), withImages(providers["openrouter"])
 			in := simpleIn()
@@ -88,8 +88,9 @@ func TestCapabilityRouteChecksEachRowsLimits(t *testing.T) {
 				first.ImageLimits.MinSide = 300
 			case "image opt-in":
 				first.AllowImages = false
-			case "image trust":
-				first.ImageTrust = imageTrust(0)
+			case "image opt-in with long context":
+				// Long-context permission must not enable image uploads.
+				first = applyOperator(first, false, true)
 			}
 			session, hits, log := capabilitySession(t, []ProviderSpec{first, second}, []int{200, 200})
 			capabilityCall(t, session, in, false, wantAnswer)

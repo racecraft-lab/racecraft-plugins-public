@@ -481,3 +481,27 @@ func (c Config) credentialSource() string {
 	}
 	return "environment " + c.Provider.APIKeyEnv
 }
+
+func TestDurationSettingDiagnostics(t *testing.T) {
+	for _, tc := range []struct {
+		setting, raw, want string
+	}{
+		{"JEV_REQUEST_TIMEOUT", "soon", `JEV_REQUEST_TIMEOUT="soon" is not a duration such as 45s or 2m`},
+		{"JEV_REQUEST_TIMEOUT", " ", `JEV_REQUEST_TIMEOUT=" " is not a duration such as 45s or 2m`},
+		{"JEV_REQUEST_TIMEOUT", "0", `JEV_REQUEST_TIMEOUT="0" must be positive`},
+		{"JEV_REQUEST_TIMEOUT", "-1s", `JEV_REQUEST_TIMEOUT="-1s" must be positive`},
+		{"JEV_REQUEST_TIMEOUT", " 6m ", `JEV_REQUEST_TIMEOUT=" 6m " is above the 5m0s ceiling`},
+		{"JEV_HOP_TIMEOUT", "soon", `JEV_HOP_TIMEOUT="soon" is not a duration such as 10s`},
+		{"JEV_HOP_TIMEOUT", " ", `JEV_HOP_TIMEOUT=" " is not a duration such as 10s`},
+		{"JEV_HOP_TIMEOUT", "0", "JEV_HOP_TIMEOUT must be positive"},
+		{"JEV_HOP_TIMEOUT", "-1s", "JEV_HOP_TIMEOUT must be positive"},
+		{"JEV_HOP_TIMEOUT", " 46s ", "JEV_HOP_TIMEOUT=46s exceeds JEV_REQUEST_TIMEOUT=45s"},
+	} {
+		t.Run(tc.setting+"/"+tc.raw, func(t *testing.T) {
+			_, err := resolveLegacyConfig(envLookup(map[string]string{tc.setting: tc.raw}), false)
+			if err == nil || err.Error() != tc.want {
+				t.Fatalf("error = %v; want %q", err, tc.want)
+			}
+		})
+	}
+}
