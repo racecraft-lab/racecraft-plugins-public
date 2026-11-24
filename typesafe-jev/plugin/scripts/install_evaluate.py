@@ -162,6 +162,16 @@ def install(binary: bytes, destination: Path, force: bool) -> None:
             os.unlink(staged)
 
 
+def release_binary(base: str, asset: str) -> bytes:
+    """Download and verify one named release asset, then return its binary."""
+    digest = expected_checksum(fetch(f"{base}/{SUMS_NAME}", MAX_SUMS_BYTES), asset)
+    archive = fetch(f"{base}/{asset}", MAX_ARCHIVE_BYTES)
+    got = hashlib.sha256(archive).hexdigest()
+    if got != digest:
+        raise InstallError(f"checksum mismatch for {asset}: got {got}, want {digest}")
+    return extract_binary(archive, "evaluate")
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Install the evaluate binary from a typesafe-jev release.")
     parser.add_argument("--version", help="release to install, such as 0.9.0 (default: this plugin's version)")
@@ -186,12 +196,7 @@ def main(argv: list[str] | None = None) -> int:
         asset = f"evaluate-{system}-{arch}.tar.gz"
         base = f"{args.base_url.rstrip('/')}/{tag}"
         print(f"Installing evaluate {version} ({system}/{arch}) from {tag}")
-        digest = expected_checksum(fetch(f"{base}/{SUMS_NAME}", MAX_SUMS_BYTES), asset)
-        archive = fetch(f"{base}/{asset}", MAX_ARCHIVE_BYTES)
-        got = hashlib.sha256(archive).hexdigest()
-        if got != digest:
-            raise InstallError(f"checksum mismatch for {asset}: got {got}, want {digest}")
-        install(extract_binary(archive, "evaluate"), destination, args.force)
+        install(release_binary(base, asset), destination, args.force)
     except InstallError as error:
         print(f"install_evaluate: {error}", file=sys.stderr)
         return 1
