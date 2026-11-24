@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import io
 import json
 import os
@@ -28,6 +29,7 @@ import re
 import sys
 import tarfile
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -107,7 +109,7 @@ def fetch(url: str, limit: int) -> bytes:
             body = response.read(limit + 1)
     except urllib.error.HTTPError as error:
         raise InstallError(f"{url} returned HTTP {error.code}") from error
-    except (urllib.error.URLError, OSError) as error:
+    except (urllib.error.URLError, http.client.HTTPException, OSError) as error:
         raise InstallError(f"cannot download {url}: {error}") from error
     if len(body) > limit:
         raise InstallError(f"{url} is over the {limit} byte limit")
@@ -144,7 +146,7 @@ def extract_binary(archive: bytes, member_name: str) -> bytes:
     raise InstallError(f"the archive has no {member_name}")
 
 
-def install(binary: bytes, destination: Path, force: bool) -> None:
+def install(binary: bytes, destination: Path, force: bool, *, deadline: float | None = None) -> None:
     """Write binary to destination atomically: stage beside it, then rename."""
     if destination.exists() and not force:
         raise InstallError(f"{destination} already exists; pass --force to replace it")
@@ -154,12 +156,24 @@ def install(binary: bytes, destination: Path, force: bool) -> None:
         with os.fdopen(fd, "wb") as handle:
             handle.write(binary)
         os.chmod(staged, 0o755)
+        if deadline is not None and time.monotonic() >= deadline:
+            raise InstallError("auto-install timed out before atomic replacement")
         os.replace(staged, destination)
     except OSError as error:
         raise InstallError(f"cannot install to {destination}: {error}") from error
     finally:
         if os.path.exists(staged):
             os.unlink(staged)
+
+
+def release_binary(base: str, asset: str) -> bytes:
+    """Download and verify one named release asset, then return its binary."""
+    digest = expected_checksum(fetch(f"{base}/{SUMS_NAME}", MAX_SUMS_BYTES), asset)
+    archive = fetch(f"{base}/{asset}", MAX_ARCHIVE_BYTES)
+    got = hashlib.sha256(archive).hexdigest()
+    if got != digest:
+        raise InstallError(f"checksum mismatch for {asset}: got {got}, want {digest}")
+    return extract_binary(archive, "evaluate")
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -186,12 +200,7 @@ def main(argv: list[str] | None = None) -> int:
         asset = f"evaluate-{system}-{arch}.tar.gz"
         base = f"{args.base_url.rstrip('/')}/{tag}"
         print(f"Installing evaluate {version} ({system}/{arch}) from {tag}")
-        digest = expected_checksum(fetch(f"{base}/{SUMS_NAME}", MAX_SUMS_BYTES), asset)
-        archive = fetch(f"{base}/{asset}", MAX_ARCHIVE_BYTES)
-        got = hashlib.sha256(archive).hexdigest()
-        if got != digest:
-            raise InstallError(f"checksum mismatch for {asset}: got {got}, want {digest}")
-        install(extract_binary(archive, "evaluate"), destination, args.force)
+        install(release_binary(base, asset), destination, args.force)
     except InstallError as error:
         print(f"install_evaluate: {error}", file=sys.stderr)
         return 1

@@ -58,6 +58,29 @@ That is not a statement about privacy or cost.
 
 Do not put a secret in `state` to have a judgment made about it.
 
+## Plugin startup downloads
+
+On non-Windows server starts, the plugin launcher checks the default binary's
+version. If it is missing or differs, it downloads the archive and
+`SHA256SUMS.txt` from this repository's exact `typesafe-jev-v<plugin-version>`
+GitHub release over HTTPS. It verifies the archive's SHA-256 checksum before
+extracting and atomically replacing the binary. These checksums come from the
+same release; the launcher does not verify the separate provenance attestation.
+The version probe is bounded by 3 seconds. Download, verification and extraction
+run in memory in a daemon worker with a 20-second deadline, including DNS
+lookups. A timed-out worker is abandoned and cannot write to the destination.
+Only the main thread stages and atomically replaces a completed download; it
+refuses replacement if the deadline expired during staging. The 30-second
+startup timeout leaves 7 seconds after the probe and worker budgets for local
+staging and startup.
+A failure keeps an existing binary, or serves setup instructions when none can
+run. Diagnostics go to stderr; the launcher never reads a key file.
+
+Set `EVALUATE_AUTO_INSTALL=false` or `0` to disable startup downloads. Unset,
+`true`, or `1` enables them; other values disable them with a diagnostic.
+Setting `EVALUATE_BIN` also disables auto-install and leaves binary updates to
+the operator. The installed binary then runs as `evaluate mcp --plugin-defaults`.
+
 ## Credential handling
 
 - Read once at startup, from `JEV_API_KEY_FILE` or the selected backend's own

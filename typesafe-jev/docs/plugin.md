@@ -24,7 +24,7 @@ out of it. There is no generated payload: the directory is the whole plugin.
 | `plugin/.mcp.json` | MCP entry for Codex |
 | `plugin/shared-skills/typesafe-ai/` | TypeSafe's skill, adapted, with its MIT licence |
 | `plugin/shared-skills/typed-judgments/` | routes an in-session judgment to the tool |
-| `plugin/scripts/evaluate_launch.py` | serves a no-tool stand-in when the binary is missing or on Windows; otherwise execs `evaluate mcp --plugin-defaults`, which handles a missing credential |
+| `plugin/scripts/evaluate_launch.py` | installs the matching release at the default path when needed; serves a no-tool stand-in when unavailable or on Windows; otherwise execs `evaluate mcp --plugin-defaults`, which handles a missing credential |
 | `plugin/scripts/install_evaluate.py` | installs the release binary that matches the plugin |
 
 Both manifests declare the same name and version, which a test enforces.
@@ -33,10 +33,29 @@ Both manifests declare the same name and version, which a test enforces.
 
 **The server binary is not in the plugin.** It is compiled Go, and committing
 four platform builds to git would bloat every clone and still miss a fifth
-platform. So the binary is installed once, separately, and `plugin/scripts/evaluate_launch.py`
-finds it.
+platform. The binary lives separately at
+`~/.local/libexec/racecraft-jev/evaluate`. On non-Windows starts,
+`plugin/scripts/evaluate_launch.py` probes its `--version` with a 3-second
+timeout. If missing, unreadable, failing, or different in either version
+direction, it installs the plugin's exact `typesafe-jev-v<version>` release.
+The installer verifies the archive against that release's `SHA256SUMS.txt`,
+then stages beside the destination under a unique name and renames atomically.
+Concurrent starts cannot mix or truncate the installed binary.
 
-If the binary is missing, the launcher serves a stand-in MCP server with no
+Download, verification and extraction run in memory in a daemon worker with a
+20-second deadline, including DNS lookups. A timed-out worker cannot write files.
+Only the main thread stages and atomically replaces the binary after the worker
+finishes, refusing replacement if the deadline expired during staging. Codex's
+plugin entry and generated setup configuration allow 30 seconds for startup,
+leaving 7 seconds after the 3-second probe and worker budgets for local staging
+and startup. A matching binary causes no
+download. Set `EVALUATE_AUTO_INSTALL=false` or `0` to turn installation off;
+unset, `true`, or `1` enables it. Any other value disables downloads and names
+the invalid value on stderr. Setting `EVALUATE_BIN` also disables auto-install,
+even if it names the default path: the operator manages that binary.
+
+If installation fails, the launcher reports the reason on stderr and runs any
+existing executable. If none is available, the launcher serves a stand-in MCP server with no
 tools. Its instructions say how to install the binary and where the key file
 goes. If the binary is there, the launcher replaces itself with
 `evaluate mcp --plugin-defaults`, which does the same when no credential source
@@ -45,7 +64,8 @@ a connected server that explains itself rather than a failed one. Either way,
 one line on stderr says so. Stdout carries only protocol frames, because a
 human-readable line there is a frame the MCP client cannot parse.
 
-The launcher never reads a key and starts no other process. The server drops
+The launcher never reads a key. It starts a bounded version probe and calls the
+installer's functions before replacing itself with the binary. The server drops
 any hop whose credential cannot load, such as a key file other users can read,
 with a line on stderr, and serves the next usable hop. It refuses only when no
 hop loads. `evaluate call --check --plugin-defaults` is stricter: without
@@ -57,7 +77,8 @@ stand-in.
 
 ## Install
 
-**1. The binary**, once, from the plugin's own installer:
+**1. The binary.** The plugin installs and updates its matching release at
+server start by default. To install manually, use the plugin's installer:
 
 ```sh
 python3 plugin/scripts/install_evaluate.py

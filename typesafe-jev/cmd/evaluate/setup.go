@@ -245,7 +245,7 @@ func codexSnippet(name, exe string, env []envPair, timeout time.Duration) string
 	b.WriteString("[mcp_servers." + name + "]\n")
 	b.WriteString("command = " + tomlString(exe) + "\n")
 	b.WriteString("args = [\"mcp\"]\n")
-	b.WriteString("startup_timeout_sec = 10\n")
+	b.WriteString("startup_timeout_sec = 30\n")
 	fmt.Fprintf(&b, "tool_timeout_sec = %d\n\n", codexToolTimeout(timeout))
 	b.WriteString("[mcp_servers." + name + ".env]\n")
 	for _, p := range env {

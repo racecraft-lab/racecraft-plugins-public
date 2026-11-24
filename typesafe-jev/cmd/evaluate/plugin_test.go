@@ -149,6 +149,8 @@ func TestPluginMCPEntries(t *testing.T) {
 			t.Errorf("%s: args = %v, want [%q]", tc.file, entry["args"], tc.wantScript)
 		}
 
+		checkPluginStartupTimeout(t, tc.file, entry)
+
 		env, _ := entry["env"].(map[string]any)
 		// Backend and model selection belong to runtime configuration: any of
 		// these in the manifest would outrank the user's chain file.
@@ -176,6 +178,17 @@ func TestPluginMCPEntries(t *testing.T) {
 				t.Errorf("%s looks like it contains a credential", tc.file)
 			}
 		}
+	}
+}
+
+func checkPluginStartupTimeout(t *testing.T, file string, entry map[string]any) {
+	t.Helper()
+	timeout, set := entry["startup_timeout_sec"]
+	if file == "plugin/mcp/claude.json" && !set {
+		return
+	}
+	if timeout != float64(30) {
+		t.Errorf("%s: startup_timeout_sec = %v, want 30", file, timeout)
 	}
 }
 
