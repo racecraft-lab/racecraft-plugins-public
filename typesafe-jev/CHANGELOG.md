@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.11.1...typesafe-jev-v0.12.0) (2026-11-24)
+
+
+### Features
+
+* **typesafe-jev:** send WebP images to Clef ([#1480](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1480)) ([c69d1b7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c69d1b710380ee6303769da246f79a5fcd85771d))
+
 ## [0.11.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.11.0...typesafe-jev-v0.11.1) (2026-11-18)
 
 
