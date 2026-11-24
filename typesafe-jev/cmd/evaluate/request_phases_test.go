@@ -365,7 +365,7 @@ func precedenceRouteDiagnostic(tc requestRejectionCase, primary, other string, f
 		}
 	case "box before malformed file":
 		if fallback {
-			want = "images.door: not a PNG or JPEG"
+			want = "images.door: not a PNG, JPEG, or WebP"
 		}
 	}
 	return want

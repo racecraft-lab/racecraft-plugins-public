@@ -1066,7 +1066,7 @@ func TestSchemaAdvertisesImagesAndBox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"images"`, `"data_base64"`, `"path"`, "box"} {
+	for _, want := range []string{`"images"`, `"data_base64"`, `"path"`, "box", "PNG, JPEG, or WebP", "optional png, jpg, jpeg, or webp", "WebP (including animation) skips Jev backends"} {
 		if !strings.Contains(string(schema), want) {
 			t.Errorf("schema missing %s: %s", want, schema)
 		}

@@ -95,14 +95,15 @@ another request. The
 `typed-judgments` skill has the full per-backend table.
 
 **Images, box, and long context.** Images and `box` stay off until the operator
-sets `JEV_IMAGES=true`. Name a PNG or JPEG in `images` and reference that name
+sets `JEV_IMAGES=true`. Name a PNG, JPEG, or WebP in `images` and reference that name
 as a whole string or `{"image":"name"}`. The server builds TypeSafe's `assets`
 map, OpenRouter's `image_url` data URL, or Ollama's base64 array; do not send
 any of them yourself. `box` needs Jev 1.14, which is the default model on both
 Jev backends, and returns four
 edges from 0 to 1. TypeSafe's default window is 64,000 and 32,000 tokens;
 `JEV_LONG_CONTEXT=true` raises both to 262,144. OpenRouter's window is already
-262,144. Image bytes leave the machine and are billed.
+262,144. Clef through Ollama also accepts animated WebP. WebP skips the Jev
+backends before any HTTP call. Image bytes leave the machine and are billed.
 
 ## Judgments from Jev, decisions in code
 

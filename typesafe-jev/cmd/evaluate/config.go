@@ -28,6 +28,7 @@ type ProviderSpec struct {
 	// Daemon marks local proxy statuses that mean the cloud path is down.
 	Daemon               bool
 	WireFormat           imageWireFormat
+	ImageFormats         []string
 	QuestionTypes        []string
 	UnsupportedBoxModels []string
 	// Headers and notes are backend capabilities, independent of wire format.
@@ -225,6 +226,7 @@ var providers = map[string]ProviderSpec{
 		AuthKind:             authBearer,
 		BillingAccount:       "typesafe",
 		WireFormat:           wireTypeSafeAssets,
+		ImageFormats:         []string{"png", "jpg"},
 		QuestionTypes:        []string{typeNoul, typeChoice, typeScore, typeBox},
 		UnsupportedBoxModels: []string{"jev-1.13.0", "jev-1.13"},
 		ImageHeader:          headerDangerImages,
@@ -254,6 +256,7 @@ var providers = map[string]ProviderSpec{
 		AuthKind:             authBearer,
 		BillingAccount:       "openrouter",
 		WireFormat:           wireOpenRouterParts,
+		ImageFormats:         []string{"png", "jpg"},
 		QuestionTypes:        []string{typeNoul, typeChoice, typeScore, typeBox},
 		UnsupportedBoxModels: []string{"typesafe/jev-1.13", "~typesafe/jev-1.13", "typesafe/jev-1.13.0", "~typesafe/jev-1.13.0"},
 		AnswerNote: "\nThis backend may omit confidence and probabilities from a choice or score" +
@@ -306,6 +309,7 @@ func ollamaCloudSpec() ProviderSpec {
 		AuthKind:       authBearer,
 		BillingAccount: "ollama",
 		WireFormat:     wireOllamaImages,
+		ImageFormats:   []string{"png", "jpg", "webp"},
 		QuestionTypes:  []string{typeNoul, typeChoice, typeScore},
 		// Only choice objects (b08) and score objects (b09) were observed in
 		// the 2026-11-14 probes, beyond the published string schema. Arrays

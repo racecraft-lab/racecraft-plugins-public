@@ -185,11 +185,12 @@ away what you paid for.
 ## Images, box, and long context
 
 Images and `box` stay off until the operator sets `JEV_IMAGES=true`. Name each
-PNG or JPEG in an `images` map (`path` or `data_base64`) and reference that
+PNG, JPEG, or WebP in an `images` map (`path` or `data_base64`) and reference that
 name as a whole string, or as `{"image":"name"}`, inside `state`,
 `instructions`, or `criteria`. Do not paste an `assets` map or an `image_url`
 part. The server builds each backend's wire format. The bytes leave the
 machine and are billed. Do not put a secret in an image.
+Clef through Ollama accepts animated WebP too; animated PNGs are rejected.
 
 `box` locates one target. It takes instructions and no criteria, and it needs
 Jev 1.14, which is the default model on both Jev backends: `jev-latest` or
@@ -211,14 +212,15 @@ server checks it against each backend's limits before sending anything.
 | Choice options | 1 to 255 | 1 to 255 | 2 to 255 |
 | Instructions | string or structured | string or structured | plain string |
 | Token budget | 64,000 per request, 32,000 for state plus the longest question; 262,144 with `JEV_LONG_CONTEXT=true` | 262,144 | 65,536 |
-| Images on the wire | `assets` map | `image_url` data URLs | a base64 array: at most 4 images, 4 MiB each, 8 MiB in all |
+| Images on the wire | PNG/JPEG in an `assets` map | PNG/JPEG in `image_url` data URLs | PNG/JPEG/WebP (including animation) in a base64 array: at most 4 images, 4 MiB each, 8 MiB in all, 16 megapixels each |
 | `confidence` | always on choice and score | may be absent on choice and score | none on noul; entropy on choice and score |
 | Billing | per call, TypeSafe account | per call, OpenRouter account; the reply's `usage.cost` | per input token ($0.24 per million on Ollama's pricing page, 2026-11-14), one Ollama account for both routes |
 
 You always send the same `images` map; the server builds each backend's wire
 format.
 
-**A request a backend cannot take skips it.** A `box` question, more than 64
+**A request a backend cannot take skips it.** WebP skips the Jev backends
+(`typesafe`, `openrouter`) with no HTTP call. A `box` question, more than 64
 questions, a long or unusual question id, a structured instruction, or a state
 over 65,536 tokens skips the Ollama backends with no Ollama call. The next
 backend later in the chain that can take it answers. When none is left, the
