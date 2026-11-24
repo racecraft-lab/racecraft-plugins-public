@@ -20,8 +20,8 @@ func TestJudgmentSkillTableMatchesBackendRows(t *testing.T) {
 		fmt.Sprintf("| %s per request, %s for state plus the longest question; %s with `JEV_LONG_CONTEXT=true` | %s | %s |",
 			thousands(ts.RequestTokens), thousands(ts.QuestionTokens), thousands(ts.LongContextTokens),
 			thousands(or.RequestTokens), thousands(ol.RequestTokens)),
-		fmt.Sprintf("at most %d images, %d MiB each, %d MiB in all |",
-			ol.Limits.Images, ol.Limits.ImageBytes>>20, ol.Limits.TotalImageBytes>>20),
+		fmt.Sprintf("at most %d images, %d MiB each, %d MiB in all, %d megapixels each |",
+			ol.Limits.Images, ol.Limits.ImageBytes>>20, ol.Limits.TotalImageBytes>>20, ol.ImageLimits.MaxPixels/1_000_000),
 		fmt.Sprintf("more than %d questions", ol.Limits.Questions),
 		fmt.Sprintf("a state over %s tokens skips the Ollama backends", thousands(ol.RequestTokens)))
 }

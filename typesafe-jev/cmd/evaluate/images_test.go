@@ -15,6 +15,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -372,7 +374,7 @@ func TestImageReferenceFormsAndLimits(t *testing.T) {
 			Questions: map[string]question{"q": {Type: typeNoul, Instructions: "door"}},
 		}
 		err := validateRequest(spec, in)
-		if err == nil || !strings.Contains(err.Error(), "image_url") {
+		if err == nil || !strings.Contains(err.Error(), "image_url") || !strings.Contains(err.Error(), "name a PNG, JPEG, or WebP in images") {
 			t.Fatalf("error = %v", err)
 		}
 	})
@@ -1066,13 +1068,38 @@ func TestSchemaAdvertisesImagesAndBox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"images"`, `"data_base64"`, `"path"`, "box"} {
+	for _, want := range []string{`"images"`, `"data_base64"`, `"path"`, "box", "PNG, JPEG, or WebP", "optional png, jpg, jpeg, or webp", "WebP (including animation) skips Jev backends"} {
 		if !strings.Contains(string(schema), want) {
 			t.Errorf("schema missing %s: %s", want, schema)
 		}
 	}
 	if strings.Contains(string(schema), `"assets"`) {
 		t.Fatalf("schema advertises assets: %s", schema)
+	}
+}
+
+func TestPiImageSchemaMatchesToolSchema(t *testing.T) {
+	_, schema, ok := strings.Cut(piExtension, "      images: Type.Optional(")
+	if !ok {
+		t.Fatal("pi extension has no images schema")
+	}
+	images, ok := reflect.TypeFor[evaluateIn]().FieldByName("Images")
+	if !ok {
+		t.Fatal("evaluateIn has no Images field")
+	}
+	fields := append([]reflect.StructField{images}, reflect.VisibleFields(reflect.TypeFor[imageSource]())...)
+	descriptions := regexp.MustCompile(`description:\s*("(?:[^"\\]|\\.)*")`).FindAllStringSubmatch(schema, -1)
+	if len(descriptions) != len(fields) {
+		t.Fatalf("pi images schema has %d descriptions; Go schema has %d", len(descriptions), len(fields))
+	}
+	for i, field := range fields {
+		var got string
+		if err := json.Unmarshal([]byte(descriptions[i][1]), &got); err != nil {
+			t.Fatal(err)
+		}
+		if want := field.Tag.Get("jsonschema"); got != want {
+			t.Errorf("pi %s description = %q; Go schema = %q", field.Name, got, want)
+		}
 	}
 }
 

@@ -29,16 +29,16 @@ type question struct {
 // The name is what state, instructions, and criteria refer to; it is not the
 // wire format of either backend.
 type imageSource struct {
-	Path       string `json:"path,omitempty" jsonschema:"absolute path of a local PNG or JPEG file. Do not also set data_base64"`
-	DataBase64 string `json:"data_base64,omitempty" jsonschema:"standard base64 of a PNG or JPEG, with padding and no data: prefix or whitespace. Do not also set path"`
-	Format     string `json:"format,omitempty" jsonschema:"optional png, jpg, or jpeg; checked against the file bytes when set"`
+	Path       string `json:"path,omitempty" jsonschema:"absolute path of a local PNG, JPEG, or WebP file. Do not also set data_base64"`
+	DataBase64 string `json:"data_base64,omitempty" jsonschema:"standard base64 of a PNG, JPEG, or WebP, with padding and no data: prefix or whitespace. Do not also set path"`
+	Format     string `json:"format,omitempty" jsonschema:"optional png, jpg, jpeg, or webp; checked against the file bytes when set"`
 }
 
 type evaluateIn struct {
 	State     any                    `json:"state" jsonschema:"content to judge: plain text, or a JSON object/array with named fields. Reference an image by a whole string equal to its name, or by {\"image\":\"name\"}"`
 	Questions map[string]question    `json:"questions" jsonschema:"map of question id to question; answers come back under the same ids, which are not sent to the model"`
 	Model     string                 `json:"model,omitempty" jsonschema:"model to use; defaults to the latest Jev on whichever endpoint is configured. Box needs Jev 1.14: jev-latest or jev-1.14.0 on TypeSafe, typesafe/jev-1.14 or ~typesafe/jev-latest on OpenRouter"`
-	Images    map[string]imageSource `json:"images,omitempty" jsonschema:"named PNG or JPEG images referenced from state, instructions, or criteria. Requires the operator to set JEV_IMAGES=true. The bytes are sent to the provider and billed. The server builds each backend's wire format; do not send assets or image_url parts"`
+	Images    map[string]imageSource `json:"images,omitempty" jsonschema:"named PNG, JPEG, or WebP images referenced from state, instructions, or criteria. WebP (including animation) skips Jev backends and goes only to Clef through Ollama. Requires the operator to set JEV_IMAGES=true. The bytes are sent to the provider and billed. The server builds each backend's wire format; do not send assets or image_url parts"`
 }
 
 // registerTools adds the one `evaluate` tool.

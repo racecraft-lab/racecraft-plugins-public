@@ -45,7 +45,7 @@ const (
 // TypeSafe body will use. The token is minted here so a short caller name
 // such as "cat" cannot match inside "category" once it becomes an asset key.
 type preparedImage struct {
-	format        string // "png" or "jpg"
+	format        string // "png", "jpg", or "webp"
 	data          []byte
 	ref           string
 	width, height int
@@ -233,7 +233,7 @@ func validateImageEntries(images map[string]imageSource) error {
 		}
 		if src.Format != "" {
 			if _, ok := canonicalFormat(src.Format); !ok {
-				return fmt.Errorf("%s: format must be png, jpg, or jpeg", label)
+				return fmt.Errorf("%s: format must be png, jpg, jpeg, or webp", label)
 			}
 		}
 	}
@@ -274,7 +274,7 @@ func scanImageSites(in evaluateIn) (imageSites, error) {
 	}
 	_, _, err = rewriteImageSites(state, questions, func(path string, v any) (any, bool, error) {
 		if m, ok := v.(map[string]any); ok && mediaPart(m) {
-			return nil, false, fmt.Errorf("%s is a provider media part (image_url, input_audio, video_url, or file); name a PNG or JPEG in images and reference it from state, instructions, or criteria", path)
+			return nil, false, fmt.Errorf("%s is a provider media part (image_url, input_audio, video_url, or file); name a PNG, JPEG, or WebP in images and reference it from state, instructions, or criteria", path)
 		}
 		name, hit, unknown := imageUse(v, in.Images)
 		if unknown && sites.unknown == "" {
@@ -500,6 +500,9 @@ func (img preparedImage) validateForHop(spec ProviderSpec, name string, source i
 	if img.readError != nil {
 		return &requestShapeError{img.readError}
 	}
+	if !slices.Contains(spec.ImageFormats, img.format) {
+		return &hopRefusalError{fmt.Errorf("%s: %s is not supported by this backend", imageLabel(name), img.format)}
+	}
 	if err := checkImageDimensions(imageLabel(name), img.width, img.height, spec.ImageLimits); err != nil {
 		return &hopRefusalError{err}
 	}
@@ -554,13 +557,13 @@ func readOneImage(name string, src imageSource, limit int, haystack string) (pre
 	if animatedPNG(data) {
 		return preparedImage{data: data}, fmt.Errorf("%s: animated PNGs are rejected", label)
 	}
-	cfg, detected, err := image.DecodeConfig(bytes.NewReader(data))
+	cfg, detected, err := imageConfig(data)
 	if err != nil {
-		return preparedImage{data: data}, fmt.Errorf("%s: not a PNG or JPEG", label)
+		return preparedImage{data: data}, fmt.Errorf("%s: %w", label, err)
 	}
 	format, ok := canonicalFormat(detected)
 	if !ok {
-		return preparedImage{data: data}, fmt.Errorf("%s: not a PNG or JPEG", label)
+		return preparedImage{data: data}, fmt.Errorf("%s: not a PNG, JPEG, or WebP", label)
 	}
 	if src.Format != "" {
 		want, _ := canonicalFormat(src.Format)
@@ -570,6 +573,85 @@ func readOneImage(name string, src imageSource, limit int, haystack string) (pre
 	}
 	return preparedImage{format: format, data: data, ref: referenceToken(name, haystack), width: cfg.Width, height: cfg.Height}, nil
 }
+
+// imageConfig reads dimensions only, as DecodeConfig does for PNG and JPEG.
+// WebP uses RIFF framing and a VP8, VP8L, or VP8X dimension header:
+// https://developers.google.com/speed/webp/docs/riff_container
+func imageConfig(data []byte) (image.Config, string, error) {
+	if len(data) >= 12 && string(data[:4]) == "RIFF" && string(data[8:12]) == "WEBP" {
+		cfg, err := webPConfig(data)
+		return cfg, "webp", err
+	}
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return image.Config{}, "", errors.New("not a PNG, JPEG, or WebP")
+	}
+	return cfg, format, nil
+}
+
+func webPConfig(data []byte) (image.Config, error) {
+	malformed := errors.New("malformed or truncated WebP")
+	if uint64(binary.LittleEndian.Uint32(data[4:8]))+8 != uint64(len(data)) {
+		return image.Config{}, malformed
+	}
+	chunks := data[12:]
+	if !validWebPChunks(chunks) {
+		return image.Config{}, malformed
+	}
+	size := int(binary.LittleEndian.Uint32(chunks[4:8]))
+	w, h := webPDimensions(string(chunks[:4]), chunks[8:8+size])
+	if w == 0 || h == 0 {
+		return image.Config{}, malformed
+	}
+	return image.Config{Width: w, Height: h}, nil
+}
+
+// Check every chunk's declared length and even-byte padding before slicing.
+// This does not decode compressed pixels or choose animation frames.
+func validWebPChunks(chunks []byte) bool {
+	if len(chunks) == 0 {
+		return false
+	}
+	for len(chunks) > 0 {
+		if len(chunks) < 8 {
+			return false
+		}
+		size := uint64(binary.LittleEndian.Uint32(chunks[4:8]))
+		end := 8 + size + (size & 1)
+		if end > uint64(len(chunks)) {
+			return false
+		}
+		chunks = chunks[end:]
+	}
+	return true
+}
+
+func webPDimensions(kind string, header []byte) (int, int) {
+	switch kind {
+	case "VP8 ":
+		// A key frame's start code precedes the two 14-bit dimensions.
+		if len(header) < 10 || header[0]&1 != 0 || !bytes.Equal(header[3:6], []byte{0x9d, 1, 0x2a}) {
+			return 0, 0
+		}
+		return int(binary.LittleEndian.Uint16(header[6:8]) & 0x3fff), int(binary.LittleEndian.Uint16(header[8:10]) & 0x3fff)
+	case "VP8L":
+		if len(header) < 5 || header[0] != 0x2f || header[4]&0xe0 != 0 {
+			return 0, 0
+		}
+		bits := binary.LittleEndian.Uint32(header[1:5])
+		return int(bits&0x3fff) + 1, int((bits>>14)&0x3fff) + 1
+	case "VP8X":
+		// RFC 9649 section 2.7 requires readers to ignore reserved fields.
+		if len(header) != 10 {
+			return 0, 0
+		}
+		return int(uint24LE(header[4:7])) + 1, int(uint24LE(header[7:10])) + 1
+	default:
+		return 0, 0
+	}
+}
+
+func uint24LE(b []byte) uint32 { return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 }
 
 // imageSizeError preserves the old file/base64 diagnostics while deferring a
 // read ceiling to hop preparation. Exact file sizes never include the path.
@@ -649,7 +731,7 @@ func checkImageDimensions(label string, w, h int, limits imageBounds) error {
 		return fmt.Errorf("%s: sides are %d by %d pixels, outside the %d-%d range this backend accepts",
 			label, w, h, limits.MinSide, limits.MaxSide)
 	}
-	// PNG and JPEG dimensions fit int32; multiply in int64 even without a side cap.
+	// Supported image dimensions fit int32; multiply in int64 even without a side cap.
 	pixels := int64(w) * int64(h)
 	if pixels < int64(limits.MinPixels) || (limits.MaxPixels != noLimit && pixels > int64(limits.MaxPixels)) {
 		if limits.MinPixels == noLimit {
@@ -668,6 +750,8 @@ func canonicalFormat(s string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "png":
 		return "png", true
+	case "webp":
+		return "webp", true
 	case "jpg", "jpeg":
 		return "jpg", true
 	default:

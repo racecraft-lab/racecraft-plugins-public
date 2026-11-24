@@ -322,8 +322,8 @@ filesystem path or from repository content.
 
 The tool takes one backend-neutral `images` map. Each entry is a caller-chosen
 name with exactly one of an absolute `path` or standard `data_base64` (no
-`data:` prefix, no whitespace), and an optional `format` of `png`, `jpg`, or
-`jpeg`. A reference is a whole string equal to that name, or an object whose
+`data:` prefix, no whitespace), and an optional `format` of `png`, `jpg`,
+`jpeg`, or `webp`. A reference is a whole string equal to that name, or an object whose
 only field is `{"image": "name"}`, inside `state`, `instructions`, or
 `criteria`. A name that merely occurs inside a longer string is not a
 reference. Every image must be referenced, and a `box` question must have one.
@@ -376,7 +376,25 @@ state, instructions and criteria become `"image 1"`, `"image 2"`, and so on,
 matching the sorted array order. Repeated references reuse that position and
 never duplicate bytes. Longer strings and object keys remain unchanged, as
 with the other encoders. Ollama accepts no `box` questions; those route on.
-The existing PNG/JPEG input contract remains; WebP is not enabled by this client.
+Clef (`clef` on `ollama`, `clef:cloud` on `ollama-local`) accepts PNG, JPEG, or WebP,
+including animated WebP. WebP skips `typesafe` and `openrouter` before any
+HTTP call; when only Jev hops remain, the call exits 2 with each hop's reason.
+PNG/JPEG behavior and animated-PNG rejection are unchanged. Formats are
+capabilities on each backend row in `config.go`, checked in `images.go`.
+
+The [Ollama decision guide](https://docs.ollama.com/capabilities/decision.md)
+lists WebP in `images` (verified 2026-11-24). Owner probes on that date through
+the signed-in Ollama app returned HTTP 200 for a still VP8L 1x1 WebP and a
+two-frame animated WebP (VP8X, ANIM, two ANMF chunks). Animation input tokens
+matched the still image; the owner chose to follow Clef's acceptance. The
+client forwards the original bytes without selecting a frame.
+
+Local WebP checks use RIFF/WEBP magic, the declared container and chunk sizes
+(including padding), and VP8, VP8L or VP8X dimension headers, following the
+[WebP container specification](https://developers.google.com/speed/webp/docs/riff_container).
+Malformed or truncated framing and dimension headers are rejected locally.
+As with PNG/JPEG configuration decoding, compressed pixels are not decoded;
+VP8X dimensions describe the canvas, including for animation.
 
 Ollama allows at most 4 images, 4 MiB each, 8 MiB in total and 16,000,000
 pixels per image, with no separate side-length cap. This client measures the
@@ -437,7 +455,7 @@ later hops never run the caller's model, so:
   OpenRouter.
 - Universal shape errors are rejected before per-hop limits and capabilities,
   except image-file errors. Image files are read lazily, so a file that cannot
-  be read or is not PNG or JPEG is reported only after a hop's earlier checks
+  be read or is not PNG, JPEG, or WebP is reported only after a hop's earlier checks
   pass; a hop refusal can therefore be reported first. Either way the request
   is a local rejection (exit 2) and nothing is sent. Each hop checks its own limits and image opt-in before any request is sent
   to it. A refusal takes a capability route to the next able hop and leaves

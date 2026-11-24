@@ -193,7 +193,7 @@ It gets back the raw response JSON, with each answer under the same id you gave 
 | `state` | yes | Content to judge: plain text, or a JSON object/array with named fields. A whole string equal to an image name, or `{"image":"name"}`, places that image here |
 | `questions` | yes | Map of question id to `{type, instructions, criteria?}`. `box` takes instructions and no criteria |
 | `model` | no | The call's model, then `JEV_MODEL`, then the backend default. Passed through exactly as given |
-| `images` | no | Named PNG or JPEG images: each entry is `{path}` or `{data_base64}`, plus an optional `format`. Requires `JEV_IMAGES=true` |
+| `images` | no | Named PNG, JPEG, or WebP images: each entry is `{path}` or `{data_base64}`, plus an optional `format`. Requires `JEV_IMAGES=true` |
 
 Criteria by type: `noul` takes optional `{"true": ..., "false": ...}` descriptions; `choice` requires a map of option to description; `score` requires an ordered array of 2 to 10 levels; `box` takes none.
 
@@ -203,7 +203,7 @@ Criteria by type: `noul` takes optional `{"true": ..., "false": ...}` descriptio
 
 `images` is the only image input. Do not send a TypeSafe `assets` map or an OpenRouter `image_url` part: the server builds the wire format for the backend in use. A reference is a whole string equal to the name, or `{"image":"name"}`, inside `state`, `instructions`, or `criteria`.
 
-`JEV_IMAGES=true` is required before any image or `box` question is sent. Unset means off. The bytes leave the machine and are billed. Format, the 16 MiB decoded-file cap, and each backend's pixel limits are checked locally, so a picture the backend would refuse costs nothing. TypeSafe then receives `assets` plus `TypeSafe-Danger-Zone-Images: true`. OpenRouter receives `image_url` data URLs and no TypeSafe header. PNG and JPEG only; animated PNGs are rejected. EXIF orientation is not rewritten.
+`JEV_IMAGES=true` is required before any image or `box` question is sent. Unset means off. The bytes leave the machine and are billed. Format and each backend's byte and pixel limits are checked locally, so a picture the backend would refuse costs nothing. TypeSafe then receives `assets` plus `TypeSafe-Danger-Zone-Images: true`. OpenRouter receives `image_url` data URLs and no TypeSafe header. Both Jev backends take PNG and JPEG. Clef through Ollama (`clef` on `ollama`, `clef:cloud` on `ollama-local`) takes PNG, JPEG, or WebP, including animated WebP, in a top-level base64 array: at most 4 images, 4 MiB each, 8 MiB total, and 16 megapixels each. WebP skips the Jev hops before any HTTP call; a chain of only Jev hops exits 2 with each hop's reason. Animated PNGs are rejected. EXIF orientation is not rewritten.
 
 `box` returns `{top, bottom, left, right}`, each from 0 to 1, with `left < right` and `top < bottom`. It needs Jev 1.14: `jev-latest` or `jev-1.14.0` on TypeSafe, `typesafe/jev-1.14` or `~typesafe/jev-latest` on OpenRouter. Both defaults have been Jev 1.14 since 2026-10-14. A model this server knows is 1.13 (`jev-1.13.0`, `typesafe/jev-1.13`) is rejected locally.
 
