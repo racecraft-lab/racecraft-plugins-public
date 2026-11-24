@@ -764,6 +764,12 @@ class WorkflowTests(unittest.TestCase):
     def test_job_uses_full_history_exact_pr_head_and_environment_inputs(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/pr-metadata.yml").read_text(encoding="utf-8")
         job = workflow.split("  validate-test-changes:\n", 1)[1]
+        self.assertEqual(
+            ["    if: github.event_name == 'workflow_dispatch' || "
+             "(github.event.pull_request.state == 'open' && github.event.pull_request.draft == false)"],
+            [line for line in job.splitlines() if line.startswith("    if:")],
+            "Closed PRs must skip the git-ref gate; open non-draft PRs and manual dispatch keep running",
+        )
         self.assertIn("edited", workflow.split("  workflow_dispatch:", 1)[0])
         for contract in (
             "fetch-depth: 0", "persist-credentials: false",
