@@ -11,8 +11,13 @@ is disabled, the launcher probes the default binary's --version (at most three
 seconds). A missing, unreadable, failing or different version is replaced with
 the plugin's own release, in either version direction. The installer verifies
 the archive against that release's SHA256SUMS.txt and replaces it atomically.
-The whole install has a twenty-second deadline; failure runs the existing
-binary or serves the stand-in with the reason when no executable is available.
+Download, verification and extraction run in a daemon worker with a twenty-second
+deadline, including DNS lookups. Only the main thread stages and atomically
+replaces the binary after the worker finishes; an abandoned worker cannot write.
+An expired deadline also refuses replacement after staging. The three-second
+probe plus twenty-second worker budget leaves seven seconds of the configured
+thirty-second startup timeout for local staging and startup. Failure runs the
+existing binary or serves the stand-in when no executable is available.
 EVALUATE_AUTO_INSTALL accepts true/1 (also the unset default) or false/0;
 other values disable downloads with a stderr diagnostic.
 
@@ -41,10 +46,12 @@ from __future__ import annotations
 
 import json
 import os
-import signal
+import queue
 import subprocess
 import shlex
 import sys
+import threading
+import time
 from pathlib import Path
 
 import install_evaluate
@@ -102,23 +109,31 @@ def version_matches(binary: str, version: str) -> bool:
     return result.returncode == 0 and result.stdout.strip() == version.encode("ascii")
 
 
-def _install_timed_out(_signum: int, _frame: object) -> None:
-    raise InstallError(f"auto-install timed out after {INSTALL_TIMEOUT_SECONDS} seconds")
-
-
 def install_matching(binary: str, version: str) -> None:
-    """Bound download, verification, extraction and atomic install together."""
-    previous = signal.signal(signal.SIGALRM, _install_timed_out)
-    try:
-        signal.setitimer(signal.ITIMER_REAL, INSTALL_TIMEOUT_SECONDS)
-        system, arch = install_evaluate.target()
-        base = f"{install_evaluate.RELEASES}/{install_evaluate.TAG_PREFIX}{version}"
-        asset = f"evaluate-{system}-{arch}.tar.gz"
-        payload = install_evaluate.release_binary(base, asset)
-        install_evaluate.install(payload, Path(binary), force=True)
-    finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, previous)
+    """Bound network work independently of blocking DNS; only the caller writes."""
+    deadline = time.monotonic() + INSTALL_TIMEOUT_SECONDS
+    system, arch = install_evaluate.target()
+    base = f"{install_evaluate.RELEASES}/{install_evaluate.TAG_PREFIX}{version}"
+    asset = f"evaluate-{system}-{arch}.tar.gz"
+    outcome: queue.SimpleQueue[bytes | Exception] = queue.SimpleQueue()
+
+    def download() -> None:
+        try:
+            payload = install_evaluate.release_binary(base, asset)
+        except Exception as error:  # noqa: BLE001 - relay worker failures to the launcher boundary
+            outcome.put(error)
+        else:
+            outcome.put(payload)
+
+    worker = threading.Thread(target=download, daemon=True)
+    worker.start()
+    worker.join(max(0, deadline - time.monotonic()))
+    if worker.is_alive() or time.monotonic() >= deadline:
+        raise InstallError(f"auto-install timed out after {INSTALL_TIMEOUT_SECONDS} seconds")
+    payload = outcome.get_nowait()
+    if isinstance(payload, Exception):
+        raise payload
+    install_evaluate.install(payload, Path(binary), force=True, deadline=deadline)
 
 
 def ensure_binary(binary: str) -> str | None:
@@ -134,8 +149,8 @@ def ensure_binary(binary: str) -> str | None:
         version = plugin_version()
         if not version_matches(binary, version):
             install_matching(binary, version)
-    except (InstallError, OSError) as error:
-        return "auto-install failed: " + " ".join(str(error).splitlines())
+    except Exception as error:  # noqa: BLE001 - auto-install must never prevent MCP fallback
+        return f"auto-install failed: {type(error).__name__}: " + " ".join(str(error).splitlines())
     return None
 
 

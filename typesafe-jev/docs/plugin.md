@@ -42,8 +42,13 @@ The installer verifies the archive against that release's `SHA256SUMS.txt`,
 then stages beside the destination under a unique name and renames atomically.
 Concurrent starts cannot mix or truncate the installed binary.
 
-The whole install has a 20-second deadline. Codex's plugin entry and generated
-setup configuration allow 30 seconds for startup. A matching binary causes no
+Download, verification and extraction run in memory in a daemon worker with a
+20-second deadline, including DNS lookups. A timed-out worker cannot write files.
+Only the main thread stages and atomically replaces the binary after the worker
+finishes, refusing replacement if the deadline expired during staging. Codex's
+plugin entry and generated setup configuration allow 30 seconds for startup,
+leaving 7 seconds after the 3-second probe and worker budgets for local staging
+and startup. A matching binary causes no
 download. Set `EVALUATE_AUTO_INSTALL=false` or `0` to turn installation off;
 unset, `true`, or `1` enables it. Any other value disables downloads and names
 the invalid value on stderr. Setting `EVALUATE_BIN` also disables auto-install,

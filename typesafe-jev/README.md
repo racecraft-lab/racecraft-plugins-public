@@ -89,8 +89,12 @@ server start if it is missing or its `--version` differs from the plugin's own
 version, including a newer binary or a dev build. It uses the plugin's exact
 `typesafe-jev-v<version>` release and verifies `SHA256SUMS.txt` before atomic
 replacement. A matching binary causes no download. The version probe has a
-3-second timeout; the whole install has a 20-second deadline. Codex startup
-configuration allows 30 seconds.
+3-second timeout. A daemon worker downloads, verifies and extracts in memory
+with a 20-second deadline, including DNS lookups. After it finishes, the main
+thread stages and atomically replaces the binary; replacement is refused if
+the deadline expired during staging. An abandoned worker cannot write files.
+Codex startup configuration allows 30 seconds, leaving 7 seconds after the
+probe and worker budgets for local staging and startup.
 
 Set `EVALUATE_AUTO_INSTALL=false` or `0` to manage updates yourself. Unset,
 `true`, or `1` enables it; any other value disables it with a stderr diagnostic.

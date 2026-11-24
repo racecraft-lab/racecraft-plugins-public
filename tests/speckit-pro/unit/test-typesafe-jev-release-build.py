@@ -16,6 +16,7 @@ import io
 import json
 import os
 import signal
+import socketserver
 import threading
 import time
 import subprocess
@@ -28,6 +29,7 @@ from pathlib import Path
 from types import ModuleType
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+PLUGIN_SCRIPTS = REPO_ROOT / "typesafe-jev/plugin/scripts"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
@@ -47,6 +49,32 @@ INSTALLER = load_module(
 )
 LAUNCHER = load_module("evaluate_launch", REPO_ROOT / "typesafe-jev/plugin/scripts/evaluate_launch.py")
 GO_CHECK = load_module("check_go_module", REPO_ROOT / "scripts" / "check-go-module.py")
+REAL_FETCH = INSTALLER.fetch
+
+
+@contextlib.contextmanager
+def malformed_release_host(response: bytes):
+    """Serve malformed HTTP locally, including errors raised while reading."""
+    class Handler(socketserver.BaseRequestHandler):
+        def handle(self):
+            self.request.recv(65536)
+            self.request.sendall(response)
+
+    with socketserver.TCPServer(("127.0.0.1", 0), Handler) as server:
+        worker = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+        worker.start()
+        try:
+            yield f"http://127.0.0.1:{server.server_address[1]}/download"
+        finally:
+            server.shutdown()
+            worker.join(timeout=2)
+
+
+MALFORMED_HTTP = {
+    "IncompleteRead": b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nzz\r\n",
+    "BadStatusLine": b"garbage\r\n\r\n",
+    "LineTooLong": b"HTTP/1.1 200 OK\r\nX: " + b"a" * 70000 + b"\r\n\r\n",
+}
 
 
 def completed(argv: list[str], returncode: int = 0, stdout: str = "") -> subprocess.CompletedProcess[str]:
@@ -420,6 +448,68 @@ class TypesafeJevLauncherSettingsTests(_LauncherFixture):
                 self.assertEqual(self.payload, self.destination.read_bytes())
 
 
+class TypesafeJevLauncherResilienceTests(_LauncherFixture):
+    def test_unexpected_download_or_disk_errors_fall_back_with_one_typed_diagnostic(self) -> None:
+        for existing in (True, False):
+            for owner, operation in ((INSTALLER, "release_binary"), (INSTALLER, "install")):
+                with self.subTest(existing=existing, operation=operation):
+                    if self.destination.exists():
+                        self.destination.unlink()
+                    old = self.binary_script("0.1.0")
+                    if existing:
+                        self.put_binary(old)
+                    archive = BUILD.archive_bytes(self.payload, b"licence")
+                    self.fetch.side_effect = [BUILD.sums_text({BUILD.asset_name(*INSTALLER.target()): archive}).encode(), archive]
+                    with unittest.mock.patch.object(owner, operation, side_effect=RuntimeError("unexpected\nfixture failure")):
+                        _, stderr = self.launch(expect_exec=existing)
+                    self.assertEqual(1, len(stderr.splitlines()))
+                    self.assertIn("RuntimeError: unexpected fixture failure", stderr)
+                    self.assertEqual(old if existing else None,
+                                     self.destination.read_bytes() if self.destination.exists() else None)
+
+    def test_blocked_download_returns_by_deadline_and_cannot_install_afterwards(self) -> None:
+        from concurrent.futures import ThreadPoolExecutor
+        for existing in (True, False):
+            with self.subTest(existing=existing):
+                if self.destination.exists():
+                    self.destination.unlink()
+                old = self.binary_script("0.1.0")
+                if existing:
+                    self.put_binary(old)
+                entered, release = threading.Event(), threading.Event()
+                workers = []
+                archive = BUILD.archive_bytes(self.payload, b"licence")
+                sums = BUILD.sums_text({BUILD.asset_name(*INSTALLER.target()): archive}).encode()
+
+                def blocked_fetch(url, _limit):
+                    workers.append(threading.current_thread())
+                    entered.set()
+                    self.assertTrue(release.wait(timeout=3))
+                    return sums if url.endswith(INSTALLER.SUMS_NAME) else archive
+
+                self.fetch.side_effect = blocked_fetch
+                with (unittest.mock.patch.object(LAUNCHER, "INSTALL_TIMEOUT_SECONDS", 0.05),
+                      ThreadPoolExecutor(max_workers=1) as pool):
+                    started = time.monotonic()
+                    pending = pool.submit(self.launch, expect_exec=existing)
+                    try:
+                        stdout, stderr = pending.result(timeout=0.7)
+                        self.assertLess(time.monotonic() - started, 0.7)
+                        self.assertTrue(entered.is_set())
+                        self.assertIn("timed out", stderr)
+                        self.assertEqual(1, len(stderr.splitlines()))
+                        if not existing:
+                            self.assertIn("timed out", json.loads(stdout)["result"]["instructions"])
+                        self.assertTrue(workers[0].daemon)
+                    finally:
+                        release.set()
+                        for worker in set(workers):
+                            worker.join(timeout=2)
+                    self.assertEqual(old if existing else None,
+                                     self.destination.read_bytes() if self.destination.exists() else None)
+                    self.assertEqual([], list(self.destination.parent.glob(".evaluate-install-*")))
+
+
 class TypesafeJevLauncherFailureTests(_LauncherFixture):
     def assert_install_failure(self, existing: bool, failure: str) -> None:
         if self.destination.exists():
@@ -465,6 +555,21 @@ class TypesafeJevLauncherFailureTests(_LauncherFixture):
 
 
 class TypesafeJevLauncherAtomicFailureTests(_LauncherFixture):
+    def test_only_the_caller_writes_after_download_and_verification_complete(self) -> None:
+        caller = threading.current_thread()
+        writes = []
+        install = INSTALLER.install
+
+        def record_write(*args, **kwargs):
+            self.assertEqual(2, self.fetch.call_count)
+            writes.append(threading.current_thread())
+            return install(*args, **kwargs)
+
+        with unittest.mock.patch.object(INSTALLER, "install", side_effect=record_write):
+            self.launch()
+        self.assertEqual([caller], writes)
+        self.assertEqual(self.payload, self.destination.read_bytes())
+
     def test_failed_atomic_replace_keeps_old_binary_and_removes_stage(self) -> None:
         old = self.binary_script("0.1.0")
         self.put_binary(old)
@@ -484,6 +589,41 @@ class TypesafeJevLauncherAtomicFailureTests(_LauncherFixture):
         self.assertEqual(old, self.destination.read_bytes())
 
 
+class TypesafeJevLauncherHttpFailureTests(_LauncherFixture):
+    def test_real_fetch_http_errors_exec_old_binary_or_serve_standin_with_only_mcp_stdout(self) -> None:
+        for error_type, response in MALFORMED_HTTP.items():
+            for existing in (True, False):
+                with self.subTest(error_type=error_type, existing=existing), malformed_release_host(response) as base:
+                    if self.destination.exists():
+                        self.destination.unlink()
+                    old = self.binary_script("0.1.0")
+                    if existing:
+                        self.put_binary(old)
+                    script = (
+                        f"import sys; sys.path.insert(0, {str(PLUGIN_SCRIPTS)!r}); "
+                        "import evaluate_launch, install_evaluate; "
+                        f"install_evaluate.RELEASES = {base!r}; "
+                        "raise SystemExit(evaluate_launch.main())"
+                    )
+                    result = subprocess.run([sys.executable, "-I", "-c", script],
+                                            input='{"jsonrpc":"2.0","id":7,"method":"initialize"}\n',
+                                            text=True, capture_output=True, timeout=5, check=False)
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    self.assertEqual(1, len(result.stderr.splitlines()), result.stderr)
+                    self.assertNotIn("Traceback", result.stderr)
+                    frames = [json.loads(line) for line in result.stdout.splitlines()]
+                    self.assertEqual(1, len(frames))
+                    self.assertEqual("2.0", frames[0]["jsonrpc"])
+                    self.assertEqual(7, frames[0]["id"])
+                    if existing:
+                        self.assertEqual({"binary": "0.1.0", "plugin": self.version}, frames[0]["result"])
+                        self.assertEqual(old, self.destination.read_bytes())
+                    else:
+                        self.assertIn("auto-install failed", frames[0]["result"]["instructions"])
+                        self.assertFalse(self.destination.exists())
+                    self.assertEqual([], list(self.destination.parent.glob(".evaluate-install-*")))
+
+
 class TypesafeJevLauncherProtocolTests(_LauncherFixture):
     def test_installed_binary_exec_writes_only_mcp_frames(self) -> None:
         archive = BUILD.archive_bytes(self.payload, b"licence")
@@ -501,6 +641,34 @@ class TypesafeJevLauncherProtocolTests(_LauncherFixture):
         self.assertEqual("", result.stderr)
         self.assertEqual([{"jsonrpc": "2.0", "id": 7, "result": {"binary": self.version, "plugin": self.version}}],
                          [json.loads(line) for line in result.stdout.splitlines()])
+
+
+class TypesafeJevInstallerHttpFailureTests(unittest.TestCase):
+    def test_real_fetch_http_errors_become_install_errors_and_clean_cli_failures(self) -> None:
+        for error_type, response in MALFORMED_HTTP.items():
+            with self.subTest(error_type=error_type), malformed_release_host(response) as base:
+                with self.subTest(entry="fetch"):
+                    with self.assertRaises(INSTALLER.InstallError) as failure:
+                        REAL_FETCH(base, INSTALLER.MAX_SUMS_BYTES)
+                    self.assertEqual(error_type, type(failure.exception.__cause__).__name__)
+                with self.subTest(entry="cli"), tempfile.TemporaryDirectory() as scratch:
+                    destination = Path(scratch) / "evaluate"
+                    result = subprocess.run(
+                        [sys.executable, "-I", str(PLUGIN_SCRIPTS / "install_evaluate.py"),
+                         "--base-url", base, "--version", "0.9.0", "--dest", str(destination)],
+                        env={"PATH": os.defpath, "HOME": scratch}, text=True, capture_output=True, timeout=5, check=False,
+                    )
+                    self.assertEqual(1, result.returncode)
+                    self.assertIn("install_evaluate: cannot download", result.stderr)
+                    self.assertNotIn("Traceback", result.stderr)
+                    self.assertFalse(destination.exists())
+                    self.assertEqual([], list(destination.parent.glob(".evaluate-install-*")))
+
+    def test_manual_installer_does_not_hide_unexpected_errors(self) -> None:
+        with (tempfile.TemporaryDirectory() as scratch,
+              unittest.mock.patch.object(INSTALLER, "release_binary", side_effect=RuntimeError("fixture bug")),
+              contextlib.redirect_stdout(io.StringIO()), self.assertRaisesRegex(RuntimeError, "fixture bug")):
+            INSTALLER.main(["--version", "0.9.0", "--dest", str(Path(scratch) / "evaluate")])
 
 
 class TypesafeJevInstallerTests(unittest.TestCase):
@@ -558,7 +726,8 @@ def build_suite() -> unittest.TestSuite:
         unittest.defaultTestLoader.loadTestsFromTestCase(case)
         for case in (TypesafeJevReleaseBuildTests, TypesafeJevInstallerTests, TypesafeJevLauncherVersionTests,
                      TypesafeJevLauncherSettingsTests, TypesafeJevLauncherFailureTests, TypesafeJevLauncherProtocolTests,
-                     TypesafeJevLauncherAtomicFailureTests)
+                     TypesafeJevLauncherAtomicFailureTests, TypesafeJevLauncherResilienceTests,
+                     TypesafeJevLauncherHttpFailureTests, TypesafeJevInstallerHttpFailureTests)
     )
 
 

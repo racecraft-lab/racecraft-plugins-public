@@ -66,7 +66,13 @@ version. If it is missing or differs, it downloads the archive and
 GitHub release over HTTPS. It verifies the archive's SHA-256 checksum before
 extracting and atomically replacing the binary. These checksums come from the
 same release; the launcher does not verify the separate provenance attestation.
-The version probe is bounded by 3 seconds and the whole install by 20 seconds.
+The version probe is bounded by 3 seconds. Download, verification and extraction
+run in memory in a daemon worker with a 20-second deadline, including DNS
+lookups. A timed-out worker is abandoned and cannot write to the destination.
+Only the main thread stages and atomically replaces a completed download; it
+refuses replacement if the deadline expired during staging. The 30-second
+startup timeout leaves 7 seconds after the probe and worker budgets for local
+staging and startup.
 A failure keeps an existing binary, or serves setup instructions when none can
 run. Diagnostics go to stderr; the launcher never reads a key file.
 

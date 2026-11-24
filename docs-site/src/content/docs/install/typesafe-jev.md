@@ -11,9 +11,9 @@ instead of prose.
 ## What You Need
 
 - The plugin, from this marketplace.
-- The `evaluate` binary, installed once, separately. The plugin carries a
-  launcher, not platform builds. Release builds exist for macOS and Linux on
-  amd64 and arm64. Windows has none yet.
+- The `evaluate` binary, installed and updated automatically by the launcher
+  at server start when needed. The binary lives separately from the plugin.
+  Release builds exist for macOS and Linux on amd64 and arm64. Windows has none yet.
 - Python 3.11 or newer on `PATH` as `python3`, which runs the launcher and the
   installer.
 - Optionally, a TypeSafe or OpenRouter API key. Without one, the plugin still
@@ -41,7 +41,18 @@ generated payload for it: that directory is the whole plugin.
 
 ## Install The Binary
 
-Run the plugin's installer once. From a checkout of this repository:
+On non-Windows server starts, the launcher installs the plugin's exact release
+if the default binary is missing or its version differs, including when a newer
+binary is present. A matching binary causes no download. It verifies the release's
+`SHA256SUMS.txt` before replacing the binary atomically.
+
+Set `EVALUATE_AUTO_INSTALL=false` or `0` to turn auto-install off. Unset, `true`,
+or `1` enables it; any other value disables it with a stderr diagnostic. Setting
+`EVALUATE_BIN` also disables auto-install: you manage the binary at that path.
+If an auto-install fails or times out, the launcher runs an existing executable,
+or serves setup instructions with no tools when none is available.
+
+To install manually, run the plugin's installer from a checkout of this repository:
 
 ```text
 python3 typesafe-jev/plugin/scripts/install_evaluate.py
@@ -102,8 +113,9 @@ copy first, or you get two `jev` servers and two sets of skills:
 /plugin marketplace remove racecraft-typesafe
 ```
 
-The binary path and the key files do not change. A 0.8.0 binary is too old for
-this plugin's launcher, so run the installer with `--force` once.
+The binary path and the key files do not change. The launcher installs the
+plugin's matching binary on the next server start. If you disabled auto-install
+or set `EVALUATE_BIN`, update your managed binary with the installer and `--force`.
 
 ## Roll Back
 
