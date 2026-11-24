@@ -169,17 +169,17 @@ export default function (pi: ExtensionAPI) {
           {},
           {
             description:
-              "named PNG or JPEG images referenced from state, instructions, or criteria by a whole string equal to the name, or by {image: name}. Requires JEV_IMAGES=true. The bytes leave the machine and are billed. Do not send assets or image_url parts; the server builds the wire format.",
+              "named PNG, JPEG, or WebP images referenced from state, instructions, or criteria. WebP (including animation) skips Jev backends and goes only to Clef through Ollama. Requires the operator to set JEV_IMAGES=true. The bytes are sent to the provider and billed. The server builds each backend's wire format; do not send assets or image_url parts",
             additionalProperties: Type.Object({
               path: Type.Optional(
-                Type.String({ description: "absolute path of a local PNG or JPEG. Do not also set data_base64" }),
+                Type.String({ description: "absolute path of a local PNG, JPEG, or WebP file. Do not also set data_base64" }),
               ),
               data_base64: Type.Optional(
                 Type.String({
-                  description: "standard base64 of a PNG or JPEG, with padding and no data: prefix. Do not also set path",
+                  description: "standard base64 of a PNG, JPEG, or WebP, with padding and no data: prefix or whitespace. Do not also set path",
                 }),
               ),
-              format: Type.Optional(Type.String({ description: "optional png, jpg, or jpeg" })),
+              format: Type.Optional(Type.String({ description: "optional png, jpg, jpeg, or webp; checked against the file bytes when set" })),
             }),
           },
         ),

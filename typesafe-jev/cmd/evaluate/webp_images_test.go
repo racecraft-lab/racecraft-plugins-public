@@ -72,6 +72,24 @@ func TestWebPDimensions(t *testing.T) {
 		})
 	}
 }
+func TestWebPVP8XIgnoresReservedFields(t *testing.T) {
+	for name, reserved := range map[string][]byte{
+		"high flag bits": {0xc0, 0, 0, 0},
+		"low flag bit":   {0x01, 0, 0, 0},
+		"reserved bytes": {0, 0xff, 0xff, 0xff},
+		"all reserved":   {0xc1, 0xff, 0xff, 0xff},
+	} {
+		t.Run(name, func(t *testing.T) {
+			data := dimensionWebP("VP8X", 321, 654)
+			copy(data[20:24], reserved)
+			img, err := readOneImage("door", imageSource{DataBase64: b64(data)}, maxImageBytes, "")
+			if err != nil || img.format != "webp" || img.width != 321 || img.height != 654 {
+				t.Fatalf("format=%s dimensions=%dx%d err=%v", img.format, img.width, img.height, err)
+			}
+		})
+	}
+}
+
 func TestWebPOllamaWireAndJevRouting(t *testing.T) {
 	for _, backend := range []string{"ollama", "ollama-local"} {
 		for _, animated := range []bool{false, true} {

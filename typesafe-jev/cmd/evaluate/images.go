@@ -45,7 +45,7 @@ const (
 // TypeSafe body will use. The token is minted here so a short caller name
 // such as "cat" cannot match inside "category" once it becomes an asset key.
 type preparedImage struct {
-	format        string // "png" or "jpg"
+	format        string // "png", "jpg", or "webp"
 	data          []byte
 	ref           string
 	width, height int
@@ -274,7 +274,7 @@ func scanImageSites(in evaluateIn) (imageSites, error) {
 	}
 	_, _, err = rewriteImageSites(state, questions, func(path string, v any) (any, bool, error) {
 		if m, ok := v.(map[string]any); ok && mediaPart(m) {
-			return nil, false, fmt.Errorf("%s is a provider media part (image_url, input_audio, video_url, or file); name a PNG or JPEG in images and reference it from state, instructions, or criteria", path)
+			return nil, false, fmt.Errorf("%s is a provider media part (image_url, input_audio, video_url, or file); name a PNG, JPEG, or WebP in images and reference it from state, instructions, or criteria", path)
 		}
 		name, hit, unknown := imageUse(v, in.Images)
 		if unknown && sites.unknown == "" {
@@ -641,7 +641,8 @@ func webPDimensions(kind string, header []byte) (int, int) {
 		bits := binary.LittleEndian.Uint32(header[1:5])
 		return int(bits&0x3fff) + 1, int((bits>>14)&0x3fff) + 1
 	case "VP8X":
-		if len(header) != 10 || header[0]&0xc1 != 0 || header[1] != 0 || header[2] != 0 || header[3] != 0 {
+		// RFC 9649 section 2.7 requires readers to ignore reserved fields.
+		if len(header) != 10 {
 			return 0, 0
 		}
 		return int(uint24LE(header[4:7])) + 1, int(uint24LE(header[7:10])) + 1
