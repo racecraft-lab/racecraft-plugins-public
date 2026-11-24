@@ -44,8 +44,9 @@ Installed it from the old `racecraft-typesafe` marketplace? Uninstall that copy
 and remove that marketplace first, or the client runs two `jev` servers. The
 binary path and the key files do not change.
 
-The binary is installed separately either way, by step 1 of the quickstart
-below. The plugin carries a launcher, not four platform builds. Until the binary
+The plugin installs its matching binary automatically on the next server start.
+For a server registered by hand, use step 1 of the quickstart below. The plugin
+carries a launcher, not four platform builds. Until the binary
 and a key are in place, the plugin's server connects with no tools and says
 what is missing.
 
@@ -83,14 +84,22 @@ The installer is a Python script in the plugin, at `plugin/scripts/install_evalu
 python3 plugin/scripts/install_evaluate.py
 ```
 
-It downloads the release tagged `typesafe-jev-v<version>` for this machine, checks it against that release's `SHA256SUMS.txt`, and installs it to `~/.local/libexec/racecraft-jev/evaluate`. By default it installs the plugin's own version, so the binary matches the launcher; `--version 0.9.0` picks another, and `--force` replaces an existing binary. It never asks GitHub for the "latest" release, because this repository releases more than one component. The path is deliberately **not** on your `PATH`, so it cannot collide with an upstream `evaluate` you may already have. Point clients at that absolute path. A plugin update also needs the matching binary. After updating the plugin, run its installer again from this directory (or use the installer in the updated plugin):
+It downloads the release tagged `typesafe-jev-v<version>` for this machine, checks it against that release's `SHA256SUMS.txt`, and installs it to `~/.local/libexec/racecraft-jev/evaluate`. By default it installs the plugin's own version, so the binary matches the launcher; `--version 0.9.0` picks another, and `--force` replaces an existing binary. It never asks GitHub for the "latest" release, because this repository releases more than one component. The path is deliberately **not** on your `PATH`, so it cannot collide with an upstream `evaluate` you may already have. Point clients at that absolute path. With the plugin, the launcher installs this binary automatically on the next
+server start if it is missing or its `--version` differs from the plugin's own
+version, including a newer binary or a dev build. It uses the plugin's exact
+`typesafe-jev-v<version>` release and verifies `SHA256SUMS.txt` before atomic
+replacement. A matching binary causes no download. The version probe has a
+3-second timeout; the whole install has a 20-second deadline. Codex startup
+configuration allows 30 seconds.
 
-```sh
-python3 plugin/scripts/install_evaluate.py --force
-```
-
-The server warns in its client instructions and on stderr when the plugin version differs from the binary's, including when the binary is a dev build. Binaries from before this release cannot warn; update them with the command above.
-
+Set `EVALUATE_AUTO_INSTALL=false` or `0` to manage updates yourself. Unset,
+`true`, or `1` enables it; any other value disables it with a stderr diagnostic.
+Setting `EVALUATE_BIN` also disables auto-install, even if it names the default
+path. If an install fails, the launcher reports the reason on stderr and runs
+an existing executable; without one it serves setup instructions with no tools.
+The server still warns when its version differs from the plugin's. For manual
+updates, run `python3 plugin/scripts/install_evaluate.py --force` from the
+updated plugin or checkout.
 Start every live check or release smoke test with `evaluate version` (use `~/.local/libexec/racecraft-jev/evaluate version` for the default install) and confirm it equals the version in `plugin/.claude-plugin/plugin.json` before proceeding.
 
 Building from source works too, into the same directory:
@@ -105,7 +114,7 @@ Each release from 0.9.2 on also carries `provenance.sigstore.json`, a signed SLS
 gh attestation verify evaluate-darwin-arm64.tar.gz --bundle provenance.sigstore.json --repo racecraft-lab/racecraft-plugins-public
 ```
 
-For standalone installs, `evaluate update` later moves an installed release to the newest `typesafe-jev-v*` release, and ignores every other component's releases. Plugin users rerun the plugin installer with `--force` so the binary matches the plugin.
+For standalone installs, `evaluate update` later moves an installed release to the newest `typesafe-jev-v*` release, and ignores every other component's releases. Plugin users get the matching release automatically on the next server start, unless auto-install is disabled.
 
 **2. Choose a backend.** Selection is explicit. Which API keys happen to be set never decides where your state is sent or which account is billed.
 
@@ -244,6 +253,8 @@ hop loads.
 
 | Variable | Default | Meaning |
 |---|---|---|
+| `EVALUATE_AUTO_INSTALL` | on | Plugin launcher only: unset, `true`, or `1` installs the plugin's exact release when needed; `false` or `0` disables it. Other values disable it with a stderr diagnostic |
+| `EVALUATE_BIN` | `~/.local/libexec/racecraft-jev/evaluate` | Launcher binary path; setting it disables auto-install and leaves updates to the operator |
 | `JEV_CHAIN` | `typesafe` (`typesafe,openrouter` under `--plugin-defaults`) | Ordered distinct providers, up to four; overrides the chain file and cannot be combined with the legacy provider pair |
 | `JEV_PROVIDER` | unset | Legacy first backend; by itself selects one hop |
 | `JEV_MODEL` | backend default | Model id for configured hop 1 only, passed through unchanged |

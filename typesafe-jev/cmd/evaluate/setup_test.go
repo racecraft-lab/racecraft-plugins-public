@@ -273,6 +273,9 @@ func TestCodexToolTimeoutExceedsRequestBudget(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := generate(t, cfg, "/opt/racecraft/evaluate", setupOptions{clients: []string{"codex"}})
+	if !strings.Contains(got, "startup_timeout_sec = 30") {
+		t.Errorf("startup should allow the launcher install budget:\n%s", got)
+	}
 	if !strings.Contains(got, "tool_timeout_sec = 330") {
 		t.Errorf("a 5m budget should generate tool_timeout_sec = 330:\n%s", got)
 	}

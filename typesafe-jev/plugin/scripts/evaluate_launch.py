@@ -4,7 +4,17 @@
 The plugin cannot be fully self-contained: this server is a compiled Go
 binary, and committing four platform builds to git would bloat the repository
 and still need a fifth for anyone else. So the plugin ships this launcher and
-the binary is installed once, separately.
+the binary lives separately at the installer's default path.
+
+On non-Windows starts, unless EVALUATE_BIN is set or EVALUATE_AUTO_INSTALL
+is disabled, the launcher probes the default binary's --version (at most three
+seconds). A missing, unreadable, failing or different version is replaced with
+the plugin's own release, in either version direction. The installer verifies
+the archive against that release's SHA256SUMS.txt and replaces it atomically.
+The whole install has a twenty-second deadline; failure runs the existing
+binary or serves the stand-in with the reason when no executable is available.
+EVALUATE_AUTO_INSTALL accepts true/1 (also the unset default) or false/0;
+other values disable downloads with a stderr diagnostic.
 
 When the binary is installed, the launcher replaces itself with
 `evaluate mcp --plugin-defaults`. That server reads the plugin's key-file
@@ -19,8 +29,9 @@ say how to set Jev up. A user without a TypeSafe or OpenRouter key, or without
 the binary, then sees a connected server that explains itself rather than a
 failed one.
 
-The launcher never opens a key file or reads a key, and it starts no other
-process: it either serves the stand-in or execs the binary.
+The launcher never opens a key file or reads a key. It starts a bounded version
+probe and uses the installer's download functions so plugin updates also update
+the separately stored binary. It then serves the stand-in or execs the binary.
 
 Everything this writes for a human goes to stderr. Stdout belongs to the MCP
 protocol, and a single stray line on it is a frame the client cannot parse.
@@ -30,10 +41,17 @@ from __future__ import annotations
 
 import json
 import os
+import signal
+import subprocess
 import shlex
 import sys
+from pathlib import Path
 
+import install_evaluate
 from install_evaluate import InstallError, KEY_SETUP_HINT, plugin_version
+
+VERSION_TIMEOUT_SECONDS = 3
+INSTALL_TIMEOUT_SECONDS = 20
 
 INSTALLER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "install_evaluate.py")
 SETUP_TEXT = (
@@ -67,6 +85,58 @@ def resolve_binary() -> str:
 
 def is_executable(path: str) -> bool:
     return os.path.isfile(path) and os.access(path, os.X_OK)
+
+
+def version_matches(binary: str, version: str) -> bool:
+    """Probe the default file without consuming MCP stdin or exposing output."""
+    try:
+        result = subprocess.run(
+            # Auto-install only probes the default file, always named evaluate.
+            # A fixed executable also lets the repository process scanner verify it.
+            ["./evaluate", "--version"], cwd=os.path.dirname(binary),
+            stdin=subprocess.DEVNULL, capture_output=True,
+            timeout=VERSION_TIMEOUT_SECONDS, check=False, shell=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0 and result.stdout.strip() == version.encode("ascii")
+
+
+def _install_timed_out(_signum: int, _frame: object) -> None:
+    raise InstallError(f"auto-install timed out after {INSTALL_TIMEOUT_SECONDS} seconds")
+
+
+def install_matching(binary: str, version: str) -> None:
+    """Bound download, verification, extraction and atomic install together."""
+    previous = signal.signal(signal.SIGALRM, _install_timed_out)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, INSTALL_TIMEOUT_SECONDS)
+        system, arch = install_evaluate.target()
+        base = f"{install_evaluate.RELEASES}/{install_evaluate.TAG_PREFIX}{version}"
+        asset = f"evaluate-{system}-{arch}.tar.gz"
+        payload = install_evaluate.release_binary(base, asset)
+        install_evaluate.install(payload, Path(binary), force=True)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def ensure_binary(binary: str) -> str | None:
+    """Return a diagnostic on failure; explicit operator settings never install."""
+    if "EVALUATE_BIN" in os.environ:
+        return None
+    setting = os.environ.get("EVALUATE_AUTO_INSTALL", "true")
+    if setting in ("false", "0"):
+        return None
+    if setting not in ("true", "1"):
+        return f"EVALUATE_AUTO_INSTALL={setting!r} is invalid; auto-install disabled"
+    try:
+        version = plugin_version()
+        if not version_matches(binary, version):
+            install_matching(binary, version)
+    except (InstallError, OSError) as error:
+        return "auto-install failed: " + " ".join(str(error).splitlines())
+    return None
 
 
 def _reply(message_id: object, result: object = None, error: dict | None = None) -> dict:
@@ -138,8 +208,11 @@ def main() -> int:
     if os.name == "nt":
         return serve_unconfigured("evaluate has no Windows release build yet")
     binary = resolve_binary()
+    diagnostic = ensure_binary(binary)
     if not is_executable(binary):
-        return serve_unconfigured(f"the evaluate binary is not installed at {binary}")
+        return serve_unconfigured(diagnostic or f"the evaluate binary is not installed at {binary}")
+    if diagnostic:
+        _say(diagnostic)
     # exec, not a child process: the client signals this process directly, and
     # an extra process in between would swallow the termination it sends.
     try:
