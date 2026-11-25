@@ -1,6 +1,6 @@
 {
   "name": "typesafe-jev",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Ask for typed judgments with probabilities instead of parsing prose, through TypeSafe or OpenRouter (Jev: noul, choice, score, box) or Ollama (Clef: noul, choice, score), with the backend chain configured explicitly.",
   "author": {
     "name": "Racecraft Lab",

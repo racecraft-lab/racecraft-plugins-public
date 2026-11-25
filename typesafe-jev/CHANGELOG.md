@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.12.0...typesafe-jev-v0.12.1) (2026-11-25)
+
+
+### Bug Fixes
+
+* **typesafe-jev:** install the matching evaluate binary when the plugin updates ([#1482](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1482)) ([0c8e35d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0c8e35db71b4f044da59f194aaa05c88aec588e0))
+
 ## [0.12.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/typesafe-jev-v0.11.1...typesafe-jev-v0.12.0) (2026-11-24)
 
 
